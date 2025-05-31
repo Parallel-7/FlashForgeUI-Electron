@@ -1,0 +1,214 @@
+name: Build and Release Electron App
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version Number (e.g., 1.0.0)'
+        required: true
+        default: ''
+      prerelease:
+        description: 'Is this a Pre-Release?'
+        type: boolean
+        default: false
+
+jobs:
+  build_and_release:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+        node-version: [18] # LTS version, good for Electron
+
+    steps:
+      - name: Checkout FlashForgeUI
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'
+
+      - name: Set project directory environment variable
+        shell: bash
+        run: echo "PROJECT_DIR=$(pwd)" >> $GITHUB_ENV
+
+      - name: Clone and Build Custom Dependencies
+        shell: bash
+        run: |
+          echo "Current directory: $(pwd)"
+          echo "Project directory is: ${{ env.PROJECT_DIR }}"
+
+          mkdir -p ../dependencies_build
+          
+          echo "Cloning ff-5mp-api-ts..."
+          git clone https://github.com/GhostTypes/ff-5mp-api-ts.git ../dependencies_build/ff-5mp-api-ts
+          cd ../dependencies_build/ff-5mp-api-ts
+          echo "Building ff-5mp-api-ts in $(pwd)"
+          npm install
+          if [ -f package.json ] && grep -q '"build":' package.json; then
+            npm run build
+          else
+            echo "No build script found in ff-5mp-api-ts, skipping build command."
+          fi
+          
+          echo "Cloning slicer-meta..."
+          cd ${{ env.PROJECT_DIR }}
+          git clone https://github.com/Parallel-7/slicer-meta.git ../dependencies_build/slicer-meta
+          cd ../dependencies_build/slicer-meta
+          echo "Building slicer-meta in $(pwd)"
+          npm install
+          if [ -f package.json ] && grep -q '"build":' package.json; then
+            npm run build
+          else
+            echo "No build script found in slicer-meta, skipping build command."
+          fi
+
+          cd ${{ env.PROJECT_DIR }}
+          echo "Returned to main project directory: $(pwd)"
+
+      - name: Adjust custom dependency paths in package.json
+        shell: bash
+        run: |
+          echo "Updating package.json dependency paths..."
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            powershell -Command "(Get-Content package.json -Raw) -replace 'file:../ff-5mp-api-ts', 'file:../dependencies_build/ff-5mp-api-ts' | Set-Content package.json"
+            powershell -Command "(Get-Content package.json -Raw) -replace 'file:../slicer-meta', 'file:../dependencies_build/slicer-meta' | Set-Content package.json"
+          else
+            sed -i -e 's|file:../ff-5mp-api-ts|file:../dependencies_build/ff-5mp-api-ts|g' package.json
+            sed -i -e 's|file:../slicer-meta|file:../dependencies_build/slicer-meta|g' package.json
+          fi
+          echo "package.json after path adjustment:"
+          cat package.json
+
+      - name: Run npm install
+        shell: bash
+        run: |
+          npm install --verbose
+
+      - name: Set Application Version
+        shell: bash
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [[ "$VERSION" == *.* && "$VERSION" != *.*.* ]]; then
+            VERSION="${VERSION}.0"
+          elif [[ "$VERSION" != *.* ]]; then
+            VERSION="${VERSION}.0.0"
+          fi
+          echo "Setting version to: $VERSION"
+          npm version "$VERSION" --no-git-tag-version --allow-same-version
+
+      - name: Build application with electron-builder
+        shell: bash
+        run: |
+          # Use platform-specific build commands
+          if [[ "$RUNNER_OS" == "Linux" ]]; then
+            npm run build:linux
+          elif [[ "$RUNNER_OS" == "Windows" ]]; then
+            npm run build:win
+          elif [[ "$RUNNER_OS" == "macOS" ]]; then
+            npm run build:mac
+          fi
+
+      - name: List Build Artifacts
+        shell: bash
+        run: |
+          echo "Listing contents of dist directory:"
+          if [[ "$RUNNER_OS" == "Windows" ]]; then
+            dir /s dist || echo "dist directory not found or empty."
+          else
+            ls -R dist || echo "dist directory not found or empty."
+          fi
+
+      - name: Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: flashforge-ui-${{ matrix.os }}
+          path: |
+            dist/**/*.zip
+            dist/**/*.deb
+            dist/**/*.rpm
+            dist/**/*Setup*.exe
+            dist/**/*.dmg
+            dist/**/*.AppImage
+            dist/**/*.nupkg
+            !dist/**/elevate.exe
+            !dist/**/FlashForgeUI.exe
+          if-no-files-found: warn
+
+  create_github_release:
+    needs: build_and_release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download all build artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Display downloaded artifacts structure
+        shell: bash
+        run: |
+          echo "Downloaded artifacts layout:"
+          ls -R artifacts
+
+      - name: Prepare Release Assets
+        id: prep_assets
+        shell: bash
+        run: |
+          mkdir release_assets
+          find artifacts/ -type f \( -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*Setup*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.nupkg" \) | grep -v "FlashForgeUI.exe" | grep -v "elevate.exe" | while IFS= read -r file; do
+            filename=$(basename "$file")
+            cp "$file" "release_assets/$filename"
+            echo "Copied $file to release_assets/$filename"
+          done
+          
+          echo "Prepared assets in release_assets:"
+          ls -l release_assets/
+
+      - name: Generate Release Notes
+        id: generate_notes
+        shell: bash
+        run: |
+          VERSION="${{ github.event.inputs.version }}"
+          if [[ "$VERSION" == *.* && "$VERSION" != *.*.* ]]; then
+            VERSION="${VERSION}.0"
+          elif [[ "$VERSION" != *.* ]]; then
+            VERSION="${VERSION}.0.0"
+          fi
+          
+          IS_PRERELEASE="${{ github.event.inputs.prerelease }}"
+          RELEASE_TYPE_BADGE=""
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
+            RELEASE_TYPE_BADGE=" (Pre-release)"
+          fi
+
+          cat > RELEASE_NOTES.md << EOF
+          # FlashForgeUI v${VERSION}${RELEASE_TYPE_BADGE}
+
+          Placeholder release text
+
+          EOF
+          
+          echo "VERSION_TAG=v${VERSION}" >> $GITHUB_ENV
+          echo "RELEASE_NAME=FlashForgeUI v${VERSION}${RELEASE_TYPE_BADGE}" >> $GITHUB_ENV
+          echo "RELEASE_NOTES_PATH=RELEASE_NOTES.md" >> $GITHUB_ENV
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.VERSION_TAG }}
+          name: ${{ env.RELEASE_NAME }}
+          body_path: ${{ env.RELEASE_NOTES_PATH }}
+          draft: false
+          prerelease: ${{ github.event.inputs.prerelease }}
+          files: |
+            release_assets/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

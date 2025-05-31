@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Settings</title>
+    <link rel="stylesheet" href="settings.css" />
+</head>
+<body>
+<div class="dialog-container">
+    <!-- Header -->
+    <div class="dialog-header">
+        <div class="dialog-title">Settings</div>
+        <button class="dialog-close" id="btn-close">×</button>
+    </div>
+
+    <!-- Content -->
+    <div class="dialog-content">
+        <div class="settings-grid">
+            <!-- Column 1 -->
+            <div class="settings-column">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="web-ui"> Web UI
+                </label>
+                <div class="input-group">
+                    <label for="web-ui-port">Web UI Port:</label>
+                    <input type="number" id="web-ui-port" class="settings-input" min="1" max="65535" placeholder="3000">
+                </div>
+                <div class="input-group">
+                    <label for="web-ui-password">Web UI Password:</label>
+                    <input type="password" id="web-ui-password" class="settings-input" placeholder="changeme">
+                </div>
+                <div class="input-group">
+                    <label for="camera-proxy-port">Camera Proxy Port:</label>
+                    <input type="number" id="camera-proxy-port" class="settings-input" min="1" max="65535" placeholder="8181">
+                </div>
+                <div class="settings-info-text">
+                    Port for the camera proxy used by both the app and Web UI
+                </div>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="custom-camera"> Custom Camera
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="discord-sync"> Discord Sync
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="alert-when-complete"> Alert On Complete
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="alert-when-cooled"> Alert On Cooled
+                </label>
+            </div>
+
+            <!-- Column 2 -->
+            <div class="settings-column">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="always-on-top"> Always On Top
+                </label>
+                <div class="input-group">
+                    <label for="custom-camera-url">Camera URL:</label>
+                    <input type="text" id="custom-camera-url" class="settings-input" placeholder="http://...">
+                </div>
+                <div class="input-group">
+                    <label for="webhook-url">Discord Webhook:</label>
+                    <input type="text" id="webhook-url" class="settings-input" placeholder="https://discord.com/api/webhooks/...">
+                </div>
+                <div class="input-group">
+                    <label for="discord-update-interval">Discord Update Interval (minutes):</label>
+                    <input type="number" id="discord-update-interval" class="settings-input" min="1" max="60" placeholder="5">
+                </div>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="visual-alerts"> Visual Alerts
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="audio-alerts"> Audio Alerts
+                </label>
+            </div>
+
+            <!-- Column 3 -->
+            <div class="settings-column">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="debug-mode"> Debug Mode
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="custom-leds"> Custom LEDs
+                </label>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="force-legacy-api"> Force Legacy API
+                </label>
+                <div class="settings-info-text">
+                    When enabled, the application will use the legacy TCP API even for 5M/Pro printers.
+                    Requires reconnection to take effect.
+                </div>
+                <div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="dialog-footer">
+        <span id="save-status" class="save-status"></span>
+        <button class="dialog-button cancel" id="btn-cancel">Close</button>
+        <!-- Save button might not be needed if changes are saved on input -->
+        <!-- <button class="dialog-button" id="btn-save">Save & Close</button> -->
+    </div>
+</div>
+<script src="settings-renderer.js"></script>
+</body>
+</html>

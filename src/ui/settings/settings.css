@@ -1,0 +1,197 @@
+/* src/ui/settings.css */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+:root {
+    --dark-bg: #2a2a2a;
+    --darker-bg: #1e1e1e;
+    --header-bg: #222222;
+    --border-color: #444444;
+    --button-bg: #4285f4;
+    --button-hover: #5a95f5;
+    --text-color: #e0e0e0;
+    --input-bg: #3c3c3c; /* Slightly lighter for inputs */
+}
+
+body {
+    background-color: var(--dark-bg);
+    color: var(--text-color);
+    height: 100vh;
+    width: 100vw;
+    overflow: hidden; /* Prevent body scroll */
+    display: flex;
+}
+
+.dialog-container {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: 100%;
+    border: 1px solid var(--border-color); /* Add border if window is frameless */
+}
+
+/* Header */
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--header-bg);
+    height: 32px;
+    padding: 0 10px;
+    -webkit-app-region: drag;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+.dialog-title {
+    font-weight: bold;
+    -webkit-app-region: no-drag;
+}
+
+.dialog-close {
+    -webkit-app-region: no-drag;
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 16px;
+    cursor: pointer;
+    width: 30px;
+    height: 100%;
+}
+
+.dialog-close:hover {
+    background-color: #e81123;
+}
+
+/* Content Area */
+.dialog-content {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto; /* Allow scrolling if content overflows */
+}
+
+.settings-grid {
+    display: flex;
+    gap: 30px; /* Space between columns */
+}
+
+.settings-column {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* Space between items in a column */
+    flex: 1; /* Allow columns to share space */
+}
+
+/* Form Elements */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    white-space: nowrap; /* Prevent wrapping */
+}
+
+/* Style checkboxes if desired */
+input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--button-bg); /* Modern way to color checkboxes */
+}
+
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.input-group label {
+    font-size: 0.9em;
+    color: #ccc;
+}
+
+.settings-info-text {
+    font-size: 0.8em;
+    color: #aaa;
+    margin-top: -10px;
+    line-height: 1.3;
+}
+
+.settings-input {
+    background-color: var(--input-bg);
+    border: 1px solid var(--border-color);
+    padding: 6px 8px;
+    color: var(--text-color);
+    border-radius: 2px;
+    width: 100%; /* Take full column width */
+    min-width: 150px; /* Ensure minimum width */
+}
+
+/* Footer */
+.dialog-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 10px 15px;
+    background-color: var(--darker-bg);
+    border-top: 1px solid var(--border-color);
+    flex-shrink: 0;
+    gap: 10px;
+}
+
+.save-status {
+    flex-grow: 1; /* Push buttons to the right */
+    font-size: 0.8em;
+    color: var(--success-color);
+    opacity: 0;
+    transition: opacity 0.5s ease-in-out;
+}
+
+.save-status.visible {
+    opacity: 1;
+}
+
+
+.dialog-button {
+    background-color: var(--button-bg);
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 2px;
+    cursor: pointer;
+}
+
+.dialog-button:hover {
+    background-color: var(--button-hover);
+}
+
+.dialog-button.cancel {
+    background-color: #555;
+}
+.dialog-button.cancel:hover {
+    background-color: #666;
+}
+
+
+/* Custom scrollbar styling */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--darker-bg);
+}
+
+::-webkit-scrollbar-thumb {
+    background: #666;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #888;
+}

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Command Terminal</title>
+    <link rel="stylesheet" href="send-cmds.css" />
+</head>
+<body>
+<div class="dialog-container">
+    <!-- Header -->
+    <div class="dialog-header">
+        <div class="dialog-title">Command Terminal</div>
+        <button class="dialog-close" id="btn-close">×</button>
+    </div>
+
+    <!-- Content -->
+    <div class="dialog-content">
+        <!-- Log Output Area -->
+        <div class="log-area" id="log-output">
+            <div class="log-entry info">[System] Command terminal ready. Enter G/M code commands below.</div>
+        </div>
+        
+        <!-- Command Input Area -->
+        <div class="command-input-row">
+            <input type="text" id="command-input" placeholder="Enter G/M code command...">
+            <button class="dialog-button" id="btn-send">Send</button>
+        </div>
+    </div>
+</div>
+
+<script src="send-cmds-renderer.js"></script>
+</body>
+</html>

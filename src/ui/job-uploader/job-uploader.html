@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Upload Job</title>
+    <link rel="stylesheet" href="job-uploader.css" />
+</head>
+<body>
+<div class="dialog-container">
+    <!-- Header -->
+    <div class="dialog-header">
+        <div class="dialog-title">Upload Job</div>
+        <button class="dialog-close" id="btn-close">×</button>
+    </div>
+
+    <!-- Content -->
+    <div class="dialog-content">
+        <!-- File Selection -->
+        <div class="file-selection-row">
+            <span id="file-path-display">No file selected...</span>
+            <button class="dialog-button" id="btn-browse">Browse...</button>
+        </div>
+
+        <!-- Options -->
+        <div class="options-row">
+            <label class="checkbox-label">
+                <input type="checkbox" id="cb-start-now" checked> Start Now
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" id="cb-auto-level"> Auto Level
+            </label>
+        </div>
+
+        <!-- Metadata Display -->
+        <div class="metadata-area">
+            <!-- Left Column: Details -->
+            <div class="metadata-column details">
+                <div><span class="meta-label">Printer:</span> <span class="meta-value" id="meta-printer">-</span></div>
+                <div><span class="meta-label">Filament:</span> <span class="meta-value" id="meta-filament-type">-</span></div>
+                <div><span class="meta-label">Used (Len):</span> <span class="meta-value" id="meta-filament-len">-</span></div>
+                <div><span class="meta-label">Used (Wt):</span> <span class="meta-value" id="meta-filament-wt">-</span></div>
+                <!-- Add other details from 3MF if needed -->
+                <div><span class="meta-label">Support:</span> <span class="meta-value" id="meta-support">-</span></div>
+            </div>
+
+            <!-- Middle Column: Slicer Info -->
+            <div class="metadata-column slicer">
+                <div><span class="meta-label">Slicer:</span> <span class="meta-value" id="meta-slicer-name">-</span></div>
+                <div><span class="meta-label">Version:</span> <span class="meta-value" id="meta-slicer-ver">-</span></div>
+                <div><span class="meta-label">Date:</span> <span class="meta-value" id="meta-slice-date">-</span></div>
+                <div><span class="meta-label">Time:</span> <span class="meta-value" id="meta-slice-time">-</span></div>
+            </div>
+
+            <!-- Right Column: Preview & ETA -->
+            <div class="metadata-column preview">
+                <div class="thumbnail-box" id="meta-thumbnail">
+                    <span class="no-preview-text">No Preview</span>
+                </div>
+                <div class="eta-value"><span class="meta-label">ETA:</span> <span class="meta-value" id="meta-eta">-</span></div>
+            </div>
+        </div>
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay" style="display: none;">Parsing file...</div>
+    </div>
+
+    <!-- Footer -->
+    <div class="dialog-footer">
+        <button class="dialog-button cancel" id="btn-cancel">Cancel</button>
+        <button class="dialog-button" id="btn-ok" disabled>OK</button>
+    </div>
+</div>
+<script src="job-uploader-renderer.js"></script>
+</body>
+</html>

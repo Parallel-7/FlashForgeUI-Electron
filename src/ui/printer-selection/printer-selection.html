@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Select a Printer</title>
+    <link rel="stylesheet" href="printer-selection.css" />
+</head>
+<body>
+<div class="dialog-container">
+    <!-- Header -->
+    <div class="dialog-header">
+        <div class="dialog-title">Select a Printer</div>
+        <button class="dialog-close" id="btn-close">×</button>
+    </div>
+
+    <!-- Content: Table -->
+    <div class="dialog-content">
+        <div class="table-container">
+            <table id="printer-table">
+                <thead>
+                <tr>
+                    <th>Printer Name</th>
+                    <th>IP Address</th>
+                    <th>Serial Number</th>
+                </tr>
+                </thead>
+                <tbody>
+                <!-- Rows will be populated by JS -->
+                <tr class="loading-row">
+                    <td colspan="3">Scanning...</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="no-printers-message" class="message-overlay" style="display: none;">
+            No printers found on the network. Ensure LAN mode is enabled.
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="dialog-footer">
+        <span class="instructions">Double-click a printer to select</span>
+        <button class="dialog-button cancel" id="btn-cancel">Cancel</button>
+        <!-- Optional: Add a select button -->
+        <!-- <button class="dialog-button" id="btn-select" disabled>Select</button> -->
+    </div>
+</div>
+<script src="printer-selection-renderer.js"></script>
+</body>
+</html>

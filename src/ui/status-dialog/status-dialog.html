@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Server Status</title>
+  <link rel="stylesheet" href="../../index.css" />
+  <style>
+    /* Dark theme styles */
+    body {
+      background-color: #1e1e1e;
+      color: #e0e0e0;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    .dialog-container {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      background-color: #1e1e1e;
+      overflow: hidden; /* Prevent double scrollbars */
+    }
+    
+    .dialog-titlebar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 10px;
+      background-color: #252525;
+      -webkit-app-region: drag;
+      border-bottom: 1px solid #333;
+    }
+    
+    .dialog-title {
+      font-weight: bold;
+      color: #ffffff;
+      padding: 5px 10px;
+    }
+    
+    .dialog-close-btn {
+      -webkit-app-region: no-drag;
+      border: none;
+      background: #3a3a3a;
+      font-size: 1.2em;
+      color: #e0e0e0;
+      cursor: pointer;
+      width: 30px;
+      height: 30px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 5px;
+    }
+    
+    .dialog-close-btn:hover {
+      color: #ffffff;
+    }
+    
+    .status-container {
+      padding: 10px;
+      overflow-y: auto;
+      height: calc(100vh - 100px); /* Provide enough space for header and footer */
+      min-height: 300px;
+    }
+    
+    .status-section {
+      margin-bottom: 20px;
+      border: 1px solid #444;
+      border-radius: 5px;
+      padding: 10px;
+      background-color: #252525;
+    }
+    
+    .status-section h3 {
+      margin-top: 0;
+      border-bottom: 1px solid #444;
+      padding-bottom: 5px;
+      color: #ffffff;
+    }
+    
+    .status-row {
+      display: flex;
+      justify-content: space-between;
+      margin: 5px 0;
+      flex-wrap: wrap;
+      padding: 3px 0;
+    }
+    
+    .status-value {
+      max-width: 200px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      word-break: break-all;
+      color: #b8b8b8;
+    }
+    
+    .status-label {
+      font-weight: bold;
+      margin-right: 10px;
+      color: #e0e0e0;
+    }
+    
+    /* Make sure the controls are always visible */
+    .controls {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px;
+      border-top: 1px solid #444;
+      background-color: #252525;
+      position: sticky;
+      bottom: 0;
+      z-index: 10;
+    }
+    
+    .refresh-controls {
+      display: flex;
+      align-items: center;
+      color: #e0e0e0;
+    }
+    
+    .refresh-controls label {
+      margin-left: 10px;
+    }
+    
+    .status-indicator {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+    }
+    
+    .status-active {
+      background-color: #4CAF50;
+    }
+    
+    .status-inactive {
+      background-color: #f44336;
+    }
+    
+    button {
+      background-color: #3a3a3a;
+      color: #e0e0e0;
+      border: 1px solid #555;
+      border-radius: 3px;
+      padding: 5px 10px;
+      cursor: pointer;
+    }
+    
+    button:hover {
+      background-color: #444;
+    }
+    
+    input[type="checkbox"] {
+      accent-color: #4CAF50;
+    }
+  </style>
+</head>
+<body>
+  <div class="dialog-container">
+    <!-- Custom window titlebar -->
+    <div class="dialog-titlebar">
+      <span class="dialog-title">Server Status</span>
+      <button id="btn-close" class="dialog-close-btn">×</button>
+    </div>
+    
+    <!-- Status content -->
+    <div class="status-container">
+      <!-- WebUI Server section -->
+      <div class="status-section">
+        <h3>WebUI Server</h3>
+        <div class="status-row">
+          <span class="status-label">Status:</span>
+          <span id="webui-status"><span class="status-indicator status-inactive"></span>Unknown</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Connected Clients:</span>
+          <span id="webui-clients" class="status-value">0</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">URL:</span>
+          <span id="webui-url" class="status-value">None</span>
+        </div>
+      </div>
+      
+      <!-- Camera Proxy section -->
+      <div class="status-section">
+        <h3>Camera Proxy</h3>
+        <div class="status-row">
+          <span class="status-label">Status:</span>
+          <span id="camera-status"><span class="status-indicator status-inactive"></span>Unknown</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Port:</span>
+          <span id="camera-port" class="status-value">Unknown</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Connected Clients:</span>
+          <span id="camera-clients" class="status-value">0</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Streaming:</span>
+          <span id="camera-streaming" class="status-value"><span class="status-indicator status-inactive"></span>No</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Stream URL:</span>
+          <span id="camera-url" class="status-value">None</span>
+        </div>
+      </div>
+      
+      <!-- System Information section -->
+      <div class="status-section">
+        <h3>System Information</h3>
+        <div class="status-row">
+          <span class="status-label">Application Uptime:</span>
+          <span id="app-uptime" class="status-value">Unknown</span>
+        </div>
+        <div class="status-row">
+          <span class="status-label">Memory Usage:</span>
+          <span id="memory-usage" class="status-value">Unknown</span>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Controls -->
+    <div class="controls">
+      <button id="btn-refresh">Refresh</button>
+      <div class="refresh-controls">
+        <input type="checkbox" id="chk-auto-refresh" checked>
+        <label for="chk-auto-refresh">Auto-refresh (5s)</label>
+      </div>
+    </div>
+  </div>
+
+  <script src="status-dialog.js"></script>
+</body>
+</html>

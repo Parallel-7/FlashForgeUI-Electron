@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Select Job</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        :root {
+            --dark-bg: #2a2a2a;
+            --darker-bg: #1e1e1e;
+            --header-bg: #222222;
+            --border-color: #444444;
+            --button-bg: #4285f4;
+            --button-hover: #5a95f5;
+            --text-color: #e0e0e0;
+            --accent-color: #4285f4;
+            --error-color: #f44336;
+            --warning-color: #ff9800;
+            --success-color: #4caf50;
+        }
+
+        body {
+            background-color: var(--dark-bg);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .dialog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: var(--header-bg);
+            height: 32px;
+            padding: 0 10px;
+            -webkit-app-region: drag;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .dialog-title {
+            font-weight: bold;
+            -webkit-app-region: no-drag;
+        }
+
+        .close-button {
+            -webkit-app-region: no-drag;
+            background: none;
+            border: none;
+            color: var(--text-color);
+            font-size: 16px;
+            cursor: pointer;
+            width: 30px;
+            height: 100%;
+        }
+
+        .close-button:hover {
+            background-color: #e81123;
+        }
+
+        .dialog-content {
+            padding: 10px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .file-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+            padding: 10px;
+            overflow-y: auto;
+            max-height: calc(100vh - 150px);
+        }
+
+        .file-item {
+            background-color: var(--darker-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .file-item:hover, .file-item.selected {
+            border-color: var(--accent-color);
+        }
+
+        .file-item.selected {
+            background-color: rgba(66, 133, 244, 0.2);
+        }
+
+        .thumbnail {
+            width: 100px;
+            height: 100px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background-color: var(--dark-bg);
+            margin-bottom: 8px;
+        }
+
+        .thumbnail img {
+            max-width: 100%;
+            max-height: 100%;
+        }
+
+        .no-preview {
+            color: #777;
+            font-style: italic;
+            font-size: 12px;
+            text-align: center;
+        }
+
+        .filename {
+            text-align: center;
+            font-size: 12px;
+            word-break: break-word;
+            max-width: 100%;
+        }
+
+        .dialog-footer {
+            padding: 10px;
+            background-color: var(--darker-bg);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            cursor: pointer;
+        }
+
+        .action-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        button {
+            background-color: var(--button-bg);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 2px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: var(--button-hover);
+        }
+
+        button:disabled {
+            background-color: #555;
+            cursor: not-allowed;
+        }
+
+        button.cancel {
+            background-color: #555;
+        }
+
+        button.cancel:hover {
+            background-color: #666;
+        }
+
+        /* Loading indicator */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 200px;
+        }
+
+        .loading-spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid var(--accent-color);
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--darker-bg);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #666;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #888;
+        }
+    </style>
+</head>
+
+<body>
+<div class="dialog-header">
+    <div class="dialog-title">Select Job</div>
+    <button class="close-button" id="btn-close">×</button>
+</div>
+
+<div class="dialog-content">
+    <div class="loading" id="loading">
+        <div class="loading-spinner"></div>
+    </div>
+    <div class="file-list" id="file-list"></div>
+</div>
+
+<div class="dialog-footer">
+    <div class="options">
+        <label class="checkbox-label">
+            <input type="checkbox" id="cb-leveling">
+            Bed Leveling Before Print
+        </label>
+        <label class="checkbox-label">
+            <input type="checkbox" id="cb-start-now" checked>
+            Start Print After Selection
+        </label>
+    </div>
+    <div class="action-buttons">
+        <button class="cancel" id="btn-cancel">Cancel</button>
+        <button id="btn-select" disabled>Select</button>
+    </div>
+</div>
+
+<script>
+    let selectedFile = null;
+    let fileList = [];
+
+    // When DOM content is loaded, set up event listeners
+    document.addEventListener('DOMContentLoaded', () => {
+        // Close button event
+        document.getElementById('btn-close').addEventListener('click', () => {
+            window.api.send('close-job-picker');
+        });
+
+        // Cancel button event
+        document.getElementById('btn-cancel').addEventListener('click', () => {
+            window.api.send('close-job-picker');
+        });
+
+        // Select button event
+        document.getElementById('btn-select').addEventListener('click', () => {
+            if (selectedFile) {
+                window.api.send('job-selected', {
+                    filename: selectedFile,
+                    leveling: document.getElementById('cb-leveling').checked,
+                    startNow: document.getElementById('cb-start-now').checked
+                });
+            }
+        });
+
+        // Listen for job list from main process
+        window.api.receive('job-list', (data) => {
+            fileList = data.files;
+            document.querySelector('.dialog-title').textContent = data.dialogTitle;
+            
+            // If this is a legacy printer, show a message about legacy mode
+            if (data.isLegacy) {
+                // Update dialog title to indicate legacy mode
+                document.querySelector('.dialog-title').textContent += " (Legacy Mode)";
+                
+                // Legacy printers can now start prints with the new API
+                // No need to disable the checkbox anymore
+            }
+            
+            populateFileList(data.files);
+        });
+
+        // Listen for thumbnail results from main process
+        window.api.receive('thumbnail-result', (data) => {
+            updateThumbnail(data.filename, data.thumbnail);
+        });
+    });
+
+    // Function to populate the file list
+    function populateFileList(files) {
+        const fileListElement = document.getElementById('file-list');
+        const loadingElement = document.getElementById('loading');
+
+        // Hide loading, show file list
+        loadingElement.style.display = 'none';
+        fileListElement.style.display = 'grid';
+
+        // Clear existing files
+        fileListElement.innerHTML = '';
+
+        if (files.length === 0) {
+            fileListElement.innerHTML = '<div class="no-files">No files found</div>';
+            return;
+        }
+
+        // Add each file to the grid
+        files.forEach(file => {
+            let filename;
+            if (typeof file === 'string') {
+                filename = file;
+            } else {
+                filename = file.filename || file.name;
+            }
+
+            const fileItem = document.createElement('div');
+            fileItem.className = 'file-item';
+            fileItem.dataset.filename = filename;
+
+            const thumbnail = document.createElement('div');
+            thumbnail.className = 'thumbnail';
+            thumbnail.innerHTML = '<div class="no-preview">Loading...</div>';
+
+            const filenameElement = document.createElement('div');
+            filenameElement.className = 'filename';
+            filenameElement.textContent = filename;
+
+            fileItem.appendChild(thumbnail);
+            fileItem.appendChild(filenameElement);
+            fileListElement.appendChild(fileItem);
+
+            // Request thumbnail for this file
+            window.api.send('request-thumbnail', filename);
+
+            // Add click event to select this file
+            fileItem.addEventListener('click', () => {
+                // Deselect previous selection
+                document.querySelectorAll('.file-item.selected').forEach(item => {
+                    item.classList.remove('selected');
+                });
+
+                // Select this file
+                fileItem.classList.add('selected');
+                selectedFile = filename;
+
+                // Enable the select button
+                document.getElementById('btn-select').disabled = false;
+            });
+        });
+    }
+
+    // Function to update thumbnail once it's received
+    function updateThumbnail(filename, thumbnail) {
+        const fileItems = document.querySelectorAll('.file-item');
+
+        for (const item of fileItems) {
+            if (item.dataset.filename === filename) {
+                const thumbnailDiv = item.querySelector('.thumbnail');
+
+                if (thumbnail) {
+                    // Display actual thumbnail as PNG
+                    thumbnailDiv.innerHTML = `<img src="data:image/png;base64,${thumbnail}" alt="${filename}" />`;
+                } else {
+                    // Display placeholder for no thumbnail
+                    thumbnailDiv.innerHTML = '<div class="no-preview">No Preview</div>';
+                }
+
+                break;
+            }
+        }
+    }
+</script>
+</body>
+</html>
