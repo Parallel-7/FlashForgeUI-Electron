@@ -1,7 +1,7 @@
 {
   "name": "FlashForgeUI",
   "productName": "FlashForgeUI",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Monitoring and Control software for FlashForge printers",
   "main": "lib/index.js",
   "scripts": {
