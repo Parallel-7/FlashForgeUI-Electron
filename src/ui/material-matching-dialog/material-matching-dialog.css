@@ -1,0 +1,374 @@
+/* Material Matching Dialog Styles */
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+}
+
+/* Dark theme styles */
+body {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+}
+
+/* Dialog header */
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #252525;
+  border-bottom: 1px solid #333;
+  border-radius: 8px 8px 0 0;
+}
+
+.dialog-title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #ffffff;
+  margin: 0;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  color: #e0e0e0;
+  font-size: 20px;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.close-button:hover {
+  background-color: #e81123;
+  color: #ffffff;
+}
+
+/* Dialog content */
+.dialog-content {
+  padding: 20px;
+  overflow-y: auto;
+  max-height: calc(90vh - 140px);
+}
+
+/* Dialog footer */
+.dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px;
+  background-color: #252525;
+  border-top: 1px solid #333;
+  border-radius: 0 0 8px 8px;
+}
+
+/* Button styles */
+.button {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.button.primary {
+  background-color: #4285f4;
+  color: white;
+}
+
+.button.primary:hover:not(:disabled) {
+  background-color: #5a95f5;
+}
+
+.button.primary:disabled {
+  background-color: #555;
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.button.secondary {
+  background-color: #3a3a3a;
+  color: #e0e0e0;
+  border: 1px solid #555;
+}
+
+.button.secondary:hover {
+  background-color: #444;
+}
+
+.dialog-container {
+  width: 700px;
+  max-width: 90vw;
+  max-height: 90vh;
+  background-color: #1e1e1e;
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  border: 1px solid #333;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.info-section {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.info-text {
+  margin: 0;
+  color: #c0c0c0;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.matching-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
+  gap: 20px;
+  min-height: 400px;
+}
+
+.requirements-section {
+  grid-column: 1;
+  grid-row: 1 / 3;
+}
+
+.ifs-section {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.mappings-section {
+  grid-column: 2;
+  grid-row: 2;
+}
+
+.requirements-section h3,
+.ifs-section h3,
+.mappings-section h3 {
+  margin: 0 0 15px 0;
+  color: #ffffff;
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* Requirement list */
+.requirement-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.requirement-item {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 15px;
+  transition: all 0.2s ease;
+}
+
+.requirement-item.selected {
+  border-color: #00ff6e;
+  box-shadow: 0 0 10px rgba(0, 255, 110, 0.3);
+}
+
+.requirement-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.tool-label {
+  font-weight: 500;
+  color: #ffffff;
+}
+
+.material-swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+}
+
+.requirement-details {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: #b0b0b0;
+}
+
+/* IFS slot list */
+.slot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.slot-item {
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.slot-item:hover:not(.disabled):not(.assigned) {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.slot-item.selected {
+  border-color: #00ff6e;
+  background-color: rgba(0, 255, 110, 0.1);
+}
+
+.slot-item.assigned {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slot-item.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.slot-swatch {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  flex-shrink: 0;
+}
+
+.slot-info {
+  flex: 1;
+}
+
+.slot-label {
+  font-weight: 500;
+  color: #ffffff;
+  margin-bottom: 4px;
+}
+
+.slot-material {
+  font-size: 13px;
+  color: #b0b0b0;
+}
+
+.slot-empty {
+  font-size: 13px;
+  color: #808080;
+  font-style: italic;
+}
+
+/* Mapping list */
+.mapping-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.mapping-item {
+  background-color: rgba(0, 255, 110, 0.05);
+  border: 1px solid rgba(0, 255, 110, 0.2);
+  border-radius: 6px;
+  padding: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.mapping-text {
+  color: #c0c0c0;
+}
+
+.mapping-arrow {
+  color: #00ff6e;
+  margin: 0 8px;
+}
+
+.mapping-warning {
+  background-color: rgba(255, 200, 0, 0.05);
+  border-color: rgba(255, 200, 0, 0.2);
+}
+
+.mapping-warning .mapping-arrow {
+  color: #ffc800;
+}
+
+.remove-mapping {
+  background: none;
+  border: none;
+  color: #ff4444;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.remove-mapping:hover {
+  background-color: rgba(255, 68, 68, 0.2);
+}
+
+/* Messages */
+.error-message,
+.warning-message {
+  margin-top: 15px;
+  padding: 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.error-message {
+  background-color: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  color: #ff4444;
+}
+
+.warning-message {
+  background-color: rgba(255, 200, 0, 0.1);
+  border: 1px solid rgba(255, 200, 0, 0.3);
+  color: #ffc800;
+}
+
+/* Empty state */
+.empty-mappings {
+  text-align: center;
+  color: #808080;
+  font-style: italic;
+  padding: 20px;
+}
+

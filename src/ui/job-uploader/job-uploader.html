@@ -6,69 +6,118 @@
     <link rel="stylesheet" href="job-uploader.css" />
 </head>
 <body>
-<div class="dialog-container">
-    <!-- Header -->
-    <div class="dialog-header">
-        <div class="dialog-title">Upload Job</div>
-        <button class="dialog-close" id="btn-close">×</button>
+
+<!-- Header -->
+<div class="header">
+    <span class="title">Upload Job</span>
+    <button class="close-btn" id="btn-close">×</button>
+</div>
+
+<!-- File Selection -->
+<div class="file-section">
+    <div class="file-path" id="file-path-display">No file selected...</div>
+    <button class="browse-btn" id="btn-browse">Browse...</button>
+</div>
+
+<!-- Options -->
+<div class="options-section">
+    <label class="option">
+        <input type="checkbox" id="cb-start-now" checked> Start Now
+    </label>
+    <label class="option">
+        <input type="checkbox" id="cb-auto-level"> Auto Level
+    </label>
+</div>
+
+<!-- Main Content - 3 Column Layout -->
+<div class="content">
+    <!-- Left Column: File Details -->
+    <div class="column">
+        <div class="field">
+            <span class="label">Printer:</span>
+            <span class="value" id="meta-printer">-</span>
+        </div>
+        <div class="field">
+            <span class="label">Filament:</span>
+            <span class="value" id="meta-filament-type">-</span>
+        </div>
+        <div class="field">
+            <span class="label">Used (Len):</span>
+            <span class="value" id="meta-filament-len">-</span>
+        </div>
+        <div class="field">
+            <span class="label">Used (Wt):</span>
+            <span class="value" id="meta-filament-wt">-</span>
+        </div>
+        <div class="field">
+            <span class="label">Support:</span>
+            <span class="value" id="meta-support">-</span>
+        </div>
     </div>
 
-    <!-- Content -->
-    <div class="dialog-content">
-        <!-- File Selection -->
-        <div class="file-selection-row">
-            <span id="file-path-display">No file selected...</span>
-            <button class="dialog-button" id="btn-browse">Browse...</button>
+    <!-- Middle Column: Slicer Info -->
+    <div class="column">
+        <div class="field">
+            <span class="label">Slicer:</span>
+            <span class="value" id="meta-slicer-name">-</span>
         </div>
-
-        <!-- Options -->
-        <div class="options-row">
-            <label class="checkbox-label">
-                <input type="checkbox" id="cb-start-now" checked> Start Now
-            </label>
-            <label class="checkbox-label">
-                <input type="checkbox" id="cb-auto-level"> Auto Level
-            </label>
+        <div class="field">
+            <span class="label">Version:</span>
+            <span class="value" id="meta-slicer-ver">-</span>
         </div>
-
-        <!-- Metadata Display -->
-        <div class="metadata-area">
-            <!-- Left Column: Details -->
-            <div class="metadata-column details">
-                <div><span class="meta-label">Printer:</span> <span class="meta-value" id="meta-printer">-</span></div>
-                <div><span class="meta-label">Filament:</span> <span class="meta-value" id="meta-filament-type">-</span></div>
-                <div><span class="meta-label">Used (Len):</span> <span class="meta-value" id="meta-filament-len">-</span></div>
-                <div><span class="meta-label">Used (Wt):</span> <span class="meta-value" id="meta-filament-wt">-</span></div>
-                <!-- Add other details from 3MF if needed -->
-                <div><span class="meta-label">Support:</span> <span class="meta-value" id="meta-support">-</span></div>
-            </div>
-
-            <!-- Middle Column: Slicer Info -->
-            <div class="metadata-column slicer">
-                <div><span class="meta-label">Slicer:</span> <span class="meta-value" id="meta-slicer-name">-</span></div>
-                <div><span class="meta-label">Version:</span> <span class="meta-value" id="meta-slicer-ver">-</span></div>
-                <div><span class="meta-label">Date:</span> <span class="meta-value" id="meta-slice-date">-</span></div>
-                <div><span class="meta-label">Time:</span> <span class="meta-value" id="meta-slice-time">-</span></div>
-            </div>
-
-            <!-- Right Column: Preview & ETA -->
-            <div class="metadata-column preview">
-                <div class="thumbnail-box" id="meta-thumbnail">
-                    <span class="no-preview-text">No Preview</span>
-                </div>
-                <div class="eta-value"><span class="meta-label">ETA:</span> <span class="meta-value" id="meta-eta">-</span></div>
-            </div>
+        <div class="field">
+            <span class="label">Date:</span>
+            <span class="value" id="meta-slice-date">-</span>
         </div>
-        <!-- Loading Overlay -->
-        <div id="loading-overlay" class="loading-overlay" style="display: none;">Parsing file...</div>
+        <div class="field">
+            <span class="label">Time:</span>
+            <span class="value" id="meta-slice-time">-</span>
+        </div>
     </div>
 
-    <!-- Footer -->
-    <div class="dialog-footer">
-        <button class="dialog-button cancel" id="btn-cancel">Cancel</button>
-        <button class="dialog-button" id="btn-ok" disabled>OK</button>
+    <!-- Right Column: Preview -->
+    <div class="column preview-column">
+        <div class="thumbnail" id="meta-thumbnail">
+            <span class="no-preview">No Preview</span>
+        </div>
+        <div class="field eta-field">
+            <span class="label">ETA:</span>
+            <span class="value" id="meta-eta">-</span>
+        </div>
     </div>
 </div>
-<script src="job-uploader-renderer.js"></script>
+
+<!-- Footer -->
+<div class="footer">
+    <button class="btn cancel-btn" id="btn-cancel">Cancel</button>
+    <button class="btn ok-btn" id="btn-ok" disabled>OK</button>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay" style="display: none;">
+    Parsing file...
+</div>
+
+<!-- Upload Progress Overlay -->
+<div id="upload-progress-overlay" class="upload-progress-overlay" style="display: none;">
+    <div class="progress-container">
+        <div class="progress-header">
+            <span class="progress-title">Uploading Job</span>
+            <span class="progress-percentage" id="progress-percentage">0%</span>
+        </div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="progress-status" id="progress-status">Preparing upload...</div>
+    </div>
+</div>
+
+<!-- CommonJS shim -->
+<script>
+    if (typeof exports === 'undefined') {
+        var exports = {};
+    }
+</script>
+<script src="../../../lib/ui/job-uploader/job-uploader-renderer.js"></script>
 </body>
 </html>

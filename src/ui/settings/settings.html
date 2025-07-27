@@ -98,11 +98,18 @@
     <!-- Footer -->
     <div class="dialog-footer">
         <span id="save-status" class="save-status"></span>
-        <button class="dialog-button cancel" id="btn-cancel">Close</button>
-        <!-- Save button might not be needed if changes are saved on input -->
-        <!-- <button class="dialog-button" id="btn-save">Save & Close</button> -->
+        <div class="dialog-buttons">
+            <button class="dialog-button cancel" id="btn-close-footer">Close</button>
+            <button class="dialog-button primary" id="btn-save">Save</button>
+        </div>
     </div>
 </div>
-<script src="settings-renderer.js"></script>
+<script>
+  // Shim for CommonJS exports in browser context
+  if (typeof exports === 'undefined') {
+    var exports = {};
+  }
+</script>
+<script src="../../../lib/ui/settings/settings-renderer.js"></script>
 </body>
 </html>

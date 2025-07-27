@@ -1,4 +1,7 @@
-/* src/ui/printer-selection.css */
+/* src/ui/printer-selection/printer-selection.css */
+/* Dark theme styling for printer selection dialog - 1:1 match with legacy version */
+/* Extended with support for saved printer mode */
+
 * {
     margin: 0;
     padding: 0;
@@ -17,6 +20,9 @@
     --row-hover-bg: #3a3a3a;
     --selected-bg: #4285f4; /* Use accent color for selection */
     --selected-text: white;
+    --status-online: #4caf50;
+    --status-offline: #f44336;
+    --status-changed: #ff9800;
 }
 
 html, body {
@@ -95,6 +101,55 @@ table {
     table-layout: fixed; /* Prevent columns from auto-sizing too much */
 }
 
+/* Column width adjustments for different modes */
+table.discovered-mode {
+    /* Original 3-column layout for discovered printers */
+}
+
+table.discovered-mode th:nth-child(1),
+table.discovered-mode td:nth-child(1) {
+    width: 40%; /* Printer Name */
+}
+
+table.discovered-mode th:nth-child(2),
+table.discovered-mode td:nth-child(2) {
+    width: 35%; /* IP Address */
+}
+
+table.discovered-mode th:nth-child(3),
+table.discovered-mode td:nth-child(3) {
+    width: 25%; /* Serial Number */
+}
+
+table.saved-mode {
+    /* 5-column layout for saved printers */
+}
+
+table.saved-mode th:nth-child(1),
+table.saved-mode td:nth-child(1) {
+    width: 25%; /* Printer Name */
+}
+
+table.saved-mode th:nth-child(2),
+table.saved-mode td:nth-child(2) {
+    width: 20%; /* IP Address */
+}
+
+table.saved-mode th:nth-child(3),
+table.saved-mode td:nth-child(3) {
+    width: 20%; /* Serial Number */
+}
+
+table.saved-mode th:nth-child(4),
+table.saved-mode td:nth-child(4) {
+    width: 20%; /* Last Connected */
+}
+
+table.saved-mode th:nth-child(5),
+table.saved-mode td:nth-child(5) {
+    width: 15%; /* Status */
+}
+
 th, td {
     padding: 8px 10px;
     text-align: left;
@@ -125,6 +180,10 @@ tbody tr.selected {
     color: var(--selected-text);
 }
 
+tbody tr.last-used {
+    border-left: 3px solid var(--button-bg);
+}
+
 tbody tr.loading-row td,
 .message-overlay {
     text-align: center;
@@ -146,6 +205,46 @@ tbody tr.loading-row td,
     z-index: 2; /* Above table */
 }
 
+/* Status indicators for saved printer mode */
+.status-indicator {
+    display: inline-block;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.75em;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+
+.status-online {
+    background-color: var(--status-online);
+    color: white;
+}
+
+.status-offline {
+    background-color: var(--status-offline);
+    color: white;
+}
+
+.status-changed {
+    background-color: var(--status-changed);
+    color: white;
+}
+
+/* IP address change indicator */
+.ip-changed {
+    color: var(--status-changed);
+    font-size: 0.85em;
+}
+
+.ip-changed::after {
+    content: " (IP changed)";
+    font-style: italic;
+}
+
+/* Date formatting for last connected */
+.date-cell {
+    font-size: 0.9em;
+}
 
 /* Footer */
 .dialog-footer {
@@ -179,9 +278,11 @@ tbody tr.loading-row td,
 .dialog-button.cancel {
     background-color: #555;
 }
+
 .dialog-button.cancel:hover {
     background-color: #666;
 }
+
 .dialog-button:disabled {
     background-color: #555;
     cursor: not-allowed;
@@ -192,13 +293,55 @@ tbody tr.loading-row td,
     width: 8px;
     height: 8px;
 }
+
 ::-webkit-scrollbar-track {
     background: var(--darker-bg);
 }
+
 ::-webkit-scrollbar-thumb {
     background: #666;
     border-radius: 4px;
 }
+
 ::-webkit-scrollbar-thumb:hover {
     background: #888;
+}
+
+/* Scanning animation */
+.scanning-animation {
+    font-size: 1.1em;
+    color: #1e88e5;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+    100% {
+        opacity: 1;
+    }
+}
+
+/* Discovery error styles */
+#no-printers-message button {
+    background-color: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 20px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+#no-printers-message button:hover {
+    background-color: #1976d2;
+}
+
+#no-printers-message button:active {
+    background-color: #1565c0;
 }

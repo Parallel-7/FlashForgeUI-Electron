@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Input Dialog</title>
+    <link rel="stylesheet" href="input-dialog.css">
+</head>
+<body>
+    <div class="dialog-header">
+        <div class="dialog-title" id="dialog-title">Input Dialog</div>
+        <button class="dialog-close" id="dialog-close">×</button>
+    </div>
+    <div class="dialog-content">
+        <div class="dialog-message" id="dialog-message">Please enter a value:</div>
+        <input class="dialog-input" id="dialog-input" />
+        <div class="dialog-buttons">
+            <button class="dialog-button cancel" id="dialog-cancel">Cancel</button>
+            <button class="dialog-button" id="dialog-ok">OK</button>
+        </div>
+    </div>
+
+    <!-- CommonJS shim for TypeScript compilation compatibility -->
+    <script>
+        if (typeof exports === 'undefined') {
+            var exports = {};
+        }
+    </script>
+    <script src="../../../lib/ui/input-dialog/input-dialog-renderer.js"></script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ES2015",
+    "module": "none",
+    "lib": ["ES2015", "DOM"],
+    "outDir": "../../../dist/webui/static",
+    "rootDir": ".",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true,
+    "removeComments": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "files": ["app.ts"],
+  "exclude": ["node_modules"]
+}

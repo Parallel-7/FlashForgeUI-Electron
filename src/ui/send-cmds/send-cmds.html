@@ -28,6 +28,12 @@
     </div>
 </div>
 
-<script src="send-cmds-renderer.js"></script>
+<script>
+  // Shim for CommonJS exports in browser context
+  if (typeof exports === 'undefined') {
+    var exports = {};
+  }
+</script>
+<script src="../../../lib/ui/send-cmds/send-cmds-renderer.js"></script>
 </body>
 </html>

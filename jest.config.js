@@ -1,7 +1,9 @@
 // jest.config.js
 module.exports = {
     testEnvironment: 'jsdom', // Use jsdom to simulate browser environment
+    preset: 'ts-jest',
     transform: {
+      '^.+\\.tsx?$': 'ts-jest', // Transform TypeScript files using ts-jest
       '^.+\\.jsx?$': 'babel-jest', // Transform JS files using Babel
     },
     // Optional: Mock CSS/image imports if they cause errors
@@ -22,11 +24,8 @@ module.exports = {
     collectCoverageFrom: [
       'src/**/*.{js,jsx,ts,tsx}', // Adjust to match your source structure
       '!src/**/*.d.ts',
-      '!src/main.js', // Exclude main process file
-      '!src/preload.js', // Exclude preload scripts
-      '!src/dialog-preload.js',
-      '!src/settings-preload.js',
-      '!src/printer-selection-preload.js',
+      '!src/main.ts', // Exclude main process file
+      '!src/preload.ts', // Exclude preload scripts
       '!src/**/*.test.{js,jsx,ts,tsx}', // Exclude test files themselves
       '!src/**/index.ts', // Exclude index barrels if any
       // Add other files/patterns to exclude from coverage

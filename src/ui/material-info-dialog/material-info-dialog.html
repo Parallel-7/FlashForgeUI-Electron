@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Material Information</title>
+    <link rel="stylesheet" href="material-info-dialog.css">
+</head>
+<body>
+    <div class="dialog-container">
+        <!-- Custom window titlebar -->
+        <div class="dialog-titlebar">
+            <span class="dialog-title">Material Information</span>
+            <button id="btn-close" class="dialog-close-btn">×</button>
+        </div>
+        
+        <!-- Material info content -->
+        <div class="material-info-container">
+            <div class="file-header">
+                <h3 id="file-name">Loading...</h3>
+                <div class="file-stats" id="file-stats">
+                    <span id="total-weight"></span>
+                    <span id="material-station-status"></span>
+                </div>
+            </div>
+            
+            <div class="materials-container" id="materials-container">
+                <!-- Material spools will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Shim for CommonJS exports in browser context
+        if (typeof exports === 'undefined') {
+            var exports = {};
+        }
+    </script>
+    <script src="../../../lib/ui/material-info-dialog/material-info-dialog-renderer.js"></script>
+</body>
+</html> 

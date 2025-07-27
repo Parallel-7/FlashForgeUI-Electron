@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm Print</title>
+  <link rel="stylesheet" href="../../index.css">
+  <link rel="stylesheet" href="single-color-confirmation-dialog.css">
+  <script>
+    // CommonJS compatibility shim for exports
+    if (typeof exports === 'undefined') { var exports = {}; }
+  </script>
+</head>
+<body>
+  <div class="dialog-container">
+    <div class="dialog-header">
+      <h2 class="dialog-title">Confirm Print</h2>
+      <button class="close-button" id="btn-close" title="Close">✕</button>
+    </div>
+    
+    <div class="dialog-content">
+      <div class="confirmation-message">
+        <p>Ready to start printing:</p>
+        <h3 id="file-name" class="file-name">Loading...</h3>
+      </div>
+      
+      <div class="material-preview">
+        <h4>Active Material</h4>
+        <div class="material-card">
+          <div class="material-spool">
+            <div id="spool-color" class="spool-color"></div>
+            <div class="spool-hole"></div>
+          </div>
+          <div class="material-info">
+            <div id="slot-label" class="slot-label">Loading...</div>
+            <div id="material-type" class="material-type">Loading...</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="options-section">
+        <label class="checkbox-container">
+          <input type="checkbox" id="cb-leveling">
+          <span class="checkbox-label">Perform bed leveling before print</span>
+        </label>
+      </div>
+      
+      <div id="error-message" class="error-message" style="display: none;"></div>
+    </div>
+    
+    <div class="dialog-footer">
+      <button class="button secondary" id="btn-cancel">Cancel</button>
+      <button class="button primary" id="btn-start">Start Print</button>
+    </div>
+  </div>
+  
+  <script src="../../../lib/ui/single-color-confirmation-dialog/single-color-confirmation-dialog-renderer.js"></script>
+</body>
+</html>

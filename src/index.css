@@ -224,6 +224,20 @@ progress {
   background-color: var(--button-hover);
 }
 
+/* Disabled button styles */
+.btn-row button:disabled,
+.btn-row button.disabled {
+  background-color: #555;
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.btn-row button:disabled:hover,
+.btn-row button.disabled:hover {
+  background-color: #555; /* No hover effect when disabled */
+}
+
 .model-panel, .job-stats-panel {
   border-top: 1px solid var(--border-color);
   display: flex;
@@ -232,18 +246,18 @@ progress {
 
 /* Make panels below controls fill remaining space */
 .model-panel {
-  flex: 1; /* Allow model panel to grow */
-  min-height: 150px; /* Ensure it has some minimum height */
+  flex: 1; /* Allow model panel to grow and take remaining space */
+  min-height: 100px; /* Reduced minimum height to allow more space for job stats */
   overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .job-stats-panel {
-  /* height: 160px; */ /* REMOVED: Fixed height removed */
+  height: 180px; /* RESTORED: Fixed height to accommodate all 5 info rows */
   display: flex;
   flex-direction: column;
-  flex-shrink: 0; /* ADDED: Prevent shrinking below content size */
+  flex-shrink: 0; /* Prevent shrinking below content size */
 }
 
 .panel-header {
@@ -355,6 +369,23 @@ progress {
   cursor: pointer;
 }
 
+.temp-buttons button:hover {
+  background-color: var(--button-hover);
+}
+
+.temp-buttons button:disabled,
+.temp-buttons button.disabled {
+  background-color: #555;
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.temp-buttons button:disabled:hover,
+.temp-buttons button.disabled:hover {
+  background-color: #555; /* No hover effect when disabled */
+}
+
 .filtration-buttons {
   display: flex;
   flex-direction: column;
@@ -371,6 +402,23 @@ progress {
   font-size: 0.8em;
   cursor: pointer;
   width: 100%; /* Ensure buttons take full width */
+}
+
+.filtration-buttons button:hover {
+  background-color: var(--button-hover);
+}
+
+.filtration-buttons button:disabled,
+.filtration-buttons button.disabled {
+  background-color: #555;
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.filtration-buttons button:disabled:hover,
+.filtration-buttons button.disabled:hover {
+  background-color: #555; /* No hover effect when disabled */
 }
 
 /* Log Panel */
@@ -445,3 +493,197 @@ progress {
   .camera-view { min-height: 100px; }
   .model-panel { min-height: 100px; }
 }
+
+/* Loading Overlay */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 10000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: opacity 0.3s ease-in-out;
+}
+
+.loading-overlay.hidden {
+  display: none;
+}
+
+.loading-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(2px);
+}
+
+.loading-container {
+  position: relative;
+  z-index: 10001;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loading-content {
+  background-color: var(--dark-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 32px 24px;
+  min-width: 300px;
+  max-width: 500px;
+  text-align: center;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px;
+  border: 4px solid var(--border-color);
+  border-top: 4px solid var(--accent-color);
+  border-radius: 50%;
+  animation: loading-spin 1s linear infinite;
+}
+
+@keyframes loading-spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.loading-message {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-color);
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+
+.loading-progress-container {
+  margin-bottom: 16px;
+  display: none;
+}
+
+.loading-progress-container.visible {
+  display: block;
+}
+
+.loading-progress-bar {
+  width: 100%;
+  height: 6px;
+  background-color: var(--border-color);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.loading-progress-fill {
+  height: 100%;
+  background-color: var(--accent-color);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+  width: 0%;
+}
+
+.loading-progress-text {
+  font-size: 14px;
+  color: var(--text-color);
+  opacity: 0.8;
+}
+
+.loading-cancel-btn {
+  background-color: var(--error-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  display: none;
+}
+
+.loading-cancel-btn.visible {
+  display: inline-block;
+}
+
+.loading-cancel-btn:hover {
+  background-color: #d32f2f;
+}
+
+.loading-success-icon,
+.loading-error-icon {
+  display: none;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  color: white;
+  font-size: 24px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 48px;
+  margin: 0 auto 16px;
+}
+
+.loading-success-icon {
+  background-color: var(--success-color);
+}
+
+.loading-error-icon {
+  background-color: var(--error-color);
+}
+
+/* Loading States */
+.loading-overlay.state-loading .loading-content {
+  display: block;
+}
+
+.loading-overlay.state-loading .loading-success-icon,
+.loading-overlay.state-loading .loading-error-icon {
+  display: none;
+}
+
+.loading-overlay.state-success .loading-content {
+  display: block; /* Keep content visible for success state */
+}
+
+.loading-overlay.state-success .loading-spinner {
+  display: none; /* Hide spinner in success state */
+}
+
+.loading-overlay.state-success .loading-success-icon {
+  display: block;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px; /* Same positioning as spinner */
+}
+
+.loading-overlay.state-success .loading-error-icon {
+  display: none;
+}
+
+.loading-overlay.state-error .loading-content {
+  display: block; /* Keep content visible for error state */
+}
+
+.loading-overlay.state-error .loading-spinner {
+  display: none; /* Hide spinner in error state */
+}
+
+.loading-overlay.state-error .loading-error-icon {
+  display: block;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 16px; /* Same positioning as spinner */
+}
+
+.loading-overlay.state-error .loading-success-icon {
+  display: none;
+}
+
+/* Remove the separate container styling since icons are now inside content */

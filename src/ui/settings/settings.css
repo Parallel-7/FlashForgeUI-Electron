@@ -1,4 +1,4 @@
-/* src/ui/settings.css */
+/* src/ui/settings/settings.css */
 * {
     margin: 0;
     padding: 0;
@@ -15,6 +15,7 @@
     --button-hover: #5a95f5;
     --text-color: #e0e0e0;
     --input-bg: #3c3c3c; /* Slightly lighter for inputs */
+    --success-color: #4CAF50;
 }
 
 body {
@@ -155,6 +156,10 @@ input[type="checkbox"] {
     opacity: 1;
 }
 
+.dialog-buttons {
+    display: flex;
+    gap: 10px;
+}
 
 .dialog-button {
     background-color: var(--button-bg);
@@ -172,10 +177,19 @@ input[type="checkbox"] {
 .dialog-button.cancel {
     background-color: #555;
 }
+
 .dialog-button.cancel:hover {
     background-color: #666;
 }
 
+.dialog-button.primary {
+    background-color: var(--button-bg);
+    order: 1; /* Ensure Save button appears after Close */
+}
+
+.dialog-button.primary:hover {
+    background-color: var(--button-hover);
+}
 
 /* Custom scrollbar styling */
 ::-webkit-scrollbar {

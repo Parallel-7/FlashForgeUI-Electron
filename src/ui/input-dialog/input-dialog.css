@@ -1,0 +1,191 @@
+/* Input Dialog CSS - Dark Theme Styling */
+/* Matches legacy FlashForge UI exactly */
+
+/* Reset and base styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+/* CSS Variables for consistent theming */
+:root {
+    --dark-bg: #2a2a2a;
+    --darker-bg: #1e1e1e;
+    --header-bg: #222222;
+    --border-color: #444444;
+    --button-bg: #4285f4;
+    --button-hover: #5a95f5;
+    --text-color: #e0e0e0;
+    --button-cancel-bg: #555;
+    --button-cancel-hover: #666;
+}
+
+/* Body and main container */
+body {
+    background-color: var(--dark-bg);
+    color: var(--text-color);
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Dialog header with title bar */
+.dialog-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--header-bg);
+    height: 32px;
+    padding: 0 10px;
+    -webkit-app-region: drag;
+    border-bottom: 1px solid var(--border-color);
+    user-select: none;
+}
+
+.dialog-title {
+    flex: 1;
+    text-align: center;
+    font-size: 13px;
+    font-weight: normal;
+    color: var(--text-color);
+}
+
+/* Close button */
+.dialog-close {
+    -webkit-app-region: no-drag;
+    background: none;
+    border: none;
+    color: var(--text-color);
+    font-size: 16px;
+    cursor: pointer;
+    width: 30px;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease;
+}
+
+.dialog-close:hover {
+    background-color: #e81123;
+    color: white;
+}
+
+.dialog-close:focus {
+    outline: none;
+    background-color: #e81123;
+    color: white;
+}
+
+/* Main content area */
+.dialog-content {
+    flex: 1;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 16px;
+}
+
+/* Message text */
+.dialog-message {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--text-color);
+    margin-bottom: 4px;
+}
+
+/* Input field */
+.dialog-input {
+    background-color: var(--darker-bg);
+    border: 1px solid var(--border-color);
+    padding: 8px 12px;
+    color: var(--text-color);
+    font-size: 14px;
+    border-radius: 2px;
+    outline: none;
+    transition: border-color 0.15s ease;
+}
+
+.dialog-input:focus {
+    border-color: var(--button-bg);
+    box-shadow: 0 0 0 1px var(--button-bg);
+}
+
+.dialog-input::placeholder {
+    color: #888;
+}
+
+/* Button container */
+.dialog-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-top: 8px;
+}
+
+/* Button base styling */
+.dialog-button {
+    background-color: var(--button-bg);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 2px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    min-width: 70px;
+    height: 32px;
+    transition: background-color 0.15s ease;
+}
+
+.dialog-button:hover {
+    background-color: var(--button-hover);
+}
+
+.dialog-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.5);
+}
+
+.dialog-button:active {
+    transform: translateY(1px);
+}
+
+/* Cancel button variant */
+.dialog-button.cancel {
+    background-color: var(--button-cancel-bg);
+}
+
+.dialog-button.cancel:hover {
+    background-color: var(--button-cancel-hover);
+}
+
+.dialog-button.cancel:focus {
+    box-shadow: 0 0 0 2px rgba(85, 85, 85, 0.5);
+}
+
+/* Hidden input state for confirmation dialogs */
+.dialog-input.hidden {
+    display: none;
+}
+
+/* Responsive adjustments */
+@media (max-width: 400px) {
+    .dialog-content {
+        padding: 16px;
+    }
+    
+    .dialog-buttons {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+    
+    .dialog-button {
+        width: 100%;
+    }
+}

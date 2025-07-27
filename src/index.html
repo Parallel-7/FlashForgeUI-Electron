@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <title>FlashForge UI 1.0</title>
-  <link rel="stylesheet" href="index.css" />
+  <!-- CSS is now bundled by webpack -->
 </head>
 <body>
 <div class="app-container">
@@ -13,6 +13,7 @@
       <button id="btn-connect">Connect</button>
       <button id="btn-settings">Settings</button>
       <button id="btn-status">Status</button>
+      <button id="btn-ifs" class="hidden">IFS</button>
     </div>
     <div class="title">FlashForge UI 1.0</div>
     <div class="window-controls">
@@ -42,7 +43,6 @@
         <progress id="progress-bar" value="0" max="100"></progress>
         <div class="camera-controls">
           <button id="btn-preview">Preview Off</button>
-          <button id="btn-restore-camera" title="Fix stuck camera stream">Restore Camera</button>
         </div>
       </div>
     </div>
@@ -166,8 +166,28 @@
   <div class="log-panel">
     <div id="log-output"></div>
   </div>
+
+  <!-- Loading Overlay -->
+  <div id="loading-overlay" class="loading-overlay hidden">
+    <div class="loading-backdrop"></div>
+    <div class="loading-container">
+      <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <div class="loading-success-icon" id="loading-success-icon">✓</div>
+        <div class="loading-error-icon" id="loading-error-icon">✕</div>
+        <div class="loading-message" id="loading-message">Loading...</div>
+        <div class="loading-progress-container" id="loading-progress-container">
+          <div class="loading-progress-bar">
+            <div class="loading-progress-fill" id="loading-progress-fill"></div>
+          </div>
+          <div class="loading-progress-text" id="loading-progress-text">0%</div>
+        </div>
+        <button class="loading-cancel-btn" id="loading-cancel-btn">Cancel</button>
+      </div>
+    </div>
+  </div>
 </div>
 
-<script type="module" src="renderer.js"></script>
+<!-- Webpack will inject the bundle script here automatically -->
 </body>
 </html>

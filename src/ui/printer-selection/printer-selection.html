@@ -9,7 +9,7 @@
 <div class="dialog-container">
     <!-- Header -->
     <div class="dialog-header">
-        <div class="dialog-title">Select a Printer</div>
+        <div class="dialog-title" id="dialog-title">Select a Printer</div>
         <button class="dialog-close" id="btn-close">×</button>
     </div>
 
@@ -17,34 +17,37 @@
     <div class="dialog-content">
         <div class="table-container">
             <table id="printer-table">
-                <thead>
-                <tr>
-                    <th>Printer Name</th>
-                    <th>IP Address</th>
-                    <th>Serial Number</th>
+                <thead id="table-header">
+                <tr id="header-row">
+                    <!-- Headers will be populated by TypeScript based on mode -->
                 </tr>
                 </thead>
                 <tbody>
-                <!-- Rows will be populated by JS -->
+                <!-- Rows will be populated by TypeScript -->
                 <tr class="loading-row">
-                    <td colspan="3">Scanning...</td>
+                    <td colspan="5">Scanning...</td> <!-- Increased colspan for max columns -->
                 </tr>
                 </tbody>
             </table>
         </div>
         <div id="no-printers-message" class="message-overlay" style="display: none;">
-            No printers found on the network. Ensure LAN mode is enabled.
+            No printers found. Ensure LAN mode is enabled.
         </div>
     </div>
 
     <!-- Footer -->
     <div class="dialog-footer">
-        <span class="instructions">Double-click a printer to select</span>
+        <span class="instructions" id="footer-instructions">Double-click a printer to select</span>
         <button class="dialog-button cancel" id="btn-cancel">Cancel</button>
-        <!-- Optional: Add a select button -->
-        <!-- <button class="dialog-button" id="btn-select" disabled>Select</button> -->
     </div>
 </div>
-<script src="printer-selection-renderer.js"></script>
+
+<script>
+  // Shim for CommonJS exports in browser context
+  if (typeof exports === 'undefined') {
+    var exports = {};
+  }
+</script>
+<script src="../../../lib/ui/printer-selection/printer-selection-renderer.js"></script>
 </body>
 </html>

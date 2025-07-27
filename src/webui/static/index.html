@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#303030">
+  <title>FlashForge Web UI</title>
+  <link rel="stylesheet" href="webui.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Login Screen (initially visible) -->
+    <div id="login-screen" class="login-screen">
+      <div class="login-container">
+        <h1>FlashForge Web UI</h1>
+        <div class="login-form">
+          <input type="password" id="password-input" placeholder="Enter password" autocomplete="current-password">
+          <div class="remember-me">
+            <label>
+              <input type="checkbox" id="remember-me-checkbox">
+              <span>Remember me</span>
+            </label>
+          </div>
+          <button id="login-button">Login</button>
+        </div>
+        <div id="login-error" class="login-error"></div>
+      </div>
+    </div>
+
+    <!-- Main UI (initially hidden) -->
+    <div id="main-ui" class="main-ui hidden">
+      <!-- Header Bar -->
+      <div class="header">
+        <div class="header-title">FlashForge Web UI</div>
+        <!-- Connection Status -->
+        <div class="connection-status">
+          <span class="connection-indicator" id="connection-indicator"></span>
+          <span id="connection-text">Disconnected</span>
+        </div>
+        <button id="logout-button" class="logout-button">Logout</button>
+      </div>
+
+      <!-- Main Layout -->
+      <div class="main-layout">
+        <!-- Left Side (Camera only) -->
+        <div class="left-side">
+          <div class="camera-view">
+            <div id="camera-placeholder" class="no-camera">Camera Unavailable</div>
+            <img id="camera-stream" class="camera-stream hidden" alt="Printer camera stream">
+          </div>
+        </div>
+
+        <!-- Right Side Grid -->
+        <div class="right-side-grid">
+          <!-- Control Grid -->
+          <div class="panel" id="control-grid">
+            <div class="panel-header">Controls</div>
+            <div class="panel-content">
+              <div class="btn-row">
+                <button id="btn-led-on" class="control-btn">LED On</button>
+                <button id="btn-clear-status" class="control-btn">Clear Status</button>
+              </div>
+              <div class="btn-row">
+                <button id="btn-led-off" class="control-btn">LED Off</button>
+                <button id="btn-home-axes" class="control-btn">Home Axes</button>
+              </div>
+              <div class="btn-row">
+                <button id="btn-pause" class="control-btn">Pause</button>
+                <button id="btn-resume" class="control-btn">Resume</button>
+              </div>
+              <div class="btn-row">
+                <button id="btn-cancel" class="control-btn">Cancel Print</button>
+                <button id="btn-start-recent" class="control-btn">Recent Files</button>
+              </div>
+              <div class="btn-row">
+                <button id="btn-start-local" class="control-btn">Local Files</button>
+                <button id="btn-refresh" class="control-btn">Refresh Status</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Model Preview -->
+          <div class="panel" id="model-preview-panel">
+            <div class="panel-header">Model Preview</div>
+            <div class="panel-content" id="model-preview">
+              <div class="no-preview">No preview available</div>
+            </div>
+          </div>
+
+          <!-- Printer State -->
+          <div class="panel" id="printer-state-panel">
+            <div class="panel-header">Printer State</div>
+            <div class="panel-content">
+              <div class="state-row">
+                <span>Status:</span>
+                <span id="printer-status">Unknown</span>
+              </div>
+              <div class="state-row">
+                <span>Lifetime Print Time:</span>
+                <span id="lifetime-print-time">--</span>
+              </div>
+              <div class="state-row">
+                <span>Lifetime Filament:</span>
+                <span id="lifetime-filament">--</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Temp Controls -->
+          <div class="panel" id="temp-control-panel">
+            <div class="panel-header">Temperature Control</div>
+            <div class="panel-content">
+              <div class="temp-row">
+                <span>Bed: <span id="bed-temp">--°C / --°C</span></span>
+                <div class="temp-buttons">
+                  <button id="btn-bed-set" class="temp-btn">Set</button>
+                  <button id="btn-bed-off" class="temp-btn">Off</button>
+                </div>
+              </div>
+              <div class="temp-row">
+                <span>Extruder: <span id="extruder-temp">--°C / --°C</span></span>
+                <div class="temp-buttons">
+                  <button id="btn-extruder-set" class="temp-btn">Set</button>
+                  <button id="btn-extruder-off" class="temp-btn">Off</button>
+                </div>
+              </div>
+              <!-- Filtration for AD5M Pro -->
+              <div class="filtration-section hidden" id="filtration-section">
+                 <div class="status-title">Filtration: <span id="filtration-status">Off</span></div>
+                 <div class="filtration-buttons">
+                   <button id="btn-external-filtration" class="filtration-btn">External</button>
+                   <button id="btn-internal-filtration" class="filtration-btn">Internal</button>
+                   <button id="btn-no-filtration" class="filtration-btn">Off</button>
+                 </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Job Progress -->
+          <div class="panel" id="job-progress-panel">
+            <div class="panel-header">Job Progress</div>
+            <div class="panel-content">
+              <div class="job-row">
+                <span>Current Job:</span>
+                <span id="current-job">No active job</span>
+              </div>
+              <div class="progress-row">
+                <span>Progress:</span>
+                <span id="progress-percentage">0%</span>
+              </div>
+              <progress id="progress-bar" value="0" max="100"></progress>
+            </div>
+          </div>
+
+          <!-- Job Details -->
+          <div class="panel" id="job-details-panel">
+            <div class="panel-header">Job Details</div>
+            <div class="panel-content">
+              <div class="detail-row">
+                <span>Weight:</span>
+                <span id="job-weight">--</span>
+              </div>
+              <div class="detail-row">
+                <span>Length:</span>
+                <span id="job-length">--</span>
+              </div>
+              <div class="detail-row">
+                <span>Layer:</span>
+                <span id="layer-info">-- / --</span>
+              </div>
+              <div class="detail-row">
+                <span>Time Remaining:</span>
+                <span id="time-remaining">--:--</span>
+              </div>
+              <div class="detail-row">
+                <span>Elapsed:</span>
+                <span id="elapsed-time">--:--</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- File Selection Modal -->
+      <div id="file-modal" class="modal hidden">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 id="modal-title">Select File</h2>
+            <button id="close-modal" class="close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div id="file-list" class="file-list"></div>
+          </div>
+          <div class="modal-footer">
+            <label class="checkbox-label">
+              <input type="checkbox" id="auto-level">
+              <span>Auto Level</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" id="start-now" checked>
+              <span>Start Now</span>
+            </label>
+            <button id="print-file-btn" class="primary-btn" disabled>Print</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Temperature Input Dialog -->
+      <div id="temp-dialog" class="modal hidden">
+        <div class="modal-content small">
+          <div class="modal-header">
+            <h2 id="temp-dialog-title">Set Temperature</h2>
+            <button id="close-temp-dialog" class="close-btn">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p id="temp-dialog-message">Enter temperature (°C):</p>
+            <input type="number" id="temp-input" min="0" max="300" step="5" value="0">
+          </div>
+          <div class="modal-footer">
+            <button id="temp-cancel" class="secondary-btn">Cancel</button>
+            <button id="temp-confirm" class="primary-btn">Set</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Toast Notification -->
+      <div id="toast" class="toast hidden"></div>
+    </div>
+  </div>
+
+  <!-- TypeScript compiled to JavaScript -->
+  <script src="app.js"></script>
+</body>
+</html>

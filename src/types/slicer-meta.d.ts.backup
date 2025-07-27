@@ -1,0 +1,47 @@
+/**
+ * Type declarations for the slicer-meta module.
+ * 
+ * This external module is used for parsing G-code and 3MF files
+ * to extract metadata and thumbnails.
+ */
+
+declare module 'slicer-meta' {
+  export const parseSlicerFile: (filePath: string) => Promise<ParseResult>;
+  
+  export interface ParseResult {
+    error?: string;
+    file?: FileMetadata;
+    threeMf?: ThreeMfMetadata;
+    slicer?: SlicerMetadata;
+  }
+  
+  export interface FileMetadata {
+    printerModel?: string;
+    filamentType?: string;
+    filamentUsedMM?: number;
+    filamentUsedG?: number;
+    thumbnail?: string;
+  }
+  
+  export interface ThreeMfMetadata {
+    printerModelId?: string;
+    filaments?: FilamentInfo[];
+    supportUsed?: boolean;
+    plateImage?: string;
+  }
+  
+  export interface FilamentInfo {
+    type?: string;
+    usedM?: string;
+    usedG?: string;
+    color?: string;
+  }
+  
+  export interface SlicerMetadata {
+    slicerName?: string;
+    slicerVersion?: string;
+    sliceDate?: string;
+    sliceTime?: string;
+    printEta?: string;
+  }
+}
