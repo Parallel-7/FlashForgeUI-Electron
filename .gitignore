@@ -109,12 +109,6 @@ out/
 
 # AI Agent Files
 .kiro/
-.guidelines/
-CLAUDE.md
-GEMINI.md
-PROJECT.md
-KEY-NOTES.md
-LINT.md
 
 # Misc scripts and other files
 *.py
