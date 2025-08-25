@@ -222,4 +222,16 @@ export function registerConnectionHandlers(
       printerSelectionWindow.close();
     }
   });
+
+  // Manual IP connection handler
+  ipcMain.handle('printer-connection:connect-to-ip', async (_, ipAddress: string) => {
+    try {
+      console.log('Manual IP connection requested:', ipAddress);
+      const result = await connectionManager.connectDirectlyToIP(ipAddress);
+      return { success: result.success, error: result.error };
+    } catch (error) {
+      console.error('Manual IP connection error:', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Manual connection failed' };
+    }
+  });
 }

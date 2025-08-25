@@ -85,6 +85,15 @@ export interface SingleColorConfirmationDialogData {
   readonly leveling: boolean;
 }
 
+// Auto-connect choice dialog data interface
+export interface AutoConnectChoiceDialogData {
+  readonly lastUsedPrinter?: {
+    name: string;
+    serialNumber: string;
+  } | null;
+  readonly savedPrinterCount: number;
+}
+
 // Job picker initialization data interface
 export interface JobPickerInitData {
   readonly isRecentFiles: boolean;
@@ -102,7 +111,8 @@ export type WindowType =
   | { kind: 'IFSDialog' }
   | { kind: 'MaterialInfo'; data: unknown }
   | { kind: 'MaterialMatching'; data: MaterialMatchingDialogData }
-  | { kind: 'SingleColorConfirmation'; data: SingleColorConfirmationDialogData };
+  | { kind: 'SingleColorConfirmation'; data: SingleColorConfirmationDialogData }
+  | { kind: 'AutoConnectChoice'; data: AutoConnectChoiceDialogData };
 
 // Common window size constants
 export const WINDOW_SIZES = {
@@ -171,5 +181,11 @@ export const WINDOW_SIZES = {
     height: createWindowHeight(500),
     minWidth: createWindowMinWidth(400),
     minHeight: createWindowMinHeight(450)
+  },
+  AUTO_CONNECT_CHOICE: {
+    width: createWindowWidth(550),
+    height: createWindowHeight(580),
+    minWidth: createWindowMinWidth(500),
+    minHeight: createWindowMinHeight(540)
   }
 } as const;

@@ -157,8 +157,48 @@ export class ConnectionFlowManager extends EventEmitter {
       // Discover printers
       const discoveredPrinters = await this.discoveryService.scanNetwork();
       if (discoveredPrinters.length === 0) {
-        this.loadingManager.showError('No printers found on network', 3000);
-        return { success: false, error: 'No printers found on network' };
+        // Check if we have saved printers for enhanced fallback
+        const savedPrinterCount = this.savedPrinterService.getSavedPrinterCount();
+        
+        if (savedPrinterCount > 0) {
+          // Hide discovery loading and show enhanced choice dialog
+          this.loadingManager.hide();
+          console.log('No printers discovered - showing enhanced fallback options');
+          
+          // Use the same enhanced fallback as auto-connect
+          const lastUsedPrinter = this.savedPrinterService.getLastUsedPrinter();
+          const userChoice = await this.dialogService.showAutoConnectChoiceDialog(
+            lastUsedPrinter,
+            savedPrinterCount
+          );
+          
+          if (!userChoice) {
+            return { success: false, error: 'Connection cancelled by user' };
+          }
+          
+          // Handle user choice
+          switch (userChoice) {
+            case 'connect-last-used':
+              if (lastUsedPrinter) {
+                return await this.connectToOfflineSavedPrinter(lastUsedPrinter.SerialNumber);
+              }
+              return { success: false, error: 'No last used printer available' };
+              
+            case 'show-saved-printers':
+              return await this.showSavedPrintersForSelection();
+              
+            case 'manual-ip':
+              return await this.offerManualIPEntry();
+              
+            default:
+              return { success: false, error: 'Unknown choice' };
+          }
+        } else {
+          // No saved printers - go directly to manual IP entry
+          this.loadingManager.hide();
+          console.log('No printers discovered and no saved printers - offering manual IP entry');
+          return await this.offerManualIPEntry();
+        }
       }
 
       // Hide loading for user interaction
@@ -213,7 +253,72 @@ export class ConnectionFlowManager extends EventEmitter {
       // Find matches using saved printer service
       const matches = this.savedPrinterService.findMatchingPrinters(discoveredPrinters);
       
-      // Determine auto-connect action
+      // If no matches found but we have saved printers, show auto-connect choice dialog
+      if (matches.length === 0) {
+        console.log('No saved printers found on network - showing auto-connect choice dialog');
+        const lastUsedPrinter = this.savedPrinterService.getLastUsedPrinter();
+        const savedPrinterCount = this.savedPrinterService.getSavedPrinterCount();
+        
+        this.loadingManager.hide();
+        
+        // Show auto-connect choice dialog
+        const userChoice = await this.dialogService.showAutoConnectChoiceDialog(
+          lastUsedPrinter,
+          savedPrinterCount
+        );
+        
+        if (!userChoice) {
+          return { success: false, error: 'Auto-connect cancelled by user' };
+        }
+        
+        // Handle user choice
+        switch (userChoice) {
+          case 'connect-last-used':
+            if (lastUsedPrinter) {
+              this.loadingManager.show({ message: `Attempting direct connection to ${lastUsedPrinter.Name}...`, canCancel: false });
+              try {
+                const result = await this.connectWithSavedDetails(lastUsedPrinter);
+                if (result.success) {
+                  console.log(`Successfully connected directly to ${lastUsedPrinter.Name}`);
+                  return result;
+                }
+                console.log(`Direct connection to ${lastUsedPrinter.Name} failed: ${result.error}`);
+                this.loadingManager.showError(`Direct connection to ${lastUsedPrinter.Name} failed: ${result.error}`, 4000);
+                return result;
+              } catch (error) {
+                const errorMessage = `Direct connection to ${lastUsedPrinter.Name} failed: ${error}`;
+                console.log(errorMessage);
+                this.loadingManager.showError(errorMessage, 4000);
+                return { success: false, error: errorMessage };
+              }
+            }
+            return { success: false, error: 'No last used printer available' };
+            
+          case 'show-saved-printers': {
+            // Create mock matches for all saved printers (they're offline)
+            const allSavedPrinters = this.savedPrinterService.getSavedPrinters();
+            const savedMatches = allSavedPrinters.map((savedPrinter: import('../types/printer').StoredPrinterDetails) => ({
+              savedDetails: savedPrinter,
+              discoveredPrinter: null, // Not discovered online
+              ipAddressChanged: false
+            }));
+            
+            return await this.dialogService.showSavedPrinterSelectionDialog(
+              savedMatches,
+              (serialNumber) => this.connectToOfflineSavedPrinter(serialNumber)
+            );
+          }
+            
+          case 'manual-ip':
+            return await this.offerManualIPEntry();
+            
+          case 'cancel':
+          default:
+            return { success: false, error: 'Auto-connect cancelled by user' };
+        }
+      }
+      
+      // Determine auto-connect action for matched printers
       const choice = this.autoConnectService.determineAutoConnectChoice(matches);
       
       switch (choice.action) {
@@ -289,6 +394,11 @@ export class ConnectionFlowManager extends EventEmitter {
   /** Auto-connect to a matched saved printer */
   private async autoConnectToMatch(match: import('../types/printer').SavedPrinterMatch): Promise<ConnectionResult> {
     const { savedDetails, discoveredPrinter, ipAddressChanged } = match;
+    
+    // If discoveredPrinter is null, this printer is offline
+    if (!discoveredPrinter) {
+      return { success: false, error: `${savedDetails.Name} is not available on the network` };
+    }
     
     this.loadingManager.updateMessage(`Found ${savedDetails.Name}, connecting...`);
     this.emit('auto-connect-matched', savedDetails.Name);
@@ -448,6 +558,113 @@ export class ConnectionFlowManager extends EventEmitter {
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
       this.loadingManager.showError(`Connection failed: ${errorMessage}`, 4000);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /** Connect to an offline saved printer using saved details directly */
+  private async connectToOfflineSavedPrinter(selectedSerial: string): Promise<ConnectionResult> {
+    try {
+      const savedPrinter = this.savedPrinterService.getSavedPrinter(selectedSerial);
+      if (!savedPrinter) {
+        return { success: false, error: 'Saved printer not found' };
+      }
+
+      this.loadingManager.show({ message: `Connecting to ${savedPrinter.Name} at ${savedPrinter.IPAddress}...`, canCancel: false });
+      
+      // Try to connect using saved details
+      const result = await this.connectWithSavedDetails(savedPrinter);
+      
+      if (result.success) {
+        await this.savedPrinterService.updateLastConnected(selectedSerial);
+      }
+      
+      return result;
+      
+    } catch (error) {
+      const errorMessage = getConnectionErrorMessage(error);
+      this.loadingManager.showError(`Connection failed: ${errorMessage}`, 4000);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /** Offer manual IP entry to user */
+  private async offerManualIPEntry(): Promise<ConnectionResult> {
+    if (!this.inputDialogHandler) {
+      return { success: false, error: 'Manual IP entry not available - input dialog handler not set' };
+    }
+
+    try {
+      const ipAddress = await this.inputDialogHandler({
+        title: 'Manual Printer Connection',
+        message: 'No printers found on network. Enter printer IP address manually:',
+        defaultValue: '',
+        inputType: 'text',
+        placeholder: 'e.g., 192.168.1.100'
+      });
+
+      if (!ipAddress) {
+        return { success: false, error: 'No IP address provided' };
+      }
+
+      // Validate IP address format
+      const { IPAddressSchema } = await import('../utils/validation.utils');
+      const validation = IPAddressSchema.safeParse(ipAddress.trim());
+      if (!validation.success) {
+        this.loadingManager.showError('Invalid IP address format', 3000);
+        return { success: false, error: 'Invalid IP address format' };
+      }
+
+      return await this.connectDirectlyToIP(validation.data);
+      
+    } catch (error) {
+      const errorMessage = getConnectionErrorMessage(error);
+      this.loadingManager.showError(`Manual connection failed: ${errorMessage}`, 4000);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /** Connect directly to an IP address */
+  public async connectDirectlyToIP(ipAddress: string): Promise<ConnectionResult> {
+    try {
+      this.loadingManager.show({ message: `Connecting to printer at ${ipAddress}...`, canCancel: false });
+      
+      // Create a mock discovered printer for the connection process
+      const mockDiscoveredPrinter: DiscoveredPrinter = {
+        name: `Printer at ${ipAddress}`,
+        ipAddress: ipAddress,
+        serialNumber: '', // Will be determined during connection
+        model: undefined // Will be determined during connection
+      };
+
+      // Use the standard connection flow
+      return await this.connectToPrinter(mockDiscoveredPrinter);
+      
+    } catch (error) {
+      const errorMessage = getConnectionErrorMessage(error);
+      this.loadingManager.showError(`Direct connection failed: ${errorMessage}`, 4000);
+      return { success: false, error: errorMessage };
+    }
+  }
+
+  /** Show saved printers for manual selection */
+  private async showSavedPrintersForSelection(): Promise<ConnectionResult> {
+    try {
+      // Find all saved printers and create mock matches (they're not online)
+      const allSavedPrinters = this.savedPrinterService.getSavedPrinters();
+      const savedMatches = allSavedPrinters.map((savedPrinter: import('../types/printer').StoredPrinterDetails) => ({
+        savedDetails: savedPrinter,
+        discoveredPrinter: null, // Not discovered online
+        ipAddressChanged: false
+      }));
+      
+      return await this.dialogService.showSavedPrinterSelectionDialog(
+        savedMatches,
+        (serialNumber) => this.connectToOfflineSavedPrinter(serialNumber)
+      );
+    } catch (error) {
+      const errorMessage = getConnectionErrorMessage(error);
+      this.loadingManager.showError(`Failed to show saved printers: ${errorMessage}`, 4000);
       return { success: false, error: errorMessage };
     }
   }

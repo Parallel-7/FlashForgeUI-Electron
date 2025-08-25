@@ -13,6 +13,7 @@ import {
   InputDialogOptions,
   MaterialMatchingDialogData,
   SingleColorConfirmationDialogData,
+  AutoConnectChoiceDialogData,
   createPreloadPath,
   WINDOW_SIZES
 } from '../shared/WindowTypes';
@@ -300,4 +301,113 @@ export const createIFSDialog = (): void => {
 
   setupDevTools(ifsDialogWindow);
   windowManager.setIFSDialogWindow(ifsDialogWindow);
+};
+
+// Global handler state for auto-connect choice dialog to prevent duplicate registrations
+let globalResponseChannelHandler: ((_event: unknown) => Promise<AutoConnectChoiceDialogData & { responseChannel: string }>) | null = null;
+
+/**
+ * Create the auto-connect choice dialog window
+ * @param data - Dialog initialization data
+ * @returns Promise that resolves with user choice or null if cancelled
+ */
+export const createAutoConnectChoiceDialog = (data: AutoConnectChoiceDialogData): Promise<string | null> => {
+  return new Promise((resolve) => {
+    const windowManager = getWindowManager();
+    const mainWindow = windowManager.getMainWindow();
+    
+    if (!validateParentWindow(mainWindow, 'auto-connect choice dialog')) {
+      resolve(null);
+      return;
+    }
+
+    // Generate unique dialog ID and response channel
+    const dialogId = generateDialogId();
+    const responseChannel = createResponseChannelName(dialogId);
+    let handlerActive = true;
+
+    // Create the dialog window
+    const autoConnectChoiceDialogWindow = createModalWindow(
+      mainWindow,
+      WINDOW_SIZES.AUTO_CONNECT_CHOICE,
+      createPreloadPath(path.join(__dirname, '../../ui/auto-connect-choice/auto-connect-choice-preload.js')),
+      { resizable: false, frame: false }
+    );
+
+    // Set up response handler using handle/invoke pattern
+    const handleResponse = async (_event: unknown, result: { action: string } | null): Promise<void> => {
+      if (!handlerActive) return;
+      
+      handlerActive = false;
+      ipcMain.removeHandler(responseChannel);
+      
+      // Close dialog window
+      if (autoConnectChoiceDialogWindow && !autoConnectChoiceDialogWindow.isDestroyed()) {
+        autoConnectChoiceDialogWindow.close();
+      }
+      
+      // Resolve promise with result
+      resolve(result?.action || null);
+    };
+
+    // Set up response channel provider - only register if not already registered
+    const handleGetResponseChannel = async (_event: unknown): Promise<AutoConnectChoiceDialogData & { responseChannel: string }> => {
+      return {
+        ...data,
+        responseChannel
+      };
+    };
+
+    // Register the unique response handler for this dialog instance
+    ipcMain.handle(responseChannel, handleResponse);
+
+    // Register the global response channel provider only if not already registered
+    if (!globalResponseChannelHandler) {
+      globalResponseChannelHandler = handleGetResponseChannel;
+      ipcMain.handle('auto-connect-choice:get-response-channel', globalResponseChannelHandler);
+    } else {
+      // Update the existing handler to use current dialog data
+      globalResponseChannelHandler = handleGetResponseChannel;
+      // Remove the old handler and register the new one
+      ipcMain.removeHandler('auto-connect-choice:get-response-channel');
+      ipcMain.handle('auto-connect-choice:get-response-channel', globalResponseChannelHandler);
+    }
+
+    // Load HTML and setup lifecycle
+    void loadWindowHTML(autoConnectChoiceDialogWindow, 'auto-connect-choice');
+
+    // Initialize dialog when ready
+    autoConnectChoiceDialogWindow.webContents.on('did-finish-load', () => {
+      if (autoConnectChoiceDialogWindow && !autoConnectChoiceDialogWindow.isDestroyed()) {
+        autoConnectChoiceDialogWindow.webContents.send('auto-connect-choice:init', {
+          ...data,
+          responseChannel
+        });
+      }
+    });
+
+    // Setup window lifecycle with cleanup
+    setupWindowLifecycle(
+      autoConnectChoiceDialogWindow,
+      () => {
+        windowManager.setAutoConnectChoiceDialogWindow(null);
+        // Clean up IPC handlers
+        if (handlerActive) {
+          handlerActive = false;
+          ipcMain.removeHandler(responseChannel);
+          
+          // Only clean up global handler if it's the current one
+          if (globalResponseChannelHandler === handleGetResponseChannel) {
+            ipcMain.removeHandler('auto-connect-choice:get-response-channel');
+            globalResponseChannelHandler = null;
+          }
+          
+          resolve(null);
+        }
+      }
+    );
+
+    setupDevTools(autoConnectChoiceDialogWindow);
+    windowManager.setAutoConnectChoiceDialogWindow(autoConnectChoiceDialogWindow);
+  });
 };

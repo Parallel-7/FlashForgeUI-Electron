@@ -19,9 +19,12 @@
     "build:mac": "npm run build && electron-builder --mac --publish never --config electron-builder-config.js",
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
-    "linecount": "powershell -ExecutionPolicy Bypass -File count_lines.ps1",
+    "linecount": "powershell -ExecutionPolicy Bypass -File scripts/count_lines.ps1",
+	"docs:check": "powershell -ExecutionPolicy Bypass -File scripts/check_fileoverview.ps1",
+    "docs:combine": "powershell -ExecutionPolicy Bypass -File scripts/extract_fileoverview.ps1",
+    "docs:clean": "rimraf \"fileoverview-collection.json\"",
     "clean": "rimraf lib dist \"NVIDIA Corporation\"",
-    "typecheck": "npx tsc --noEmit"
+    "type-check": "npx tsc --noEmit"
   },
   "keywords": [],
   "author": {

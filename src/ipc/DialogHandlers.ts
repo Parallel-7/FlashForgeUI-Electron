@@ -29,8 +29,6 @@ export const setupDialogHandlers = (): void => {
     ipcMain.removeAllListeners('open-printer-selection');
     ipcMain.on('open-printer-selection', async () => {
       // Check if already connected and show confirmation
-      let shouldDisconnect = false;
-      
       if (connectionManager.isConnected()) {
         const currentDetails = connectionManager.getCurrentDetails();
         const printerName = currentDetails?.Name || 'Unknown Printer';
@@ -48,12 +46,23 @@ export const setupDialogHandlers = (): void => {
         if (response.response === 0) {
           return; // User cancelled
         }
-        
-        // User wants to continue - we'll need to disconnect
-        shouldDisconnect = true;
       }
 
-      await enhancedCreatePrinterSelectionWindow(shouldDisconnect);
+      // Manual Connect button should go directly to the connection flow
+      // This bypasses the old printer selection dialog completely
+      try {
+        console.log('Manual connect button pressed - starting direct connection flow');
+        const result = await connectionManager.startConnectionFlow({ checkForActiveConnection: false });
+        
+        if (result.success) {
+          console.log('Manual connection flow completed successfully');
+        } else if (result.error && !result.error.includes('cancelled')) {
+          // Only show error if it's not a user cancellation
+          console.log('Manual connection flow failed:', result.error);
+        }
+      } catch (error) {
+        console.error('Manual connection flow error:', error);
+      }
     });
   };
 
@@ -115,17 +124,36 @@ export const setupDialogHandlers = (): void => {
           connectionManager.on('discovery-started', onDiscoveryStarted);
           connectionManager.on('discovery-completed', onDiscoveryCompleted);
           
-          // Start just the discovery process
-          void connectionManager.discoverPrinters().then(() => {
-            // Discovery completed within the event handler
+          // Start the full connection flow with enhanced fallback logic
+          void connectionManager.startConnectionFlow({ checkForActiveConnection: false }).then((result) => {
+            // Connection flow completed - result contains success/failure info
+            if (!result.success && result.error) {
+              console.log('Connection flow completed with result:', result);
+              const window = windowManager.getPrinterSelectionWindow();
+              if (window && !window.isDestroyed()) {
+                // Check if this is a "user cancelled" scenario vs actual error
+                if (result.error.includes('User cancelled') || result.error.includes('cancelled')) {
+                  // User cancelled during the flow - don't show error
+                  console.log('Connection flow cancelled by user');
+                } else {
+                  // Send error event for genuine failures
+                  window.webContents.send('printer-selection:discovery-error', {
+                    error: result.error,
+                    message: 'Connection flow completed but no printer was connected. You can still select a printer manually.'
+                  });
+                }
+              }
+            }
+            // If result.success is true, it means a printer was connected automatically
+            // and the window will be closed by the connection success handlers
           }).catch(error => {
-            console.error('Discovery error:', error);
+            console.error('Connection flow error:', error);
             const window = windowManager.getPrinterSelectionWindow();
             if (window && !window.isDestroyed()) {
-              // Send error event instead of just empty array
+              // Send error event for unexpected failures
               window.webContents.send('printer-selection:discovery-error', {
-                error: error instanceof Error ? error.message : 'Discovery failed',
-                message: 'Failed to scan for printers. Please check your network connection and try again.'
+                error: error instanceof Error ? error.message : 'Connection flow failed',
+                message: 'Failed to start connection flow. Please check your network connection and try again.'
               });
             }
           });

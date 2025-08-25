@@ -1,0 +1,183 @@
+/* Auto-Connect Choice Dialog Styles */
+
+body {
+    margin: 0;
+    padding: 0;
+    background: #2c2c2c;
+    color: #ffffff;
+    font-family: Arial, sans-serif;
+    font-size: 14px;
+    overflow: hidden;
+    min-height: 100vh;
+}
+
+.dialog-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    width: 100vw;
+    box-sizing: border-box;
+    padding: 0;
+}
+
+/* Content Styles */
+.dialog-content {
+    flex: 1;
+    padding: 25px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    box-sizing: border-box;
+    justify-content: center;
+}
+
+.message {
+    text-align: center;
+    margin-bottom: 10px;
+}
+
+.message-text {
+    font-size: 16px;
+    color: #e0e0e0;
+    margin-bottom: 10px;
+}
+
+.last-used-info {
+    font-size: 14px;
+    color: #b0b0b0;
+    padding: 8px 16px;
+    background: #383838;
+    border-radius: 6px;
+    margin: 0 auto;
+    display: inline-block;
+}
+
+.last-used-info strong {
+    color: #ffffff;
+}
+
+/* Options Container */
+.options-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-width: 480px;
+    margin: 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+/* Option Button Styles */
+.option-button {
+    display: flex;
+    align-items: center;
+    padding: 16px 20px;
+    background: #383838;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    color: #ffffff;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: inherit;
+    text-align: left;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.option-button:hover {
+    background: #454545;
+    border-color: #555555;
+    transform: translateY(-1px);
+}
+
+.option-button:active {
+    transform: translateY(0);
+}
+
+.option-button.primary {
+    background: #0078d4;
+    border-color: #106ebe;
+}
+
+.option-button.primary:hover {
+    background: #106ebe;
+    border-color: #005a9e;
+}
+
+.option-button.cancel {
+    background: #d13438;
+    border-color: #b22327;
+}
+
+.option-button.cancel:hover {
+    background: #b22327;
+    border-color: #991d20;
+}
+
+.option-icon {
+    font-size: 24px;
+    margin-right: 16px;
+    flex-shrink: 0;
+    width: 32px;
+    text-align: center;
+}
+
+.option-content {
+    flex: 1;
+}
+
+.option-title {
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 4px;
+}
+
+.option-description {
+    font-size: 13px;
+    color: #b0b0b0;
+    line-height: 1.3;
+}
+
+.option-button.primary .option-description {
+    color: #cce7ff;
+}
+
+.option-button.cancel .option-description {
+    color: #ffb3b5;
+}
+
+/* Focus styles for accessibility */
+.option-button:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px #0078d4;
+}
+
+
+/* Disabled state */
+.option-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+/* Animation for showing options */
+.option-button {
+    opacity: 0;
+    animation: fadeInUp 0.3s ease forwards;
+}
+
+.option-button:nth-child(1) { animation-delay: 0.1s; }
+.option-button:nth-child(2) { animation-delay: 0.2s; }
+.option-button:nth-child(3) { animation-delay: 0.3s; }
+.option-button:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}

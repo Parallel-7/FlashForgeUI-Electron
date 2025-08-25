@@ -149,7 +149,7 @@ export class SavedPrinterService extends EventEmitter {
         lastConnected: savedPrinter.lastConnected,
         isOnline: !!match,
         ipAddressChanged: match?.ipAddressChanged || false,
-        currentIpAddress: match?.discoveredPrinter.ipAddress
+        currentIpAddress: match?.discoveredPrinter?.ipAddress
       };
     });
   }

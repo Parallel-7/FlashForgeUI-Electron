@@ -148,10 +148,11 @@ export interface MultiPrinterConfig {
 /**
  * Result of matching discovered printers with saved printers
  * Used during auto-connect discovery phase
+ * discoveredPrinter can be null for offline/unavailable saved printers
  */
 export interface SavedPrinterMatch {
   readonly savedDetails: StoredPrinterDetails;
-  readonly discoveredPrinter: DiscoveredPrinter;
+  readonly discoveredPrinter: DiscoveredPrinter | null;
   readonly ipAddressChanged: boolean;
 }
 

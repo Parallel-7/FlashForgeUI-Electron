@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Auto-Connect Options</title>
+    <link rel="stylesheet" href="auto-connect-choice.css" />
+</head>
+<body>
+<div class="dialog-container">
+    <!-- Content -->
+    <div class="dialog-content">
+        <div class="message">
+            <div class="message-text">
+                No printers found on the network during auto-connect.
+            </div>
+            <div id="last-used-info" class="last-used-info" style="display: none;">
+                <span>Last used printer: <strong id="last-used-name">-</strong></span>
+            </div>
+        </div>
+
+        <div class="options-container">
+            <button class="option-button primary" id="btn-connect-last-used" style="display: none;">
+                <div class="option-icon">🔗</div>
+                <div class="option-content">
+                    <div class="option-title">Connect to Last Used Printer</div>
+                    <div class="option-description">Quick connection to <span id="quick-printer-name">-</span></div>
+                </div>
+            </button>
+
+            <button class="option-button" id="btn-show-saved-printers" style="display: none;">
+                <div class="option-icon">📋</div>
+                <div class="option-content">
+                    <div class="option-title">Show All Saved Printers</div>
+                    <div class="option-description">Choose from <span id="saved-count">0</span> saved printer(s)</div>
+                </div>
+            </button>
+
+            <button class="option-button" id="btn-manual-ip">
+                <div class="option-icon">⌨️</div>
+                <div class="option-content">
+                    <div class="option-title">Enter IP Manually</div>
+                    <div class="option-description">Connect directly to a specific IP address</div>
+                </div>
+            </button>
+
+            <button class="option-button cancel" id="btn-cancel">
+                <div class="option-icon">❌</div>
+                <div class="option-content">
+                    <div class="option-title">Cancel</div>
+                    <div class="option-description">Skip auto-connect</div>
+                </div>
+            </button>
+        </div>
+    </div>
+</div>
+
+<script>
+  // Shim for CommonJS exports in browser context
+  if (typeof exports === 'undefined') {
+    var exports = {};
+  }
+</script>
+<script src="../../../lib/ui/auto-connect-choice/auto-connect-choice-renderer.js"></script>
+</body>
+</html>
