@@ -14,6 +14,10 @@ export interface ConnectChoiceData {
   timestamp?: string;
 }
 
+interface ResponseChannelData {
+  responseChannel: string;
+}
+
 export interface ConnectChoiceAPI {
   onDialogInit: (callback: (data: ConnectChoiceData & { responseChannel: string }) => void) => void;
   sendChoice: (choice: ConnectChoiceOption) => Promise<void>;
@@ -37,9 +41,9 @@ const connectChoiceAPI: ConnectChoiceAPI = {
   sendChoice: async (choice: ConnectChoiceOption): Promise<void> => {
     try {
       // Get the response channel from main process
-      const dialogData = await ipcRenderer.invoke('connect-choice:get-response-channel');
+      const dialogData = await ipcRenderer.invoke('connect-choice:get-response-channel') as ResponseChannelData | null;
       
-      if (dialogData && dialogData.responseChannel) {
+      if (dialogData?.responseChannel) {
         // Send choice through the unique response channel
         await ipcRenderer.invoke(dialogData.responseChannel, choice);
       } else {

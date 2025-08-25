@@ -97,6 +97,7 @@ export interface AutoConnectChoiceDialogData {
 // Connect choice dialog data interface
 export interface ConnectChoiceDialogData {
   // Currently minimal - can be extended to include printer status info
+  [key: string]: unknown;
 }
 
 // Job picker initialization data interface

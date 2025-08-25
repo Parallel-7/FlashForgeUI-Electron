@@ -7,7 +7,6 @@
 import type { ConnectChoiceOption, ConnectChoiceData } from './connect-choice-dialog-preload';
 
 // Global state
-let currentData: ConnectChoiceData | null = null;
 let isHandlingChoice = false;
 
 /**
@@ -20,7 +19,6 @@ document.addEventListener('DOMContentLoaded', (): void => {
   // Listen for initialization data from main process
   window.connectChoiceAPI.onDialogInit((data: ConnectChoiceData & { responseChannel: string }) => {
     console.log('Received connect choice dialog data:', data);
-    currentData = data;
     updateDialogUI(data);
   });
 });

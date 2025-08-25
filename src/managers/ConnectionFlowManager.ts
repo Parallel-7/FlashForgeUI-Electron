@@ -493,10 +493,15 @@ export class ConnectionFlowManager extends EventEmitter {
       // Step 5: Save printer details
       this.loadingManager.updateMessage('Saving printer details...');
       const modelType = detectPrinterModelType(tempResult.typeName);
+      
+      // For manual IP connections, get serial number and name from printer info
+      const serialNumber = discoveredPrinter.serialNumber || tempResult.printerInfo?.SerialNumber || `Unknown-${Date.now()}`;
+      const printerName = (tempResult.printerInfo?.Name as string) || discoveredPrinter.name;
+      
       const printerDetails: PrinterDetails = {
-        Name: formatPrinterName(discoveredPrinter.name, discoveredPrinter.serialNumber),
+        Name: formatPrinterName(printerName, serialNumber),
         IPAddress: discoveredPrinter.ipAddress,
-        SerialNumber: discoveredPrinter.serialNumber,
+        SerialNumber: serialNumber,
         CheckCode: checkCode,
         ClientType: ForceLegacyAPI ? 'legacy' : clientType,
         printerModel: tempResult.typeName,
@@ -504,6 +509,9 @@ export class ConnectionFlowManager extends EventEmitter {
       };
 
       await this.savedPrinterService.savePrinter(printerDetails);
+
+      // Update last connected timestamp
+      await this.savedPrinterService.updateLastConnected(printerDetails.SerialNumber);
 
       // Step 6: Update connection state
       this.connectionStateManager.setConnected(
