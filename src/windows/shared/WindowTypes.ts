@@ -94,6 +94,11 @@ export interface AutoConnectChoiceDialogData {
   readonly savedPrinterCount: number;
 }
 
+// Connect choice dialog data interface
+export interface ConnectChoiceDialogData {
+  // Currently minimal - can be extended to include printer status info
+}
+
 // Job picker initialization data interface
 export interface JobPickerInitData {
   readonly isRecentFiles: boolean;
@@ -112,7 +117,8 @@ export type WindowType =
   | { kind: 'MaterialInfo'; data: unknown }
   | { kind: 'MaterialMatching'; data: MaterialMatchingDialogData }
   | { kind: 'SingleColorConfirmation'; data: SingleColorConfirmationDialogData }
-  | { kind: 'AutoConnectChoice'; data: AutoConnectChoiceDialogData };
+  | { kind: 'AutoConnectChoice'; data: AutoConnectChoiceDialogData }
+  | { kind: 'ConnectChoice'; data: ConnectChoiceDialogData };
 
 // Common window size constants
 export const WINDOW_SIZES = {
@@ -183,9 +189,15 @@ export const WINDOW_SIZES = {
     minHeight: createWindowMinHeight(450)
   },
   AUTO_CONNECT_CHOICE: {
-    width: createWindowWidth(550),
-    height: createWindowHeight(580),
-    minWidth: createWindowMinWidth(500),
-    minHeight: createWindowMinHeight(540)
+    width: createWindowWidth(500),
+    height: createWindowHeight(480),
+    minWidth: createWindowMinWidth(450),
+    minHeight: createWindowMinHeight(420)
+  },
+  CONNECT_CHOICE: {
+    width: createWindowWidth(480),
+    height: createWindowHeight(450),
+    minWidth: createWindowMinWidth(450),
+    minHeight: createWindowMinHeight(400)
   }
 } as const;

@@ -6,9 +6,7 @@
 import { ipcMain, dialog } from 'electron';
 import { getWindowManager } from '../windows/WindowManager';
 import { getPrinterConnectionManager } from '../managers/ConnectionFlowManager';
-import { createPrinterSelectionWindow } from '../windows/WindowFactory';
 import { getLoadingManager } from '../managers/LoadingManager';
-import type { DiscoveredPrinter } from '../types/printer';
 
 /**
  * Setup dialog-specific handlers and enhancements
@@ -23,9 +21,9 @@ export const setupDialogHandlers = (): void => {
     return createInputDialog(options);
   });
 
-  // Enhanced printer selection window initialization with real discovery
-  const setupPrinterSelectionEnhancement = (): void => {
-    // Override the 'open-printer-selection' handler with enhanced version
+  // Enhanced connect choice dialog initialization
+  const setupConnectChoiceEnhancement = (): void => {
+    // Override the 'open-printer-selection' handler with connect choice dialog
     ipcMain.removeAllListeners('open-printer-selection');
     ipcMain.on('open-printer-selection', async () => {
       // Check if already connected and show confirmation
@@ -37,8 +35,8 @@ export const setupDialogHandlers = (): void => {
           type: 'warning',
           title: 'Printer Connected',
           message: `You are currently connected to ${printerName}`,
-          detail: 'Scanning for printers may interfere with ongoing operations. Do you want to continue?',
-          buttons: ['Cancel', 'Continue Scan'],
+          detail: 'Opening connection options may interfere with ongoing operations. Do you want to continue?',
+          buttons: ['Cancel', 'Continue'],
           defaultId: 0,
           cancelId: 0
         });
@@ -48,129 +46,57 @@ export const setupDialogHandlers = (): void => {
         }
       }
 
-      // Manual Connect button should go directly to the connection flow
-      // This bypasses the old printer selection dialog completely
+      // Show connect choice dialog instead of directly starting connection flow
       try {
-        console.log('Manual connect button pressed - starting direct connection flow');
-        const result = await connectionManager.startConnectionFlow({ checkForActiveConnection: false });
+        console.log('Connect button pressed - showing connection choice dialog');
+        const { createConnectChoiceDialog } = await import('../windows/WindowFactory');
         
-        if (result.success) {
-          console.log('Manual connection flow completed successfully');
-        } else if (result.error && !result.error.includes('cancelled')) {
-          // Only show error if it's not a user cancellation
-          console.log('Manual connection flow failed:', result.error);
+        // Show the connect choice dialog
+        const userChoice = await createConnectChoiceDialog({});
+        
+        if (userChoice === 'enter-ip') {
+          console.log('User chose to enter IP manually');
+          // Show input dialog for IP entry
+          const { createInputDialog } = await import('../windows/WindowFactory');
+          const ipAddress = await createInputDialog({
+            title: 'Enter Printer IP',
+            message: 'Enter the IP address of your FlashForge printer:',
+            placeholder: '192.168.1.100',
+            inputType: 'text'
+          });
+          
+          if (ipAddress) {
+            // Connect directly to the provided IP
+            console.log(`Connecting directly to IP: ${ipAddress}`);
+            const result = await connectionManager.connectDirectlyToIP(ipAddress);
+            if (result.success) {
+              console.log('Manual IP connection completed successfully');
+            } else {
+              console.log('Manual IP connection failed:', result.error);
+            }
+          }
+          
+        } else if (userChoice === 'scan-network') {
+          console.log('User chose to scan network');
+          // Start the network discovery flow (existing behavior)
+          const result = await connectionManager.startConnectionFlow({ checkForActiveConnection: false });
+          
+          if (result.success) {
+            console.log('Network scan connection flow completed successfully');
+          } else if (result.error && !result.error.includes('cancelled')) {
+            console.log('Network scan connection flow failed:', result.error);
+          }
+          
+        } else {
+          console.log('User cancelled connection choice dialog');
         }
+        
       } catch (error) {
-        console.error('Manual connection flow error:', error);
+        console.error('Connect choice dialog error:', error);
       }
     });
   };
 
-  // Enhanced printer selection window creation
-  const enhancedCreatePrinterSelectionWindow = async (shouldDisconnect: boolean = false): Promise<void> => {
-    // If we need to disconnect first, do it before creating the window
-    if (shouldDisconnect && connectionManager.isConnected()) {
-      try {
-        // Show loading overlay on main window while disconnecting
-        const mainWindow = windowManager.getMainWindow();
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('loading-show', {
-            message: 'Disconnecting from current printer...',
-            canCancel: false
-          });
-        }
-        
-        // Disconnect from current printer
-        await connectionManager.disconnect();
-        
-        // Hide loading overlay
-        if (mainWindow && !mainWindow.isDestroyed()) {
-          mainWindow.webContents.send('loading-hide', {});
-        }
-      } catch (error) {
-        console.error('Failed to disconnect before scanning:', error);
-        // Continue anyway - don't block the user
-      }
-    }
-    
-    createPrinterSelectionWindow();
-    
-    // Start real printer discovery after window is ready
-    setTimeout(async () => {
-      const printerSelectionWindow = windowManager.getPrinterSelectionWindow();
-      if (printerSelectionWindow && !printerSelectionWindow.isDestroyed()) {
-        try {
-          // Send initial discovery started event immediately
-          printerSelectionWindow.webContents.send('printer-selection:discovery-started');
-          
-          // Listen for discovery events
-          const onDiscoveryStarted = () => {
-            const window = windowManager.getPrinterSelectionWindow();
-            if (window && !window.isDestroyed()) {
-              window.webContents.send('printer-selection:discovery-started');
-            }
-          };
-          
-          const onDiscoveryCompleted = (printers: DiscoveredPrinter[]) => {
-            const window = windowManager.getPrinterSelectionWindow();
-            if (window && !window.isDestroyed()) {
-              window.webContents.send('printer-selection:receive-printers', printers);
-            }
-            // Clean up listeners
-            connectionManager.removeListener('discovery-started', onDiscoveryStarted);
-            connectionManager.removeListener('discovery-completed', onDiscoveryCompleted);
-          };
-          
-          connectionManager.on('discovery-started', onDiscoveryStarted);
-          connectionManager.on('discovery-completed', onDiscoveryCompleted);
-          
-          // Start the full connection flow with enhanced fallback logic
-          void connectionManager.startConnectionFlow({ checkForActiveConnection: false }).then((result) => {
-            // Connection flow completed - result contains success/failure info
-            if (!result.success && result.error) {
-              console.log('Connection flow completed with result:', result);
-              const window = windowManager.getPrinterSelectionWindow();
-              if (window && !window.isDestroyed()) {
-                // Check if this is a "user cancelled" scenario vs actual error
-                if (result.error.includes('User cancelled') || result.error.includes('cancelled')) {
-                  // User cancelled during the flow - don't show error
-                  console.log('Connection flow cancelled by user');
-                } else {
-                  // Send error event for genuine failures
-                  window.webContents.send('printer-selection:discovery-error', {
-                    error: result.error,
-                    message: 'Connection flow completed but no printer was connected. You can still select a printer manually.'
-                  });
-                }
-              }
-            }
-            // If result.success is true, it means a printer was connected automatically
-            // and the window will be closed by the connection success handlers
-          }).catch(error => {
-            console.error('Connection flow error:', error);
-            const window = windowManager.getPrinterSelectionWindow();
-            if (window && !window.isDestroyed()) {
-              // Send error event for unexpected failures
-              window.webContents.send('printer-selection:discovery-error', {
-                error: error instanceof Error ? error.message : 'Connection flow failed',
-                message: 'Failed to start connection flow. Please check your network connection and try again.'
-              });
-            }
-          });
-          
-        } catch (error) {
-          console.error('Discovery initialization error:', error);
-          const window = windowManager.getPrinterSelectionWindow();
-          if (window && !window.isDestroyed()) {
-            window.webContents.send('printer-selection:discovery-error', {
-              error: error instanceof Error ? error.message : 'Discovery initialization failed',
-              message: 'Failed to initialize printer discovery. Please try again.'
-            });
-          }
-        }
-      }
-    }, 300); // Slightly shorter delay since we handle errors better now
-  };
 
   // Loading overlay handlers
   const setupLoadingHandlers = (): void => {
@@ -263,6 +189,6 @@ export const setupDialogHandlers = (): void => {
   };
 
   // Initialize handlers
-  setupPrinterSelectionEnhancement();
+  setupConnectChoiceEnhancement();
   setupLoadingHandlers();
 };

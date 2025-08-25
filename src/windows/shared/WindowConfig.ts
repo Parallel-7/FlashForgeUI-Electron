@@ -61,9 +61,10 @@ export const createModalWindow = (
   options: {
     readonly resizable?: boolean;
     readonly frame?: boolean;
+    readonly transparent?: boolean;
   } = {}
 ): BrowserWindow => {
-  const { resizable = true, frame = false } = options;
+  const { resizable = true, frame = false, transparent = false } = options;
   
   return new BrowserWindow({
     width: dimensions.width,
@@ -75,6 +76,7 @@ export const createModalWindow = (
     frame,
     show: false,
     resizable,
+    transparent,
     webPreferences: createSecureWebPreferences(preloadPath),
   });
 };

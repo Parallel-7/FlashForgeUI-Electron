@@ -14,6 +14,7 @@ import {
   MaterialMatchingDialogData,
   SingleColorConfirmationDialogData,
   AutoConnectChoiceDialogData,
+  ConnectChoiceDialogData,
   createPreloadPath,
   WINDOW_SIZES
 } from '../shared/WindowTypes';
@@ -331,7 +332,7 @@ export const createAutoConnectChoiceDialog = (data: AutoConnectChoiceDialogData)
       mainWindow,
       WINDOW_SIZES.AUTO_CONNECT_CHOICE,
       createPreloadPath(path.join(__dirname, '../../ui/auto-connect-choice/auto-connect-choice-preload.js')),
-      { resizable: false, frame: false }
+      { resizable: false, frame: false, transparent: true }
     );
 
     // Set up response handler using handle/invoke pattern
@@ -409,5 +410,114 @@ export const createAutoConnectChoiceDialog = (data: AutoConnectChoiceDialogData)
 
     setupDevTools(autoConnectChoiceDialogWindow);
     windowManager.setAutoConnectChoiceDialogWindow(autoConnectChoiceDialogWindow);
+  });
+};
+
+// Global handler state for connect choice dialog to prevent duplicate registrations
+let globalConnectChoiceHandler: ((_event: unknown) => Promise<ConnectChoiceDialogData & { responseChannel: string }>) | null = null;
+
+/**
+ * Create the connect choice dialog window
+ * @param data - Dialog initialization data
+ * @returns Promise that resolves with user choice or null if cancelled
+ */
+export const createConnectChoiceDialog = (data: ConnectChoiceDialogData): Promise<string | null> => {
+  return new Promise((resolve) => {
+    const windowManager = getWindowManager();
+    const mainWindow = windowManager.getMainWindow();
+    
+    if (!validateParentWindow(mainWindow, 'connect choice dialog')) {
+      resolve(null);
+      return;
+    }
+
+    // Generate unique dialog ID and response channel
+    const dialogId = generateDialogId();
+    const responseChannel = createResponseChannelName(dialogId);
+    let handlerActive = true;
+
+    // Create the dialog window
+    const connectChoiceDialogWindow = createModalWindow(
+      mainWindow,
+      WINDOW_SIZES.CONNECT_CHOICE,
+      createPreloadPath(path.join(__dirname, '../../ui/connect-choice-dialog/connect-choice-dialog-preload.js')),
+      { resizable: false, frame: false, transparent: true }
+    );
+
+    // Set up response handler using handle/invoke pattern
+    const handleResponse = async (_event: unknown, result: { action: string } | null): Promise<void> => {
+      if (!handlerActive) return;
+      
+      handlerActive = false;
+      ipcMain.removeHandler(responseChannel);
+      
+      // Close dialog window
+      if (connectChoiceDialogWindow && !connectChoiceDialogWindow.isDestroyed()) {
+        connectChoiceDialogWindow.close();
+      }
+      
+      // Resolve promise with result
+      resolve(result?.action || null);
+    };
+
+    // Set up response channel provider - only register if not already registered
+    const handleGetResponseChannel = async (_event: unknown): Promise<ConnectChoiceDialogData & { responseChannel: string }> => {
+      return {
+        ...data,
+        responseChannel
+      };
+    };
+
+    // Register the unique response handler for this dialog instance
+    ipcMain.handle(responseChannel, handleResponse);
+
+    // Register the global response channel provider only if not already registered
+    if (!globalConnectChoiceHandler) {
+      globalConnectChoiceHandler = handleGetResponseChannel;
+      ipcMain.handle('connect-choice:get-response-channel', globalConnectChoiceHandler);
+    } else {
+      // Update the existing handler to use current dialog data
+      globalConnectChoiceHandler = handleGetResponseChannel;
+      // Remove the old handler and register the new one
+      ipcMain.removeHandler('connect-choice:get-response-channel');
+      ipcMain.handle('connect-choice:get-response-channel', globalConnectChoiceHandler);
+    }
+
+    // Load HTML and setup lifecycle
+    void loadWindowHTML(connectChoiceDialogWindow, 'connect-choice-dialog');
+
+    // Initialize dialog when ready
+    connectChoiceDialogWindow.webContents.on('did-finish-load', () => {
+      if (connectChoiceDialogWindow && !connectChoiceDialogWindow.isDestroyed()) {
+        connectChoiceDialogWindow.webContents.send('connect-choice:init', {
+          ...data,
+          responseChannel
+        });
+      }
+    });
+
+    // Setup window lifecycle with cleanup
+    setupWindowLifecycle(
+      connectChoiceDialogWindow,
+      () => {
+        windowManager.setConnectChoiceDialogWindow(null);
+        // Clean up IPC handlers
+        if (handlerActive) {
+          handlerActive = false;
+          ipcMain.removeHandler(responseChannel);
+          
+          // Only clean up global handler if it's the current one
+          if (globalConnectChoiceHandler === handleGetResponseChannel) {
+            ipcMain.removeHandler('connect-choice:get-response-channel');
+            globalConnectChoiceHandler = null;
+          }
+          
+          resolve(null);
+        }
+      }
+    );
+
+    setupDevTools(connectChoiceDialogWindow);
+    windowManager.setConnectChoiceDialogWindow(connectChoiceDialogWindow);
   });
 };

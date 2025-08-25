@@ -20,7 +20,8 @@ export enum WindowType {
   MATERIAL_INFO_DIALOG = 'materialInfoDialog',
   MATERIAL_MATCHING_DIALOG = 'materialMatchingDialog',
   SINGLE_COLOR_CONFIRMATION_DIALOG = 'singleColorConfirmationDialog',
-  AUTO_CONNECT_CHOICE_DIALOG = 'autoConnectChoiceDialog'
+  AUTO_CONNECT_CHOICE_DIALOG = 'autoConnectChoiceDialog',
+  CONNECT_CHOICE_DIALOG = 'connectChoiceDialog'
 }
 
 class WindowManager {
@@ -244,6 +245,19 @@ class WindowManager {
 
   public hasAutoConnectChoiceDialogWindow(): boolean {
     return this.hasWindow(WindowType.AUTO_CONNECT_CHOICE_DIALOG);
+  }
+
+  // Convenience methods for connect choice dialog access
+  public getConnectChoiceDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.CONNECT_CHOICE_DIALOG);
+  }
+
+  public setConnectChoiceDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.CONNECT_CHOICE_DIALOG, window);
+  }
+
+  public hasConnectChoiceDialogWindow(): boolean {
+    return this.hasWindow(WindowType.CONNECT_CHOICE_DIALOG);
   }
 
   /**

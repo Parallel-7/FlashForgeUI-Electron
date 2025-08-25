@@ -1,9 +1,8 @@
 /**
- * Auto-Connect Choice Dialog Styles
+ * Connect Choice Dialog Styles
  * 
- * Modern dialog styling for the auto-connect choice interface, following
+ * Modern dialog styling for the connect choice interface, following
  * FlashForgeUI design patterns and dark theme consistency.
- * Matches the design pattern of connect-choice-dialog for visual consistency.
  */
 
 body {
@@ -71,9 +70,6 @@ body {
     padding: 24px;
     flex: 1;
     overflow-y: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
     /* Hide scrollbars while maintaining scroll functionality */
     scrollbar-width: none; /* Firefox */
     -ms-overflow-style: none; /* Internet Explorer 10+ */
@@ -84,44 +80,13 @@ body {
     display: none;
 }
 
-.message {
-    text-align: center;
-    margin-bottom: 8px;
-}
-
-.message-text {
-    font-size: 1rem;
-    color: #e0e0e0;
-    margin-bottom: 12px;
-    font-weight: 500;
-}
-
-.last-used-info {
-    font-size: 0.85rem;
-    color: #b0b0b0;
-    padding: 8px 16px;
-    background: #444;
-    border-radius: 6px;
-    margin: 0 auto;
-    display: inline-block;
-    border: 1px solid #555;
-}
-
-.last-used-info strong {
-    color: #ffffff;
-}
-
-.options-container {
+.choice-options {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    max-width: none;
-    margin: 0;
-    width: 100%;
-    box-sizing: border-box;
 }
 
-.option-button {
+.choice-button {
     display: flex;
     align-items: center;
     background: #4a4a4a;
@@ -134,142 +99,96 @@ body {
     width: 100%;
     color: inherit;
     font-family: inherit;
-    box-sizing: border-box;
 }
 
-.option-button:hover {
+.choice-button:hover {
     border-color: #4a90e2;
     background: #515151;
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
 }
 
-.option-button:active {
+.choice-button:active {
     transform: translateY(0);
     box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
 }
 
-.option-button:focus {
+.choice-button:focus {
     outline: none;
     border-color: #4a90e2;
     box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
 }
 
-.option-button.primary {
-    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-    border-color: #357abd;
-    color: white;
-}
-
-.option-button.primary:hover {
-    background: linear-gradient(135deg, #5a9ef3 0%, #4686c7 100%);
-    border-color: #4686c7;
-    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
-}
-
-.option-button.cancel {
-    background: #d13438;
-    border-color: #b22327;
-    color: white;
-}
-
-.option-button.cancel:hover {
-    background: #e14044;
-    border-color: #c32a2e;
-    box-shadow: 0 4px 12px rgba(209, 52, 56, 0.3);
-}
-
-.option-icon {
+.choice-icon {
     flex-shrink: 0;
     width: 48px;
     height: 48px;
-    background: rgba(255, 255, 255, 0.1);
+    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
     border-radius: 8px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: inherit;
+    color: white;
     margin-right: 16px;
     transition: transform 0.2s ease;
-    font-size: 24px;
 }
 
-.option-button.primary .option-icon {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.option-button.cancel .option-icon {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-.option-button:hover .option-icon {
+.choice-button:hover .choice-icon {
     transform: scale(1.05);
 }
 
-.option-content {
+.choice-content {
     flex: 1;
 }
 
-.option-title {
+.choice-content h3 {
     margin: 0 0 6px 0;
     font-size: 1.1rem;
     font-weight: 600;
-    color: inherit;
+    color: #ffffff;
 }
 
-.option-description {
+.choice-content p {
     margin: 0;
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: #b0b0b0;
     line-height: 1.4;
 }
 
-.option-button.primary .option-description {
-    color: rgba(255, 255, 255, 0.9);
+.dialog-actions {
+    padding: 16px 24px 24px 24px;
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid #555;
+    background: #353535;
+    flex-shrink: 0;
 }
 
-.option-button.cancel .option-description {
-    color: rgba(255, 255, 255, 0.9);
+.btn-secondary {
+    background: #666;
+    color: white;
+    border: 1px solid #777;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    min-width: 80px;
 }
 
-/* Disabled state */
-.option-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
+.btn-secondary:hover {
+    background: #777;
+    border-color: #888;
 }
 
-.option-button:disabled:hover {
-    border-color: #555;
-    background: #4a4a4a;
-    transform: none;
-    box-shadow: none;
+.btn-secondary:active {
+    background: #555;
 }
 
-.option-button:disabled .option-icon {
-    transform: none;
-}
-
-/* Animation for showing options */
-.option-button {
-    opacity: 0;
-    animation: fadeInUp 0.3s ease forwards;
-}
-
-.option-button:nth-child(1) { animation-delay: 0.1s; }
-.option-button:nth-child(2) { animation-delay: 0.2s; }
-.option-button:nth-child(3) { animation-delay: 0.3s; }
-.option-button:nth-child(4) { animation-delay: 0.4s; }
-
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+.btn-secondary:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(102, 102, 102, 0.5);
 }
 
 /* High contrast accessibility support */
@@ -278,11 +197,11 @@ body {
         border-color: #ffffff;
     }
     
-    .option-button {
+    .choice-button {
         border-color: #ffffff;
     }
     
-    .option-description {
+    .choice-content p {
         color: #cccccc;
     }
 }
@@ -295,20 +214,31 @@ body {
         transform: none;
     }
     
-    .option-button {
+    .choice-button {
         transition: none;
-        animation: none;
-        opacity: 1;
-        transform: none;
     }
     
-    .option-icon {
+    .choice-icon {
         transition: none;
     }
 }
 
 /* Focus management for keyboard navigation */
-.option-button.keyboard-focused {
+.choice-button.keyboard-focused {
     border-color: #4a90e2;
     box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.5);
+}
+
+/* Loading state (future enhancement) */
+.choice-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.choice-button:disabled:hover {
+    border-color: #555;
+    background: #4a4a4a;
+    transform: none;
+    box-shadow: none;
 }

@@ -24,7 +24,8 @@ export {
   createMaterialMatchingDialog,
   createSingleColorConfirmationDialog,
   createMaterialInfoDialog,
-  createIFSDialog
+  createIFSDialog,
+  createConnectChoiceDialog
 } from './factories/DialogWindowFactory';
 
 // Utility and feature windows
