@@ -207,6 +207,7 @@ const createMainWindow = async (): Promise<void> => {
       allowRunningInsecureContent: false, // Security
     },
     frame: false, // Custom title bar
+    transparent: true, // Enable transparency for rounded corners
     titleBarStyle: 'hidden',
     show: false, // Don't show until ready
   });

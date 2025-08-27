@@ -6,91 +6,90 @@
     <link rel="stylesheet" href="job-uploader.css" />
 </head>
 <body>
+<div class="dialog-container">
+    <!-- Dialog Header -->
+    <div class="dialog-header">
+        <div class="dialog-title">Upload Job</div>
+        <button class="dialog-close" id="btn-close">×</button>
+    </div>
 
-<!-- Header -->
-<div class="header">
-    <span class="title">Upload Job</span>
-    <button class="close-btn" id="btn-close">×</button>
-</div>
+    <!-- Dialog Content -->
+    <div class="dialog-content">
+        <!-- File Selection -->
+        <div class="file-section">
+            <div class="file-path" id="file-path-display">No file selected...</div>
+            <button class="browse-btn" id="btn-browse">Browse...</button>
+        </div>
 
-<!-- File Selection -->
-<div class="file-section">
-    <div class="file-path" id="file-path-display">No file selected...</div>
-    <button class="browse-btn" id="btn-browse">Browse...</button>
-</div>
+        <!-- Options -->
+        <div class="options-section">
+            <label class="option">
+                <input type="checkbox" id="cb-start-now" checked> Start Now
+            </label>
+            <label class="option">
+                <input type="checkbox" id="cb-auto-level"> Auto Level
+            </label>
+        </div>
 
-<!-- Options -->
-<div class="options-section">
-    <label class="option">
-        <input type="checkbox" id="cb-start-now" checked> Start Now
-    </label>
-    <label class="option">
-        <input type="checkbox" id="cb-auto-level"> Auto Level
-    </label>
-</div>
+        <!-- Main Content Layout -->
+        <div class="content">
+            <!-- Left Side: Preview -->
+            <div class="preview-section">
+                <div class="thumbnail" id="meta-thumbnail">
+                    <span class="no-preview">No Preview</span>
+                </div>
+            </div>
 
-<!-- Main Content - 3 Column Layout -->
-<div class="content">
-    <!-- Left Column: File Details -->
-    <div class="column">
-        <div class="field">
-            <span class="label">Printer:</span>
-            <span class="value" id="meta-printer">-</span>
-        </div>
-        <div class="field">
-            <span class="label">Filament:</span>
-            <span class="value" id="meta-filament-type">-</span>
-        </div>
-        <div class="field">
-            <span class="label">Used (Len):</span>
-            <span class="value" id="meta-filament-len">-</span>
-        </div>
-        <div class="field">
-            <span class="label">Used (Wt):</span>
-            <span class="value" id="meta-filament-wt">-</span>
-        </div>
-        <div class="field">
-            <span class="label">Support:</span>
-            <span class="value" id="meta-support">-</span>
+            <!-- Right Side: Metadata -->
+            <div class="metadata-section">
+                <div class="metadata-group">
+                    <h4 class="group-title">Printer Model:</h4>
+                    <div class="group-value" id="meta-printer">Flashforge-Adventurer-5M-Pro</div>
+                </div>
+                
+                <div class="metadata-group">
+                    <h4 class="group-title">Filament Type:</h4>
+                    <div class="group-value" id="meta-filament-type">PLA</div>
+                </div>
+                
+                <div class="metadata-group">
+                    <h4 class="group-title">Filament Used:</h4>
+                    <div class="group-value" id="meta-filament-len">11.30 g</div>
+                </div>
+                
+                <div class="metadata-group">
+                    <h4 class="group-title">Sliced by:</h4>
+                    <div class="group-value" id="meta-slicer-name">Orca-Flashforge</div>
+                </div>
+                
+                <div class="metadata-group">
+                    <h4 class="group-title">Version:</h4>
+                    <div class="group-value" id="meta-slicer-ver">1.1.0</div>
+                </div>
+                
+                <div class="metadata-group">
+                    <h4 class="group-title">Date:</h4>
+                    <div class="group-value" id="meta-slice-date">2025-01-06</div>
+                </div>
+                
+                <div class="metadata-group">
+                    <h4 class="group-title">Time:</h4>
+                    <div class="group-value" id="meta-slice-time">8:51 PM</div>
+                </div>
+                
+                <div class="metadata-group print-time-highlight">
+                    <h4 class="group-title">Estimated Print Time:</h4>
+                    <div class="group-value print-time-value" id="meta-eta">36m41s</div>
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Middle Column: Slicer Info -->
-    <div class="column">
-        <div class="field">
-            <span class="label">Slicer:</span>
-            <span class="value" id="meta-slicer-name">-</span>
-        </div>
-        <div class="field">
-            <span class="label">Version:</span>
-            <span class="value" id="meta-slicer-ver">-</span>
-        </div>
-        <div class="field">
-            <span class="label">Date:</span>
-            <span class="value" id="meta-slice-date">-</span>
-        </div>
-        <div class="field">
-            <span class="label">Time:</span>
-            <span class="value" id="meta-slice-time">-</span>
-        </div>
+    <!-- Dialog Footer -->
+    <div class="dialog-footer">
+        <button class="dialog-button cancel" id="btn-cancel">Cancel</button>
+        <button class="dialog-button primary" id="btn-ok" disabled>OK</button>
     </div>
-
-    <!-- Right Column: Preview -->
-    <div class="column preview-column">
-        <div class="thumbnail" id="meta-thumbnail">
-            <span class="no-preview">No Preview</span>
-        </div>
-        <div class="field eta-field">
-            <span class="label">ETA:</span>
-            <span class="value" id="meta-eta">-</span>
-        </div>
-    </div>
-</div>
-
-<!-- Footer -->
-<div class="footer">
-    <button class="btn cancel-btn" id="btn-cancel">Cancel</button>
-    <button class="btn ok-btn" id="btn-ok" disabled>OK</button>
 </div>
 
 <!-- Loading Overlay -->

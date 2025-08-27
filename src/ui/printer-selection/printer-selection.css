@@ -1,104 +1,43 @@
-/* src/ui/printer-selection/printer-selection.css */
-/* Dark theme styling for printer selection dialog - 1:1 match with legacy version */
-/* Extended with support for saved printer mode */
+/* Printer Selection Dialog - Rounded Styling Pattern */
+/* Import shared template for consistent styling */
+@import url('../shared/rounded-dialog-template.css');
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-}
-
+/* Custom CSS variables for printer selection dialog */
 :root {
-    --dark-bg: #2a2a2a;
-    --darker-bg: #1e1e1e;
-    --header-bg: #222222;
-    --border-color: #444444;
     --button-bg: #4285f4;
     --button-hover: #5a95f5;
-    --text-color: #e0e0e0;
-    --row-hover-bg: #3a3a3a;
-    --selected-bg: #4285f4; /* Use accent color for selection */
+    --row-hover-bg: #404040;
+    --selected-bg: #4285f4;
     --selected-text: white;
     --status-online: #4caf50;
     --status-offline: #f44336;
     --status-changed: #ff9800;
+    --table-border: #555;
+    --table-header-bg: #2a2a2a;
 }
 
-html, body {
-    height: 100%;
-    width: 100%;
-    overflow: hidden;
-}
-
-body {
-    background-color: var(--dark-bg);
-    color: var(--text-color);
-    display: flex;
-}
-
-.dialog-container {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    border: 1px solid var(--border-color);
-}
-
-/* Header */
-.dialog-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: var(--header-bg);
-    height: 32px;
-    padding: 0 10px;
-    -webkit-app-region: drag;
-    border-bottom: 1px solid var(--border-color);
-    flex-shrink: 0;
-}
-
-.dialog-title {
-    font-weight: bold;
-    -webkit-app-region: no-drag;
-}
-
-.dialog-close {
-    -webkit-app-region: no-drag;
-    background: none;
-    border: none;
-    color: var(--text-color);
-    font-size: 16px;
-    cursor: pointer;
-    width: 30px;
-    height: 100%;
-}
-
-.dialog-close:hover {
-    background-color: #e81123;
-}
-
-/* Content Area */
-.dialog-content {
-    flex: 1;
-    padding: 0; /* Remove padding to allow table container full space */
-    overflow: hidden; /* Prevent content scroll, table container will scroll */
-    display: flex;
-    flex-direction: column;
-    position: relative; /* For overlay */
-}
+/* Printer Selection Dialog Specific Styling */
 
 .table-container {
     flex: 1;
-    overflow-y: auto; /* Enable scrolling for the table */
-    border: 1px solid var(--border-color);
-    margin: 10px; /* Add margin around the table */
+    overflow-y: auto;
+    border: 1px solid var(--table-border);
+    border-radius: 8px;
+    margin: 0 0 16px 0;
+    background-color: #353535;
+    /* Hide scrollbars while maintaining scroll functionality */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.table-container::-webkit-scrollbar {
+    display: none;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    table-layout: fixed; /* Prevent columns from auto-sizing too much */
+    table-layout: fixed;
 }
 
 /* Column width adjustments for different modes */
@@ -151,24 +90,28 @@ table.saved-mode td:nth-child(5) {
 }
 
 th, td {
-    padding: 8px 10px;
+    padding: 12px;
     text-align: left;
-    border-bottom: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--table-border);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 th {
-    background-color: var(--header-bg);
-    position: sticky; /* Make header sticky */
+    background-color: var(--table-header-bg);
+    position: sticky;
     top: 0;
     z-index: 1;
+    color: #ffffff;
+    font-weight: 600;
+    font-size: 14px;
 }
 
 tbody tr {
     cursor: pointer;
-    transition: background-color 0.15s ease-in-out;
+    transition: all 0.2s ease;
+    background-color: #353535;
 }
 
 tbody tr:hover {
@@ -187,22 +130,23 @@ tbody tr.last-used {
 tbody tr.loading-row td,
 .message-overlay {
     text-align: center;
-    color: #aaa;
+    color: #aaaaaa;
     font-style: italic;
-    padding: 20px;
+    padding: 24px;
 }
 
 .message-overlay {
     position: absolute;
-    top: 10px; /* Match table margin */
-    left: 10px;
-    right: 10px;
-    bottom: 10px;
-    background-color: rgba(42, 42, 42, 0.9); /* Semi-transparent background */
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 16px;
+    background-color: rgba(53, 53, 53, 0.95);
+    border-radius: 8px;
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 2; /* Above table */
+    z-index: 2;
 }
 
 /* Status indicators for saved printer mode */
@@ -246,71 +190,49 @@ tbody tr.loading-row td,
     font-size: 0.9em;
 }
 
-/* Footer */
+/* Footer - inherits from template with custom layout */
 .dialog-footer {
-    display: flex;
-    justify-content: space-between; /* Space out instructions and button */
-    align-items: center;
-    padding: 10px 15px;
-    background-color: var(--darker-bg);
-    border-top: 1px solid var(--border-color);
-    flex-shrink: 0;
+    justify-content: space-between; /* Override default flex-end */
 }
 
 .instructions {
-    font-size: 0.85em;
-    color: #aaa;
+    font-size: 0.9rem;
+    color: #cccccc;
+    font-style: italic;
 }
 
+/* Button styling - inherit from template with overrides */
 .dialog-button {
     background-color: var(--button-bg);
-    color: white;
-    border: none;
-    padding: 6px 14px;
-    border-radius: 2px;
-    cursor: pointer;
+    border-color: var(--button-bg);
 }
 
 .dialog-button:hover {
     background-color: var(--button-hover);
+    border-color: var(--button-hover);
 }
 
 .dialog-button.cancel {
-    background-color: #555;
+    background-color: #666;
+    border-color: #777;
 }
 
 .dialog-button.cancel:hover {
-    background-color: #666;
+    background-color: #777;
+    border-color: #888;
 }
 
 .dialog-button:disabled {
     background-color: #555;
+    border-color: #666;
     cursor: not-allowed;
-}
-
-/* Custom scrollbar styling */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--darker-bg);
-}
-
-::-webkit-scrollbar-thumb {
-    background: #666;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #888;
+    opacity: 0.6;
 }
 
 /* Scanning animation */
 .scanning-animation {
     font-size: 1.1em;
-    color: #1e88e5;
+    color: var(--button-bg);
     animation: pulse 1.5s infinite;
 }
 
@@ -328,20 +250,36 @@ tbody tr.loading-row td,
 
 /* Discovery error styles */
 #no-printers-message button {
-    background-color: var(--primary-color);
+    background-color: var(--button-bg);
     color: white;
-    border: none;
-    border-radius: 4px;
+    border: 1px solid var(--button-bg);
+    border-radius: 6px;
     padding: 8px 20px;
     font-size: 0.9em;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.2s ease;
 }
 
 #no-printers-message button:hover {
-    background-color: #1976d2;
+    background-color: var(--button-hover);
+    border-color: var(--button-hover);
 }
 
-#no-printers-message button:active {
-    background-color: #1565c0;
+/* Responsive design */
+@media (max-width: 600px) {
+    th, td {
+        padding: 8px;
+        font-size: 0.9rem;
+    }
+    
+    .dialog-footer {
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+    }
+    
+    .instructions {
+        order: 2;
+        font-size: 0.8rem;
+    }
 }

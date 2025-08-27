@@ -1,187 +1,146 @@
-/* src/ui/send-cmds/send-cmds.css */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-}
+/* Send Commands Dialog - Rounded Styling Pattern */
+/* Import shared template for consistent styling */
+@import url('../shared/rounded-dialog-template.css');
 
+/* Custom CSS variables for send commands dialog */
 :root {
-    --dark-bg: #2a2a2a;
-    --darker-bg: #1e1e1e;
-    --header-bg: #222222;
-    --border-color: #444444;
     --button-bg: #4285f4;
     --button-hover: #5a95f5;
-    --text-color: #e0e0e0;
-    --input-bg: #3c3c3c;
-    --label-color: #ccc;
+    --input-bg: #2a2a2a;
+    --log-bg: #1e1e1e;
+    --command-color: #4DACFF;
+    --response-color: #00FF00;
+    --error-color: #FF6666;
+    --info-color: #CCCCCC;
 }
 
-body {
-    background-color: var(--dark-bg);
-    color: var(--text-color);
-    height: 100vh;
-    width: 100vw;
-    overflow: hidden;
-    display: flex;
-}
+/* Send Commands Dialog Specific Styling */
 
-.dialog-container {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    height: 100%;
-    border: 1px solid var(--border-color);
-}
-
-/* Header */
-.dialog-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: var(--header-bg);
-    height: 32px;
-    padding: 0 10px;
-    -webkit-app-region: drag;
-    border-bottom: 1px solid var(--border-color);
-    flex-shrink: 0;
-}
-
-/* Add zero height between header and content */
-.dialog-header + .dialog-content {
-    padding-top: 0;
-}
-
-.dialog-title {
-    font-weight: bold;
-    -webkit-app-region: no-drag;
-}
-
-.dialog-close {
-    -webkit-app-region: no-drag;
-    background: none; 
-    border: none; 
-    color: var(--text-color);
-    font-size: 16px; 
-    cursor: pointer; 
-    width: 30px; 
-    height: 100%;
-}
-
-.dialog-close:hover { 
-    background-color: #e81123; 
-}
-
-/* Content Area */
+/* Override dialog-content padding for terminal layout */
 .dialog-content {
-    flex: 1;
-    padding: 5px;
     display: flex;
     flex-direction: column;
-    gap: 5px; /* Reduced space between sections */
+    gap: 12px;
     overflow: hidden;
 }
 
 .log-area {
     flex: 1;
-    background-color: var(--darker-bg);
-    border: 1px solid var(--border-color);
+    background-color: var(--log-bg);
+    border: 1px solid #555;
+    border-radius: 8px;
     padding: 0;
-    margin: 0;
-    font-family: monospace;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     overflow-y: auto;
     white-space: pre-wrap;
     word-break: break-word;
-    color: var(--text-color);
-    font-size: 14px;
-    border-radius: 2px;
+    color: #ffffff;
+    font-size: 13px;
+    /* Hide scrollbars while maintaining scroll functionality */
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.log-area::-webkit-scrollbar {
+    display: none;
 }
 
 .log-area > .log-entry:first-child {
     margin-top: 0;
-    padding-top: 5px;
+    padding-top: 8px;
 }
 
 .command-input-row {
     display: flex;
     gap: 10px;
-    margin-top: auto;
     flex-shrink: 0;
 }
 
 #command-input {
     flex-grow: 1;
     background-color: var(--input-bg);
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    padding: 8px 10px;
-    border-radius: 2px;
+    border: 1px solid #555;
+    color: #ffffff;
+    padding: 10px 12px;
+    border-radius: 6px;
     font-size: 14px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    transition: all 0.2s ease;
 }
 
 #command-input:focus {
     outline: none;
     border-color: var(--button-bg);
+    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.3);
 }
 
+#command-input::placeholder {
+    color: #888;
+    font-style: italic;
+}
+
+/* Button styling - inherit from template with overrides */
 .dialog-button {
     background-color: var(--button-bg);
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 2px;
-    cursor: pointer;
-    font-size: 14px;
+    border-color: var(--button-bg);
     min-width: 80px;
 }
 
 .dialog-button:hover {
     background-color: var(--button-hover);
+    border-color: var(--button-hover);
 }
 
 .dialog-button:disabled {
     background-color: #555;
+    border-color: #666;
     cursor: not-allowed;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar {
-    width: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--darker-bg);
-}
-
-::-webkit-scrollbar-thumb {
-    background: #666;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #888;
+    opacity: 0.6;
 }
 
 /* Log entry styles */
 .log-entry {
-    margin-bottom: 2px;
-    line-height: 1.2;
-    padding: 0 10px;
+    margin-bottom: 4px;
+    line-height: 1.3;
+    padding: 2px 12px;
 }
 
 .log-entry.command {
-    color: #4DACFF;
+    color: var(--command-color);
+    font-weight: 500;
 }
 
 .log-entry.response {
-    color: #00FF00;
+    color: var(--response-color);
 }
 
 .log-entry.error {
-    color: #FF6666;
+    color: var(--error-color);
+    font-weight: 500;
 }
 
 .log-entry.info {
-    color: #CCCCCC;
+    color: var(--info-color);
+    font-style: italic;
+}
+
+/* Responsive design */
+@media (max-width: 600px) {
+    .command-input-row {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .dialog-button {
+        width: 100%;
+    }
+    
+    #command-input {
+        padding: 8px 10px;
+        font-size: 13px;
+    }
+    
+    .log-area {
+        font-size: 12px;
+    }
 }

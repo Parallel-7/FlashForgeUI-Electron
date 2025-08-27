@@ -1,18 +1,27 @@
-/* Single Color Confirmation Dialog Styles */
+/* Single Color Confirmation Dialog - Rounded Styling Pattern */
+/* Import shared template for consistent styling */
+@import url('../shared/rounded-dialog-template.css');
 
-.dialog-container {
-  width: 450px;
-  max-width: 90vw;
+/* Custom CSS variables for single color confirmation dialog */
+:root {
+  --button-bg: #4285f4;
+  --button-hover: #5a95f5;
+  --material-type-color: #00ff6e;
+  --spool-bg: #808080;
+  --card-bg: #353535;
+  --option-bg: #2a2a2a;
 }
+
+/* Single Color Confirmation Dialog Specific Styling */
 
 .confirmation-message {
   text-align: center;
-  margin-bottom: 25px;
+  margin-bottom: 24px;
 }
 
 .confirmation-message p {
-  margin: 0 0 10px 0;
-  color: #b0b0b0;
+  margin: 0 0 12px 0;
+  color: #cccccc;
   font-size: 14px;
 }
 
@@ -20,24 +29,24 @@
   margin: 0;
   color: #ffffff;
   font-size: 18px;
-  font-weight: 500;
+  font-weight: 600;
   word-break: break-word;
 }
 
 /* Material preview section */
 .material-preview {
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: var(--card-bg);
+  border: 1px solid #555;
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
 }
 
 .material-preview h4 {
-  margin: 0 0 15px 0;
-  color: #c0c0c0;
+  margin: 0 0 16px 0;
+  color: #ffffff;
   font-size: 14px;
-  font-weight: 400;
+  font-weight: 600;
   text-align: center;
 }
 
@@ -59,12 +68,12 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background-color: #808080;
-  border: 3px solid rgba(255, 255, 255, 0.2);
+  background-color: var(--spool-bg);
+  border: 3px solid rgba(255, 255, 255, 0.3);
   box-shadow: 
-    inset 0 0 20px rgba(0, 0, 0, 0.3),
-    0 4px 8px rgba(0, 0, 0, 0.3);
-  transition: background-color 0.3s ease;
+    inset 0 0 20px rgba(0, 0, 0, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.4);
+  transition: all 0.3s ease;
 }
 
 .spool-hole {
@@ -76,7 +85,7 @@
   height: 30px;
   border-radius: 50%;
   background-color: #1a1a1a;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
 }
 
 /* Material info */
@@ -86,23 +95,24 @@
 
 .slot-label {
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
   color: #ffffff;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
 }
 
 .material-type {
   font-size: 14px;
-  color: #00ff6e;
+  color: var(--material-type-color);
+  font-weight: 500;
 }
 
 /* Options section */
 .options-section {
-  background-color: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 6px;
-  padding: 15px;
-  margin-bottom: 15px;
+  background-color: var(--option-bg);
+  border: 1px solid #555;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
 }
 
 .checkbox-container {
@@ -114,12 +124,13 @@
 .checkbox-container input[type="checkbox"] {
   width: 18px;
   height: 18px;
-  margin-right: 10px;
+  margin-right: 12px;
   cursor: pointer;
+  accent-color: var(--button-bg);
 }
 
 .checkbox-label {
-  color: #c0c0c0;
+  color: #ffffff;
   font-size: 14px;
   user-select: none;
 }
@@ -130,15 +141,31 @@
   border: 1px solid rgba(255, 68, 68, 0.3);
   color: #ff4444;
   padding: 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   font-size: 14px;
   line-height: 1.4;
-  margin-bottom: 15px;
+  margin-bottom: 16px;
 }
 
-/* Dialog footer */
-.dialog-footer {
-  margin-top: 20px;
+/* Button styling - inherit from template with overrides */
+.dialog-button.primary {
+  background-color: var(--button-bg);
+  border-color: var(--button-bg);
+}
+
+.dialog-button.primary:hover {
+  background-color: var(--button-hover);
+  border-color: var(--button-hover);
+}
+
+.dialog-button.cancel {
+  background-color: #666;
+  border-color: #777;
+}
+
+.dialog-button.cancel:hover {
+  background-color: #777;
+  border-color: #888;
 }
 
 /* Loading state */
@@ -150,9 +177,38 @@
 .no-material .spool-color {
   background-color: #333333;
   border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .no-material .material-type {
-  color: #808080;
+  color: #888888;
   font-style: italic;
+}
+
+/* Responsive design */
+@media (max-width: 500px) {
+  .material-card {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+  
+  .material-spool {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .spool-hole {
+    width: 24px;
+    height: 24px;
+  }
+  
+  .confirmation-message {
+    margin-bottom: 20px;
+  }
+  
+  .material-preview {
+    padding: 16px;
+    margin-bottom: 16px;
+  }
 }

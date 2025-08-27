@@ -7,14 +7,14 @@
 </head>
 <body>
     <div class="dialog-container">
-        <!-- Custom window titlebar -->
-        <div class="dialog-titlebar">
-            <span class="dialog-title">IFS - Material Station</span>
-            <button id="btn-close" class="dialog-close-btn">×</button>
+        <!-- Dialog Header -->
+        <div class="dialog-header">
+            <div class="dialog-title">IFS - Material Station</div>
+            <button id="btn-close" class="dialog-close">×</button>
         </div>
         
-        <!-- Material station content -->
-        <div class="material-station-container">
+        <!-- Dialog Content -->
+        <div class="dialog-content">
             <div class="station-header">
                 <h3>Material Slots</h3>
                 <div class="station-status" id="station-status">
@@ -74,11 +74,9 @@
                 </div>
             </div>
             
-            <div class="dialog-footer">
-                <div class="active-slot-info">
-                    <span>Active Slot: </span>
-                    <span id="active-slot-text">None</span>
-                </div>
+            <div class="active-slot-info">
+                <span>Active Slot: </span>
+                <span id="active-slot-text">None</span>
             </div>
         </div>
     </div>

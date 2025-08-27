@@ -13,16 +13,13 @@
 </head>
 <body>
   <div class="dialog-container">
-    <div class="dialog-header">
+    <div class="dialog-header with-description">
       <h2 class="dialog-title">Match Print Materials to IFS Slots</h2>
-      <button class="close-button" id="btn-close" title="Close">✕</button>
+      <p class="dialog-description">Match each material used in your print to the corresponding IFS slot. Materials must be the same type (e.g., PLA to PLA).</p>
+      <button class="dialog-close" id="btn-close" title="Close">×</button>
     </div>
     
     <div class="dialog-content">
-      <div class="info-section">
-        <p class="info-text">Match each material used in your print to the corresponding IFS slot. Materials must be the same type (e.g., PLA to PLA).</p>
-      </div>
-      
       <div class="matching-container">
         <!-- Print requirements section -->
         <div class="requirements-section">
@@ -54,8 +51,8 @@
     </div>
     
     <div class="dialog-footer">
-      <button class="button secondary" id="btn-cancel">Cancel</button>
-      <button class="button primary" id="btn-confirm" disabled>Start Print</button>
+      <button class="dialog-button cancel" id="btn-cancel">Cancel</button>
+      <button class="dialog-button primary" id="btn-confirm" disabled>Start Print</button>
     </div>
   </div>
   

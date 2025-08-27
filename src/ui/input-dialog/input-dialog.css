@@ -1,172 +1,97 @@
-/* Input Dialog CSS - Dark Theme Styling */
-/* Matches legacy FlashForge UI exactly */
+/* Input Dialog CSS - Rounded Styling Pattern */
+/* Import shared template for consistent styling */
+@import url('../shared/rounded-dialog-template.css');
 
-/* Reset and base styles */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-}
-
-/* CSS Variables for consistent theming */
+/* Custom CSS variables for input dialog */
 :root {
-    --dark-bg: #2a2a2a;
-    --darker-bg: #1e1e1e;
-    --header-bg: #222222;
-    --border-color: #444444;
     --button-bg: #4285f4;
     --button-hover: #5a95f5;
-    --text-color: #e0e0e0;
-    --button-cancel-bg: #555;
-    --button-cancel-hover: #666;
+    --input-border: #555;
+    --input-focus: #4285f4;
 }
 
-/* Body and main container */
+/* Override body styling to match shared template pattern */
 body {
-    background-color: var(--dark-bg);
-    color: var(--text-color);
+    margin: 0;
+    padding: 16px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: transparent;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     height: 100vh;
-    width: 100vw;
-    display: flex;
-    flex-direction: column;
+    -webkit-font-smoothing: antialiased;
     overflow: hidden;
+    box-sizing: border-box;
 }
 
-/* Dialog header with title bar */
-.dialog-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background-color: var(--header-bg);
-    height: 32px;
-    padding: 0 10px;
-    -webkit-app-region: drag;
-    border-bottom: 1px solid var(--border-color);
-    user-select: none;
-}
+/* Input Dialog Specific Styling */
 
-.dialog-title {
-    flex: 1;
-    text-align: center;
-    font-size: 13px;
-    font-weight: normal;
-    color: var(--text-color);
-}
-
-/* Close button */
-.dialog-close {
-    -webkit-app-region: no-drag;
-    background: none;
-    border: none;
-    color: var(--text-color);
-    font-size: 16px;
-    cursor: pointer;
-    width: 30px;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background-color 0.15s ease;
-}
-
-.dialog-close:hover {
-    background-color: #e81123;
-    color: white;
-}
-
-.dialog-close:focus {
-    outline: none;
-    background-color: #e81123;
-    color: white;
-}
-
-/* Main content area */
-.dialog-content {
-    flex: 1;
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 16px;
-}
-
-/* Message text */
+/* Message text styling */
 .dialog-message {
     font-size: 14px;
     line-height: 1.4;
-    color: var(--text-color);
-    margin-bottom: 4px;
+    color: #ffffff;
+    margin-bottom: 16px;
+    text-align: center;
 }
 
-/* Input field */
+/* Input field styling */
 .dialog-input {
-    background-color: var(--darker-bg);
-    border: 1px solid var(--border-color);
-    padding: 8px 12px;
-    color: var(--text-color);
+    background-color: #2a2a2a;
+    border: 1px solid var(--input-border);
+    padding: 10px 12px;
+    color: #ffffff;
     font-size: 14px;
-    border-radius: 2px;
+    border-radius: 6px;
     outline: none;
-    transition: border-color 0.15s ease;
+    transition: all 0.2s ease;
+    margin-bottom: 20px;
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+    width: 200px;
+    text-align: center;
 }
 
 .dialog-input:focus {
-    border-color: var(--button-bg);
-    box-shadow: 0 0 0 1px var(--button-bg);
+    border-color: var(--input-focus);
+    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.3);
 }
 
 .dialog-input::placeholder {
     color: #888;
 }
 
-/* Button container */
+/* Button container styling */
 .dialog-buttons {
     display: flex;
-    justify-content: flex-end;
-    gap: 16px;
-    margin-top: 8px;
+    justify-content: center;
+    gap: 10px;
+    padding-top: 8px;
 }
 
-/* Button base styling */
+/* Button styling - inherit most styles from template */
 .dialog-button {
     background-color: var(--button-bg);
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    border-radius: 2px;
-    cursor: pointer;
-    font-size: 13px;
-    font-weight: 500;
-    min-width: 70px;
-    height: 32px;
-    transition: background-color 0.15s ease;
+    border-color: var(--button-bg);
 }
 
 .dialog-button:hover {
     background-color: var(--button-hover);
-}
-
-.dialog-button:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.5);
-}
-
-.dialog-button:active {
-    transform: translateY(1px);
+    border-color: var(--button-hover);
 }
 
 /* Cancel button variant */
 .dialog-button.cancel {
-    background-color: var(--button-cancel-bg);
+    background-color: #666;
+    border-color: #777;
 }
 
 .dialog-button.cancel:hover {
-    background-color: var(--button-cancel-hover);
-}
-
-.dialog-button.cancel:focus {
-    box-shadow: 0 0 0 2px rgba(85, 85, 85, 0.5);
+    background-color: #777;
+    border-color: #888;
 }
 
 /* Hidden input state for confirmation dialogs */
@@ -177,15 +102,21 @@ body {
 /* Responsive adjustments */
 @media (max-width: 400px) {
     .dialog-content {
-        padding: 16px;
+        padding: 20px;
+    }
+    
+    .dialog-input {
+        width: calc(100% - 24px);
+        max-width: 200px;
     }
     
     .dialog-buttons {
         flex-direction: column-reverse;
-        align-items: stretch;
+        align-items: center;
+        gap: 8px;
     }
     
     .dialog-button {
-        width: 100%;
+        width: 120px;
     }
 }

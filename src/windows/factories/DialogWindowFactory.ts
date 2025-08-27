@@ -63,7 +63,7 @@ export const createInputDialog = (options: InputDialogOptions): Promise<string |
       mainWindow,
       WINDOW_SIZES.INPUT_DIALOG,
       createPreloadPath(path.join(__dirname, '../../ui/input-dialog/input-dialog-preload.js')),
-      { resizable: false }
+      { resizable: false, frame: false, transparent: true }
     );
 
     // Set up response handler using handle/invoke pattern
@@ -138,7 +138,8 @@ export const createMaterialMatchingDialog = (data: MaterialMatchingDialogData): 
     const materialMatchingDialogWindow = createModalWindow(
       parentWindow,
       WINDOW_SIZES.MATERIAL_MATCHING,
-      createPreloadPath(path.join(__dirname, '../../ui/material-matching-dialog/material-matching-dialog-preload.js'))
+      createPreloadPath(path.join(__dirname, '../../ui/material-matching-dialog/material-matching-dialog-preload.js')),
+      { resizable: false, frame: false, transparent: true }
     ) as DialogWindow<unknown[] | null>;
 
     // Store window data for IPC handlers
@@ -191,7 +192,7 @@ export const createSingleColorConfirmationDialog = (data: SingleColorConfirmatio
       parentWindow,
       WINDOW_SIZES.SINGLE_COLOR_CONFIRMATION,
       createPreloadPath(path.join(__dirname, '../../ui/single-color-confirmation-dialog/single-color-confirmation-dialog-preload.js')),
-      { resizable: false }
+      { resizable: false, frame: false, transparent: true }
     ) as DialogWindow<boolean>;
 
     // Store window data for IPC handlers
@@ -241,7 +242,8 @@ export const createMaterialInfoDialog = (materialData: unknown): void => {
   const materialInfoDialogWindow = createModalWindow(
     parentWindow,
     WINDOW_SIZES.MATERIAL_INFO,
-    createPreloadPath(path.join(__dirname, '../../ui/material-info-dialog/material-info-dialog-preload.js'))
+    createPreloadPath(path.join(__dirname, '../../ui/material-info-dialog/material-info-dialog-preload.js')),
+    { resizable: false, frame: false, transparent: true }
   );
 
   // Load HTML and setup lifecycle
@@ -282,7 +284,8 @@ export const createIFSDialog = (): void => {
   const ifsDialogWindow = createModalWindow(
     mainWindow,
     WINDOW_SIZES.IFS_DIALOG,
-    createPreloadPath(path.join(__dirname, '../../ui/ifs-dialog/ifs-dialog-preload.js'))
+    createPreloadPath(path.join(__dirname, '../../ui/ifs-dialog/ifs-dialog-preload.js')),
+    { resizable: false, frame: false, transparent: true }
   );
 
   // Load HTML and setup lifecycle

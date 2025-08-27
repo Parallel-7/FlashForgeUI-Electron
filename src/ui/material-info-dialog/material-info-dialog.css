@@ -1,135 +1,73 @@
-/* Material Info Dialog Styles */
+/* Material Info Dialog - Rounded Styling Pattern */
+/* Import shared template for consistent styling */
+@import url('../shared/rounded-dialog-template.css');
+
+/* Custom CSS variables for material info dialog */
 :root {
-  --dialog-bg: #2a2a2a;
-  --dialog-header-bg: #3a3a3a;
-  --dialog-border: #555;
-  --text-primary: #e0e0e0;
-  --text-secondary: #aaa;
-  --button-bg: #4a4a4a;
-  --button-hover: #5a5a5a;
   --accent-color: #5c6bc0;
   --success-color: #4caf50;
   --error-color: #f44336;
   --warning-color: #ff9800;
   --empty-spool-color: #666;
+  --material-card-bg: #353535;
+  --file-stats-bg: #2a2a2a;
 }
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background-color: var(--dialog-bg);
-  color: var(--text-primary);
-  overflow: hidden;
-}
-
-.dialog-container {
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  flex-direction: column;
-  background-color: var(--dialog-bg);
-}
-
-/* Dialog titlebar */
-.dialog-titlebar {
-  background-color: var(--dialog-header-bg);
-  padding: 12px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid var(--dialog-border);
-  user-select: none;
-  -webkit-app-region: drag;
-}
-
-.dialog-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: var(--accent-color);
-}
-
-.dialog-close-btn {
-  background: none;
-  border: none;
-  color: var(--text-primary);
-  font-size: 18px;
-  width: 32px;
-  height: 32px;
-  border-radius: 4px;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.2s;
-  -webkit-app-region: no-drag;
-}
-
-.dialog-close-btn:hover {
-  background-color: var(--button-hover);
-}
-
-/* Material info container */
-.material-info-container {
-  flex: 1;
-  padding: 20px;
-  overflow-y: auto;
-}
+/* Material Info Dialog Specific Styling */
 
 .file-header {
-  margin-bottom: 20px;
+  margin-bottom: 24px;
   text-align: center;
 }
 
 .file-header h3 {
   font-size: 18px;
   font-weight: 500;
-  color: var(--text-primary);
-  margin-bottom: 8px;
+  color: #ffffff;
+  margin-bottom: 12px;
   word-break: break-word;
 }
 
 .file-stats {
   display: flex;
   justify-content: center;
-  gap: 20px;
+  gap: 16px;
   font-size: 14px;
-  color: var(--text-secondary);
+  color: #cccccc;
+  flex-wrap: wrap;
 }
 
 .file-stats span {
-  padding: 4px 8px;
-  background-color: var(--dialog-header-bg);
-  border-radius: 4px;
+  padding: 6px 12px;
+  background-color: var(--file-stats-bg);
+  border: 1px solid #555;
+  border-radius: 6px;
 }
 
 /* Materials container */
 .materials-container {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 20px;
-  margin-top: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 8px;
 }
 
 .material-item {
-  background-color: var(--dialog-header-bg);
-  border: 1px solid var(--dialog-border);
+  background-color: var(--material-card-bg);
+  border: 1px solid #555;
   border-radius: 8px;
   padding: 16px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 12px;
-  transition: border-color 0.3s, box-shadow 0.3s;
+  transition: all 0.2s ease;
 }
 
 .material-item:hover {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(92, 107, 192, 0.2);
+  box-shadow: 0 4px 12px rgba(92, 107, 192, 0.2);
+  transform: translateY(-2px);
 }
 
 /* Spool styling - same as Material Station */
@@ -206,26 +144,40 @@ body {
 .material-name {
   font-size: 14px;
   font-weight: 500;
-  color: var(--text-primary);
-  margin-bottom: 4px;
+  color: #ffffff;
+  margin-bottom: 6px;
 }
 
 .material-weight {
   font-size: 12px;
-  color: var(--text-secondary);
-  padding: 4px 8px;
-  border-radius: 4px;
-  background-color: rgba(255, 255, 255, 0.05);
+  color: #cccccc;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background-color: #2a2a2a;
+  border: 1px solid #555;
   display: inline-block;
 }
 
+/* Empty state */
+.no-materials {
+  text-align: center;
+  color: #aaaaaa;
+  font-style: italic;
+  padding: 40px 20px;
+  background-color: var(--material-card-bg);
+  border: 1px solid #555;
+  border-radius: 8px;
+  margin-top: 20px;
+}
+
 /* Responsive design */
-@media (max-width: 500px) {
+@media (max-width: 600px) {
   .materials-container {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
   
-  .material-info-container {
+  .dialog-content {
     padding: 16px;
   }
   
@@ -243,14 +195,10 @@ body {
     flex-direction: column;
     gap: 8px;
   }
-}
-
-/* Empty state */
-.no-materials {
-  text-align: center;
-  color: var(--text-secondary);
-  font-style: italic;
-  padding: 40px 20px;
+  
+  .file-header h3 {
+    font-size: 16px;
+  }
 }
 
 /* Material station indicator */

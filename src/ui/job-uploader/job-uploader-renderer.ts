@@ -71,6 +71,9 @@ interface DialogElements {
     sliceTime: HTMLElement | null;
     thumbnailBox: HTMLElement | null;
     eta: HTMLElement | null;
+    layerHeight: HTMLElement | null;
+    infill: HTMLElement | null;
+    layers: HTMLElement | null;
     okButton: HTMLButtonElement | null;
     cancelButton: HTMLButtonElement | null;
     closeButton: HTMLButtonElement | null;
@@ -155,6 +158,9 @@ document.addEventListener('DOMContentLoaded', (): void => {
         sliceTime: document.getElementById('meta-slice-time'),
         thumbnailBox: document.getElementById('meta-thumbnail'),
         eta: document.getElementById('meta-eta'),
+        layerHeight: document.getElementById('meta-layer-height'),
+        infill: document.getElementById('meta-infill'),
+        layers: document.getElementById('meta-layers'),
         okButton: document.getElementById('btn-ok') as HTMLButtonElement,
         cancelButton: document.getElementById('btn-cancel') as HTMLButtonElement,
         closeButton: document.getElementById('btn-close') as HTMLButtonElement,
@@ -510,6 +516,23 @@ function populateMetadata(elements: DialogElements, data: MetadataResult): void 
     if (elements.eta) {
         elements.eta.textContent = data.slicer?.printEta || '-';
     }
+    
+    // New Print Information Fields - Use available data or fallbacks
+    if (elements.layerHeight) {
+        // Try to get layer height from threeMf or provide default
+        const layerHeight = (data.threeMf as any)?.layerHeight || (data.file as any)?.layerHeight;
+        elements.layerHeight.textContent = layerHeight ? `${layerHeight} mm` : '-';
+    }
+    if (elements.infill) {
+        // Try to get infill from threeMf or provide default
+        const infill = (data.threeMf as any)?.infill || (data.file as any)?.infill;
+        elements.infill.textContent = infill ? `${infill}%` : '-';
+    }
+    if (elements.layers) {
+        // Try to get layer count from threeMf or provide default
+        const layers = (data.threeMf as any)?.layerCount || (data.file as any)?.layers;
+        elements.layers.textContent = layers?.toString() || '-';
+    }
 
     // Right Column: Thumbnail
     if (elements.thumbnailBox) {
@@ -541,7 +564,10 @@ function resetMetadata(elements: DialogElements): void {
         elements.slicerVer,
         elements.sliceDate,
         elements.sliceTime,
-        elements.eta
+        elements.eta,
+        elements.layerHeight,
+        elements.infill,
+        elements.layers
     ];
 
     metadataElements.forEach(element => {

@@ -47,9 +47,13 @@ body {
 .dialog-header {
     background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
     color: white;
-    padding: 24px;
+    padding: 16px 24px;
     text-align: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.dialog-header.with-description {
+    padding: 24px;
 }
 
 .dialog-header h2 {
@@ -162,6 +166,10 @@ body {
     border-top: 1px solid #555;
     background: #353535;
     flex-shrink: 0;
+}
+
+.dialog-actions.compact {
+    padding: 12px 24px 16px 24px;
 }
 
 .btn-secondary {

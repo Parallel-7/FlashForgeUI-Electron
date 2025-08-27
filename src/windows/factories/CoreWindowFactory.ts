@@ -46,7 +46,7 @@ export const createSettingsWindow = (): void => {
     mainWindow,
     dimensions,
     preloadPath,
-    { resizable: true, frame: false }
+    { resizable: true, frame: false, transparent: true }
   );
 
   // Load HTML file with error handling
@@ -95,7 +95,7 @@ export const createStatusWindow = (): void => {
     mainWindow,
     dimensions,
     preloadPath,
-    { resizable: true, frame: false }
+    { resizable: true, frame: false, transparent: true }
   );
 
   // Load HTML file with error handling

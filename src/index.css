@@ -21,21 +21,42 @@
 }
 
 body {
-  background-color: var(--dark-bg);
+  background: transparent;
   color: var(--text-color);
   overflow: hidden;
   margin: 0;
-  padding: 0;
+  padding: 16px;
   height: 100vh;
   width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-font-smoothing: antialiased;
+  box-sizing: border-box;
 }
 
 .app-container {
   display: flex;
   flex-direction: column;
-  height: 100vh;
-  width: 100vw;
+  height: calc(100vh - 32px);
+  width: calc(100vw - 32px);
+  max-width: 100%;
+  max-height: calc(100vh - 32px);
   overflow: hidden;
+  background: var(--dark-bg);
+  border: 1px solid #555;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transform: scale(0.95);
+  animation: appFadeIn 0.2s ease-out forwards;
+}
+
+@keyframes appFadeIn {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Header */
@@ -43,12 +64,15 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background-color: var(--header-bg);
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
   height: 32px;
   padding: 0 10px;
   -webkit-app-region: drag;
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
   flex: 0 0 32px; /* Fixed height for header */
+  color: white;
 }
 
 .left-controls {
@@ -56,13 +80,21 @@ body {
   -webkit-app-region: no-drag;
 }
 
+.title {
+  color: white;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
 .left-controls button {
   padding: 3px 8px;
   margin-right: 5px;
-  background-color: var(--dark-bg);
-  color: var(--text-color);
-  border: 1px solid var(--border-color);
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .window-controls {
@@ -70,15 +102,22 @@ body {
   -webkit-app-region: no-drag;
 }
 
+.left-controls button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
 .window-controls button {
   margin-left: 5px;
   background: none;
   border: none;
-  color: var(--text-color);
+  color: white;
   font-size: 16px;
   cursor: pointer;
   width: 30px;
   height: 100%;
+  border-radius: 4px;
+  transition: all 0.2s ease;
 }
 
 .window-controls button:hover {

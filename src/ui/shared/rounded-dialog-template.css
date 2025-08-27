@@ -1,23 +1,11 @@
-/* src/ui/settings/settings.css */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-}
+/* 
+ * Rounded Dialog Template CSS
+ * This template provides the standard rounded dialog styling pattern
+ * that should be applied to all dialog windows in the FlashForgeUI application.
+ * Based on the connect-choice-dialog design reference.
+ */
 
-:root {
-    --dark-bg: #2a2a2a;
-    --darker-bg: #1e1e1e;
-    --header-bg: #222222;
-    --border-color: #444444;
-    --button-bg: #4285f4;
-    --button-hover: #5a95f5;
-    --text-color: #e0e0e0;
-    --input-bg: #3c3c3c; /* Slightly lighter for inputs */
-    --success-color: #4CAF50;
-}
-
+/* Body styling for transparent window with rounded container */
 body {
     margin: 0;
     padding: 16px;
@@ -33,6 +21,7 @@ body {
     box-sizing: border-box;
 }
 
+/* Main dialog container with rounded styling */
 .dialog-container {
     background: #3a3a3a;
     border: 1px solid #555;
@@ -57,19 +46,26 @@ body {
     }
 }
 
-/* Header */
+/* Header with gradient background - use 24px padding for dialogs with sub-text, 16px for title-only */
 .dialog-header {
     background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
     color: white;
-    padding: 16px 24px;
+    padding: 16px 24px; /* Default to compact size for title-only dialogs */
     text-align: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     border-top-left-radius: 12px;
     border-top-right-radius: 12px;
     flex-shrink: 0;
     -webkit-app-region: drag;
+    position: relative;
 }
 
+/* Header variant for dialogs with sub-text */
+.dialog-header.with-description {
+    padding: 24px; /* Larger padding when there's description text */
+}
+
+.dialog-header h2,
 .dialog-title {
     margin: 0;
     font-size: 1.4rem;
@@ -78,10 +74,19 @@ body {
     -webkit-app-region: no-drag;
 }
 
+.dialog-description {
+    margin: 8px 0 0 0;
+    opacity: 0.9;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+/* Close button styling */
+.close-button,
 .dialog-close {
     -webkit-app-region: no-drag;
     position: absolute;
-    top: 16px;
+    top: 16px; /* Default for compact headers */
     right: 24px;
     background: none;
     border: none;
@@ -94,11 +99,18 @@ body {
     transition: all 0.2s ease;
 }
 
+/* Close button position for headers with description */
+.dialog-header.with-description .close-button,
+.dialog-header.with-description .dialog-close {
+    top: 24px; /* Match larger padding for headers with sub-text */
+}
+
+.close-button:hover,
 .dialog-close:hover {
     background-color: rgba(255, 255, 255, 0.2);
 }
 
-/* Content Area */
+/* Content area with hidden scrollbars */
 .dialog-content {
     padding: 24px;
     flex: 1;
@@ -113,66 +125,10 @@ body {
     display: none;
 }
 
-.settings-grid {
-    display: flex;
-    gap: 30px; /* Space between columns */
-}
-
-.settings-column {
-    display: flex;
-    flex-direction: column;
-    gap: 15px; /* Space between items in a column */
-    flex: 1; /* Allow columns to share space */
-}
-
-/* Form Elements */
-.checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    white-space: nowrap; /* Prevent wrapping */
-}
-
-/* Style checkboxes if desired */
-input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-    accent-color: var(--button-bg); /* Modern way to color checkboxes */
-}
-
-.input-group {
-    display: flex;
-    flex-direction: column;
-    gap: 5px;
-}
-
-.input-group label {
-    font-size: 0.9em;
-    color: #ccc;
-}
-
-.settings-info-text {
-    font-size: 0.8em;
-    color: #aaa;
-    margin-top: -10px;
-    line-height: 1.3;
-}
-
-.settings-input {
-    background-color: var(--input-bg);
-    border: 1px solid var(--border-color);
-    padding: 6px 8px;
-    color: var(--text-color);
-    border-radius: 2px;
-    width: 100%; /* Take full column width */
-    min-width: 150px; /* Ensure minimum width */
-}
-
-/* Footer */
-.dialog-footer {
-    padding: 16px 24px 24px 24px;
+/* Footer/actions area - adjust padding based on content */
+.dialog-footer,
+.dialog-actions {
+    padding: 16px 24px 24px 24px; /* Default padding for multi-button footers */
     display: flex;
     justify-content: flex-end;
     align-items: center;
@@ -184,23 +140,15 @@ input[type="checkbox"] {
     border-bottom-right-radius: 12px;
 }
 
-.save-status {
-    flex-grow: 1; /* Push buttons to the right */
-    font-size: 0.8em;
-    color: var(--success-color);
-    opacity: 0;
-    transition: opacity 0.5s ease-in-out;
+/* Compact footer variant for single button or minimal content */
+.dialog-footer.compact,
+.dialog-actions.compact {
+    padding: 12px 24px 16px 24px; /* Reduced padding for smaller footers */
 }
 
-.save-status.visible {
-    opacity: 1;
-}
-
-.dialog-buttons {
-    display: flex;
-    gap: 10px;
-}
-
+/* Standard button styling */
+button,
+.btn-secondary,
 .dialog-button {
     background: #666;
     color: white;
@@ -214,54 +162,69 @@ input[type="checkbox"] {
     min-width: 80px;
 }
 
+button:hover,
+.btn-secondary:hover,
 .dialog-button:hover {
     background: #777;
     border-color: #888;
 }
 
+button:active,
+.btn-secondary:active,
 .dialog-button:active {
     background: #555;
 }
 
+button:focus,
+.btn-secondary:focus,
 .dialog-button:focus {
     outline: none;
     box-shadow: 0 0 0 2px rgba(102, 102, 102, 0.5);
 }
 
-.dialog-button.cancel {
-    background: #666;
+button:disabled,
+.btn-secondary:disabled,
+.dialog-button:disabled {
+    background: #555;
+    cursor: not-allowed;
+    opacity: 0.6;
 }
 
-.dialog-button.cancel:hover {
-    background: #777;
+/* Primary button styling */
+.btn-primary,
+.dialog-button.primary,
+button.primary {
+    background-color: var(--button-bg, #4285f4);
+    border-color: var(--button-bg, #4285f4);
 }
 
-.dialog-button.primary {
-    background-color: var(--button-bg);
-    border-color: var(--button-bg);
-    order: 1; /* Ensure Save button appears after Close */
+.btn-primary:hover,
+.dialog-button.primary:hover,
+button.primary:hover {
+    background-color: var(--button-hover, #5a95f5);
+    border-color: var(--button-hover, #5a95f5);
 }
 
-.dialog-button.primary:hover {
-    background-color: var(--button-hover);
-    border-color: var(--button-hover);
+/* High contrast accessibility support */
+@media (prefers-contrast: high) {
+    .dialog-container {
+        border-color: #ffffff;
+    }
 }
 
-/* Custom scrollbar styling */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: var(--darker-bg);
-}
-
-::-webkit-scrollbar-thumb {
-    background: #666;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #888;
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .dialog-container {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+    
+    button,
+    .btn-secondary,
+    .dialog-button,
+    .close-button,
+    .dialog-close {
+        transition: none;
+    }
 }

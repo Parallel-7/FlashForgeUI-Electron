@@ -1,151 +1,26 @@
-/* Material Matching Dialog Styles */
+/* Material Matching Dialog - Rounded Styling Pattern */
+/* Import shared template for consistent styling */
+@import url('../shared/rounded-dialog-template.css');
 
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+/* Custom CSS variables for material matching dialog */
+:root {
+  --button-bg: #4285f4;
+  --button-hover: #5a95f5;
+  --selection-color: #00ff6e;
+  --warning-color: #ffc800;
+  --error-color: #ff4444;
+  --card-bg: #353535;
+  --card-border: #555;
 }
 
-/* Dark theme styles */
-body {
-  background-color: #1e1e1e;
-  color: #e0e0e0;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 100vh;
-}
-
-/* Dialog header */
-.dialog-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background-color: #252525;
-  border-bottom: 1px solid #333;
-  border-radius: 8px 8px 0 0;
-}
-
-.dialog-title {
-  font-size: 18px;
-  font-weight: 500;
-  color: #ffffff;
-  margin: 0;
-}
-
-.close-button {
-  background: none;
-  border: none;
-  color: #e0e0e0;
-  font-size: 20px;
-  cursor: pointer;
-  width: 30px;
-  height: 30px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 4px;
-  transition: all 0.2s ease;
-}
-
-.close-button:hover {
-  background-color: #e81123;
-  color: #ffffff;
-}
-
-/* Dialog content */
-.dialog-content {
-  padding: 20px;
-  overflow-y: auto;
-  max-height: calc(90vh - 140px);
-}
-
-/* Dialog footer */
-.dialog-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 10px;
-  padding: 16px;
-  background-color: #252525;
-  border-top: 1px solid #333;
-  border-radius: 0 0 8px 8px;
-}
-
-/* Button styles */
-.button {
-  padding: 8px 20px;
-  border: none;
-  border-radius: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.button.primary {
-  background-color: #4285f4;
-  color: white;
-}
-
-.button.primary:hover:not(:disabled) {
-  background-color: #5a95f5;
-}
-
-.button.primary:disabled {
-  background-color: #555;
-  color: #999;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.button.secondary {
-  background-color: #3a3a3a;
-  color: #e0e0e0;
-  border: 1px solid #555;
-}
-
-.button.secondary:hover {
-  background-color: #444;
-}
-
-.dialog-container {
-  width: 700px;
-  max-width: 90vw;
-  max-height: 90vh;
-  background-color: #1e1e1e;
-  border-radius: 8px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-  border: 1px solid #333;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.info-section {
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 20px;
-}
-
-.info-text {
-  margin: 0;
-  color: #c0c0c0;
-  font-size: 14px;
-  line-height: 1.5;
-}
+/* Material Matching Dialog Specific Styling */
 
 .matching-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: auto 1fr;
-  gap: 20px;
-  min-height: 400px;
+  gap: 16px;
+  min-height: 450px;
 }
 
 .requirements-section {
@@ -166,30 +41,32 @@ body {
 .requirements-section h3,
 .ifs-section h3,
 .mappings-section h3 {
-  margin: 0 0 15px 0;
+  margin: 0 0 16px 0;
   color: #ffffff;
   font-size: 16px;
-  font-weight: 500;
+  font-weight: 600;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--card-border);
 }
 
 /* Requirement list */
 .requirement-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
 .requirement-item {
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
-  padding: 15px;
+  padding: 12px;
   transition: all 0.2s ease;
 }
 
 .requirement-item.selected {
-  border-color: #00ff6e;
-  box-shadow: 0 0 10px rgba(0, 255, 110, 0.3);
+  border-color: var(--selection-color);
+  box-shadow: 0 0 12px rgba(0, 255, 110, 0.3);
 }
 
 .requirement-header {
@@ -227,8 +104,8 @@ body {
 }
 
 .slot-item {
-  background-color: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
   border-radius: 8px;
   padding: 12px;
   cursor: pointer;
@@ -239,11 +116,12 @@ body {
 }
 
 .slot-item:hover:not(.disabled):not(.assigned) {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: #404040;
+  border-color: #666;
 }
 
 .slot-item.selected {
-  border-color: #00ff6e;
+  border-color: var(--selection-color);
   background-color: rgba(0, 255, 110, 0.1);
 }
 
@@ -295,7 +173,7 @@ body {
 
 .mapping-item {
   background-color: rgba(0, 255, 110, 0.05);
-  border: 1px solid rgba(0, 255, 110, 0.2);
+  border: 1px solid rgba(0, 255, 110, 0.3);
   border-radius: 6px;
   padding: 10px;
   display: flex;
@@ -309,23 +187,23 @@ body {
 }
 
 .mapping-arrow {
-  color: #00ff6e;
+  color: var(--selection-color);
   margin: 0 8px;
 }
 
 .mapping-warning {
   background-color: rgba(255, 200, 0, 0.05);
-  border-color: rgba(255, 200, 0, 0.2);
+  border-color: rgba(255, 200, 0, 0.3);
 }
 
 .mapping-warning .mapping-arrow {
-  color: #ffc800;
+  color: var(--warning-color);
 }
 
 .remove-mapping {
   background: none;
   border: none;
-  color: #ff4444;
+  color: var(--error-color);
   cursor: pointer;
   font-size: 16px;
   padding: 0;
@@ -335,7 +213,7 @@ body {
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
 }
 
 .remove-mapping:hover {
@@ -345,7 +223,7 @@ body {
 /* Messages */
 .error-message,
 .warning-message {
-  margin-top: 15px;
+  margin-top: 16px;
   padding: 12px;
   border-radius: 6px;
   font-size: 14px;
@@ -355,20 +233,80 @@ body {
 .error-message {
   background-color: rgba(255, 68, 68, 0.1);
   border: 1px solid rgba(255, 68, 68, 0.3);
-  color: #ff4444;
+  color: var(--error-color);
 }
 
 .warning-message {
   background-color: rgba(255, 200, 0, 0.1);
   border: 1px solid rgba(255, 200, 0, 0.3);
-  color: #ffc800;
+  color: var(--warning-color);
+}
+
+/* Button styling - inherit from template with overrides */
+.dialog-button.primary {
+  background-color: var(--button-bg);
+  border-color: var(--button-bg);
+}
+
+.dialog-button.primary:hover:not(:disabled) {
+  background-color: var(--button-hover);
+  border-color: var(--button-hover);
+}
+
+.dialog-button.primary:disabled {
+  background-color: #555;
+  border-color: #666;
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.dialog-button.cancel {
+  background-color: #666;
+  border-color: #777;
+}
+
+.dialog-button.cancel:hover {
+  background-color: #777;
+  border-color: #888;
 }
 
 /* Empty state */
 .empty-mappings {
   text-align: center;
-  color: #808080;
+  color: #888888;
   font-style: italic;
   padding: 20px;
+  background-color: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 8px;
+}
+
+/* Responsive design */
+@media (max-width: 800px) {
+  .matching-container {
+    grid-template-columns: 1fr;
+    grid-template-rows: auto auto auto;
+    gap: 12px;
+  }
+  
+  .requirements-section {
+    grid-column: 1;
+    grid-row: 1;
+  }
+  
+  .ifs-section {
+    grid-column: 1;
+    grid-row: 2;
+  }
+  
+  .mappings-section {
+    grid-column: 1;
+    grid-row: 3;
+  }
+  
+  .dialog-content {
+    padding: 16px;
+  }
 }
 

@@ -136,16 +136,16 @@ export const WINDOW_SIZES = {
     minHeight: createWindowMinHeight(500)
   },
   INPUT_DIALOG: {
-    width: createWindowWidth(400),
-    height: createWindowHeight(250),
-    minWidth: createWindowMinWidth(350),
-    minHeight: createWindowMinHeight(220)
+    width: createWindowWidth(420),
+    height: createWindowHeight(300),
+    minWidth: createWindowMinWidth(380),
+    minHeight: createWindowMinHeight(280)
   },
   JOB_UPLOADER: {
-    width: createWindowWidth(750),
-    height: createWindowHeight(550),
-    minWidth: createWindowMinWidth(700),
-    minHeight: createWindowMinHeight(500)
+    width: createWindowWidth(950),
+    height: createWindowHeight(720),
+    minWidth: createWindowMinWidth(875),
+    minHeight: createWindowMinHeight(650)
   },
   PRINTER_SELECTION: {
     width: createWindowWidth(500),
@@ -161,9 +161,9 @@ export const WINDOW_SIZES = {
   },
   SEND_COMMANDS: {
     width: createWindowWidth(600),
-    height: createWindowHeight(500),
+    height: createWindowHeight(700),
     minWidth: createWindowMinWidth(500),
-    minHeight: createWindowMinHeight(400)
+    minHeight: createWindowMinHeight(600)
   },
   IFS_DIALOG: {
     width: createWindowWidth(600),
