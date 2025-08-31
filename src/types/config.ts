@@ -22,6 +22,7 @@ export interface AppConfig {
   readonly WebUIPort: number;
   readonly WebUIPassword: string;
   readonly CameraProxyPort: number;
+  readonly RoundedUI: boolean;
 }
 
 /**
@@ -45,6 +46,7 @@ export interface MutableAppConfig {
   WebUIPort: number;
   WebUIPassword: string;
   CameraProxyPort: number;
+  RoundedUI: boolean;
 }
 
 /**
@@ -67,7 +69,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   WebUIEnabled: false,
   WebUIPort: 3000,
   WebUIPassword: 'changeme',
-  CameraProxyPort: 8181
+  CameraProxyPort: 8181,
+  RoundedUI: false
 } as const;
 
 /**

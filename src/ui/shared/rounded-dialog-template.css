@@ -1,16 +1,24 @@
 /* 
- * Rounded Dialog Template CSS
- * This template provides the standard rounded dialog styling pattern
- * that should be applied to all dialog windows in the FlashForgeUI application.
- * Based on the connect-choice-dialog design reference.
+ * Dialog Template CSS
+ * This template provides the standard dialog styling pattern that can be
+ * configured to use either rounded or square design based on user preferences.
+ * Styling is controlled via CSS variables injected at window creation.
+ * 
+ * Responsive Padding System:
+ * - Rounded mode: 16px body padding + 24px content padding = optimal spacing
+ * - Square mode: 0px body padding + 16px content padding = minimal spacing
+ * This prevents thick borders in square mode while maintaining nice spacing in rounded mode.
  */
 
-/* Body styling for transparent window with rounded container */
+/* CSS Variables - Injected by the application based on RoundedUI config */
+/* No default values here - must be injected by CSSVariables.ts */
+
+/* Body styling - adapts based on rounded UI setting */
 body {
     margin: 0;
-    padding: 16px;
+    padding: var(--ui-padding);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: transparent;
+    background: var(--ui-background);
     color: #ffffff;
     display: flex;
     align-items: center;
@@ -21,15 +29,15 @@ body {
     box-sizing: border-box;
 }
 
-/* Main dialog container with rounded styling */
+/* Main dialog container - adapts styling based on UI mode */
 .dialog-container {
-    background: #3a3a3a;
-    border: 1px solid #555;
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    background: var(--container-background);
+    border: var(--ui-border);
+    border-radius: var(--ui-border-radius);
+    box-shadow: var(--ui-box-shadow);
     width: 100%;
     max-width: 100%;
-    max-height: calc(100vh - 32px);
+    max-height: calc(100vh - calc(var(--ui-padding) * 2));
     padding: 0;
     overflow: hidden;
     display: flex;
@@ -46,15 +54,15 @@ body {
     }
 }
 
-/* Header with gradient background - use 24px padding for dialogs with sub-text, 16px for title-only */
+/* Header with gradient background - use responsive padding */
 .dialog-header {
     background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
     color: white;
     padding: 16px 24px; /* Default to compact size for title-only dialogs */
     text-align: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
+    border-bottom: var(--ui-border);
+    border-top-left-radius: var(--header-border-radius-top);
+    border-top-right-radius: var(--header-border-radius-top);
     flex-shrink: 0;
     -webkit-app-region: drag;
     position: relative;
@@ -132,12 +140,12 @@ body {
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    border-top: 1px solid #555;
+    border-top: var(--ui-border);
     background: #353535;
     flex-shrink: 0;
     gap: 10px;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
+    border-bottom-left-radius: var(--footer-border-radius-bottom);
+    border-bottom-right-radius: var(--footer-border-radius-bottom);
 }
 
 /* Compact footer variant for single button or minimal content */

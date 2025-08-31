@@ -13,6 +13,7 @@ import {
   createPreloadPath,
   WINDOW_SIZES 
 } from './WindowTypes';
+import { getUIWindowOptions, injectUIStyleVariables } from '../../utils/CSSVariables';
 
 /**
  * Create standardized secure web preferences for all windows
@@ -62,23 +63,45 @@ export const createModalWindow = (
     readonly resizable?: boolean;
     readonly frame?: boolean;
     readonly transparent?: boolean;
+    readonly useUIConfig?: boolean;
   } = {}
 ): BrowserWindow => {
-  const { resizable = true, frame = false, transparent = false } = options;
+  const { resizable = true, frame, transparent, useUIConfig = true } = options;
   
-  return new BrowserWindow({
+  // Determine final window options with backward compatibility
+  let finalFrame: boolean;
+  let finalTransparent: boolean;
+  
+  if (frame !== undefined || transparent !== undefined) {
+    // Backward compatibility: use explicit frame/transparent values if provided
+    finalFrame = frame !== undefined ? frame : true;
+    finalTransparent = transparent !== undefined ? transparent : false;
+  } else if (useUIConfig) {
+    // New behavior: use UI configuration based on RoundedUI setting
+    const uiOptions = getUIWindowOptions();
+    finalFrame = uiOptions.frame;
+    finalTransparent = uiOptions.transparent;
+  } else {
+    // Default values
+    finalFrame = true;
+    finalTransparent = false;
+  }
+  
+  const window = new BrowserWindow({
     width: dimensions.width,
     height: dimensions.height,
     minWidth: dimensions.minWidth,
     minHeight: dimensions.minHeight,
     parent: parentWindow,
     modal: true,
-    frame,
+    frame: finalFrame,
     show: false,
     resizable,
-    transparent,
+    transparent: finalTransparent,
     webPreferences: createSecureWebPreferences(preloadPath),
   });
+  
+  return window;
 };
 
 /**
@@ -97,8 +120,14 @@ export const createUIPreloadPath = (componentName: string): PreloadPath => {
  */
 export const loadWindowHTML = async (
   window: BrowserWindow, 
-  componentName: string
+  componentName: string,
+  injectUIConfig: boolean = true
 ): Promise<void> => {
+  // Inject CSS variables before loading HTML to ensure they're available when CSS is parsed
+  if (injectUIConfig) {
+    injectUIStyleVariables(window);
+  }
+  
   // HTML files remain in src directory, not copied to lib during compilation
   // From lib/windows/shared/ we need to go up to project root, then to src/ui/
   const htmlPath = path.join(__dirname, `../../../src/ui/${componentName}/${componentName}.html`);

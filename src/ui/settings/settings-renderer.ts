@@ -40,7 +40,8 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'custom-camera-url': 'CustomCameraUrl',
   'custom-leds': 'CustomLeds',
   'force-legacy-api': 'ForceLegacyAPI',
-  'discord-update-interval': 'DiscordUpdateIntervalMinutes'
+  'discord-update-interval': 'DiscordUpdateIntervalMinutes',
+  'rounded-ui': 'RoundedUI'
 };
 
 class SettingsRenderer {
@@ -142,6 +143,7 @@ class SettingsRenderer {
 
     // Update input states after loading
     this.updateInputStates();
+    this.handleMacOSCompatibility();
     this.hasUnsavedChanges = false;
     this.updateSaveButtonState();
   }
@@ -196,6 +198,27 @@ class SettingsRenderer {
     const discordEnabled = this.inputs.get('discord-sync')?.checked || false;
     this.setInputEnabled('webhook-url', discordEnabled);
     this.setInputEnabled('discord-update-interval', discordEnabled);
+  }
+
+  private handleMacOSCompatibility(): void {
+    // Check if running on macOS
+    const isMacOS = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+    
+    if (isMacOS) {
+      // Disable the rounded UI checkbox on macOS
+      const roundedUIInput = this.inputs.get('rounded-ui');
+      if (roundedUIInput) {
+        roundedUIInput.disabled = true;
+        roundedUIInput.checked = false;
+        roundedUIInput.style.opacity = '0.5';
+      }
+      
+      // Show the macOS warning message
+      const macosWarning = document.querySelector('.macos-warning');
+      if (macosWarning) {
+        (macosWarning as HTMLElement).style.display = 'block';
+      }
+    }
   }
 
   private setInputEnabled(inputId: string, enabled: boolean): void {

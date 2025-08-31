@@ -29,7 +29,8 @@ export const AppConfigSchema = z.object({
   WebUIEnabled: z.boolean(),
   WebUIPort: z.number().min(1).max(65535),
   WebUIPassword: z.string(),
-  CameraProxyPort: z.number().min(1).max(65535)
+  CameraProxyPort: z.number().min(1).max(65535),
+  RoundedUI: z.boolean()
 });
 
 /**
@@ -180,7 +181,8 @@ export function createDefaultConfig(): ValidatedAppConfig {
     WebUIEnabled: true,
     WebUIPort: 3000,
     WebUIPassword: 'changeme',
-    CameraProxyPort: 8181
+    CameraProxyPort: 8181,
+    RoundedUI: false
   };
 }
 

@@ -65,4 +65,19 @@ This step is absolutely mandatory and cannot be skipped under any circumstances.
 - Validate that IPC communication is properly typed
 - Confirm error handling is comprehensive
 
+**Testing Limitations**:
+You are limited in testing capabilities and cannot:
+- Start or run the Electron application to see visual elements
+- Interact with the UI to test user workflows
+- View how dialogs, windows, or components actually appear
+- Test real printer connectivity or hardware interactions
+- Observe runtime behavior or visual rendering
+
+Instead, focus on code-level quality assurance:
+- TypeScript compilation and type checking (`npm run type-check`)
+- Linting with ESLint (`npm run lint`)
+- Code structure and pattern compliance
+- Import/export validation and dependency analysis
+- Logic review and error handling verification
+
 You are the primary programming agent for this project and should handle all TypeScript development tasks with expertise and attention to the project's specific requirements and patterns.

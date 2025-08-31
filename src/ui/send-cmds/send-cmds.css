@@ -1,29 +1,33 @@
-/* Send Commands Dialog - Rounded Styling Pattern */
+/* Send Commands Dialog - Minimal CSS like working Settings dialog */
 /* Import shared template for consistent styling */
 @import url('../shared/rounded-dialog-template.css');
 
-/* Custom CSS variables for send commands dialog */
+/* Universal CSS reset for consistent spacing */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Custom CSS variables */
 :root {
     --button-bg: #4285f4;
     --button-hover: #5a95f5;
     --input-bg: #2a2a2a;
     --log-bg: #1e1e1e;
-    --command-color: #4DACFF;
-    --response-color: #00FF00;
-    --error-color: #FF6666;
-    --info-color: #CCCCCC;
 }
 
-/* Send Commands Dialog Specific Styling */
-
-/* Override dialog-content padding for terminal layout */
-.dialog-content {
+/* Terminal container - minimal styling */
+.terminal-container {
     display: flex;
     flex-direction: column;
     gap: 12px;
-    overflow: hidden;
+    height: 100%;
+    min-height: 400px;
 }
 
+/* Log area */
 .log-area {
     flex: 1;
     background-color: var(--log-bg);
@@ -32,32 +36,18 @@
     padding: 0;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
     overflow-y: auto;
-    white-space: pre-wrap;
-    word-break: break-word;
     color: #ffffff;
     font-size: 13px;
-    /* Hide scrollbars while maintaining scroll functionality */
-    scrollbar-width: none;
-    -ms-overflow-style: none;
 }
 
-.log-area::-webkit-scrollbar {
-    display: none;
-}
-
-.log-area > .log-entry:first-child {
-    margin-top: 0;
-    padding-top: 8px;
-}
-
+/* Command input row */
 .command-input-row {
     display: flex;
     gap: 10px;
-    flex-shrink: 0;
 }
 
 #command-input {
-    flex-grow: 1;
+    flex: 1;
     background-color: var(--input-bg);
     border: 1px solid #555;
     color: #ffffff;
@@ -65,7 +55,6 @@
     border-radius: 6px;
     font-size: 14px;
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    transition: all 0.2s ease;
 }
 
 #command-input:focus {
@@ -74,12 +63,7 @@
     box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.3);
 }
 
-#command-input::placeholder {
-    color: #888;
-    font-style: italic;
-}
-
-/* Button styling - inherit from template with overrides */
+/* Button styling */
 .dialog-button {
     background-color: var(--button-bg);
     border-color: var(--button-bg);
@@ -91,13 +75,6 @@
     border-color: var(--button-hover);
 }
 
-.dialog-button:disabled {
-    background-color: #555;
-    border-color: #666;
-    cursor: not-allowed;
-    opacity: 0.6;
-}
-
 /* Log entry styles */
 .log-entry {
     margin-bottom: 4px;
@@ -106,41 +83,20 @@
 }
 
 .log-entry.command {
-    color: var(--command-color);
+    color: #4DACFF;
     font-weight: 500;
 }
 
 .log-entry.response {
-    color: var(--response-color);
+    color: #00FF00;
 }
 
 .log-entry.error {
-    color: var(--error-color);
+    color: #FF6666;
     font-weight: 500;
 }
 
 .log-entry.info {
-    color: var(--info-color);
+    color: #CCCCCC;
     font-style: italic;
-}
-
-/* Responsive design */
-@media (max-width: 600px) {
-    .command-input-row {
-        flex-direction: column;
-        gap: 8px;
-    }
-    
-    .dialog-button {
-        width: 100%;
-    }
-    
-    #command-input {
-        padding: 8px 10px;
-        font-size: 13px;
-    }
-    
-    .log-area {
-        font-size: 12px;
-    }
 }

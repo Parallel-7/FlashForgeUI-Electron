@@ -1,8 +1,18 @@
+/* Job Picker CSS - Uses Shared Template for Conditional Styling */
+/* Import shared template for consistent rounded/square UI switching */
+@import url('../shared/rounded-dialog-template.css');
+
+/* Universal CSS reset for consistent spacing */
 * {
     margin: 0;
     padding: 0;
     box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Fix dialog container to fill window height */
+.dialog-container {
+    height: 100%;
 }
 
 :root {
@@ -19,69 +29,13 @@
     --success-color: #4caf50;
 }
 
-body {
-    margin: 0;
-    padding: 16px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: transparent;
-    color: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    -webkit-font-smoothing: antialiased;
-    overflow: hidden;
-    box-sizing: border-box;
-}
+/* Template provides: body styles */
 
-.dialog-container {
-    background: #3a3a3a;
-    border: 1px solid #555;
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    width: 100%;
-    max-width: 100%;
-    max-height: calc(100vh - 32px);
-    padding: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    opacity: 0;
-    transform: scale(0.95);
-    animation: dialogFadeIn 0.2s ease-out forwards;
-}
+/* Template provides: .dialog-container, animation, .dialog-header base styles */
 
-@keyframes dialogFadeIn {
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-.dialog-header {
-    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-    color: white;
-    padding: 24px;
-    text-align: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
-    flex-shrink: 0;
-    -webkit-app-region: drag;
-    position: relative;
-}
-
-.dialog-title {
-    margin: 0;
-    font-size: 1.4rem;
-    font-weight: 600;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    -webkit-app-region: no-drag;
-}
+/* Template provides: .dialog-header, .dialog-title, .close-button styles */
 
 .close-button {
-    -webkit-app-region: no-drag;
-    position: absolute;
     top: 24px;
     right: 24px;
     background: none;
@@ -121,7 +75,7 @@ body {
     gap: 15px;
     padding: 10px;
     overflow-y: auto;
-    max-height: calc(100vh - 150px);
+    flex: 1;
 }
 
 .file-item {
@@ -202,14 +156,7 @@ body {
     max-width: 100%;
 }
 
-.dialog-footer {
-    padding: 16px 24px 24px 24px;
-    background: #353535;
-    border-top: 1px solid #555;
-    flex-shrink: 0;
-    border-bottom-left-radius: 12px;
-    border-bottom-right-radius: 12px;
-}
+/* Template provides: .dialog-footer styles */
 
 .options {
     display: flex;

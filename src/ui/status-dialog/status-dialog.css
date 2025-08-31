@@ -1,51 +1,13 @@
-/* src/ui/status-dialog/status-dialog.css */
+/* Status Dialog CSS - Uses Shared Template for Conditional Styling */
+/* Import shared template for consistent rounded/square UI switching */
+@import url('../shared/rounded-dialog-template.css');
 
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-}
 
-/* Dark theme styles */
-body {
-    margin: 0;
-    padding: 16px;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: transparent;
-    color: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    -webkit-font-smoothing: antialiased;
-    overflow: hidden;
-    box-sizing: border-box;
-}
+/* Template provides: * reset styles */
 
-.dialog-container {
-    background: #3a3a3a;
-    border: 1px solid #555;
-    border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    width: 100%;
-    max-width: 100%;
-    max-height: calc(100vh - 32px);
-    padding: 0;
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-    opacity: 0;
-    transform: scale(0.95);
-    animation: dialogFadeIn 0.2s ease-out forwards;
-}
+/* Template provides: body styles */
 
-@keyframes dialogFadeIn {
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
+/* Template provides: .dialog-container, animation styles */
 
 .dialog-titlebar {
     background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
@@ -53,8 +15,8 @@ body {
     padding: 16px 24px;
     text-align: center;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    border-top-left-radius: 12px;
-    border-top-right-radius: 12px;
+    border-top-left-radius: var(--header-border-radius-top, 12px);
+    border-top-right-radius: var(--header-border-radius-top, 12px);
     flex-shrink: 0;
     -webkit-app-region: drag;
     position: relative;

@@ -38,6 +38,15 @@ body {
   font-size: 18px;
   font-weight: 600;
   color: #ffffff;
+  margin: 0;
+  flex: 1;
+}
+
+.active-slot-info {
+  font-size: 14px;
+  color: #ffffff;
+  flex: 1;
+  text-align: center;
 }
 
 .station-status {
@@ -186,17 +195,7 @@ body {
   font-style: italic;
 }
 
-/* Active slot info */
-.active-slot-info {
-  border-top: 1px solid #555;
-  padding: 16px 0 0 0;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-size: 14px;
-  color: #cccccc;
-  clear: both;
-}
+/* Active slot info - old rule removed, now styled in header section */
 
 .active-slot-info span:last-child {
   font-weight: 600;

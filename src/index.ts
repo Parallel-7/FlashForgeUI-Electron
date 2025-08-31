@@ -21,6 +21,7 @@ import { getEnvironmentDetectionService } from './services/EnvironmentDetectionS
 import { getStaticFileManager } from './services/StaticFileManager';
 import { initializeNotificationSystem, disposeNotificationSystem } from './services/notifications';
 import { getThumbnailCacheService } from './services/ThumbnailCacheService';
+import { getUIWindowOptions, injectUIStyleVariables } from './utils/CSSVariables';
 
 /**
  * Main Electron process entry point. Handles app lifecycle, creates the main window,
@@ -169,12 +170,53 @@ Please check the installation and try restarting the application.`;
 };
 
 /**
+ * Handle macOS rounded UI compatibility by disabling it and warning the user
+ */
+const handleMacOSRoundedUICompatibility = async (): Promise<void> => {
+  // Check if running on macOS
+  if (process.platform !== 'darwin') {
+    return; // Not on macOS, no action needed
+  }
+  
+  const configManager = getConfigManager();
+  const config = configManager.getConfig();
+  
+  // Check if rounded UI is enabled on macOS
+  if (config.RoundedUI) {
+    console.log('macOS detected with rounded UI enabled - disabling for compatibility');
+    
+    // Disable rounded UI
+    configManager.updateConfig({ RoundedUI: false });
+    
+    // Show warning dialog
+    const result = await dialog.showMessageBox({
+      type: 'warning',
+      title: 'Rounded UI Disabled',
+      message: 'Rounded UI has been automatically disabled on macOS',
+      detail: 'The rounded UI feature causes window control positioning issues on macOS. It has been disabled automatically to ensure proper functionality. Please restart the application to avoid any UI inconsistencies.',
+      buttons: ['Restart Now', 'Continue'],
+      defaultId: 0,
+      cancelId: 1
+    });
+    
+    if (result.response === 0) {
+      // User chose to restart
+      app.relaunch();
+      app.exit();
+    }
+  }
+};
+
+/**
  * Create the main application window with environment-aware path resolution
  */
 const createMainWindow = async (): Promise<void> => {
   const windowManager = getWindowManager();
   const environmentService = getEnvironmentDetectionService();
   const staticFileManager = getStaticFileManager();
+  
+  // Handle macOS rounded UI compatibility before creating windows
+  await handleMacOSRoundedUICompatibility();
   
   // Validate assets before creating window
   const assetValidation = await validateWebUIAssets();
@@ -191,7 +233,13 @@ const createMainWindow = async (): Promise<void> => {
   console.log(`Creating main window with preload: ${preloadPath}`);
   console.log(`Will load HTML from: ${htmlPath}`);
   
-  // Create the browser window with environment-aware preload path
+  // Get UI configuration for main window (only for transparency)
+  const configManager = getConfigManager();
+  const config = configManager.getConfig();
+  const roundedUI = config.RoundedUI;
+  const useRoundedUI = roundedUI && process.platform !== 'darwin';
+  
+  // Create the browser window - always frameless for custom titlebar
   const mainWindow = new BrowserWindow({
     height: 950,
     width: 970,
@@ -206,8 +254,8 @@ const createMainWindow = async (): Promise<void> => {
       webSecurity: true, // Security
       allowRunningInsecureContent: false, // Security
     },
-    frame: false, // Custom title bar
-    transparent: true, // Enable transparency for rounded corners
+    frame: false, // Always frameless for custom titlebar
+    transparent: useRoundedUI, // Only transparent when rounded UI is enabled
     titleBarStyle: 'hidden',
     show: false, // Don't show until ready
   });
@@ -217,6 +265,10 @@ const createMainWindow = async (): Promise<void> => {
     console.log(`Loading web UI from: ${htmlPath}`);
     await mainWindow.loadFile(htmlPath);
     console.log('Web UI loaded successfully');
+    
+    // Inject CSS variables for conditional UI styling
+    injectUIStyleVariables(mainWindow);
+    console.log('CSS variables injected for main window');
   } catch (error) {
     const loadError = error instanceof Error ? error : new Error(String(error));
     console.error('Failed to load web UI:', loadError.message);

@@ -17,6 +17,7 @@ import {
   focusExistingWindow,
   createModalWindow
 } from '../shared/WindowConfig';
+import { getUIWindowOptions } from '../../utils/CSSVariables';
 
 /**
  * Create the settings window with modal behavior and parent window relationship
@@ -91,11 +92,12 @@ export const createStatusWindow = (): void => {
   const dimensions = getWindowDimensions('STATUS');
   const preloadPath = createUIPreloadPath('status-dialog');
   
+  const uiOptions = getUIWindowOptions();
   const statusWindow = createModalWindow(
     mainWindow,
     dimensions,
     preloadPath,
-    { resizable: true, frame: false, transparent: true }
+    { resizable: true, frame: false, transparent: uiOptions.transparent }
   );
 
   // Load HTML file with error handling
