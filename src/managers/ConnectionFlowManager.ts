@@ -453,6 +453,11 @@ export class ConnectionFlowManager extends EventEmitter {
         clientType
       });
 
+      // Extract printer name early for better user experience in dialogs
+      const realPrinterName = tempResult.printerInfo?.Name && typeof tempResult.printerInfo.Name === 'string' 
+        ? tempResult.printerInfo.Name 
+        : discoveredPrinter.name;
+
       // Step 3: Handle check code requirements
       let checkCode = getDefaultCheckCode();
       
@@ -460,12 +465,12 @@ export class ConnectionFlowManager extends EventEmitter {
       const savedCheckCode = this.savedPrinterService.getSavedCheckCode(discoveredPrinter.serialNumber);
       
       if (savedCheckCode) {
-        console.log('Using saved check code for known printer:', discoveredPrinter.name);
+        console.log('Using saved check code for known printer:', realPrinterName);
         checkCode = savedCheckCode;
       } else if (shouldPromptForCheckCode(familyInfo.is5MFamily, undefined, ForceLegacyAPI)) {
         this.loadingManager.hide();
         
-        const promptedCheckCode = await this.promptForCheckCode(discoveredPrinter.name);
+        const promptedCheckCode = await this.promptForCheckCode(realPrinterName);
         if (!promptedCheckCode) {
           this.loadingManager.showError('Check code required but not provided', 3000);
           return { success: false, error: 'Check code required but not provided' };
@@ -475,10 +480,48 @@ export class ConnectionFlowManager extends EventEmitter {
         this.loadingManager.show({ message: 'Establishing connection with pairing code...', canCancel: false });
       }
 
-      // Step 4: Establish final connection
+      // Step 4: Extract and validate printer information
+      this.loadingManager.updateMessage('Processing printer details...');
+      const modelType = detectPrinterModelType(tempResult.typeName);
+      
+      // Extract serial number from temporary connection if not already present
+      let serialNumber = discoveredPrinter.serialNumber;
+      if (!serialNumber && tempResult.printerInfo?.SerialNumber) {
+        serialNumber = tempResult.printerInfo.SerialNumber as string;
+        console.log('Extracted serial number from temporary connection:', serialNumber);
+      }
+      
+      // Use the real printer name we extracted earlier
+      const printerName = realPrinterName;
+      if (printerName !== discoveredPrinter.name) {
+        console.log('Using real printer name from temporary connection:', printerName);
+      }
+      
+      // Fallback for serial number if still missing
+      if (!serialNumber || serialNumber.trim() === '') {
+        console.warn('No serial number available, generating fallback');
+        serialNumber = `Unknown-${Date.now()}`;
+      }
+      
+      // Update the discoveredPrinter object with the correct information for connection establishment
+      const updatedDiscoveredPrinter: DiscoveredPrinter = {
+        ...discoveredPrinter,
+        name: printerName,
+        serialNumber: serialNumber
+      };
+      
+      console.log('Final printer details for connection:', {
+        originalName: discoveredPrinter.name,
+        finalName: printerName,
+        originalSerial: discoveredPrinter.serialNumber,
+        finalSerial: serialNumber,
+        ipAddress: discoveredPrinter.ipAddress
+      });
+
+      // Step 5: Establish final connection using updated printer information
       this.loadingManager.updateMessage('Establishing final connection...');
       const connectionResult = await this.connectionService.establishFinalConnection(
-        discoveredPrinter,
+        updatedDiscoveredPrinter, // Use the updated printer info with correct serial number
         tempResult.typeName,
         familyInfo.is5MFamily,
         checkCode,
@@ -490,14 +533,8 @@ export class ConnectionFlowManager extends EventEmitter {
         return { success: false, error: 'Failed to establish final connection' };
       }
 
-      // Step 5: Save printer details
+      // Step 6: Save printer details
       this.loadingManager.updateMessage('Saving printer details...');
-      const modelType = detectPrinterModelType(tempResult.typeName);
-      
-      // For manual IP connections, get serial number and name from printer info
-      const serialNumber = discoveredPrinter.serialNumber || tempResult.printerInfo?.SerialNumber || `Unknown-${Date.now()}`;
-      const printerName = (tempResult.printerInfo?.Name as string) || discoveredPrinter.name;
-      
       const printerDetails: PrinterDetails = {
         Name: formatPrinterName(printerName, serialNumber),
         IPAddress: discoveredPrinter.ipAddress,
@@ -513,14 +550,14 @@ export class ConnectionFlowManager extends EventEmitter {
       // Update last connected timestamp
       await this.savedPrinterService.updateLastConnected(printerDetails.SerialNumber);
 
-      // Step 6: Update connection state
+      // Step 7: Update connection state
       this.connectionStateManager.setConnected(
         printerDetails,
         connectionResult.primaryClient,
         connectionResult.secondaryClient
       );
 
-      // Step 7: Initialize backend manager
+      // Step 8: Initialize backend manager
       await this.backendManager.onConnectionEstablished(
         printerDetails, 
         connectionResult.primaryClient,
@@ -638,18 +675,25 @@ export class ConnectionFlowManager extends EventEmitter {
       this.loadingManager.show({ message: `Connecting to printer at ${ipAddress}...`, canCancel: false });
       
       // Create a mock discovered printer for the connection process
+      // The actual name and serial will be determined during temporary connection
       const mockDiscoveredPrinter: DiscoveredPrinter = {
-        name: `Printer at ${ipAddress}`,
+        name: `Printer at ${ipAddress}`, // Temporary name, will be updated
         ipAddress: ipAddress,
         serialNumber: '', // Will be determined during connection
         model: undefined // Will be determined during connection
       };
 
-      // Use the standard connection flow
+      console.log('Starting direct IP connection to:', ipAddress);
+      
+      // Use the standard connection flow which will:
+      // 1. Create temporary connection to get printer info
+      // 2. Extract proper name and serial number
+      // 3. Establish final connection with correct details
       return await this.connectToPrinter(mockDiscoveredPrinter);
       
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
+      console.error('Direct IP connection failed:', error);
       this.loadingManager.showError(`Direct connection failed: ${errorMessage}`, 4000);
       return { success: false, error: errorMessage };
     }

@@ -77,6 +77,13 @@ export class ConnectionEstablishmentService extends EventEmitter {
       const typeName = printerInfo.TypeName;
       const familyInfo = detectPrinterFamily(typeName);
       
+      console.log('Temporary connection - extracted printer info:', {
+        TypeName: printerInfo.TypeName,
+        Name: printerInfo.Name,
+        SerialNumber: printerInfo.SerialNumber,
+        is5MFamily: familyInfo.is5MFamily
+      });
+      
       this.emit('printer-type-detected', { typeName, familyInfo });
       
       // For legacy printers, we can reuse this connection
@@ -91,7 +98,17 @@ export class ConnectionEstablishmentService extends EventEmitter {
         };
       } else {
         // 5M family - dispose temp client, will create new one
+        // But first ensure we have critical information for dual API connection
+        if (!printerInfo.SerialNumber || printerInfo.SerialNumber.trim() === '') {
+          console.warn('Warning: No serial number found in printer info for 5M family printer');
+          console.warn('This may cause dual API connection to fail');
+        }
+        
         void tempClient.dispose();
+        
+        // Add a small delay after disposing temp client to ensure clean state
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
         return {
           success: true,
           typeName,
@@ -143,41 +160,83 @@ export class ConnectionEstablishmentService extends EventEmitter {
     checkCode: string
   ): Promise<ConnectionClients> {
     console.log('Creating dual API connection for 5M family printer');
+    console.log('Connection details:', {
+      ipAddress: printer.ipAddress,
+      serialNumber: printer.serialNumber,
+      name: printer.name,
+      hasValidSerial: !!(printer.serialNumber && printer.serialNumber.trim() !== '')
+    });
+    
+    // Validate that we have a valid serial number for FiveMClient
+    if (!printer.serialNumber || printer.serialNumber.trim() === '') {
+      console.error('Cannot create FiveMClient without valid serial number');
+      throw new Error('Serial number is required for dual API connection but was not provided');
+    }
     
     // Primary client: FiveMClient for new API operations
     const primaryClient = new FiveMClient(printer.ipAddress, printer.serialNumber, checkCode);
     
     try {
+      console.log('Initializing FiveMClient...');
       const initialized = await primaryClient.initialize();
       if (!initialized) {
-        throw new Error('Failed to initialize 5M client');
+        console.error('FiveMClient initialization returned false');
+        throw new Error('Failed to initialize 5M client - initialization returned false');
       }
+      console.log('FiveMClient initialized successfully');
 
+      console.log('Initializing FiveMClient control...');
       const controlOk = await primaryClient.initControl();
       if (!controlOk) {
-        throw new Error('Failed to initialize 5M control');
+        console.error('FiveMClient control initialization failed');
+        throw new Error('Failed to initialize 5M control - initControl returned false');
       }
+      console.log('FiveMClient control initialized successfully');
+      
+      // Add a small delay to ensure primary client is fully ready
+      await new Promise(resolve => setTimeout(resolve, 500));
       
       // Secondary client: FlashForgeClient for legacy API operations (G-code commands)
+      console.log('Initializing secondary FlashForgeClient...');
       const secondaryClient = new FlashForgeClient(printer.ipAddress);
       const legacyConnected = await secondaryClient.initControl();
       if (!legacyConnected) {
+        console.error('Secondary FlashForgeClient initialization failed');
         // If secondary client fails, dispose primary and fail
-        void primaryClient.dispose();
+        try {
+          await primaryClient.dispose();
+        } catch (disposeError) {
+          console.error('Error disposing primary client after secondary failure:', disposeError);
+        }
         throw new Error('Failed to initialize legacy client for dual API');
       }
+      console.log('Secondary FlashForgeClient initialized successfully');
       
       console.log('Both clients initialized successfully for dual API');
-      this.emit('dual-api-connection-established');
+      this.emit('dual-api-connection-established', {
+        ipAddress: printer.ipAddress,
+        serialNumber: printer.serialNumber
+      });
       
       return {
         primaryClient,
         secondaryClient
       };
     } catch (error) {
+      console.error('Error in establishDualAPIConnection:', error);
       // Clean up on failure
-      void primaryClient.dispose();
-      throw error;
+      try {
+        await primaryClient.dispose();
+      } catch (disposeError) {
+        console.error('Error disposing primary client after error:', disposeError);
+      }
+      
+      // Provide more specific error information
+      if (error instanceof Error) {
+        throw new Error(`Dual API connection failed: ${error.message}`);
+      } else {
+        throw new Error(`Dual API connection failed: ${String(error)}`);
+      }
     }
   }
 

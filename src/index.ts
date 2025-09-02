@@ -256,9 +256,13 @@ const createMainWindow = async (): Promise<void> => {
     },
     frame: false, // Always frameless for custom titlebar
     transparent: useRoundedUI, // Only transparent when rounded UI is enabled
-    titleBarStyle: 'hidden',
     show: false, // Don't show until ready
   });
+
+  // Hide traffic light buttons on macOS
+  if (process.platform === 'darwin') {
+    mainWindow.setWindowButtonVisibility(false);
+  }
 
   // Load the app using environment-aware path resolution
   try {

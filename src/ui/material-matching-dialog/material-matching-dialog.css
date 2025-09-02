@@ -282,8 +282,8 @@
   border-radius: 8px;
 }
 
-/* Responsive design */
-@media (max-width: 800px) {
+/* Responsive design - only collapse to single column on very small screens */
+@media (max-width: 500px) {
   .matching-container {
     grid-template-columns: 1fr;
     grid-template-rows: auto auto auto;

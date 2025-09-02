@@ -433,7 +433,7 @@ function createFileItem(filename: string): HTMLElement {
         console.log('Job picker: createFileItem - Adding (i) icon for multi-color job:', filename, 'with', jobData.toolDatas?.length || 0, 'tools');
         const infoIcon = document.createElement('button');
         infoIcon.className = 'info-icon';
-        infoIcon.innerHTML = 'ⓘ';
+        infoIcon.innerHTML = 'i';
         infoIcon.title = 'View material information';
         infoIcon.addEventListener('click', (e) => {
             e.stopPropagation(); // Prevent file selection
