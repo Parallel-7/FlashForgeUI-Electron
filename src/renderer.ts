@@ -174,6 +174,7 @@ function updateUIElement(id: string, value: string): void {
 }
 
 function setupWindowControls(): void {
+  // Standard window controls (for non-macOS)
   const minimizeBtn = document.getElementById('btn-minimize');
   const maximizeBtn = document.getElementById('btn-maximize');
   const closeBtn = document.getElementById('btn-close');
@@ -207,6 +208,44 @@ function setupWindowControls(): void {
         window.api.send('window-close');
       } else {
         logMessage('ERROR: API not available for close');
+      }
+    });
+  }
+
+  // MacOS traffic light controls
+  const trafficCloseBtn = document.getElementById('traffic-close');
+  const trafficMinimizeBtn = document.getElementById('traffic-minimize');
+  const trafficMaximizeBtn = document.getElementById('traffic-maximize');
+
+  if (trafficCloseBtn) {
+    trafficCloseBtn.addEventListener('click', () => {
+      logMessage('Traffic light close clicked');
+      if (window.api) {
+        window.api.send('window-close');
+      } else {
+        logMessage('ERROR: API not available for traffic close');
+      }
+    });
+  }
+
+  if (trafficMinimizeBtn) {
+    trafficMinimizeBtn.addEventListener('click', () => {
+      logMessage('Traffic light minimize clicked');
+      if (window.api) {
+        window.api.send('window-minimize');
+      } else {
+        logMessage('ERROR: API not available for traffic minimize');
+      }
+    });
+  }
+
+  if (trafficMaximizeBtn) {
+    trafficMaximizeBtn.addEventListener('click', () => {
+      logMessage('Traffic light maximize clicked');
+      if (window.api) {
+        window.api.send('window-maximize');
+      } else {
+        logMessage('ERROR: API not available for traffic maximize');
       }
     });
   }
@@ -891,7 +930,12 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('API is not available. Preload script might not be loaded correctly.');
     logMessage('ERROR: API not available - some features may not work');
   } else {
-
+    // Set up platform detection listener for platform-specific styling
+    window.api.onPlatformInfo((platform: string) => {
+      console.log(`Received platform info: ${platform}`);
+      document.body.classList.add(`platform-${platform}`);
+      logMessage(`Platform-specific styling applied: platform-${platform}`);
+    });
     
     // Set up IPC listeners for connection state changes (when properly configured)
     // TODO: Implement proper IPC listeners when API interface is updated

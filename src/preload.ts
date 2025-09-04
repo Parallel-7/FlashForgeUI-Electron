@@ -16,6 +16,7 @@ interface ElectronAPI {
   requestMaterialStationStatus: () => Promise<unknown>;
   requestModelPreview: () => Promise<string | null>;
   requestBackendStatus: () => Promise<unknown>;
+  onPlatformInfo: (callback: (platform: string) => void) => void;
   loading: LoadingAPI;
   camera: CameraAPI;
 }
@@ -137,7 +138,8 @@ const validReceiveChannels = [
   'loading-progress',
   'loading-message-updated',
   'loading-cancelled',
-  'polling-update'
+  'polling-update',
+  'platform-info'
 ];
 
 // Expose camera URL for renderer
@@ -269,6 +271,19 @@ contextBridge.exposeInMainWorld('api', {
 
   requestBackendStatus: async (): Promise<unknown> => {
     return await ipcRenderer.invoke('request-backend-status');
+  },
+
+  onPlatformInfo: (callback: (platform: string) => void) => {
+    const wrappedCallback: IPCListener = (event: unknown, platform: unknown) => {
+      if (typeof platform === 'string') {
+        callback(platform);
+      } else {
+        console.warn('Invalid platform info received:', platform);
+      }
+    };
+    
+    listeners.set('platform-info', { original: callback as IPCListener, wrapped: wrappedCallback });
+    ipcRenderer.once('platform-info', wrappedCallback);
   },
 
   loading: {

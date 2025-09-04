@@ -58,6 +58,7 @@ interface ElectronAPI {
   requestMaterialStationStatus: () => Promise<unknown>;
   requestModelPreview: () => Promise<string | null>;
   requestBackendStatus: () => Promise<unknown>;
+  onPlatformInfo: (callback: (platform: string) => void) => void;
   loading: LoadingAPI;
   camera: CameraAPI;
 }

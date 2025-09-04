@@ -22,7 +22,11 @@
       "mcp__sequential-thinking__sequentialthinking",
       "mcp__gemini-mcp__gemini_collaborate",
       "WebFetch(domain:www.electronjs.org)",
-      "Bash(git log:*)"
+      "Bash(git log:*)",
+      "WebFetch(domain:webpack.electron.build)",
+      "Bash(wmic:*)",
+      "Bash(fsutil fsinfo:*)",
+      "Bash(dir:*)"
     ],
     "deny": []
   }

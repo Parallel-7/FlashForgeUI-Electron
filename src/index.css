@@ -128,6 +128,109 @@ body {
   background-color: #e81123;
 }
 
+/* =========================== */
+/* MACOS TRAFFIC LIGHTS STYLING */
+/* =========================== */
+
+/* Traffic lights: Default hidden, shown on macOS via higher specificity */
+.traffic-lights {
+  display: none;
+  align-items: center;
+  -webkit-app-region: no-drag;
+  padding-left: 12px;
+  gap: 8px;
+}
+
+/* MacOS: Show traffic lights with proper CSS specificity */
+body.platform-darwin .traffic-lights {
+  display: flex;
+}
+
+/* Individual traffic light buttons */
+.traffic-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.15s ease;
+  font-size: 8px;
+  color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  -webkit-app-region: no-drag;
+}
+
+/* Traffic light colors - authentic macOS */
+.traffic-light.close {
+  background-color: #FF5F57;
+}
+
+.traffic-light.minimize {
+  background-color: #FFBD2E;
+}
+
+.traffic-light.maximize {
+  background-color: #28CA42;
+}
+
+/* Hover effects with symbols */
+.traffic-light:hover {
+  opacity: 0.8;
+}
+
+.traffic-light.close:hover::after {
+  content: "×";
+}
+
+.traffic-light.minimize:hover::after {
+  content: "−";
+}
+
+.traffic-light.maximize:hover::after {
+  content: "+";
+}
+
+/* =========================== */
+/* MACOS LAYOUT ADJUSTMENTS */
+/* =========================== */
+
+/* Default layout: App buttons left, title center, window controls right */
+.header {
+  /* Keep existing flex properties */
+}
+
+/* MacOS layout adjustments */
+.platform-darwin .header {
+  justify-content: flex-start; /* Change from space-between to flex-start */
+}
+
+/* MacOS: Hide standard window controls */
+.platform-darwin .window-controls {
+  display: none;
+}
+
+/* MacOS: Reorder header elements */
+.platform-darwin .traffic-lights {
+  order: 1;
+  flex-shrink: 0;
+}
+
+.platform-darwin .title {
+  order: 2;
+  flex: 1;
+  text-align: center;
+  margin: 0 10px;
+}
+
+.platform-darwin .left-controls {
+  order: 3;
+  flex-shrink: 0;
+}
+
 /* Main Layout */
 .main-layout {
   flex: 1;

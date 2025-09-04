@@ -11,6 +11,7 @@ import { getConfigManager } from '../managers/ConfigManager';
 
 /**
  * Injects CSS variables into a window based on the current RoundedUI configuration
+ * Platform class injection is now handled securely via IPC in the renderer process
  * @param window The BrowserWindow to inject variables into
  */
 export function injectUIStyleVariables(window: BrowserWindow): void {
@@ -31,7 +32,8 @@ export function injectUIStyleVariables(window: BrowserWindow): void {
     }
   `;
   
-  // Insert CSS immediately - no need to wait since we're calling this before HTML load
+  // Insert CSS variables immediately
+  // Platform class injection is now handled securely via IPC
   void window.webContents.insertCSS(cssVariables);
 }
 

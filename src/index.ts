@@ -294,6 +294,10 @@ const createMainWindow = async (): Promise<void> => {
       mainWindow.show();
       console.log('Main window shown');
       
+      // Send platform information to renderer for platform-specific styling
+      console.log(`Sending platform info: ${process.platform}`);
+      mainWindow.webContents.send('platform-info', process.platform);
+      
       // Start power save blocker to prevent OS throttling
       if (powerSaveBlockerId === null) {
         powerSaveBlockerId = powerSaveBlocker.start('prevent-app-suspension');

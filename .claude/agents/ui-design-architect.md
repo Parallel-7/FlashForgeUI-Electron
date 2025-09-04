@@ -47,6 +47,57 @@ Design Principles:
 - Use modern CSS techniques for animations, transitions, and visual effects (fadeIn, translateY hover effects)
 - Ensure accessibility compliance with proper ARIA labels and keyboard navigation support
 
+## **Platform Detection System**
+The FlashForgeUI-Electron app uses a secure IPC-based platform detection system that enables platform-specific styling, particularly for macOS native features like traffic light window controls.
+
+### Technical Implementation
+- **IPC Channel**: 'platform-info' 
+- **API**: `window.api.onPlatformInfo((platform) => { /* styling logic */ })`
+- **Platform Classes**: Automatically adds `platform-${platform}` class to document.body
+  - macOS: `platform-darwin`
+  - Windows: `platform-win32`  
+  - Linux: `platform-linux`
+
+### CSS Patterns for Platform-Specific Styling
+```css
+/* macOS-specific styling */
+.platform-darwin .header {
+  justify-content: flex-start;
+}
+
+.platform-darwin .window-controls {
+  display: none; /* Hide standard controls on macOS */
+}
+
+.platform-darwin .traffic-lights {
+  display: flex; /* Show native macOS traffic lights */
+}
+```
+
+### Security Architecture
+- Uses secure contextBridge IPC (no executeJavaScript)
+- Channel validation in preload script
+- Type-safe TypeScript interfaces
+- Single-use listeners to prevent memory leaks
+
+### Critical Bug Fixed
+**Template Literal Issue**: Previous implementation had a template literal interpolation bug in CSSVariables.ts where `platform-${platform}` wasn't being properly substituted, causing platform classes to never be applied.
+
+### Platform-Specific Design Guidelines
+1. **Always test both platforms**: Ensure UI works on both macOS (with traffic lights) and Windows (with standard controls)
+2. **Use platform classes**: Target `.platform-darwin`, `.platform-win32` for platform-specific styles
+3. **Follow dual UI mode**: Platform styling must work with both rounded/square UI modes
+4. **Never use executeJavaScript**: Use the secure IPC API for any platform detection needs
+5. **macOS Traffic Light Integration**: Account for native macOS window controls in header layouts
+6. **Cross-platform button consistency**: Maintain familiar interaction patterns per platform
+
+### Files Modified in Platform System
+- `src/preload.ts` - Added secure platform API
+- `src/index.ts` - Added platform IPC transmission  
+- `src/renderer.ts` - Added platform class application
+- `src/utils/CSSVariables.ts` - Removed insecure platform detection
+- `src/types/global.d.ts` - Added TypeScript types
+
 ## **Critical Window Configuration Patterns**
 **ALWAYS USE** the Settings dialog window configuration as the template:
 ```typescript
@@ -126,6 +177,9 @@ Implementation Approach:
 - **NEVER assume working in one UI mode** means it works in both - ALWAYS test both modes
 - **NEVER make structural changes** to working dialogs without comprehensive testing
 - **NEVER ignore template compliance** - all dialogs must use the shared rounded-dialog-template.css
+- **NEVER use executeJavaScript for platform detection** - always use the secure IPC-based platform detection system
+- **NEVER hardcode platform-specific styles** - always use the platform classes (.platform-darwin, .platform-win32, .platform-linux)
+- **NEVER assume platform styling works** without testing on actual platforms or with platform class simulation
 
 Dialog Structure Standards:
 - **Container**: .dialog-container with clean rounded edges, proper animations (dialogFadeIn), and responsive sizing
@@ -163,7 +217,7 @@ Dialog Structure Standards:
 Quality Assurance:
 - **MANDATORY: Dual UI mode compliance** - Test both rounded and square modes
 - **Content overflow protection** - Ensure all text and elements are visible with proper minimum dimensions
-- **Cross-platform compatibility** - Verify appearance on Windows, Linux, and macOS  
+- **Cross-platform compatibility** - Verify appearance on Windows, Linux, and macOS using the platform detection system (.platform-darwin, .platform-win32, .platform-linux classes)  
 - **Accessibility compliance** - Include proper ARIA labels, keyboard navigation, and high contrast mode support
 - **Performance validation** - Test animations, transitions, and memory usage
 - **Integration testing** - Confirm proper IPC communication and data flow with existing systems
@@ -185,5 +239,6 @@ Instead, focus on code-level UI quality assurance:
 - File organization and naming consistency with existing UI code
 - Proper window sizing configuration in WINDOW_SIZES definitions
 - **CRITICAL: Dual UI mode compatibility analysis** - ensure CSS works in both UI states
+- **Platform-specific compatibility analysis** - ensure platform classes (.platform-darwin, .platform-win32, .platform-linux) work correctly with dual UI modes
 
 You excel at creating beautiful, functional interfaces that seamlessly integrate with the FlashForgeUI-Electron application's established design system, ensuring users experience consistent, polished interactions across all dialogs and components.
