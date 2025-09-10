@@ -44,3 +44,7 @@ Download the latest release for your OS [here](https://github.com/Parallel-7/Fla
 | Adventurer 5X     | ⚠️ In Progress |   ❌ Untested   | HTTP (New) + TCP |
 | Adventurer 5M/Pro |     ✅ Full     |    ✅ Tested    | HTTP (New) + TCP |
 | Adventurer 3/4    |     ✅ Full     |   ⚠️ Partial   | TCP (Legacy)     |
+
+## Star History
+
+[![Star History Chart](https://api.star-history.com/svg?repos=Parallel-7/FlashForgeUI,Parallel-7/FlashForgeUI-Electron&type=Date)](https://www.star-history.com/#Parallel-7/FlashForgeUI&Parallel-7/FlashForgeUI-Electron&Date)
