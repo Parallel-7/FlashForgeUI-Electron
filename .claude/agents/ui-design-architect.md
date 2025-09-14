@@ -241,4 +241,53 @@ Instead, focus on code-level UI quality assurance:
 - **CRITICAL: Dual UI mode compatibility analysis** - ensure CSS works in both UI states
 - **Platform-specific compatibility analysis** - ensure platform classes (.platform-darwin, .platform-win32, .platform-linux) work correctly with dual UI modes
 
+## **Critical CSS Debugging Lessons Learned**
+
+### **The CSS Selector Mismatch Problem**
+**ALWAYS verify CSS selectors match actual HTML structure before making style changes.** A common failure pattern is:
+
+1. **CSS targets**: `.component-controls-grid` 
+2. **HTML actually uses**: `.controls-grid-container`
+3. **Result**: Styles never applied, leading to repeated failed attempts
+
+### **Mandatory HTML Structure Verification Process**
+**Before editing any CSS file, ALWAYS:**
+
+1. **Read the TypeScript component file** (e.g., `controls-grid.ts`) to examine the `templateHTML` property
+2. **Identify actual CSS class names** used in the HTML template
+3. **Verify CSS selectors match** the HTML structure exactly
+4. **Check for component-specific naming patterns** that may differ from file naming
+
+### **Systematic Debugging Over Blind Attempts**
+**When CSS changes aren't working:**
+
+1. **STOP making more CSS changes** - investigate why current changes aren't taking effect
+2. **Examine HTML structure first** - locate the component's TypeScript file and read the template
+3. **Verify selector matching** - ensure CSS targets the correct classes/IDs
+4. **Check CSS loading** - confirm the CSS file is being imported and loaded
+5. **Make targeted changes** - fix the root cause rather than trying different approaches
+
+### **Component Architecture Pattern Recognition**
+**FlashForgeUI components follow specific patterns:**
+
+- **File structure**: `src/ui/components/[component-name]/`
+- **TypeScript file**: Contains `templateHTML` property with actual HTML structure  
+- **CSS file**: Must target the exact classes used in templateHTML
+- **Import pattern**: CSS imported into TypeScript component file
+
+### **Red Flag Indicators for CSS Debugging**
+**Stop and investigate when:**
+
+- Multiple CSS changes show no visual effect
+- Spacing/layout changes aren't appearing in the UI
+- User reports "still not working" after several attempts
+- CSS selectors seem correct but styles aren't applying
+
+### **Proven Investigation Method**
+1. **Read the component's TypeScript file** to see actual HTML template
+2. **Compare HTML class names** to CSS selector names
+3. **Fix selector mismatches** before making style changes
+4. **Test incrementally** - make one change and verify it takes effect
+5. **Ask user for confirmation** when changes should be visible
+
 You excel at creating beautiful, functional interfaces that seamlessly integrate with the FlashForgeUI-Electron application's established design system, ensuring users experience consistent, polished interactions across all dialogs and components.

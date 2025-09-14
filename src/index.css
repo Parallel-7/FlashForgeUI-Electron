@@ -21,42 +21,21 @@
 }
 
 body {
-  background: var(--ui-background, transparent);
+  background-color: var(--dark-bg);
   color: var(--text-color);
   overflow: hidden;
   margin: 0;
-  padding: var(--ui-padding, 16px);
+  padding: 0;
   height: 100vh;
   width: 100vw;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  -webkit-font-smoothing: antialiased;
-  box-sizing: border-box;
 }
 
 .app-container {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - calc(var(--ui-padding, 16px) * 2));
-  width: calc(100vw - calc(var(--ui-padding, 16px) * 2));
-  max-width: 100%;
-  max-height: calc(100vh - calc(var(--ui-padding, 16px) * 2));
+  height: 100vh;
+  width: 100vw;
   overflow: hidden;
-  background: var(--dark-bg);
-  border: var(--ui-border, 1px solid #555);
-  border-radius: var(--ui-border-radius, 12px);
-  box-shadow: var(--ui-box-shadow, 0 8px 32px rgba(0, 0, 0, 0.5));
-  opacity: 0;
-  transform: scale(0.95);
-  animation: appFadeIn 0.2s ease-out forwards;
-}
-
-@keyframes appFadeIn {
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
 }
 
 /* Header */
@@ -64,15 +43,12 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  background-color: var(--header-bg);
   height: 32px;
   padding: 0 10px;
   -webkit-app-region: drag;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  border-top-left-radius: var(--header-border-radius-top, 12px);
-  border-top-right-radius: var(--header-border-radius-top, 12px);
+  border-bottom: 1px solid var(--border-color);
   flex: 0 0 32px; /* Fixed height for header */
-  color: white;
 }
 
 .left-controls {
@@ -80,21 +56,13 @@ body {
   -webkit-app-region: no-drag;
 }
 
-.title {
-  color: white;
-  font-weight: 600;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-
 .left-controls button {
   padding: 3px 8px;
   margin-right: 5px;
-  background-color: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
+  background-color: var(--dark-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
   cursor: pointer;
-  transition: all 0.2s ease;
 }
 
 .window-controls {
@@ -102,22 +70,15 @@ body {
   -webkit-app-region: no-drag;
 }
 
-.left-controls button:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  border-color: rgba(255, 255, 255, 0.3);
-}
-
 .window-controls button {
   margin-left: 5px;
   background: none;
   border: none;
-  color: white;
+  color: var(--text-color);
   font-size: 16px;
   cursor: pointer;
   width: 30px;
   height: 100%;
-  border-radius: 4px;
-  transition: all 0.2s ease;
 }
 
 .window-controls button:hover {
@@ -248,88 +209,9 @@ body.platform-darwin .traffic-lights {
   border-right: 1px solid var(--border-color);
 }
 
-.camera-view {
-  flex: 1;
-  min-height: 200px; /* Minimum height */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  border-bottom: 1px solid var(--border-color);
-  position: relative; /* For absolute positioning of text */
-  background-color: var(--darker-bg);
-}
+/* Camera view styles have been moved to camera-preview.css */
 
-.camera-view img {
-  width: 100%; /* Fill the available width */
-  height: 100%; /* Fill the available height */
-  object-fit: cover; /* Cover the container, may crop image */
-}
-
-.no-camera {
-  position: absolute;
-  color: #aaa;
-  font-style: italic;
-  left: 0;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  /* Center text */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-.job-info-panel {
-  background-color: var(--dark-bg);
-  padding: 8px;
-  border-bottom: 1px solid var(--border-color); /* NOTE: This border might be visually redundant if camera-view has one. Consider removing if left-side border is enough. */
-  display: flex;
-  flex-direction: column;
-  /* height: 200px; */ /* REMOVED: Fixed height removed */
-  flex-shrink: 0; /* Ensure this panel doesn't shrink below content */
-}
-
-.job-row, .progress-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 8px; /* Slightly increased margin */
-}
-
-progress {
-  width: 100%;
-  height: 8px;
-  margin: 8px 0; /* Increased margin */
-}
-
-/* Camera controls styling */
-.camera-controls {
-  display: flex;
-  gap: 8px;
-  margin-top: 8px;
-  align-self: flex-end;
-}
-
-.camera-controls button {
-  background-color: var(--button-bg);
-  color: white;
-  border: none;
-  padding: 4px 10px;
-  border-radius: 2px;
-  cursor: pointer;
-  font-size: 0.9em;
-}
-
-.camera-controls button:hover {
-  background-color: var(--button-hover);
-}
-
-#btn-restore-camera {
-  background-color: var(--warning-color);
-}
-
-#btn-restore-camera:hover {
-  background-color: #ffb74d;
-}
+/* Job info panel styles have been moved to job-info.css */
 
 /* Right Side */
 .right-side {
@@ -339,256 +221,70 @@ progress {
   overflow: hidden;
 }
 
-.controls-grid {
-  padding: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  flex-shrink: 0; /* Prevent controls from shrinking */
-}
+/* Controls grid styles are now in controls-grid.css */
 
-.btn-row {
-  display: flex;
-  gap: 8px;
-}
-
-.btn-row button {
-  flex: 1;
-  background-color: var(--button-bg);
-  color: white;
-  border: none;
-  padding: 6px 0;
-  border-radius: 2px;
-  cursor: pointer;
-}
-
-.btn-row button:hover {
-  background-color: var(--button-hover);
-}
-
-/* Disabled button styles */
-.btn-row button:disabled,
-.btn-row button.disabled {
-  background-color: #555;
-  color: #999;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.btn-row button:disabled:hover,
-.btn-row button.disabled:hover {
-  background-color: #555; /* No hover effect when disabled */
-}
-
-.model-panel, .job-stats-panel {
-  border-top: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-}
-
-/* Make panels below controls fill remaining space */
-.model-panel {
-  flex: 1; /* Allow model panel to grow and take remaining space */
-  min-height: 100px; /* Reduced minimum height to allow more space for job stats */
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-}
-
-.job-stats-panel {
-  height: 180px; /* RESTORED: Fixed height to accommodate all 5 info rows */
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0; /* Prevent shrinking below content size */
-}
-
-.panel-header {
-  background-color: var(--header-bg);
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--border-color);
-  flex-shrink: 0; /* Prevent header shrinking */
-}
-
-.model-panel .panel-content {
-  flex: 1; /* Allow content to fill panel */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background-color: transparent; /* Changed from darker-bg to transparent */
-  overflow: hidden; /* Keep hidden unless the model preview itself needs scroll */
-}
-
-/* Style for model preview */
-#model-preview {
-  width: 100%;
-  height: 100%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-
-#model-preview img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  background-color: transparent;
-}
-
-#model-preview span {
-  color: #aaa;
-  font-style: italic;
-}
-
-.job-stats-panel .panel-content {
-  padding: 8px;
-  flex: 1; /* Allow content area to take space within the panel */
-  overflow: hidden; /* Can likely be removed now, or set to visible/auto */
-}
-
-.info-row {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 6px; /* Slightly increased for better spacing */
-}
+/* Model panel and job stats panel styles are now in their respective component CSS files */
 
 /* Status Bar */
 .status-bar {
-  /* Consider if fixed height is truly needed, or if content can define it */
-  height: 140px;
+  height: 300px; /* Set to 300px for perfect spacing */
   display: flex;
   background-color: var(--dark-bg);
   border-top: 1px solid var(--border-color);
   overflow: hidden;
-  flex-shrink: 0; /* Prevent status bar shrinking */
+  flex-shrink: 0;
+  gap: 0;
+  position: relative;
+  align-items: stretch;
 }
 
-.status-section {
-  padding: 8px;
-  border-right: 1px solid var(--border-color);
+
+.status-bar > div {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-start;
-  overflow: hidden;
-  min-width: 100px; /* Keep minimum width */
-}
-
-.status-section:last-child {
-  border-right: none; /* Remove border from the last section */
-}
-
-.status-title {
-  font-weight: bold;
-  margin-bottom: 4px;
-  white-space: nowrap; /* Prevent title wrapping */
-}
-
-.status-item {
-  margin-bottom: 4px;
-  font-size: 0.9em;
-  white-space: nowrap; /* Prevent wrapping */
-}
-
-.temp-row {
-  display: flex;
-  justify-content: space-between;
+  min-width: 120px;
+  max-width: none;
+  border-right: 1px solid var(--border-color);
+  background-color: var(--dark-bg);
+  position: relative;
   align-items: center;
-  margin-bottom: 4px;
+  justify-content: center;
 }
 
-.temp-buttons {
-  display: flex;
-  gap: 4px;
+.status-bar > div:last-child {
+  border-right: none;
 }
 
-.temp-buttons button {
-  background-color: var(--button-bg);
-  color: white;
-  border: none;
-  padding: 2px 6px; /* Adjusted padding slightly */
-  border-radius: 2px;
-  font-size: 0.8em;
-  cursor: pointer;
+
+/* Responsive status bar adjustments */
+@media (max-width: 800px) {
+  .status-bar {
+    height: 160px; /* Increased from 120px */
+  }
+  
+  .status-bar > div {
+    min-width: 100px;
+  }
 }
 
-.temp-buttons button:hover {
-  background-color: var(--button-hover);
+@media (max-width: 600px) {
+  .status-bar {
+    height: 140px; /* Increased from 100px */
+  }
+  
+  .status-bar > div {
+    min-width: 80px;
+  }
 }
 
-.temp-buttons button:disabled,
-.temp-buttons button.disabled {
-  background-color: #555;
-  color: #999;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
+/* Status section styles are now in individual status bar component CSS files */
 
-.temp-buttons button:disabled:hover,
-.temp-buttons button.disabled:hover {
-  background-color: #555; /* No hover effect when disabled */
-}
+/* Temperature control styles are now in temperature-controls.css */
 
-.filtration-buttons {
-  display: flex;
-  flex-direction: column;
-  gap: 3px; /* Reduced gap slightly */
-  margin-top: auto; /* Push buttons towards the bottom */
-}
+/* Filtration control styles are now in filtration-controls.css */
 
-.filtration-buttons button {
-  background-color: var(--button-bg);
-  color: white;
-  border: none;
-  padding: 3px 0; /* Kept padding */
-  border-radius: 2px;
-  font-size: 0.8em;
-  cursor: pointer;
-  width: 100%; /* Ensure buttons take full width */
-}
+/* Log panel styles are now in log-panel.css */
 
-.filtration-buttons button:hover {
-  background-color: var(--button-hover);
-}
-
-.filtration-buttons button:disabled,
-.filtration-buttons button.disabled {
-  background-color: #555;
-  color: #999;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.filtration-buttons button:disabled:hover,
-.filtration-buttons button.disabled:hover {
-  background-color: #555; /* No hover effect when disabled */
-}
-
-/* Log Panel */
-.log-panel {
-  height: 150px; /* Keep fixed height as logs can be long */
-  background-color: var(--darker-bg);
-  border-top: 1px solid var(--border-color);
-  overflow-y: auto; /* Only allow vertical scrolling */
-  flex-shrink: 0; /* Prevent log panel shrinking */
-}
-
-#log-output {
-  padding: 5px;
-  font-family: monospace;
-  font-size: 0.8em;
-  /* height: 100%; Removed as parent has fixed height and overflow */
-  min-height: calc(150px - 10px); /* Ensure content area tries to fill */
-}
-
-/* Status colors */
-#printer-status.idle { color: var(--text-color); }
-#printer-status.printing { color: var(--success-color); font-weight: bold; }
-#printer-status.paused { color: var(--warning-color); font-weight: bold;}
-#printer-status.error { color: var(--error-color); font-weight: bold; }
-#printer-status.completed { color: var(--success-color); }
-#printer-status.busy { color: var(--accent-color); }
-#printer-status.heating { color: var(--warning-color); }
-/* Add other states if needed */
+/* Status colors are now in printer-status.css */
 
 /* Custom scrollbar styling */
 ::-webkit-scrollbar {
@@ -609,6 +305,30 @@ progress {
   background: #888;
 }
 
+/* Component containers */
+#camera-preview-container {
+  flex: 1; /* Take all available space in left-side */
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#controls-grid-container,
+#model-preview-container,
+#job-stats-container,
+#printer-status-container,
+#temperature-controls-container,
+#filtration-controls-container,
+#additional-info-container {
+  /* Containers should be transparent and let components manage their own styles */
+}
+
+#log-panel-container {
+  /* Hide log panel from main UI - will be accessible via dialog instead */
+  display: none;
+}
+
 /* Add a media query for better responsiveness on small screens */
 @media (max-width: 800px) {
   .main-layout {
@@ -617,23 +337,17 @@ progress {
 
   .left-side, .right-side {
     width: 100%;
-    /* height: auto; /* Let content determine height */
-    /* The existing 50%/50% split might still be desired, but removing fixed px heights within them helps */
   }
 
   .left-side {
-    height: 50%; /* Keep split for small screens if desired */
+    height: 50%;
     border-right: none;
     border-bottom: 1px solid var(--border-color);
   }
 
   .right-side {
-    height: 50%; /* Keep split for small screens if desired */
+    height: 50%;
   }
-
-  /* Adjust heights inside if 50/50 split is too restrictive */
-  .camera-view { min-height: 100px; }
-  .model-panel { min-height: 100px; }
 }
 
 /* Loading Overlay */

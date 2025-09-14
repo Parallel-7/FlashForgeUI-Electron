@@ -1,0 +1,25 @@
+description = "Finds all source files missing @fileoverview documentation and generates it automatically."
+prompt = """
+My task is to find all source files missing `@fileoverview` documentation and generate it for them.
+
+I will follow these steps:
+
+1.  **Find undocumented files**: Run `!{npm run docs:check}` to get a list of files missing the `@fileoverview` block. I will parse the output to get a list of file paths.
+
+2.  **Generate and apply documentation**: For each undocumented file found in Step 1, I will:
+    a. Read the entire content of the file to understand its purpose, exports, and functionality.
+    b. Generate a comprehensive and high-quality `@fileoverview` JSDoc block based on the following principles:
+        - **Ensure Style Guide Exists**: Before writing, check if `fileoverview-collection.json` exists in the workspace root. If not, run `npm run docs:combine` to generate it.
+        - **Consult Existing Examples**: Review `fileoverview-collection.json` to understand the established tone, structure, and level of detail for documentation in this project. This ensures consistency.
+        - **Be Professional and Concise**: Get straight to the point. For example, instead of "This file is the main entry point for the application," write "Main entry point."
+        - **Avoid Redundancy**: Do not mention the application's name (e.g., "FlashForgeUI"). The project context is implicit.
+        - **Focus on Purpose**: The first sentence should be a clear, high-level summary of the file's purpose.
+        - **Detail Key Responsibilities**: Use a bulleted list or subsequent paragraphs to describe the file's key functions, major components it orchestrates, and its role in the overall architecture.
+        - **Maintain Technical Accuracy**: Ensure the documentation accurately reflects the code's imports, exports, and logic.
+	c. Remove any existing documentation at the head of the file (within the first ~10 lines) that does NOT use @fileoverview. This is "legacy style" documentation.
+    d. Prepend the new JSDoc block to the file's content, ensuring a blank line follows the block.
+    e. Write the modified content back to the file.
+
+I will repeat this process for all files identified as missing documentation.
+I will ALWAYS make sure I'm writing UPDATED content to the file, NEVER writing the SAME contents back.
+"""

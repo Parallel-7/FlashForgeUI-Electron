@@ -1,0 +1,122 @@
+/**
+ * @fileoverview Log Dialog CSS - Uses Shared Template for Conditional Styling
+ * 
+ * This file provides styling for the log dialog window that displays application
+ * logs in a popup instead of the main UI. It uses the shared dialog template
+ * for consistent rounded/square UI switching and adds specific styling for
+ * the log display area.
+ * 
+ * Key features:
+ * - Monospace font for log messages
+ * - Scrollable log area with fixed height
+ * - Controls for clearing logs and showing message count
+ * - Dark theme consistent with application
+ */
+
+/* Import shared template for consistent rounded/square UI switching */
+@import url('../shared/rounded-dialog-template.css');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+}
+
+:root {
+    --dark-bg: #2a2a2a;
+    --darker-bg: #1e1e1e;
+    --header-bg: #222222;
+    --border-color: #444444;
+    --button-bg: #4285f4;
+    --button-hover: #5a95f5;
+    --text-color: #e0e0e0;
+    --success-color: #4CAF50;
+    --secondary-button-bg: #666666;
+    --secondary-button-hover: #777777;
+}
+
+/* Template provides: body, .dialog-container, dialogFadeIn animation */
+/* Template provides: .dialog-header, .dialog-title, .dialog-close styles */
+/* Template provides: .dialog-content base styles */
+
+.log-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 15px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.log-count {
+    color: var(--text-color);
+    font-size: 0.9em;
+    opacity: 0.8;
+}
+
+.dialog-button.secondary {
+    background: var(--secondary-button-bg);
+    border: 1px solid var(--border-color);
+}
+
+.dialog-button.secondary:hover {
+    background: var(--secondary-button-hover);
+}
+
+.log-container {
+    height: 400px;
+    background-color: var(--darker-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--ui-border-radius, 4px);
+    overflow: hidden;
+    position: relative;
+}
+
+.log-output {
+    height: 100%;
+    overflow-y: auto;
+    padding: 10px;
+    font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+    font-size: 0.85em;
+    line-height: 1.4;
+    color: var(--text-color);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+}
+
+.log-output:empty::after {
+    content: 'No log messages to display';
+    color: var(--text-color);
+    opacity: 0.5;
+    font-style: italic;
+    display: block;
+    text-align: center;
+    padding-top: 50px;
+}
+
+/* Scrollbar styling for the log output */
+.log-output::-webkit-scrollbar {
+    width: 8px;
+}
+
+.log-output::-webkit-scrollbar-track {
+    background: var(--dark-bg);
+}
+
+.log-output::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 4px;
+}
+
+.log-output::-webkit-scrollbar-thumb:hover {
+    background: #555555;
+}
+
+/* Log message styling */
+.log-output > div {
+    margin-bottom: 2px;
+    padding: 2px 0;
+}
+
+/* Template provides: .dialog-footer and .dialog-buttons styles */

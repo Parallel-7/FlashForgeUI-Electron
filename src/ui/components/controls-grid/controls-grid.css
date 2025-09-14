@@ -1,0 +1,46 @@
+/**
+ * Controls Grid Component CSS
+ * Interactive control buttons for printer operations
+ */
+
+.controls-grid-container {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex-shrink: 0; /* Prevent controls from shrinking */
+}
+
+.controls-grid-container .btn-row {
+  display: flex;
+  gap: 12px;
+}
+
+.controls-grid-container .btn-row button {
+  flex: 1;
+  background-color: var(--button-bg);
+  color: white;
+  border: none;
+  padding: 6px 8px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.controls-grid-container .btn-row button:hover {
+  background-color: var(--button-hover);
+}
+
+/* Disabled button styles */
+.controls-grid-container .btn-row button:disabled,
+.controls-grid-container .btn-row button.disabled {
+  background-color: #555;
+  color: #999;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.controls-grid-container .btn-row button:disabled:hover,
+.controls-grid-container .btn-row button.disabled:hover {
+  background-color: #555; /* No hover effect when disabled */
+}

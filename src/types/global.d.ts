@@ -63,11 +63,19 @@ interface ElectronAPI {
   camera: CameraAPI;
 }
 
+// Window controls interface for sub-windows
+interface WindowControls {
+  minimize: () => void;
+  close: () => void;
+  closeGeneric: () => void;
+}
+
 // Extend the Window interface to include the Electron API
 declare global {
   interface Window {
     api: ElectronAPI;
     CAMERA_URL: string;
+    windowControls?: WindowControls;
   }
 }
 

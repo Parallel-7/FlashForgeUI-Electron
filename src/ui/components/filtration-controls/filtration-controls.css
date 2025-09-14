@@ -1,0 +1,296 @@
+/**
+ * Filtration Controls Component Styles
+ * Modern, professional filtration control interface with clean typography and intuitive layout
+ * Completely rebuilt for proper centering and visual consistency
+ */
+
+.filtration-controls-container {
+  padding: 16px 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 12px;
+  min-width: 200px;
+  height: 100%;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Filtration Status Row Layout - Clean and Centered */
+.filtration-controls-container .filtration-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #373737 0%, #404040 100%);
+  border-radius: 6px;
+  border: 1px solid #4a4a4a;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05),
+              0 2px 4px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
+  min-height: 44px;
+}
+
+.filtration-controls-container .filtration-status-row:hover {
+  border-color: #5a5a5a;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08),
+              0 3px 6px rgba(0,0,0,0.2);
+}
+
+/* Filtration Labels */
+.filtration-controls-container .filtration-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e6e6e6;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+/* Filtration Values */
+.filtration-controls-container .filtration-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: 'Segoe UI', monospace;
+  letter-spacing: 0.5px;
+  text-align: right;
+  flex-grow: 1;
+  margin-left: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #555555 0%, #666666 100%);
+  border: 1px solid #777777;
+  transition: all 0.3s ease;
+  min-width: 60px;
+  text-align: center;
+}
+
+/* Filtration Status Display Styling */
+.filtration-controls-container #filtration-status-display {
+  text-transform: capitalize;
+}
+
+/* TVOC Level Color Coding */
+.filtration-controls-container #tvoc-level-display.tvoc-low {
+  background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
+  color: #ffffff;
+  border-color: rgba(76, 175, 80, 0.4);
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.25),
+              inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+.filtration-controls-container #tvoc-level-display.tvoc-medium {
+  background: linear-gradient(135deg, #ff9500 0%, #f57c00 100%);
+  color: #ffffff;
+  border-color: rgba(255, 149, 0, 0.4);
+  box-shadow: 0 2px 4px rgba(255, 149, 0, 0.25),
+              inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+.filtration-controls-container #tvoc-level-display.tvoc-high {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: #ffffff;
+  border-color: rgba(231, 76, 60, 0.4);
+  box-shadow: 0 2px 4px rgba(231, 76, 60, 0.25),
+              inset 0 1px 0 rgba(255,255,255,0.2);
+  animation: tvocAlert 2s ease-in-out infinite alternate;
+}
+
+@keyframes tvocAlert {
+  0% {
+    opacity: 0.9;
+    box-shadow: 0 2px 4px rgba(231, 76, 60, 0.25),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+  100% {
+    opacity: 1;
+    box-shadow: 0 4px 8px rgba(231, 76, 60, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+}
+
+/* Button Container - Vertical Layout */
+.filtration-controls-container .filtration-controls-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: flex-start;
+  align-items: stretch;
+  padding: 8px 0;
+  margin-top: 4px;
+}
+
+/* Modern Button Design - Full Width Vertical */
+.filtration-controls-container .filtration-control-btn {
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  color: #ffffff;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  width: 100%;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(74, 144, 226, 0.25),
+              inset 0 1px 0 rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.1);
+  min-height: 36px;
+}
+
+.filtration-controls-container .filtration-control-btn:hover:not(:disabled):not(.active) {
+  background: linear-gradient(135deg, #5ba0f2 0%, #4585c7 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(74, 144, 226, 0.35),
+              inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.filtration-controls-container .filtration-control-btn:active:not(:disabled) {
+  transform: translateY(0);
+  background: linear-gradient(135deg, #3d7bc2 0%, #2d6ba3 100%);
+  box-shadow: 0 1px 2px rgba(74, 144, 226, 0.2),
+              inset 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Active Button State */
+.filtration-controls-container .filtration-control-btn.active {
+  background: linear-gradient(135deg, #00e676 0%, #00c853 100%);
+  color: #ffffff;
+  border-color: rgba(0, 230, 118, 0.4);
+  box-shadow: 0 2px 4px rgba(0, 230, 118, 0.25),
+              inset 0 1px 0 rgba(255,255,255,0.2);
+  animation: activePulse 2s ease-in-out infinite alternate;
+}
+
+@keyframes activePulse {
+  0% {
+    opacity: 0.9;
+    box-shadow: 0 2px 4px rgba(0, 230, 118, 0.25),
+                inset 0 1px 0 rgba(255,255,255,0.2);
+  }
+  100% {
+    opacity: 1;
+    box-shadow: 0 4px 8px rgba(0, 230, 118, 0.4),
+                inset 0 1px 0 rgba(255,255,255,0.3);
+  }
+}
+
+.filtration-controls-container .filtration-control-btn.active:hover {
+  background: linear-gradient(135deg, #00e676 0%, #00c853 100%);
+  transform: none;
+  box-shadow: 0 4px 8px rgba(0, 230, 118, 0.4),
+              inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+/* None Button Variant */
+.filtration-controls-container #btn-no-filtration:not(.active) {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  box-shadow: 0 2px 4px rgba(231, 76, 60, 0.25),
+              inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+.filtration-controls-container #btn-no-filtration:not(.active):hover:not(:disabled) {
+  background: linear-gradient(135deg, #f55c4c 0%, #d0493b 100%);
+  box-shadow: 0 4px 8px rgba(231, 76, 60, 0.35),
+              inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.filtration-controls-container #btn-no-filtration:not(.active):active:not(:disabled) {
+  background: linear-gradient(135deg, #c73c2c 0%, #a0291b 100%);
+  box-shadow: 0 1px 2px rgba(231, 76, 60, 0.2),
+              inset 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Disabled Button States */
+.filtration-controls-container .filtration-control-btn:disabled,
+.filtration-controls-container .filtration-control-btn.disabled {
+  background: linear-gradient(135deg, #555555 0%, #444444 100%);
+  color: #999999;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+  border: 1px solid #333333;
+}
+
+.filtration-controls-container .filtration-control-btn:disabled:hover,
+.filtration-controls-container .filtration-control-btn.disabled:hover {
+  background: linear-gradient(135deg, #555555 0%, #444444 100%);
+  transform: none;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Filtration Unavailable State */
+.filtration-controls-container.filtration-unavailable {
+  opacity: 0.5;
+  pointer-events: none;
+  filter: grayscale(0.8);
+}
+
+.filtration-controls-container.filtration-unavailable::before {
+  content: "Filtration Not Available";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: #ffffff;
+  padding: 8px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Container State Enhancement */
+.filtration-controls-container:has(.active) {
+  border-left: 3px solid rgba(0, 230, 118, 0.4);
+}
+
+.filtration-controls-container:has(#tvoc-level-display.tvoc-high) {
+  border-left: 3px solid rgba(231, 76, 60, 0.4);
+}
+
+.filtration-controls-container:has(#tvoc-level-display.tvoc-medium) {
+  border-left: 3px solid rgba(255, 149, 0, 0.4);
+}
+
+.filtration-controls-container:has(#tvoc-level-display.tvoc-low) {
+  border-left: 3px solid rgba(76, 175, 80, 0.4);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .filtration-controls-container {
+    padding: 12px 8px;
+    gap: 8px;
+    min-width: 180px;
+  }
+
+  .filtration-controls-container .filtration-status-row {
+    padding: 10px 12px;
+  }
+
+  .filtration-controls-container .filtration-label {
+    font-size: 12px;
+    min-width: 70px;
+  }
+
+  .filtration-controls-container .filtration-value {
+    font-size: 13px;
+  }
+
+  .filtration-controls-container .filtration-control-btn {
+    padding: 8px 12px;
+    font-size: 11px;
+    width: 100%;
+    min-height: 32px;
+  }
+}

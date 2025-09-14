@@ -113,7 +113,9 @@ const validSendChannels = [
   'loading-show-success',
   'loading-show-error',
   'loading-set-progress',
-  'loading-update-message'
+  'loading-update-message',
+  'add-log-message',
+  'open-log-dialog'
 ];
 
 const validReceiveChannels = [
