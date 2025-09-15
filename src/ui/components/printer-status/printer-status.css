@@ -1,7 +1,7 @@
 /**
  * Printer Status Component Styles
  * Modern, professional status display with clean typography and intuitive layout
- * Completely rebuilt for proper centering and visual consistency
+ * Matches temperature controls design language for visual consistency
  */
 
 .printer-status-container {
@@ -31,6 +31,7 @@
               0 2px 4px rgba(0,0,0,0.15);
   transition: all 0.2s ease;
   min-height: 44px;
+  width: 100%;
 }
 
 .printer-status-container .status-display-row:hover {
@@ -50,206 +51,57 @@
   flex-shrink: 0;
 }
 
-/* Status Values */
+/* Status Values - Clean Text Only */
 .printer-status-container .status-value {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
-  font-family: 'Segoe UI', monospace;
-  letter-spacing: 0.5px;
-  text-align: right;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  letter-spacing: 0.2px;
+  text-align: center;
   flex-grow: 1;
   margin-left: 12px;
+  transition: color 0.2s ease;
 }
 
-/* Printer Status Text Specific Styling */
-.printer-status-container #printer-status-text {
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: linear-gradient(135deg, #555555 0%, #666666 100%);
-  border: 1px solid #777777;
-  transition: all 0.3s ease;
-  min-width: 60px;
-  text-align: center;
+/* Clean Hover Effect */
+.printer-status-container .status-value:hover {
+  color: #4a90e2;
 }
 
-/* State-Based Status Colors and Animations */
+/* State-Based Status Colors - Simple Color Changes */
 .printer-status-container.printer-state-ready #printer-status-text {
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-  color: #ffffff;
-  border-color: rgba(74, 144, 226, 0.4);
-  box-shadow: 0 2px 4px rgba(74, 144, 226, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
+  color: #4a90e2;
 }
 
 .printer-status-container.printer-state-printing #printer-status-text {
-  background: linear-gradient(135deg, #00e676 0%, #00c853 100%);
-  color: #ffffff;
-  border-color: rgba(0, 230, 118, 0.4);
-  box-shadow: 0 2px 4px rgba(0, 230, 118, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-  animation: printingPulse 2s ease-in-out infinite alternate;
+  color: #00e676;
 }
 
 .printer-status-container.printer-state-paused #printer-status-text {
-  background: linear-gradient(135deg, #ff9500 0%, #f57c00 100%);
-  color: #ffffff;
-  border-color: rgba(255, 149, 0, 0.4);
-  box-shadow: 0 2px 4px rgba(255, 149, 0, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-  animation: pausedBlink 1.5s ease-in-out infinite;
+  color: #ff9500;
 }
 
 .printer-status-container.printer-state-error #printer-status-text {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  color: #ffffff;
-  border-color: rgba(231, 76, 60, 0.4);
-  box-shadow: 0 2px 4px rgba(231, 76, 60, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-  animation: errorPulse 1s ease-in-out infinite alternate;
+  color: #e74c3c;
 }
 
 .printer-status-container.printer-state-completed #printer-status-text {
-  background: linear-gradient(135deg, #00e676 0%, #00c853 100%);
-  color: #ffffff;
-  border-color: rgba(0, 230, 118, 0.4);
-  box-shadow: 0 2px 4px rgba(0, 230, 118, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-  animation: completedGlow 3s ease-in-out infinite alternate;
+  color: #00e676;
 }
 
 .printer-status-container.printer-state-busy #printer-status-text {
-  background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
-  color: #ffffff;
-  border-color: rgba(156, 39, 176, 0.4);
-  box-shadow: 0 2px 4px rgba(156, 39, 176, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-  animation: busyPulse 1.2s ease-in-out infinite alternate;
+  color: #9c27b0;
 }
 
 .printer-status-container.printer-state-heating #printer-status-text {
-  background: linear-gradient(135deg, #ff9500 0%, #f57c00 100%);
-  color: #ffffff;
-  border-color: rgba(255, 149, 0, 0.4);
-  box-shadow: 0 2px 4px rgba(255, 149, 0, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-  animation: heatingPulse 1.8s ease-in-out infinite alternate;
+  color: #ff9500;
 }
 
-/* Status Animations */
-@keyframes printingPulse {
-  0% {
-    opacity: 0.9;
-    box-shadow: 0 2px 4px rgba(0, 230, 118, 0.25),
-                inset 0 1px 0 rgba(255,255,255,0.2);
-  }
-  100% {
-    opacity: 1;
-    box-shadow: 0 4px 8px rgba(0, 230, 118, 0.4),
-                inset 0 1px 0 rgba(255,255,255,0.3);
-  }
-}
-
-@keyframes pausedBlink {
-  0%, 50% {
-    opacity: 1;
-  }
-  25%, 75% {
-    opacity: 0.7;
-  }
-}
-
-@keyframes errorPulse {
-  0% {
-    opacity: 0.8;
-    box-shadow: 0 2px 4px rgba(231, 76, 60, 0.25),
-                inset 0 1px 0 rgba(255,255,255,0.2);
-  }
-  100% {
-    opacity: 1;
-    box-shadow: 0 4px 8px rgba(231, 76, 60, 0.5),
-                inset 0 1px 0 rgba(255,255,255,0.3);
-  }
-}
-
-@keyframes completedGlow {
-  0% {
-    opacity: 0.9;
-    box-shadow: 0 2px 4px rgba(0, 230, 118, 0.25),
-                inset 0 1px 0 rgba(255,255,255,0.2);
-  }
-  100% {
-    opacity: 1;
-    box-shadow: 0 6px 12px rgba(0, 230, 118, 0.3),
-                inset 0 1px 0 rgba(255,255,255,0.3);
-  }
-}
-
-@keyframes busyPulse {
-  0% {
-    opacity: 0.8;
-    transform: scale(1);
-  }
-  100% {
-    opacity: 1;
-    transform: scale(1.02);
-  }
-}
-
-@keyframes heatingPulse {
-  0% {
-    opacity: 0.8;
-    box-shadow: 0 2px 4px rgba(255, 149, 0, 0.25),
-                inset 0 1px 0 rgba(255,255,255,0.2);
-  }
-  100% {
-    opacity: 1;
-    box-shadow: 0 4px 8px rgba(255, 149, 0, 0.4),
-                inset 0 1px 0 rgba(255,255,255,0.3);
-  }
-}
-
-/* Statistics Value Enhanced Styling for Active States */
-.printer-status-container.printer-state-printing .status-value {
-  color: #ffffff;
-  text-shadow: 0 0 4px rgba(0, 230, 118, 0.3);
-}
-
+/* Statistics Value State Enhancements - Simple Color Changes */
 .printer-status-container.printer-state-printing #run-time-text,
 .printer-status-container.printer-state-printing #filament-used-text {
-  background: linear-gradient(135deg, #2d3d2d 0%, #3d4d3d 100%);
   color: #00e676;
-  padding: 4px 8px;
-  border-radius: 4px;
-  border: 1px solid rgba(0, 230, 118, 0.3);
-  animation: statsGlow 3s ease-in-out infinite alternate;
-}
-
-@keyframes statsGlow {
-  0% {
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.1);
-  }
-  100% {
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.2),
-                0 2px 6px rgba(0, 230, 118, 0.2);
-  }
-}
-
-/* Container State Enhancement */
-.printer-status-container.printer-state-printing {
-  border-left: 3px solid rgba(0, 230, 118, 0.4);
-}
-
-.printer-status-container.printer-state-error {
-  border-left: 3px solid rgba(231, 76, 60, 0.4);
-}
-
-.printer-status-container.printer-state-paused {
-  border-left: 3px solid rgba(255, 149, 0, 0.4);
-}
-
-.printer-status-container.printer-state-completed {
-  border-left: 3px solid rgba(0, 230, 118, 0.4);
 }
 
 /* Responsive Adjustments */
@@ -264,12 +116,7 @@
     padding: 10px 12px;
   }
 
-  .printer-status-container .status-label {
-    font-size: 12px;
-    min-width: 70px;
-  }
-
   .printer-status-container .status-value {
-    font-size: 13px;
+    font-size: 11px;
   }
 }

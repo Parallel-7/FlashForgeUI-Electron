@@ -44,7 +44,6 @@
   letter-spacing: 0.3px;
   text-transform: uppercase;
   min-width: 80px;
-  text-align: center;
   display: flex;
   flex-direction: column;
   gap: 2px;

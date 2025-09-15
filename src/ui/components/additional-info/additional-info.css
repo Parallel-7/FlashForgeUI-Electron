@@ -9,7 +9,7 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
+  justify-content: center;
   gap: 12px;
   min-width: 200px;
   height: 100%;
@@ -29,12 +29,14 @@
               0 2px 4px rgba(0,0,0,0.15);
   transition: all 0.2s ease;
   min-height: 44px;
+  width: 100%;
 }
 
 .additional-info-container .info-display-row:hover {
   border-color: #5a5a5a;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.08),
               0 3px 6px rgba(0,0,0,0.2);
+  background: linear-gradient(135deg, #3e3e3e 0%, #474747 100%);
 }
 
 /* Info Labels */
@@ -48,207 +50,76 @@
   flex-shrink: 0;
 }
 
-/* Info Values */
+/* Info Values - Clean Text Only */
 .additional-info-container .info-value {
   font-size: 15px;
-  font-weight: 700;
+  font-weight: 600;
   color: #ffffff;
-  font-family: 'Segoe UI', monospace;
-  letter-spacing: 0.5px;
-  text-align: right;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  letter-spacing: 0.2px;
+  text-align: center;
   flex-grow: 1;
   margin-left: 12px;
-  padding: 4px 8px;
-  border-radius: 4px;
-  background: linear-gradient(135deg, #555555 0%, #666666 100%);
-  border: 1px solid #777777;
-  transition: all 0.3s ease;
-  min-width: 60px;
-  text-align: center;
+  transition: color 0.2s ease;
 }
 
-/* Nozzle Size Specific Styling */
-.additional-info-container.nozzle-size-0-4 #nozzle-size-display {
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-  color: #ffffff;
-  border-color: rgba(74, 144, 226, 0.4);
-  box-shadow: 0 2px 4px rgba(74, 144, 226, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
+/* Clean Hover Effect */
+.additional-info-container .info-value:hover {
+  color: #4a90e2;
 }
 
-.additional-info-container.nozzle-size-0-6 #nozzle-size-display {
-  background: linear-gradient(135deg, #9c27b0 0%, #7b1fa2 100%);
-  color: #ffffff;
-  border-color: rgba(156, 39, 176, 0.4);
-  box-shadow: 0 2px 4px rgba(156, 39, 176, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-}
-
-.additional-info-container.nozzle-size-other #nozzle-size-display {
-  background: linear-gradient(135deg, #ff9500 0%, #f57c00 100%);
-  color: #ffffff;
-  border-color: rgba(255, 149, 0, 0.4);
-  box-shadow: 0 2px 4px rgba(255, 149, 0, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-}
-
-/* Filament Type Styling */
-.additional-info-container #filament-type-display {
-  text-transform: uppercase;
-  font-weight: 800;
-  letter-spacing: 0.8px;
-}
-
-/* Speed Offset State Styling */
-.additional-info-container.speed-offset-normal #speed-offset-display {
-  background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
-  color: #ffffff;
-  border-color: rgba(76, 175, 80, 0.4);
-  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-}
-
-.additional-info-container.speed-offset-fast #speed-offset-display {
-  background: linear-gradient(135deg, #ff9500 0%, #f57c00 100%);
-  color: #ffffff;
-  border-color: rgba(255, 149, 0, 0.4);
-  box-shadow: 0 2px 4px rgba(255, 149, 0, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-  animation: speedAlert 2s ease-in-out infinite alternate;
-}
-
-.additional-info-container.speed-offset-slow #speed-offset-display {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  color: #ffffff;
-  border-color: rgba(231, 76, 60, 0.4);
-  box-shadow: 0 2px 4px rgba(231, 76, 60, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-  animation: speedAlert 2s ease-in-out infinite alternate;
-}
-
-@keyframes speedAlert {
-  0% {
-    opacity: 0.9;
-    box-shadow: 0 2px 4px rgba(255, 149, 0, 0.25),
-                inset 0 1px 0 rgba(255,255,255,0.2);
-  }
-  100% {
-    opacity: 1;
-    box-shadow: 0 4px 8px rgba(255, 149, 0, 0.4),
-                inset 0 1px 0 rgba(255,255,255,0.3);
-  }
-}
-
-/* Z-Axis Offset State Styling */
-.additional-info-container.z-offset-zero #z-offset-display {
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-  color: #ffffff;
-  border-color: rgba(74, 144, 226, 0.4);
-  box-shadow: 0 2px 4px rgba(74, 144, 226, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-}
-
-.additional-info-container.z-offset-positive #z-offset-display {
-  background: linear-gradient(135deg, #4caf50 0%, #388e3c 100%);
-  color: #ffffff;
-  border-color: rgba(76, 175, 80, 0.4);
-  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-}
-
-.additional-info-container.z-offset-negative #z-offset-display {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  color: #ffffff;
-  border-color: rgba(231, 76, 60, 0.4);
-  box-shadow: 0 2px 4px rgba(231, 76, 60, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-  animation: offsetAlert 3s ease-in-out infinite alternate;
-}
-
-@keyframes offsetAlert {
-  0% {
-    opacity: 0.9;
-    box-shadow: 0 2px 4px rgba(231, 76, 60, 0.25),
-                inset 0 1px 0 rgba(255,255,255,0.2);
-  }
-  100% {
-    opacity: 1;
-    box-shadow: 0 4px 8px rgba(231, 76, 60, 0.4),
-                inset 0 1px 0 rgba(255,255,255,0.3);
-  }
-}
-
-/* Settings Unavailable State */
+/* Settings unavailable state - modern dimmed appearance */
 .additional-info-container.settings-unavailable {
-  opacity: 0.6;
-  filter: grayscale(0.5);
+  opacity: 0.5;
+}
+
+.additional-info-container.settings-unavailable .info-display-row {
+  background: linear-gradient(135deg, #2d2d2d 0%, #363636 100%);
+  border-color: #333333;
+  color: #999999;
 }
 
 .additional-info-container.settings-unavailable .info-value {
-  background: linear-gradient(135deg, #444444 0%, #555555 100%);
-  color: #999999;
-  border-color: #666666;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
-}
-
-.additional-info-container.settings-unavailable .info-label {
   color: #cccccc;
 }
 
-/* Container State Enhancement */
-.additional-info-container.nozzle-size-0-4 {
-  border-left: 3px solid rgba(74, 144, 226, 0.4);
+/* Nozzle size indicators - simple color changes */
+.additional-info-container.nozzle-size-0-4 #nozzle-size-display {
+  color: #00e676;
 }
 
-.additional-info-container.nozzle-size-0-6 {
-  border-left: 3px solid rgba(156, 39, 176, 0.4);
+.additional-info-container.nozzle-size-0-6 #nozzle-size-display {
+  color: #ff9500;
 }
 
-.additional-info-container.nozzle-size-other {
-  border-left: 3px solid rgba(255, 149, 0, 0.4);
+.additional-info-container.nozzle-size-other #nozzle-size-display {
+  color: #4a90e2;
 }
 
-.additional-info-container.speed-offset-normal {
-  border-left: 3px solid rgba(76, 175, 80, 0.4);
+/* Speed offset indicators - simple color changes */
+.additional-info-container.speed-offset-normal #speed-offset-display {
+  color: #00e676;
 }
 
-.additional-info-container.speed-offset-fast,
-.additional-info-container.speed-offset-slow {
-  border-left: 3px solid rgba(255, 149, 0, 0.4);
+.additional-info-container.speed-offset-fast #speed-offset-display {
+  color: #ff9500;
 }
 
-.additional-info-container.z-offset-positive {
-  border-left: 3px solid rgba(76, 175, 80, 0.4);
+.additional-info-container.speed-offset-slow #speed-offset-display {
+  color: #e74c3c;
 }
 
-.additional-info-container.z-offset-negative {
-  border-left: 3px solid rgba(231, 76, 60, 0.4);
+/* Z-axis offset indicators - simple color changes */
+.additional-info-container.z-offset-zero #z-offset-display {
+  color: #00e676;
 }
 
-.additional-info-container.z-offset-zero {
-  border-left: 3px solid rgba(74, 144, 226, 0.4);
+.additional-info-container.z-offset-positive #z-offset-display {
+  color: #ff9500;
 }
 
-/* Info Value Enhancements for Special Cases */
-.additional-info-container #nozzle-size-display::after {
-  content: " ⌀";
-  opacity: 0.7;
-  font-size: 12px;
-  margin-left: 2px;
-}
-
-.additional-info-container #z-offset-display::after {
-  content: "mm";
-  opacity: 0.7;
-  font-size: 11px;
-  margin-left: 2px;
-}
-
-/* Hover Effects for Interactive Feel */
-.additional-info-container .info-display-row:hover .info-value {
-  transform: translateX(-2px);
-  box-shadow: 0 3px 6px rgba(0,0,0,0.2),
-              inset 0 1px 0 rgba(255,255,255,0.1);
+.additional-info-container.z-offset-negative #z-offset-display {
+  color: #4a90e2;
 }
 
 /* Responsive Adjustments */
@@ -261,19 +132,11 @@
 
   .additional-info-container .info-display-row {
     padding: 10px 12px;
-  }
-
-  .additional-info-container .info-label {
     font-size: 12px;
-    min-width: 70px;
   }
 
   .additional-info-container .info-value {
-    font-size: 13px;
-  }
-
-  .additional-info-container #nozzle-size-display::after,
-  .additional-info-container #z-offset-display::after {
-    font-size: 10px;
+    font-size: 14px;
+    min-width: 50px;
   }
 }
