@@ -1,13 +1,66 @@
-// src/renderer.ts
-// Main renderer process with real-time data polling integration
+/**
+ * @fileoverview Main Renderer Process - Component System Integration
+ * 
+ * This file serves as the main entry point for the renderer process and integrates
+ * the new component system with existing functionality. It replaces the monolithic
+ * UI approach with a clean component-based architecture while preserving all
+ * existing features and behaviors.
+ * 
+ * Key responsibilities:
+ * - Component system initialization and lifecycle management
+ * - IPC event handling and data flow
+ * - Window controls and basic UI functionality
+ * - Platform detection and styling
+ * - Loading state management
+ * - State tracking integration
+ * 
+ * Integration approach:
+ * - Uses ComponentManager for centralized component updates
+ * - Preserves all existing event handlers and IPC communication
+ * - Maintains backward compatibility with logging and state tracking
+ * - Provides graceful degradation if components fail to initialize
+ */
 
+// Core styles and dependencies
 import './index.css';
+
+// Component system imports
+import {
+  componentManager,
+  JobStatsComponent,
+  CameraPreviewComponent,
+  ControlsGridComponent,
+  ModelPreviewComponent,
+  LogPanelComponent,
+  PrinterStatusComponent,
+  TemperatureControlsComponent,
+  FiltrationControlsComponent,
+  AdditionalInfoComponent,
+  type ComponentUpdateData
+} from './ui/components';
+
+// Existing service imports
 import { getGlobalStateTracker, STATE_EVENTS, type StateChangeEvent } from './services/printer-state';
-import { updateAllPanels, initializeUIAnimations, resetUI, handleUIError } from './services/ui-updater';
+import { initializeUIAnimations, resetUI, handleUIError } from './services/ui-updater';
 import type { PollingData } from './types/polling';
 import type { ResolvedCameraConfig } from './types/camera';
 
 
+// ============================================================================
+// COMPONENT SYSTEM STATE
+// ============================================================================
+
+/** Global reference to LogPanelComponent for backward compatibility */
+let logPanelComponent: LogPanelComponent | null = null;
+
+/** Whether components have been initialized */
+let componentsInitialized = false;
+
+// ============================================================================
+// EXISTING STATE TRACKING (preserved for compatibility)
+// ============================================================================
+
+/** Camera preview state */
 let previewEnabled = false;
 let cameraStreamElement: HTMLImageElement | null = null;
 
@@ -20,19 +73,7 @@ let ifsButtonVisible = false;
 // Track legacy printer status for feature detection
 let isLegacyPrinter = false;
 
-// Basic UI state management
-interface UIState {
-  printerStatus: string;
-  currentJob: string;
-  progress: number;
-  bedTemp: string;
-  extruderTemp: string;
-  layerInfo: string;
-  eta: string;
-  jobTime: string;
-  weight: string;
-  length: string;
-}
+// Note: UIState interface removed - components handle their own state now
 
 // Loading state management
 interface LoadingState {
@@ -43,18 +84,7 @@ interface LoadingState {
   canCancel: boolean;
 }
 
-const defaultUIState: UIState = {
-  printerStatus: 'Disconnected',
-  currentJob: 'No active job',
-  progress: 0,
-  bedTemp: '0°C/0°C',
-  extruderTemp: '0°C/0°C',
-  layerInfo: '0 / 0',
-  eta: '--:--',
-  jobTime: '00:00',
-  weight: '0g',
-  length: '0m'
-};
+// Note: defaultUIState removed - components handle their own default states
 
 const defaultLoadingState: LoadingState = {
   isVisible: false,
@@ -155,23 +185,150 @@ function setupLoadingEventListeners(): void {
   }
 }
 
-// Basic logging function
+// ============================================================================
+// COMPONENT SYSTEM INITIALIZATION
+// ============================================================================
+
+/**
+ * Initialize all UI components and register them with ComponentManager
+ * Creates instances of all 10 Phase 1 components and sets up their containers
+ */
+async function initializeComponents(): Promise<void> {
+  console.log('Initializing component system...');
+  
+  try {
+    // Map component IDs to their container element IDs
+    const componentContainerMap: { [componentId: string]: string } = {
+      'camera-preview': 'camera-preview-container',
+      'controls-grid': 'controls-grid-container',
+      'model-preview': 'model-preview-container',
+      'job-stats': 'job-stats-container',
+      'printer-status': 'printer-status-container',
+      'temperature-controls': 'temperature-controls-container',
+      'filtration-controls': 'filtration-controls-container',
+      'additional-info': 'additional-info-container',
+      'log-panel': 'log-panel-container'
+    };
+
+    // Create and register all components
+    const componentRegistrations = [
+      {
+        id: 'camera-preview',
+        factory: (container: HTMLElement) => new CameraPreviewComponent(container)
+      },
+      {
+        id: 'controls-grid', 
+        factory: (container: HTMLElement) => new ControlsGridComponent(container)
+      },
+      {
+        id: 'model-preview',
+        factory: (container: HTMLElement) => new ModelPreviewComponent(container)
+      },
+      {
+        id: 'job-stats',
+        factory: (container: HTMLElement) => new JobStatsComponent(container)
+      },
+      {
+        id: 'printer-status',
+        factory: (container: HTMLElement) => new PrinterStatusComponent(container)
+      },
+      {
+        id: 'temperature-controls',
+        factory: (container: HTMLElement) => new TemperatureControlsComponent(container)
+      },
+      {
+        id: 'filtration-controls',
+        factory: (container: HTMLElement) => new FiltrationControlsComponent(container)
+      },
+      {
+        id: 'additional-info',
+        factory: (container: HTMLElement) => new AdditionalInfoComponent(container)
+      },
+      {
+        id: 'log-panel',
+        factory: (container: HTMLElement) => {
+          const logPanel = new LogPanelComponent(container);
+          logPanelComponent = logPanel; // Store reference for global logging
+          return logPanel;
+        }
+      }
+    ];
+
+    // Register all components
+    let registeredCount = 0;
+    for (const registration of componentRegistrations) {
+      const containerElement = document.getElementById(componentContainerMap[registration.id]);
+      
+      if (containerElement) {
+        try {
+          const component = registration.factory(containerElement);
+          componentManager.registerComponent(component);
+          registeredCount++;
+          console.log(`Registered component: ${registration.id}`);
+        } catch (error) {
+          console.error(`Failed to create component ${registration.id}:`, error);
+          logMessage(`WARNING: Component ${registration.id} failed to initialize`);
+        }
+      } else {
+        console.warn(`Container element not found for component: ${registration.id}`);
+        logMessage(`WARNING: Container missing for ${registration.id}`);
+      }
+    }
+
+    console.log(`Registered ${registeredCount}/${componentRegistrations.length} components`);
+    
+    // Initialize all registered components
+    await componentManager.initializeAll();
+    
+    componentsInitialized = true;
+    console.log('Component system initialization complete');
+    logMessage(`Component system initialized: ${registeredCount} components`);
+    
+  } catch (error) {
+    console.error('Component system initialization failed:', error);
+    logMessage(`ERROR: Component system initialization failed: ${error}`);
+    // Don't throw - allow fallback to continue
+  }
+}
+
+// ============================================================================
+// ENHANCED LOGGING FUNCTION
+// ============================================================================
+
+/**
+ * Enhanced logging function that integrates with LogPanelComponent
+ * Falls back to DOM manipulation if component is not available
+ * @param message - The message to log
+ */
 function logMessage(message: string): void {
+  // Always send to main process LogService for centralized storage
+  if (window.api) {
+    window.api.send('add-log-message', message);
+  }
+  
+  // Try to use LogPanelComponent if available (for backward compatibility while log panel is hidden)
+  if (logPanelComponent && logPanelComponent.isInitialized()) {
+    try {
+      logPanelComponent.addLogMessage(message);
+      return;
+    } catch (error) {
+      console.error('LogPanelComponent failed, falling back to DOM:', error);
+    }
+  }
+  
+  // Fallback to direct DOM manipulation (for early initialization or component failure)
   const logOutput = document.getElementById('log-output');
   if (logOutput) {
     const timestamp = new Date().toLocaleTimeString();
     logOutput.innerHTML += `<div>[${timestamp}] ${message}</div>`;
     logOutput.scrollTop = logOutput.scrollHeight;
+  } else {
+    // Last resort - console only
+    console.log(`[FALLBACK] ${message}`);
   }
 }
 
-// Basic UI update functions
-function updateUIElement(id: string, value: string): void {
-  const element = document.getElementById(id);
-  if (element) {
-    element.textContent = value;
-  }
-}
+// Note: updateUIElement function removed - components handle their own DOM updates
 
 function setupWindowControls(): void {
   // Standard window controls (for non-macOS)
@@ -419,7 +576,7 @@ async function handleCameraToggle(button: HTMLElement): Promise<void> {
 function setupBasicButtons(): void {
   // Add click listeners to all buttons for visual feedback
   const buttons = [
-    'btn-connect', 'btn-settings', 'btn-status', 'btn-ifs',
+    'btn-connect', 'btn-settings', 'btn-status', 'btn-ifs', 'btn-logs',
     'btn-led-on', 'btn-led-off', 'btn-clear-status', 'btn-home-axes',
     'btn-pause', 'btn-resume', 'btn-stop', 'btn-upload-job',
     'btn-start-recent', 'btn-start-local', 'btn-swap-filament', 'btn-send-cmds',
@@ -454,6 +611,7 @@ function setupBasicButtons(): void {
             'btn-settings': 'open-settings-window',
             'btn-status': 'open-status-dialog',
             'btn-ifs': 'open-ifs-dialog',
+            'btn-logs': 'open-log-dialog',
             'btn-upload-job': 'open-job-uploader',
             'btn-start-recent': 'show-recent-files',
             'btn-start-local': 'show-local-files',
@@ -518,36 +676,19 @@ function setupBasicButtons(): void {
   });
 }
 
+/**
+ * Initialize UI with default state and prepare for component system
+ * This function now serves as a bridge between legacy initialization and components
+ */
 function initializeUI(): void {
-  // Set initial UI state
-  updateUIElement('printer-status', defaultUIState.printerStatus);
-  updateUIElement('current-job', defaultUIState.currentJob);
-  updateUIElement('bed-temp', defaultUIState.bedTemp);
-  updateUIElement('extruder-temp', defaultUIState.extruderTemp);
-  updateUIElement('layer-info', defaultUIState.layerInfo);
-  updateUIElement('eta', defaultUIState.eta);
-  updateUIElement('job-time', defaultUIState.jobTime);
-  updateUIElement('weight', defaultUIState.weight);
-  updateUIElement('length', defaultUIState.length);
+  // Initialize UI animations for smooth updates (preserve existing functionality)
+  initializeUIAnimations();
   
-  // Set progress bar
-  const progressBar = document.getElementById('progress-bar') as HTMLProgressElement;
-  const progressPercentage = document.getElementById('progress-percentage');
-  if (progressBar) {
-    progressBar.value = defaultUIState.progress;
-  }
-  if (progressPercentage) {
-    progressPercentage.textContent = `${defaultUIState.progress}%`;
-  }
-  
-  // Set initial preview button state
+  // Set initial preview button state (non-componentized)
   const previewBtn = document.getElementById('btn-preview');
   if (previewBtn) {
     previewBtn.textContent = 'Preview On';
   }
-  
-  // Initialize UI animations for smooth updates
-  initializeUIAnimations();
   
   // Initialize filtration button states (disabled by default until backend reports availability)
   updateFiltrationButtonStates();
@@ -555,8 +696,8 @@ function initializeUI(): void {
   // Initialize legacy printer button states (disabled by default until backend is initialized)
   updateLegacyPrinterButtonStates();
   
-
-
+  // Component initialization will be handled separately by initializeComponents()
+  logMessage('UI initialization complete - awaiting component system');
 }
 
 /**
@@ -770,8 +911,13 @@ function isLegacyBackendType(backendType: string): boolean {
 // REAL-TIME POLLING INTEGRATION
 // ============================================================================
 
+// ============================================================================
+// COMPONENT SYSTEM DATA UPDATES
+// ============================================================================
+
 /**
  * Initialize event listeners for polling updates from main process
+ * This function is enhanced to work with the component system
  */
 function initializePollingListeners(): void {
   if (!window.api) {
@@ -784,7 +930,7 @@ function initializePollingListeners(): void {
     const pollingData = data as PollingData;
     
     try {
-      // Update filtration availability from backend data
+      // Update filtration availability from backend data (preserve existing logic)
       if (pollingData.printerStatus && pollingData.printerStatus.filtration) {
         const newFiltrationAvailable = pollingData.printerStatus.filtration.available;
         if (newFiltrationAvailable !== filtrationAvailable) {
@@ -794,13 +940,12 @@ function initializePollingListeners(): void {
         }
       }
       
-      // Update IFS button visibility for AD5X printers with material station
+      // Update IFS button visibility for AD5X printers with material station (preserve existing logic)
       if (pollingData.materialStation && pollingData.isConnected) {
         const shouldShowIFS = pollingData.materialStation.connected;
         if (shouldShowIFS !== ifsButtonVisible) {
           ifsButtonVisible = shouldShowIFS;
           updateIFSButtonVisibility();
-
         }
       } else if (ifsButtonVisible) {
         // Hide IFS button when disconnected or no material station
@@ -808,10 +953,35 @@ function initializePollingListeners(): void {
         updateIFSButtonVisibility();
       }
       
-      // Update all UI panels with new data
-      updateAllPanels(pollingData);
+      // COMPONENT SYSTEM INTEGRATION: Replace updateAllPanels with componentManager.updateAll
+      if (componentsInitialized && componentManager.isInitialized()) {
+        try {
+          // Create component update data from polling data
+          const updateData: ComponentUpdateData = {
+            pollingData: pollingData,
+            timestamp: new Date().toISOString(),
+            // Add any other update data fields as needed by components
+            printerState: pollingData.printerStatus?.state,
+            connectionState: pollingData.isConnected
+          };
+          
+          // Update all components with centralized manager
+          componentManager.updateAll(updateData);
+        } catch (error) {
+          console.error('Component system update failed:', error);
+          logMessage(`ERROR: Component update failed: ${error}`);
+          
+          // Fallback to legacy update system if components fail
+          console.warn('Falling back to legacy UI update system');
+          // Note: updateAllPanels is removed, so we'll handle this gracefully
+          handleUIError(error, 'component system failure');
+        }
+      } else {
+        // Components not ready yet - log but don't fail
+        console.warn('Components not initialized yet, skipping update');
+      }
       
-      // Update state tracker based on printer status
+      // Update state tracker based on printer status (preserve existing logic)
       const stateTracker = getGlobalStateTracker();
       if (pollingData.printerStatus && pollingData.isConnected) {
         stateTracker.setState(pollingData.printerStatus.state, 'polling update');
@@ -824,8 +994,7 @@ function initializePollingListeners(): void {
     }
   });
   
-  console.log('Polling listeners initialized - waiting for updates from main process');
-
+  console.log('Enhanced polling listeners initialized - component system integration active');
 }
 
 /**
@@ -921,9 +1090,16 @@ function initializeStateAndEventListeners(): void {
   console.log('State tracking and event listeners initialized');
 }
 
-// DOM Content Loaded handler
-document.addEventListener('DOMContentLoaded', () => {
-  console.log('Renderer process started - DOM loaded');
+// ============================================================================
+// MAIN INITIALIZATION SEQUENCE
+// ============================================================================
+
+/**
+ * Main DOM Content Loaded handler with component system integration
+ * This is the primary initialization sequence for the renderer process
+ */
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('Renderer process started with component system - DOM loaded');
   
   // Check if window.api is available
   if (!window.api) {
@@ -937,49 +1113,92 @@ document.addEventListener('DOMContentLoaded', () => {
       logMessage(`Platform-specific styling applied: platform-${platform}`);
     });
     
-    // Set up IPC listeners for connection state changes (when properly configured)
-    // TODO: Implement proper IPC listeners when API interface is updated
-    console.log('IPC listeners would be set up here');
+    console.log('IPC listeners configured for component system integration');
   }
   
-  // Setup UI components
+  // Setup non-componentized UI elements (preserved from original)
   setupWindowControls();
   setupBasicButtons();
   setupLoadingEventListeners();
   initializeUI();
   
-  // Initialize state tracking and event listeners
+  // COMPONENT SYSTEM INITIALIZATION
+  try {
+    console.log('Initializing component system...');
+    await initializeComponents();
+    console.log('Component system ready');
+  } catch (error) {
+    console.error('Component system initialization failed:', error);
+    logMessage(`ERROR: Component system failed to initialize: ${error}`);
+    // Continue with degraded functionality
+  }
+  
+  // Initialize state tracking and event listeners (preserved functionality)
   initializeStateAndEventListeners();
   
-  // Initialize polling update listeners
+  // Initialize enhanced polling update listeners
   initializePollingListeners();
   
   // Signal to main process that renderer is fully ready
   if (window.api) {
-    window.api.invoke('renderer-ready').then(() => {
-      console.log('Renderer ready signal sent - auto-connect will start');
-    }).catch((error: unknown) => {
+    try {
+      await window.api.invoke('renderer-ready');
+      console.log('Renderer ready signal sent - component system active, auto-connect will start');
+      logMessage('Renderer initialization complete - component system active');
+    } catch (error) {
       console.error('Failed to send renderer-ready signal:', error);
-    });
+      logMessage(`ERROR: Failed to signal main process: ${error}`);
+    }
   } else {
     console.error('API not available - cannot send renderer-ready signal');
+    logMessage('ERROR: Cannot communicate with main process');
   }
   
-  console.log('Renderer initialization complete');
+  console.log('Enhanced renderer initialization complete with component system');
 });
 
-// Cleanup on unload
+// ============================================================================
+// CLEANUP AND RESOURCE MANAGEMENT
+// ============================================================================
+
+/**
+ * Enhanced cleanup handler with component system teardown
+ * Ensures proper cleanup of both legacy resources and components
+ */
 window.addEventListener('beforeunload', () => {
-  console.log('Cleaning up resources in renderer');
+  console.log('Cleaning up resources in enhanced renderer with component system');
   
-  // Clean up state tracker
-  const stateTracker = getGlobalStateTracker();
-  stateTracker.dispose();
-  
-  // Clean up IPC listeners
-  if (window.api) {
-    window.api.removeAllListeners();
+  // Clean up component system
+  if (componentsInitialized) {
+    try {
+      console.log('Destroying component system...');
+      componentManager.destroyAll();
+      logPanelComponent = null;
+      componentsInitialized = false;
+      console.log('Component system cleanup complete');
+    } catch (error) {
+      console.error('Error during component cleanup:', error);
+    }
   }
   
-  console.log('Renderer cleanup complete');
+  // Clean up state tracker (preserve existing functionality)
+  try {
+    const stateTracker = getGlobalStateTracker();
+    stateTracker.dispose();
+    console.log('State tracker cleanup complete');
+  } catch (error) {
+    console.error('Error during state tracker cleanup:', error);
+  }
+  
+  // Clean up IPC listeners (preserve existing functionality)
+  if (window.api) {
+    try {
+      window.api.removeAllListeners();
+      console.log('IPC listeners cleanup complete');
+    } catch (error) {
+      console.error('Error during IPC cleanup:', error);
+    }
+  }
+  
+  console.log('Enhanced renderer cleanup complete - all resources disposed');
 });

@@ -1,0 +1,39 @@
+<!-- Controls Grid HTML Template -->
+<!-- 6x2 grid of control buttons extracted from main UI -->
+<div class="controls-grid-container">
+  <!-- Row 1: LED On, Clear Status -->
+  <div class="btn-row">
+    <button id="btn-led-on" data-action="invoke" data-channel="led-on">LED On</button>
+    <button id="btn-clear-status" data-action="invoke" data-channel="clear-status">Clear Status</button>
+  </div>
+
+  <!-- Row 2: LED Off, Home Axes -->
+  <div class="btn-row">
+    <button id="btn-led-off" data-action="invoke" data-channel="led-off">LED Off</button>
+    <button id="btn-home-axes" data-action="invoke" data-channel="home-axes">Home Axes</button>
+  </div>
+
+  <!-- Row 3: Pause, Upload Job -->
+  <div class="btn-row">
+    <button id="btn-pause" data-action="invoke" data-channel="pause-print">Pause</button>
+    <button id="btn-upload-job" data-action="send" data-channel="open-job-uploader">Upload Job</button>
+  </div>
+
+  <!-- Row 4: Resume, Start Recent -->
+  <div class="btn-row">
+    <button id="btn-resume" data-action="invoke" data-channel="resume-print">Resume</button>
+    <button id="btn-start-recent" data-action="send" data-channel="show-recent-files">Start Recent</button>
+  </div>
+
+  <!-- Row 5: Stop, Start Local -->
+  <div class="btn-row">
+    <button id="btn-stop" data-action="invoke" data-channel="cancel-print">Stop</button>
+    <button id="btn-start-local" data-action="send" data-channel="show-local-files">Start Local</button>
+  </div>
+
+  <!-- Row 6: Swap Filament, Send Cmds -->
+  <div class="btn-row">
+    <button id="btn-swap-filament" data-action="invoke" data-channel="swap-filament">Swap Filament</button>
+    <button id="btn-send-cmds" data-action="send" data-channel="open-send-commands">Send Cmds</button>
+  </div>
+</div>

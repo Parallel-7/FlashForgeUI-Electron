@@ -225,4 +225,39 @@ When scanning the codebase with the code-context-provider-mcp tool:
 - **PROACTIVE production-readiness-auditor** use after significant changes prevents build failures and deployment issues
 - **PREVENTIVE electron-security-analyst** deployment for authentication, IPC, and external integration work catches vulnerabilities early
 
+## UI Debugging and CSS Architecture Lessons
+
+### Critical CSS Debugging Principles
+
+Based on resolved issues in the component architecture, follow these essential debugging practices:
+
+**Always Verify HTML-CSS Alignment First:**
+- Before editing CSS, read the component's TypeScript file to examine the actual `templateHTML` property
+- Verify CSS selectors match the exact class names used in the HTML template
+- Common failure: CSS targets `.component-name` but HTML uses `.name-container`
+
+**Component Architecture Understanding:**
+- FlashForgeUI components are in `src/ui/components/[component-name]/`
+- TypeScript files contain `templateHTML` with actual HTML structure
+- CSS files must target exact classes used in templateHTML
+- CSS is imported into the TypeScript component file
+
+**Red Flags - Stop and Investigate When:**
+- Multiple CSS changes show no visual effect
+- User reports "still not working" after several attempts  
+- Spacing/layout changes aren't appearing in UI
+- CSS selectors appear correct but styles aren't applying
+
+**Systematic Debugging Process:**
+1. **Read component's TypeScript file** to see actual HTML template
+2. **Compare HTML class names** to CSS selector names  
+3. **Fix selector mismatches** before making style changes
+4. **Test incrementally** - make one change and verify effect
+5. **Ask user for confirmation** when changes should be visible
+
+**Avoid Blind CSS Attempts:**
+- STOP making more CSS changes if current changes aren't taking effect
+- Investigate WHY styles aren't applying rather than trying different approaches
+- Fix root cause (selector mismatch) rather than working around symptoms
+
 This guide should help you understand and contribute to the FlashForgeUI-Electron codebase effectively.

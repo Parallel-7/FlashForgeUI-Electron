@@ -11,6 +11,7 @@ export enum WindowType {
   MAIN = 'main',
   SETTINGS = 'settings',
   STATUS = 'status',
+  LOG_DIALOG = 'logDialog',
   INPUT_DIALOG = 'inputDialog',
   JOB_UPLOADER = 'jobUploader',
   PRINTER_SELECTION = 'printerSelection',
@@ -115,6 +116,19 @@ class WindowManager {
 
   public hasStatusWindow(): boolean {
     return this.hasWindow(WindowType.STATUS);
+  }
+
+  // Convenience methods for log dialog access
+  public getLogDialog(): BrowserWindow | null {
+    return this.getWindow(WindowType.LOG_DIALOG);
+  }
+
+  public setLogDialog(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.LOG_DIALOG, window);
+  }
+
+  public hasLogDialog(): boolean {
+    return this.hasWindow(WindowType.LOG_DIALOG);
   }
 
   // Convenience methods for input dialog access

@@ -1,0 +1,171 @@
+/**
+ * @fileoverview Job Info Component Styles
+ * 
+ * Component-scoped CSS for the Job Info Component. These styles are extracted
+ * and adapted from the main index.css file to work within the component system.
+ * All selectors are prefixed with .component-job-info to ensure proper scoping
+ * and prevent style conflicts with other components.
+ * 
+ * The component maintains the same visual appearance as the original job info
+ * panel but with better modularity and isolation.
+ */
+
+/* Component container styling */
+.component-job-info .job-info-panel {
+  background-color: var(--dark-bg);
+  padding: var(--ui-padding, 8px);
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+/* Job and progress row styling */
+.component-job-info .job-row,
+.component-job-info .progress-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: var(--text-color);
+  font-size: 0.9em;
+}
+
+/* Progress bar styling */
+.component-job-info progress {
+  width: 100%;
+  height: 8px;
+  margin: 8px 0;
+  border: none;
+  border-radius: var(--ui-border-radius, 2px);
+  background-color: var(--darker-bg);
+}
+
+/* Progress bar value styling with state-based colors */
+.component-job-info progress::-webkit-progress-bar {
+  background-color: var(--darker-bg);
+  border-radius: var(--ui-border-radius, 2px);
+}
+
+.component-job-info progress::-webkit-progress-value {
+  background: linear-gradient(90deg, #1976d2, #42a5f5);
+  border-radius: var(--ui-border-radius, 2px);
+  transition: background 0.3s ease;
+}
+
+.component-job-info progress::-moz-progress-bar {
+  background: linear-gradient(90deg, #1976d2, #42a5f5);
+  border-radius: var(--ui-border-radius, 2px);
+  transition: background 0.3s ease;
+}
+
+/* Progress bar state styling - printing state */
+.component-job-info progress.printing::-webkit-progress-value {
+  background: linear-gradient(90deg, var(--success-color), #66bb6a);
+}
+
+.component-job-info progress.printing::-moz-progress-bar {
+  background: linear-gradient(90deg, var(--success-color), #66bb6a);
+}
+
+/* Progress bar state styling - paused state */
+.component-job-info progress.paused::-webkit-progress-value {
+  background: linear-gradient(90deg, var(--warning-color), #ffb74d);
+}
+
+.component-job-info progress.paused::-moz-progress-bar {
+  background: linear-gradient(90deg, var(--warning-color), #ffb74d);
+}
+
+/* Progress bar state styling - completed state */
+.component-job-info progress.completed::-webkit-progress-value {
+  background: linear-gradient(90deg, var(--success-color), #66bb6a);
+}
+
+.component-job-info progress.completed::-moz-progress-bar {
+  background: linear-gradient(90deg, var(--success-color), #66bb6a);
+}
+
+/* Progress bar state styling - error state */
+.component-job-info progress.error::-webkit-progress-value {
+  background: linear-gradient(90deg, var(--error-color), #ef5350);
+}
+
+.component-job-info progress.error::-moz-progress-bar {
+  background: linear-gradient(90deg, var(--error-color), #ef5350);
+}
+
+/* Camera controls styling */
+.component-job-info .camera-controls {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  align-self: flex-end;
+}
+
+.component-job-info .camera-controls button {
+  background-color: var(--button-bg);
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  border-radius: var(--ui-border-radius, 2px);
+  cursor: pointer;
+  font-size: 0.9em;
+  transition: background-color 0.2s ease;
+}
+
+.component-job-info .camera-controls button:hover {
+  background-color: var(--button-hover);
+}
+
+.component-job-info .camera-controls button:disabled {
+  background-color: var(--darker-bg);
+  color: #888;
+  cursor: not-allowed;
+}
+
+/* Responsive design considerations */
+@media (max-width: 768px) {
+  .component-job-info .job-info-panel {
+    padding: var(--ui-padding, 6px);
+  }
+  
+  .component-job-info .job-row,
+  .component-job-info .progress-row {
+    font-size: 0.8em;
+  }
+  
+  .component-job-info .camera-controls button {
+    padding: 3px 8px;
+    font-size: 0.8em;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .component-job-info progress::-webkit-progress-value {
+    background: #0066cc;
+  }
+  
+  .component-job-info progress::-moz-progress-bar {
+    background: #0066cc;
+  }
+  
+  .component-job-info .camera-controls button {
+    border: 1px solid var(--text-color);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .component-job-info progress::-webkit-progress-value {
+    transition: none;
+  }
+  
+  .component-job-info progress::-moz-progress-bar {
+    transition: none;
+  }
+  
+  .component-job-info .camera-controls button {
+    transition: none;
+  }
+}

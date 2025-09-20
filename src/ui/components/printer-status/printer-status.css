@@ -1,0 +1,122 @@
+/**
+ * Printer Status Component Styles
+ * Modern, professional status display with clean typography and intuitive layout
+ * Matches temperature controls design language for visual consistency
+ */
+
+.printer-status-container {
+  padding: 16px 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 12px;
+  min-width: 200px;
+  height: 100%;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Status Display Row Layout - Clean and Centered */
+.printer-status-container .status-display-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #373737 0%, #404040 100%);
+  border-radius: 6px;
+  border: 1px solid #4a4a4a;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05),
+              0 2px 4px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
+  min-height: 44px;
+  width: 100%;
+}
+
+.printer-status-container .status-display-row:hover {
+  border-color: #5a5a5a;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08),
+              0 3px 6px rgba(0,0,0,0.2);
+}
+
+/* Status Labels */
+.printer-status-container .status-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e6e6e6;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  min-width: 80px;
+  flex-shrink: 0;
+}
+
+/* Status Values - Clean Text Only */
+.printer-status-container .status-value {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  letter-spacing: 0.2px;
+  text-align: center;
+  flex-grow: 1;
+  margin-left: 12px;
+  transition: color 0.2s ease;
+}
+
+/* Clean Hover Effect */
+.printer-status-container .status-value:hover {
+  color: #4a90e2;
+}
+
+/* State-Based Status Colors - Simple Color Changes */
+.printer-status-container.printer-state-ready #printer-status-text {
+  color: #4a90e2;
+}
+
+.printer-status-container.printer-state-printing #printer-status-text {
+  color: #00e676;
+}
+
+.printer-status-container.printer-state-paused #printer-status-text {
+  color: #ff9500;
+}
+
+.printer-status-container.printer-state-error #printer-status-text {
+  color: #e74c3c;
+}
+
+.printer-status-container.printer-state-completed #printer-status-text {
+  color: #00e676;
+}
+
+.printer-status-container.printer-state-busy #printer-status-text {
+  color: #9c27b0;
+}
+
+.printer-status-container.printer-state-heating #printer-status-text {
+  color: #ff9500;
+}
+
+/* Statistics Value State Enhancements - Simple Color Changes */
+.printer-status-container.printer-state-printing #run-time-text,
+.printer-status-container.printer-state-printing #filament-used-text {
+  color: #00e676;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .printer-status-container {
+    padding: 12px 8px;
+    gap: 8px;
+    min-width: 180px;
+  }
+
+  .printer-status-container .status-display-row {
+    padding: 10px 12px;
+  }
+
+  .printer-status-container .status-value {
+    font-size: 11px;
+  }
+}

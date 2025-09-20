@@ -1,8 +1,20 @@
 /**
- * Main Electron process entry point with modular architecture.
- * Initializes the application, creates windows, and coordinates all system components.
- * Uses environment-aware path resolution and comprehensive error handling for reliable
- * web UI loading across development and production environments.
+ * @fileoverview Main Electron process entry point.
+ *
+ * This file is the heart of the Electron application, responsible for initializing
+ * the app, creating the main browser window, and orchestrating all backend
+
+ * services and managers. It follows a modular architecture, delegating specific
+ * responsibilities to dedicated modules for better organization and maintainability.
+ *
+ * Key responsibilities include:
+ * - Handling the Electron app lifecycle (ready, activate, window-all-closed, before-quit).
+ * - Ensuring a single instance of the application is running.
+ * - Creating and managing the main application window (BrowserWindow).
+ * - Initializing all core managers (ConfigManager, ConnectionFlowManager, etc.).
+ * - Setting up IPC handlers for communication between the main and renderer processes.
+ * - Coordinating background services like printer polling and camera streaming.
+ * - Managing application-level concerns like power-saving and environment detection.
  */
 
 import { app, BrowserWindow, dialog, powerSaveBlocker, ipcMain } from 'electron';

@@ -13,12 +13,14 @@ import { getWebUIManager } from '../../webui/server/WebUIManager';
 import { cameraProxyService } from '../../services/CameraProxyService';
 import { getModelDisplayName } from '../../utils/PrinterUtils';
 import { FiveMClient, FlashForgeClient } from 'ff-api';
+import { getLogService } from '../../services/LogService';
 
 type WindowManager = ReturnType<typeof getWindowManager>;
 import type { AppConfig } from '../../types/config';
 import { 
   createSettingsWindow, 
   createStatusWindow, 
+  createLogDialog,
   createInputDialog, 
   createJobUploaderWindow, 
   createJobPickerWindow, 
@@ -217,6 +219,74 @@ export function registerDialogHandlers(
         appUptime: process.uptime(),
         memoryUsage: process.memoryUsage().heapUsed
       };
+    }
+  });
+
+  // Log dialog handlers
+  ipcMain.on('open-log-dialog', () => {
+    createLogDialog();
+    
+    // Set up real-time log forwarding when dialog is opened
+    const logService = getLogService();
+    const logDialog = windowManager.getLogDialog();
+    
+    if (logDialog) {
+      // Forward new log messages to the dialog
+      const messageHandler = (message: import('../../services/LogService').LogMessage) => {
+        if (logDialog && !logDialog.isDestroyed()) {
+          logDialog.webContents.send('log-dialog-new-message', message);
+        }
+      };
+      
+      logService.on('message-added', messageHandler);
+      
+      // Clean up listener when dialog is closed
+      logDialog.on('closed', () => {
+        logService.off('message-added', messageHandler);
+      });
+    }
+  });
+
+  ipcMain.on('log-dialog-close-window', () => {
+    const logDialog = windowManager.getLogDialog();
+    if (logDialog) {
+      logDialog.close();
+    }
+  });
+
+  ipcMain.handle('log-dialog-request-logs', async () => {
+    console.log('Log dialog: Requesting current log messages');
+    try {
+      const logService = getLogService();
+      const messages = logService.getMessages();
+      console.log(`Log dialog: Returning ${messages.length} log messages`);
+      return messages;
+    } catch (error) {
+      console.error('Log dialog: Failed to get log messages:', error);
+      return [];
+    }
+  });
+
+  ipcMain.handle('log-dialog-clear-logs', async () => {
+    console.log('Log dialog: Clearing all log messages');
+    try {
+      const logService = getLogService();
+      logService.clearMessages();
+      console.log('Log dialog: All log messages cleared successfully');
+      return true;
+    } catch (error) {
+      console.error('Log dialog: Failed to clear log messages:', error);
+      return false;
+    }
+  });
+
+  // Log message handler for receiving messages from renderer
+  ipcMain.on('add-log-message', (_, message: string) => {
+    try {
+      const logService = getLogService();
+      logService.addMessage(message);
+    } catch (error) {
+      console.error('Failed to add log message to LogService:', error);
     }
   });
 

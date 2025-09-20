@@ -75,11 +75,6 @@ contextBridge.exposeInMainWorld('windowControls', {
 declare global {
   interface Window {
     ifsDialogAPI: IFSDialogAPI;
-    windowControls: {
-      minimize: () => void;
-      close: () => void;
-      closeGeneric: () => void;
-    };
   }
 }
 

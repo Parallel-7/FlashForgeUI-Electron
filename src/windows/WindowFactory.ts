@@ -15,7 +15,8 @@ export type { InputDialogOptions } from './shared/WindowTypes';
 // Core application windows
 export {
   createSettingsWindow,
-  createStatusWindow
+  createStatusWindow,
+  createLogDialog
 } from './factories/CoreWindowFactory';
 
 // Dialog windows with user interaction

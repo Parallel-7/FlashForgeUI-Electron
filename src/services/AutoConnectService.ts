@@ -1,17 +1,24 @@
 /**
+ * @fileoverview
  * AutoConnectService.ts
- * Handles auto-connection logic and decision making
- * Determines when and how to automatically connect to saved printers
+ * 
+ * Provides automated printer connection functionality for the FlashForgeUI-Electron application.
+ * This service handles the logic for determining when and how to automatically connect to 
+ * previously saved printers based on network discovery results. It implements decision-making
+ * algorithms for selecting the appropriate printer when multiple matches are found, and manages
+ * auto-connect preferences and retry logic. The service follows a singleton pattern and extends
+ * EventEmitter to provide event-based communication with other components.
+ * 
+ * Key responsibilities:
+ * - Determine when auto-connection should be attempted
+ * - Make decisions about which printer to connect to when multiple options exist
+ * - Manage auto-connect preferences and configuration
+ * - Handle auto-connect retry logic and logging
  */
 
 import { EventEmitter } from 'events';
 import { getConfigManager } from '../managers/ConfigManager';
 import { SavedPrinterMatch, AutoConnectDecision } from '../types/printer';
-
-/**
- * Service responsible for auto-connection logic
- * Makes decisions about when and how to auto-connect based on saved printer configurations
- */
 export class AutoConnectService extends EventEmitter {
   private static instance: AutoConnectService | null = null;
   private readonly configManager = getConfigManager();

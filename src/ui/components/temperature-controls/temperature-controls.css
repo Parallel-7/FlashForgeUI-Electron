@@ -1,0 +1,218 @@
+/**
+ * Temperature Controls Component Styles
+ * Modern, professional temperature control interface with clean typography and intuitive layout
+ */
+
+.temperature-controls-section {
+  padding: 16px 12px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 12px;
+  min-width: 200px;
+  height: 100%;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Temperature Row Layout */
+.temperature-controls-section .temp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #373737 0%, #404040 100%);
+  border-radius: 6px;
+  border: 1px solid #4a4a4a;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 
+              0 2px 4px rgba(0,0,0,0.15);
+  transition: all 0.2s ease;
+  min-height: 44px;
+}
+
+.temperature-controls-section .temp-row:hover {
+  border-color: #5a5a5a;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 
+              0 3px 6px rgba(0,0,0,0.2);
+}
+
+/* Temperature Label and Display */
+.temperature-controls-section .temp-row > span:first-child {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e6e6e6;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  min-width: 80px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Temperature Reading Styles */
+.temperature-controls-section #bed-temp-display,
+.temperature-controls-section #extruder-temp-display {
+  font-size: 15px;
+  font-weight: 700;
+  color: #ffffff;
+  font-family: 'Segoe UI', monospace;
+  letter-spacing: 0.5px;
+  text-transform: none;
+  margin-top: 2px;
+}
+
+/* Button Container */
+.temperature-controls-section .temp-buttons {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+  align-items: center;
+}
+
+/* Modern Button Design */
+.temperature-controls-section .temp-btn {
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  color: #ffffff;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  min-width: 40px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 4px rgba(74, 144, 226, 0.25),
+              inset 0 1px 0 rgba(255,255,255,0.2);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+
+.temperature-controls-section .temp-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5ba0f2 0%, #4585c7 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(74, 144, 226, 0.35),
+              inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.temperature-controls-section .temp-btn:active:not(:disabled) {
+  transform: translateY(0);
+  background: linear-gradient(135deg, #3d7bc2 0%, #2d6ba3 100%);
+  box-shadow: 0 1px 2px rgba(74, 144, 226, 0.2),
+              inset 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Off Button Variant */
+.temperature-controls-section .temp-btn[id*="off"] {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  box-shadow: 0 2px 4px rgba(231, 76, 60, 0.25),
+              inset 0 1px 0 rgba(255,255,255,0.2);
+}
+
+.temperature-controls-section .temp-btn[id*="off"]:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f55c4c 0%, #d0493b 100%);
+  box-shadow: 0 4px 8px rgba(231, 76, 60, 0.35),
+              inset 0 1px 0 rgba(255,255,255,0.3);
+}
+
+.temperature-controls-section .temp-btn[id*="off"]:active:not(:disabled) {
+  background: linear-gradient(135deg, #c73c2c 0%, #a0291b 100%);
+  box-shadow: 0 1px 2px rgba(231, 76, 60, 0.2),
+              inset 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Disabled Button States */
+.temperature-controls-section .temp-btn:disabled,
+.temperature-controls-section .temp-btn.disabled {
+  background: linear-gradient(135deg, #555555 0%, #444444 100%);
+  color: #999999;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+  border: 1px solid #333333;
+}
+
+.temperature-controls-section .temp-btn:disabled:hover,
+.temperature-controls-section .temp-btn.disabled:hover {
+  background: linear-gradient(135deg, #555555 0%, #444444 100%);
+  transform: none;
+  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Fan Status Section */
+.temperature-controls-section .status-item {
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #2d2d2d 0%, #363636 100%);
+  border-radius: 5px;
+  border: 1px solid #404040;
+  font-size: 13px;
+  color: #cccccc;
+  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s ease;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+}
+
+.temperature-controls-section .status-item:hover {
+  border-color: #4a4a4a;
+  background: linear-gradient(135deg, #353535 0%, #3e3e3e 100%);
+}
+
+.temperature-controls-section #cooling-fan-speed,
+.temperature-controls-section #chamber-fan-speed {
+  font-weight: 700;
+  color: #ffffff;
+  font-family: 'Segoe UI', monospace;
+  font-size: 14px;
+  background: linear-gradient(135deg, #444444 0%, #555555 100%);
+  padding: 4px 8px;
+  border-radius: 3px;
+  border: 1px solid #666666;
+  min-width: 30px;
+  text-align: center;
+}
+
+/* Temperature State Indicators */
+.temperature-controls-section .temp-heating {
+  color: #ff9500;
+  text-shadow: 0 0 4px rgba(255, 149, 0, 0.4);
+  animation: tempPulse 2s ease-in-out infinite alternate;
+}
+
+.temperature-controls-section .temp-at-target {
+  color: #00e676;
+  text-shadow: 0 0 4px rgba(0, 230, 118, 0.4);
+}
+
+/* Heating Animation */
+@keyframes tempPulse {
+  0% { 
+    opacity: 0.8; 
+    text-shadow: 0 0 4px rgba(255, 149, 0, 0.4);
+  }
+  100% { 
+    opacity: 1; 
+    text-shadow: 0 0 8px rgba(255, 149, 0, 0.6);
+  }
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .temperature-controls-section {
+    padding: 12px 8px;
+    gap: 8px;
+    min-width: 180px;
+  }
+  
+  .temperature-controls-section .temp-row {
+    padding: 10px 12px;
+  }
+  
+  .temperature-controls-section .temp-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+}

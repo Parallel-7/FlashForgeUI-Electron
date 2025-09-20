@@ -117,3 +117,53 @@ export const createStatusWindow = (): void => {
   // Register window with WindowManager
   windowManager.setStatusWindow(statusWindow);
 };
+
+/**
+ * Create the log dialog window with proper window configuration and lifecycle
+ * Maintains single-instance behavior with focus on existing window
+ */
+export const createLogDialog = (): void => {
+  const windowManager = getWindowManager();
+  
+  // Check if log dialog already exists and focus it
+  if (windowManager.hasLogDialog()) {
+    const existingWindow = windowManager.getLogDialog();
+    if (focusExistingWindow(existingWindow)) {
+      return;
+    }
+  }
+
+  const mainWindow = windowManager.getMainWindow();
+  if (!validateParentWindow(mainWindow, 'log dialog')) {
+    return;
+  }
+
+  // Get standardized dimensions and create modal window
+  const dimensions = getWindowDimensions('LOG_DIALOG');
+  const preloadPath = createUIPreloadPath('log-dialog');
+  
+  const uiOptions = getUIWindowOptions();
+  const logDialog = createModalWindow(
+    mainWindow,
+    dimensions,
+    preloadPath,
+    { resizable: true, frame: false, transparent: uiOptions.transparent }
+  );
+
+  // Load HTML file with error handling
+  void loadWindowHTML(logDialog, 'log-dialog');
+
+  // Setup window lifecycle with WindowManager integration
+  setupWindowLifecycle(
+    logDialog,
+    () => {
+      windowManager.setLogDialog(null);
+    }
+  );
+
+  // Setup development tools if in development mode
+  setupDevTools(logDialog);
+
+  // Register window with WindowManager
+  windowManager.setLogDialog(logDialog);
+};

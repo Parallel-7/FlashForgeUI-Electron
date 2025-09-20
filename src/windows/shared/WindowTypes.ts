@@ -135,6 +135,12 @@ export const WINDOW_SIZES = {
     minWidth: createWindowMinWidth(500),
     minHeight: createWindowMinHeight(500)
   },
+  LOG_DIALOG: {
+    width: createWindowWidth(800),
+    height: createWindowHeight(600),
+    minWidth: createWindowMinWidth(600),
+    minHeight: createWindowMinHeight(400)
+  },
   INPUT_DIALOG: {
     width: createWindowWidth(420),
     height: createWindowHeight(300),

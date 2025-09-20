@@ -1,0 +1,19 @@
+/**
+ * Log Panel Component Styles
+ * Real-time log message display with scrolling and monospace formatting
+ */
+
+.component-log-panel {
+  height: 150px;
+  background-color: var(--darker-bg);
+  border-top: 1px solid var(--border-color);
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.component-log-panel #log-output {
+  padding: 5px;
+  font-family: monospace;
+  font-size: 0.8em;
+  min-height: calc(150px - 10px);
+}
