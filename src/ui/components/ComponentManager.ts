@@ -56,7 +56,6 @@ export class ComponentManager implements IComponentManager {
 
   /**
    * Initialize all registered components
-   * Components are initialized in parallel for better performance
    * @returns Promise that resolves when all components are initialized
    */
   async initializeAll(): Promise<void> {
@@ -66,20 +65,18 @@ export class ComponentManager implements IComponentManager {
     }
 
     console.log(`Initializing ${this.components.size} components...`);
-    
+
     const initPromises = Array.from(this.components.values()).map(async (component) => {
       try {
         await component.initialize();
-        console.log(`Component ${component.componentId} initialized successfully`);
+        console.log(`Component initialized: ${component.componentId}`);
       } catch (error) {
         console.error(`Failed to initialize component ${component.componentId}:`, error);
-        // Don't throw here - we want to continue initializing other components
-        // The component will be in an uninitialized state and won't receive updates
       }
     });
 
-    await Promise.all(initPromises);
-    
+    await Promise.allSettled(initPromises);
+
     this.initialized = true;
     console.log('All components initialized');
   }

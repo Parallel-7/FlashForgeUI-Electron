@@ -47,7 +47,7 @@ export const createInputDialog = (options: InputDialogOptions): Promise<string |
   return new Promise((resolve) => {
     const windowManager = getWindowManager();
     const mainWindow = windowManager.getMainWindow();
-    
+
     if (!validateParentWindow(mainWindow, 'input dialog')) {
       resolve(null);
       return;
@@ -69,15 +69,18 @@ export const createInputDialog = (options: InputDialogOptions): Promise<string |
     // Set up response handler using handle/invoke pattern
     const handleResponse = async (_event: unknown, result: string | null): Promise<void> => {
       if (!handlerActive) return;
-      
+
       handlerActive = false;
       ipcMain.removeHandler(responseChannel);
-      
-      // Close dialog window
+
+      // Clear window manager reference immediately to prevent duplicate handling
+      windowManager.setInputDialogWindow(null);
+
+      // Close dialog window IMMEDIATELY to prevent race conditions
       if (inputDialogWindow && !inputDialogWindow.isDestroyed()) {
-        inputDialogWindow.close();
+        inputDialogWindow.destroy(); // Use destroy() instead of close() for immediate effect
       }
-      
+
       // Resolve promise with result
       resolve(result);
     };

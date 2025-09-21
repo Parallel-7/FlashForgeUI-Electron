@@ -1095,65 +1095,59 @@ function initializeStateAndEventListeners(): void {
 // ============================================================================
 
 /**
- * Main DOM Content Loaded handler with component system integration
- * This is the primary initialization sequence for the renderer process
+ * Main DOM Content Loaded handler - standard initialization
  */
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('Renderer process started with component system - DOM loaded');
-  
+  console.log('Renderer process started - DOM loaded');
+
   // Check if window.api is available
   if (!window.api) {
     console.error('API is not available. Preload script might not be loaded correctly.');
     logMessage('ERROR: API not available - some features may not work');
-  } else {
-    // Set up platform detection listener for platform-specific styling
-    window.api.onPlatformInfo((platform: string) => {
-      console.log(`Received platform info: ${platform}`);
-      document.body.classList.add(`platform-${platform}`);
-      logMessage(`Platform-specific styling applied: platform-${platform}`);
-    });
-    
-    console.log('IPC listeners configured for component system integration');
+    return;
   }
-  
-  // Setup non-componentized UI elements (preserved from original)
+
+  // Set up platform detection listener for platform-specific styling
+  window.api.onPlatformInfo((platform: string) => {
+    console.log(`Received platform info: ${platform}`);
+    document.body.classList.add(`platform-${platform}`);
+    logMessage(`Platform-specific styling applied: platform-${platform}`);
+  });
+
+  console.log('IPC listeners configured for component system integration');
+
+  // Setup essential UI elements
   setupWindowControls();
   setupBasicButtons();
   setupLoadingEventListeners();
   initializeUI();
-  
-  // COMPONENT SYSTEM INITIALIZATION
+
+  // Component system initialization
   try {
-    console.log('Initializing component system...');
     await initializeComponents();
     console.log('Component system ready');
+    logMessage('Component system initialized: ' + componentManager.getComponentCount() + ' components');
   } catch (error) {
     console.error('Component system initialization failed:', error);
     logMessage(`ERROR: Component system failed to initialize: ${error}`);
-    // Continue with degraded functionality
   }
-  
-  // Initialize state tracking and event listeners (preserved functionality)
+
+  // Initialize state tracking and event listeners
   initializeStateAndEventListeners();
-  
+
   // Initialize enhanced polling update listeners
   initializePollingListeners();
-  
-  // Signal to main process that renderer is fully ready
-  if (window.api) {
-    try {
-      await window.api.invoke('renderer-ready');
-      console.log('Renderer ready signal sent - component system active, auto-connect will start');
-      logMessage('Renderer initialization complete - component system active');
-    } catch (error) {
-      console.error('Failed to send renderer-ready signal:', error);
-      logMessage(`ERROR: Failed to signal main process: ${error}`);
-    }
-  } else {
-    console.error('API not available - cannot send renderer-ready signal');
-    logMessage('ERROR: Cannot communicate with main process');
+
+  // Signal to main process that renderer is ready
+  try {
+    await window.api.invoke('renderer-ready');
+    console.log('Renderer ready signal sent successfully');
+    logMessage('Renderer ready signal sent successfully');
+  } catch (error) {
+    console.error('Failed to send renderer-ready signal:', error);
+    logMessage(`ERROR: Failed to signal main process: ${error}`);
   }
-  
+
   console.log('Enhanced renderer initialization complete with component system');
 });
 

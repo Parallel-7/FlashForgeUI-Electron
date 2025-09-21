@@ -1,27 +1,47 @@
 {
-  "mcpServers": {
-    "context7": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@upstash/context7-mcp"
-      ]
+    "checkpointing": {
+        "enabled": true
     },
-    "code-context-provider-mcp": {
-      "command": "cmd.exe",
-      "args": [
-        "/c",
-        "npx",
-        "-y",
-        "code-context-provider-mcp@latest"
-      ]
+    "hideBanner": true,
+    "includeDirectories": [
+        "C:\\Users\\Cope\\Documents\\GitHub\\ff-5mp-api-ts"
+    ],
+    "mcpServers": {
+        "code-context-provider-mcp": {
+            "args": [
+                "/c",
+                "npx",
+                "-y",
+                "code-context-provider-mcp@latest"
+            ],
+            "command": "cmd.exe"
+        },
+        "context7": {
+            "args": [
+                "-y",
+                "@upstash/context7-mcp"
+            ],
+            "command": "npx"
+        },
+        "sequential-thinking": {
+            "args": [
+                "-y",
+                "@modelcontextprotocol/server-sequential-thinking"
+            ],
+            "command": "npx"
+        },
+        "wireshark-mcp": {
+            "args": [
+                "mcpcap"
+            ],
+            "command": "uvx"
+        }
     },
-    "sequential-thinking": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-sequential-thinking"
-      ]
-    }
-  }
+    "telemetry": {
+        "enabled": false,
+        "logPrompts": false,
+        "otlpEndpoint": "http://localhost:16686",
+        "target": "local"
+    },
+    "usageStatisticsEnabled": false
 }

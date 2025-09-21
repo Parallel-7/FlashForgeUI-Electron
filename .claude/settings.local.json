@@ -26,8 +26,34 @@
       "WebFetch(domain:webpack.electron.build)",
       "Bash(wmic:*)",
       "Bash(fsutil fsinfo:*)",
-      "Bash(dir:*)"
+      "Bash(dir:*)",
+      "mcp__wireshark-mcp__analyze_capinfos",
+      "Bash(tshark:*)",
+      "Bash(where tshark)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" --help)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -c 100 -T fields -e frame.time -e ip.src -e ip.dst -e tcp.srcport -e tcp.dstport -e tcp.flags -e frame.len)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"ip.addr == 192.168.0.177 and tcp.port == 8898\" -c 50 -T fields -e frame.time_relative -e ip.src -e ip.dst -e tcp.srcport -e tcp.dstport -e tcp.flags -e tcp.len -e frame.len)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"ip.addr == 192.168.0.177 and tcp.port == 8898 and tcp.len > 0\" -c 10 -V)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"ip.addr == 192.168.0.177 and tcp.port == 8898 and tcp.len > 0\" -T fields -e tcp.payload -c 5)",
+      "Bash(xxd:*)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"ip.src == 192.168.0.177 and tcp.port == 8898 and tcp.len > 91\" -T fields -e tcp.payload -c 1)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"frame.number == 8\" -T fields -e tcp.payload)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"ip.addr == 192.168.0.177 and tcp.port == 8898 and tcp.flags.syn == 1\" -T fields -e frame.time_relative -e ip.src -e ip.dst -e tcp.srcport -e tcp.flags)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"ip.addr == 192.168.0.177 and tcp.port == 8898 and (tcp.flags.reset == 1 or tcp.analysis.retransmission or tcp.analysis.lost_segment)\" -c 20)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"tcp.stream == 0\" -T fields -e frame.time_relative -e ip.src -e ip.dst -e tcp.flags -e tcp.len -e frame.protocols)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"tcp.stream == 1\" -T fields -e frame.time_relative -e ip.src -e tcp.len -e tcp.payload)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"ip.addr == 192.168.0.177 and tcp.port == 8898\" -T fields -e tcp.stream)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"tcp.stream == 11 and tcp.len > 0\" -T fields -e tcp.payload)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"udp and (ip.dst == 255.255.255.255 or ip.dst == 239.255.255.250)\" -c 10 -V)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"ip.addr == 192.168.0.177 and tcp.port == 8898 and tcp.flags.syn == 1\" -T fields -e frame.time_relative)",
+      "Bash(awk:*)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"tcp.stream == 0 and (tcp.flags.fin == 1 or tcp.flags.reset == 1)\" -T fields -e frame.time_relative -e ip.src -e ip.dst -e tcp.flags)",
+      "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"ip.addr == 192.168.0.177 and tcp.port == 8898 and tcp.analysis.retransmission\" -c 5)",
+      "Bash(findstr:*)"
     ],
-    "deny": []
+    "deny": [],
+    "additionalDirectories": [
+      "C:\\Users\\Cope\\Documents\\GitHub\\ff-5mp-api-ts"
+    ]
   }
 }

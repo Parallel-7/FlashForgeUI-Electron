@@ -26,6 +26,7 @@ export class ConfigManager extends EventEmitter {
   private isLoading: boolean = false;
   private isSaving: boolean = false;
   private pendingSave: NodeJS.Timeout | null = null;
+  private configLoaded: boolean = false;
   
   private constructor() {
     super();
@@ -66,6 +67,13 @@ export class ConfigManager extends EventEmitter {
    */
   public get<K extends keyof AppConfig>(key: K): AppConfig[K] {
     return this.currentConfig[key];
+  }
+
+  /**
+   * Checks if configuration has been loaded from file
+   */
+  public isConfigLoaded(): boolean {
+    return this.configLoaded;
   }
   
   /**
@@ -225,6 +233,11 @@ export class ConfigManager extends EventEmitter {
       });
     } finally {
       this.isLoading = false;
+      this.configLoaded = true;
+
+      // Emit config-loaded event for auto-connect coordination
+      console.log('Config loading complete - emitting config-loaded event');
+      this.emit('config-loaded');
     }
   }
   

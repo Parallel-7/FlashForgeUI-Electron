@@ -268,7 +268,7 @@ const createMainWindow = async (): Promise<void> => {
     },
     frame: false, // Always frameless for custom titlebar
     transparent: useRoundedUI, // Only transparent when rounded UI is enabled
-    show: false, // Don't show until ready
+    show: true, // Show immediately when ready
   });
 
   // Hide traffic light buttons on macOS
@@ -296,40 +296,20 @@ const createMainWindow = async (): Promise<void> => {
     console.log('Continuing despite load error...');
   }
 
-  // Show window when ready to prevent visual flash
-  // Use emergency timeout as fallback for slower machines
-  let windowShown = false;
-  
-  const showWindow = () => {
-    if (!windowShown && !mainWindow.isDestroyed()) {
-      windowShown = true;
-      mainWindow.show();
-      console.log('Main window shown');
-      
-      // Send platform information to renderer for platform-specific styling
-      console.log(`Sending platform info: ${process.platform}`);
-      mainWindow.webContents.send('platform-info', process.platform);
-      
-      // Start power save blocker to prevent OS throttling
-      if (powerSaveBlockerId === null) {
-        powerSaveBlockerId = powerSaveBlocker.start('prevent-app-suspension');
-        console.log('Power save blocker started to prevent app suspension');
-      }
-    }
-  };
-  
+  // Send platform information and start power save blocker once window is ready
   mainWindow.once('ready-to-show', () => {
-    console.log('ready-to-show event fired');
-    showWindow();
-  });
-  
-  // Emergency timeout fallback for slower machines where ready-to-show may not fire
-  setTimeout(() => {
-    if (!windowShown) {
-      console.log('Emergency timeout: showing window (ready-to-show did not fire)');
-      showWindow();
+    console.log('Main window ready and displayed');
+
+    // Send platform information to renderer for platform-specific styling
+    console.log(`Sending platform info: ${process.platform}`);
+    mainWindow.webContents.send('platform-info', process.platform);
+
+    // Start power save blocker to prevent OS throttling
+    if (powerSaveBlockerId === null) {
+      powerSaveBlockerId = powerSaveBlocker.start('prevent-app-suspension');
+      console.log('Power save blocker started to prevent app suspension');
     }
-  }, 3000); // 3 second timeout
+  });
   
 
 
@@ -488,16 +468,24 @@ const performAutoConnect = async (): Promise<void> => {
  * Setup event-driven services triggered by renderer ready signal
  */
 const setupEventDrivenServices = (): void => {
-  // Listen for renderer-ready signal before attempting services initialization
+  // Listen for renderer-ready signal to start auto-connect
   ipcMain.handle('renderer-ready', async () => {
-    console.log('Renderer ready signal received - starting auto-connect');
-    
-    // Small delay to ensure all IPC handlers are fully registered
-    setTimeout(() => {
+    console.log('Renderer ready signal received - checking config status');
+
+    const configManager = getConfigManager();
+
+    // Check if config is already loaded
+    if (configManager.isConfigLoaded()) {
+      console.log('Config already loaded - starting auto-connect immediately');
       void performAutoConnect();
-      // Note: WebUI initialization moved to printer connection event
-    }, 50);
-    
+    } else {
+      console.log('Config not yet loaded - waiting for config-loaded event');
+      configManager.once('config-loaded', () => {
+        console.log('Config loaded - starting auto-connect');
+        void performAutoConnect();
+      });
+    }
+
     return { success: true };
   });
 };

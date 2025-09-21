@@ -2,6 +2,14 @@
 /* Import shared template for consistent styling */
 @import url('../shared/rounded-dialog-template.css');
 
+/* Universal CSS reset - ensures proper box-sizing and eliminates spacing issues */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
 /* Custom CSS variables for printer selection dialog */
 :root {
     --button-bg: #4285f4;
@@ -17,6 +25,16 @@
 }
 
 /* Printer Selection Dialog Specific Styling */
+
+/* Override template drag behavior - allow dragging from title text */
+.dialog-title {
+    -webkit-app-region: drag;
+}
+
+/* Ensure dialog container fills full height to eliminate gray spacing */
+.dialog-container {
+    height: 100%;
+}
 
 .table-container {
     flex: 1;

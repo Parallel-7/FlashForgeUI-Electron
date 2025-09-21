@@ -472,8 +472,8 @@ export class ConnectionFlowManager extends EventEmitter {
         
         const promptedCheckCode = await this.promptForCheckCode(realPrinterName);
         if (!promptedCheckCode) {
-          this.loadingManager.showError('Check code required but not provided', 3000);
-          return { success: false, error: 'Check code required but not provided' };
+          this.loadingManager.showError('Printer pairing cancelled', 2000);
+          return { success: false, error: 'Connection cancelled by user' };
         }
         checkCode = promptedCheckCode;
         

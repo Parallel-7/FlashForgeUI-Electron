@@ -113,3 +113,4 @@ out/
 # Misc scripts and other files
 *.py
 detail_response_example.json
+debug_logs/*
