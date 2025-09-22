@@ -363,13 +363,12 @@ export class ControlsGridComponent extends BaseComponent {
    */
   private async handleInvokeCommand(mapping: ButtonMapping): Promise<void> {
     try {
-      // Type assertion for global window.api - this follows the existing pattern
-      const api = (window as any).api;
-      if (!api || !api.invoke) {
+      // Use properly typed window.api from global definitions
+      if (!window.api || !window.api.invoke) {
         throw new Error('IPC API not available');
       }
 
-      const response = await api.invoke(mapping.channel, mapping.data) as IPCResponse;
+      const response = await window.api.invoke(mapping.channel, mapping.data) as IPCResponse;
       
       if (response.success) {
         this.logAction(`Command ${mapping.channel} executed successfully`);
@@ -389,16 +388,15 @@ export class ControlsGridComponent extends BaseComponent {
    */
   private handleSendCommand(mapping: ButtonMapping): void {
     try {
-      // Type assertion for global window.api - this follows the existing pattern
-      const api = (window as any).api;
-      if (!api || !api.send) {
+      // Use properly typed window.api from global definitions
+      if (!window.api || !window.api.send) {
         throw new Error('IPC API not available');
       }
 
       if (mapping.data !== undefined) {
-        api.send(mapping.channel, mapping.data);
+        window.api.send(mapping.channel, mapping.data);
       } else {
-        api.send(mapping.channel);
+        window.api.send(mapping.channel);
       }
       
       this.logAction(`Dialog command ${mapping.channel} sent`);
@@ -511,8 +509,9 @@ export class ControlsGridComponent extends BaseComponent {
     try {
       // Use the existing global logMessage function from renderer.ts
       // This maintains compatibility with the existing logging system
-      const logMessage = (globalThis as any).logMessage || ((window as any).logMessage);
-      
+      const logMessage = (globalThis as { logMessage?: (msg: string) => void }).logMessage ||
+                        (window as { logMessage?: (msg: string) => void }).logMessage;
+
       if (typeof logMessage === 'function') {
         const prefix = type === 'error' ? '[ERROR] ' : '';
         logMessage(`${prefix}${message}`);

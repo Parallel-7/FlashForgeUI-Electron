@@ -76,7 +76,11 @@ declare global {
     api: ElectronAPI;
     CAMERA_URL: string;
     windowControls?: WindowControls;
+    logMessage?: (message: string) => void;
   }
+
+  // Add logMessage to globalThis as well
+  var logMessage: ((message: string) => void) | undefined;
 }
 
 // Export an empty object to make this a module
