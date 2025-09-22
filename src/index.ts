@@ -524,9 +524,8 @@ const initializeApp = async (): Promise<void> => {
   // Setup event forwarding
   setupConnectionEventForwarding();
   
-  // Initialize camera service and IPC handlers
+  // Initialize camera service
   await initializeCameraService();
-  cameraIPCHandler.initialize();
   
   // Note: WebUI server initialization moved to non-blocking context
   // (will be initialized after renderer-ready signal to prevent startup crashes)

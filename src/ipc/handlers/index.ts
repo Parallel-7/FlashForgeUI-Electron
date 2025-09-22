@@ -16,6 +16,7 @@ import { registerDialogHandlers } from './dialog-handlers';
 import { registerMaterialHandlers } from './material-handlers';
 import { registerControlHandlers } from './control-handlers';
 import { registerWebUIHandlers } from './webui-handlers';
+import { registerCameraHandlers } from './camera-handlers';
 
 /**
  * Application managers required by IPC handlers
@@ -42,4 +43,5 @@ export function registerAllIpcHandlers(managers: AppManagers): void {
   registerMaterialHandlers(backendManager);
   registerControlHandlers(backendManager);
   registerWebUIHandlers();
+  registerCameraHandlers(managers);
 }
