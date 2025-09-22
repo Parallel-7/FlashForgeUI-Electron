@@ -16,7 +16,7 @@
 
 import { BaseComponent } from '../base/component';
 import type { ComponentUpdateData } from '../base/types';
-import type { FiltrationStatus } from '../../../types/polling';
+import type { FiltrationStatus, PrinterState } from '../../../types/polling';
 import { isActiveState } from '../../../types/polling';
 import './filtration-controls.css';
 
@@ -50,17 +50,17 @@ export class FiltrationControlsComponent extends BaseComponent {
   protected async setupEventListeners(): Promise<void> {
     // External filtration mode
     this.addEventListener('#btn-external-filtration', 'click', () => {
-      this.handleFiltrationModeChange('external');
+      this.handleFiltrationModeChange('external').catch(console.error);
     });
 
     // Internal filtration mode
     this.addEventListener('#btn-internal-filtration', 'click', () => {
-      this.handleFiltrationModeChange('internal');
+      this.handleFiltrationModeChange('internal').catch(console.error);
     });
 
     // No filtration mode
     this.addEventListener('#btn-no-filtration', 'click', () => {
-      this.handleFiltrationModeChange('none');
+      this.handleFiltrationModeChange('none').catch(console.error);
     });
   }
 
@@ -149,8 +149,8 @@ export class FiltrationControlsComponent extends BaseComponent {
     ];
 
     // Disable buttons if not connected, in active state, or filtration unavailable
-    const shouldDisable = !isConnected || 
-                          isActiveState(printerState as any) || 
+    const shouldDisable = !isConnected ||
+                          isActiveState(printerState as PrinterState) ||
                           (filtration !== null && !filtration.available);
 
     buttons.forEach(buttonId => {

@@ -16,7 +16,7 @@
 
 import { BaseComponent } from '../base/component';
 import type { ComponentUpdateData } from '../base/types';
-import type { PrinterTemperatures, FanStatus } from '../../../types/polling';
+import type { PrinterTemperatures, FanStatus, PrinterState } from '../../../types/polling';
 import { formatTemperature, isActiveState } from '../../../types/polling';
 import './temperature-controls.css';
 
@@ -53,20 +53,20 @@ export class TemperatureControlsComponent extends BaseComponent {
   protected async setupEventListeners(): Promise<void> {
     // Bed temperature controls
     this.addEventListener('#btn-bed-set', 'click', () => {
-      this.handleTemperatureSet('bed');
+      void this.handleTemperatureSet('bed');
     });
 
     this.addEventListener('#btn-bed-off', 'click', () => {
-      this.handleTemperatureOff('bed');
+      void this.handleTemperatureOff('bed');
     });
 
     // Extruder temperature controls
     this.addEventListener('#btn-extruder-set', 'click', () => {
-      this.handleTemperatureSet('extruder');
+      void this.handleTemperatureSet('extruder');
     });
 
     this.addEventListener('#btn-extruder-off', 'click', () => {
-      this.handleTemperatureOff('extruder');
+      void this.handleTemperatureOff('extruder');
     });
   }
 
@@ -182,7 +182,7 @@ export class TemperatureControlsComponent extends BaseComponent {
     ];
 
     // Disable buttons if not connected or in active state
-    const shouldDisable = !isConnected || isActiveState(printerState as any);
+    const shouldDisable = !isConnected || isActiveState(printerState as PrinterState);
 
     buttons.forEach(buttonId => {
       const button = this.findElementById<HTMLButtonElement>(buttonId);
