@@ -519,19 +519,25 @@ function populateMetadata(elements: DialogElements, data: MetadataResult): void 
     
     // New Print Information Fields - Use available data or fallbacks
     if (elements.layerHeight) {
-        // Try to get layer height from threeMf or provide default
-        const layerHeight = (data.threeMf as any)?.layerHeight || (data.file as any)?.layerHeight;
+        // Try to get layer height from threeMf or file with proper type checking
+        const threeMfData = data.threeMf as Record<string, unknown> | undefined;
+        const fileData = data.file as Record<string, unknown> | undefined;
+        const layerHeight = (threeMfData?.layerHeight as number | undefined) || (fileData?.layerHeight as number | undefined);
         elements.layerHeight.textContent = layerHeight ? `${layerHeight} mm` : '-';
     }
     if (elements.infill) {
-        // Try to get infill from threeMf or provide default
-        const infill = (data.threeMf as any)?.infill || (data.file as any)?.infill;
+        // Try to get infill from threeMf or file with proper type checking
+        const threeMfData = data.threeMf as Record<string, unknown> | undefined;
+        const fileData = data.file as Record<string, unknown> | undefined;
+        const infill = (threeMfData?.infill as number | undefined) || (fileData?.infill as number | undefined);
         elements.infill.textContent = infill ? `${infill}%` : '-';
     }
     if (elements.layers) {
-        // Try to get layer count from threeMf or provide default
-        const layers = (data.threeMf as any)?.layerCount || (data.file as any)?.layers;
-        elements.layers.textContent = layers?.toString() || '-';
+        // Try to get layer count from threeMf or file with proper type checking
+        const threeMfData = data.threeMf as Record<string, unknown> | undefined;
+        const fileData = data.file as Record<string, unknown> | undefined;
+        const layerCount = (threeMfData?.layerCount as number | undefined) || (fileData?.layers as number | undefined);
+        elements.layers.textContent = layerCount ? layerCount.toString() : '-';
     }
 
     // Right Column: Thumbnail
