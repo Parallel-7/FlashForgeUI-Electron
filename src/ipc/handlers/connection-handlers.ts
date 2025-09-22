@@ -8,7 +8,6 @@ import type { ConnectionFlowManager } from '../../managers/ConnectionFlowManager
 import type { getWindowManager } from '../../windows/WindowManager';
 
 type WindowManager = ReturnType<typeof getWindowManager>;
-import type { DiscoveredPrinter } from '../../types/printer';
 import { getPrinterDetailsManager } from '../../managers/PrinterDetailsManager';
 
 /**

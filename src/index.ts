@@ -33,7 +33,7 @@ import { getEnvironmentDetectionService } from './services/EnvironmentDetectionS
 import { getStaticFileManager } from './services/StaticFileManager';
 import { initializeNotificationSystem, disposeNotificationSystem } from './services/notifications';
 import { getThumbnailCacheService } from './services/ThumbnailCacheService';
-import { getUIWindowOptions, injectUIStyleVariables } from './utils/CSSVariables';
+import { injectUIStyleVariables } from './utils/CSSVariables';
 
 /**
  * Main Electron process entry point. Handles app lifecycle, creates the main window,

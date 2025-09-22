@@ -47,7 +47,7 @@ class LogDialogRenderer {
   constructor() {
     this.initializeElements();
     this.setupEventListeners();
-    this.loadInitialLogs();
+    void this.loadInitialLogs();
   }
 
   private initializeElements(): void {
@@ -68,7 +68,7 @@ class LogDialogRenderer {
   private setupEventListeners(): void {
     // Clear logs button
     this.clearLogsButton?.addEventListener('click', () => {
-      this.handleClearLogs();
+      void this.handleClearLogs();
     });
 
     // Close buttons

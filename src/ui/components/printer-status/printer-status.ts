@@ -16,7 +16,7 @@
 import { BaseComponent } from '../base/component';
 import type { ComponentUpdateData } from '../base/types';
 import type { PrinterState, CumulativeStats } from '../../../types/polling';
-import { formatTime, formatLength } from '../../../types/polling';
+import { formatLength } from '../../../types/polling';
 import './printer-status.css';
 
 /**

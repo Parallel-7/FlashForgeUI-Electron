@@ -17,7 +17,6 @@ import {
   focusExistingWindow,
   validateParentWindow
 } from '../shared/WindowConfig';
-import { getUIWindowOptions } from '../../utils/CSSVariables';
 import { JobPickerInitData } from '../shared/WindowTypes';
 import { getMainProcessPollingCoordinator } from '../../services/MainProcessPollingCoordinator';
 import { getThumbnailRequestQueue } from '../../services/ThumbnailRequestQueue';
