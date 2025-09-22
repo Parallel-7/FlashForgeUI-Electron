@@ -199,9 +199,26 @@ export class TemperatureControlsComponent extends BaseComponent {
   private async handleTemperatureSet(type: 'bed' | 'extruder'): Promise<void> {
     try {
       // Use the global API exposed by preload script
-      if (window.api && window.api.invoke) {
-        const command = type === 'bed' ? 'set-bed-temp' : 'set-extruder-temp';
-        await window.api.invoke(command);
+      if (window.api && window.api.showInputDialog) {
+        const title = type === 'bed' ? 'Set Bed Temperature' : 'Set Extruder Temperature';
+        const message = `Enter target temperature for ${type} (°C):`;
+
+        const result = await window.api.showInputDialog({
+          title,
+          message,
+          defaultValue: '0',
+          placeholder: 'Temperature in °C'
+        });
+
+        if (result !== null) {
+          const temperature = parseInt(result, 10);
+          if (!isNaN(temperature) && temperature >= 0) {
+            const command = type === 'bed' ? 'set-bed-temp' : 'set-extruder-temp';
+            await window.api.invoke(command, temperature);
+          } else {
+            console.error('Invalid temperature entered:', result);
+          }
+        }
       }
     } catch (error) {
       console.error(`Failed to set ${type} temperature:`, error);
@@ -209,16 +226,15 @@ export class TemperatureControlsComponent extends BaseComponent {
   }
 
   /**
-   * Handle temperature off button click - sets target to 0
+   * Handle temperature off button click - turns off heating
    * @param type - Temperature type ('bed' or 'extruder')
    */
   private async handleTemperatureOff(type: 'bed' | 'extruder'): Promise<void> {
     try {
       // Use the global API exposed by preload script
       if (window.api && window.api.invoke) {
-        const command = type === 'bed' ? 'set-bed-temp' : 'set-extruder-temp';
-        // Pass 0 as the temperature to turn off
-        await window.api.invoke(command, 0);
+        const command = type === 'bed' ? 'turn-off-bed-temp' : 'turn-off-extruder-temp';
+        await window.api.invoke(command);
       }
     } catch (error) {
       console.error(`Failed to turn off ${type} temperature:`, error);

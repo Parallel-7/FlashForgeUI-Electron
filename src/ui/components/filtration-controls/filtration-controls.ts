@@ -191,9 +191,12 @@ export class FiltrationControlsComponent extends BaseComponent {
    */
   private async handleFiltrationModeChange(mode: 'external' | 'internal' | 'none'): Promise<void> {
     try {
+      // Convert 'none' to 'off' to match backend expectations
+      const backendMode = mode === 'none' ? 'off' : mode;
+
       // Use the global API exposed by preload script
       if (window.api && window.api.invoke) {
-        await window.api.invoke('set-filtration-mode', mode);
+        await window.api.invoke('set-filtration', backendMode);
       }
     } catch (error) {
       console.error(`Failed to set filtration mode to ${mode}:`, error);
