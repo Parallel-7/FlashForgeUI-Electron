@@ -30,6 +30,9 @@ type SelectionMode = 'discovered' | 'saved';
 
 // Valid IPC channels are defined directly in the event listeners below
 
+// Track current dialog mode to determine correct IPC channel
+let currentMode: SelectionMode = 'discovered';
+
 // API exposed to renderer process
 interface PrinterSelectionAPI {
     selectPrinter: (printer: PrinterInfo | SavedPrinterInfo) => void;
@@ -49,7 +52,10 @@ contextBridge.exposeInMainWorld('printerSelectionAPI', {
     // Renderer to Main Process
     selectPrinter: (printer: PrinterInfo | SavedPrinterInfo): void => {
         console.log('Preload - Forwarding printer select:', JSON.stringify(printer));
-        ipcRenderer.send('printer-selection:select', printer);
+        // Send to the correct IPC channel based on current mode
+        const channel = currentMode === 'saved' ? 'printer-selection:select-saved' : 'printer-selection:select';
+        console.log('Preload - Using channel:', channel, 'for mode:', currentMode);
+        ipcRenderer.send(channel, printer);
     },
 
     cancelSelection: (): void => {
@@ -74,6 +80,8 @@ contextBridge.exposeInMainWorld('printerSelectionAPI', {
     // Main Process to Renderer - Selection Mode
     receiveMode: (func: (mode: SelectionMode) => void): void => {
         ipcRenderer.on('printer-selection:mode', (event, mode: SelectionMode) => {
+            console.log('Preload - Received mode change:', mode);
+            currentMode = mode; // Update tracked mode
             func(mode);
         });
     },
