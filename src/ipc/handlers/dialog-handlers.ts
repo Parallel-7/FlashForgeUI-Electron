@@ -399,7 +399,7 @@ export function registerDialogHandlers(
           materialType: slot.materialType,
           materialColor: slot.materialColor,
           isEmpty: slot.isEmpty,
-          isActive: slot.slotId === materialStationData.activeSlot
+          isActive: materialStationData.activeSlot !== null && slot.slotId === (materialStationData.activeSlot - 1)
         })),
         activeSlot: materialStationData.activeSlot,
         errorMessage: materialStationData.errorMessage

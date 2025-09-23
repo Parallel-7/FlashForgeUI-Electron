@@ -148,7 +148,7 @@ export class PrinterDataTransformer {
     return {
       connected,
       slots: transformedSlots,
-      activeSlot: activeSlot > 0 ? activeSlot : null,
+      activeSlot: activeSlot >= 0 ? activeSlot : null,
       errorMessage: errorMessage || null,
       lastUpdate: new Date()
     };

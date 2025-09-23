@@ -170,9 +170,8 @@ function updateActiveSlotInfo(activeSlot: number | null): void {
     
     if (activeSlotText) {
         if (activeSlot !== null && activeSlot >= 0) {
-            // Convert backend 0-based slot to UI 1-based slot
-            const uiSlotNumber = activeSlot + 1;
-            activeSlotText.textContent = `Slot ${uiSlotNumber}`;
+            // activeSlot is already 1-based for display
+            activeSlotText.textContent = `Slot ${activeSlot}`;
         } else {
             activeSlotText.textContent = 'None';
         }
