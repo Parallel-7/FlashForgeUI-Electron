@@ -50,8 +50,8 @@ export class ModelPreviewComponent extends BaseComponent {
 
   /** HTML template for the component */
   public readonly templateHTML = `
-    <div class="model-panel-header">Model Preview</div>
-    <div class="model-panel-content" id="model-preview">
+    <div class="panel-header">Model Preview</div>
+    <div class="panel-content" id="model-preview">
       <div class="preview-placeholder">
         <div class="preview-placeholder-text">No active job</div>
       </div>
@@ -118,7 +118,7 @@ export class ModelPreviewComponent extends BaseComponent {
   }
 
   /**
-   * Display thumbnail image
+   * Display thumbnail image with hard pixel size constraints
    * @param thumbnailData - Base64 encoded thumbnail data
    * @param jobName - Name of the current job
    * @param jobChanged - Whether the job has changed since last update
@@ -142,8 +142,10 @@ export class ModelPreviewComponent extends BaseComponent {
     const img = document.createElement('img');
     img.src = thumbnailData; // thumbnailData already includes the data URL prefix
     img.alt = jobName || 'Model Preview';
-    img.style.maxWidth = '100%';
-    img.style.maxHeight = '100%';
+    // Apply hard pixel constraints to prevent image from expanding beyond container limits
+    // This ensures the image never pushes job info out of view regardless of image size
+    img.style.maxWidth = '200px';
+    img.style.maxHeight = '150px';
     img.style.objectFit = 'contain';
 
     // Handle successful image load

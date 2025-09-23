@@ -1,14 +1,24 @@
 /**
- * Job Statistics Component Styles
- * Display layer information, ETA, job timing, and material usage data
+ * @fileoverview Job Statistics Component Styles
+ *
+ * Component-scoped CSS for the Job Statistics Component. These styles provide
+ * layout structure for displaying real-time job information including layer
+ * progress, ETA, timing, and material usage data.
+ *
+ * Key features:
+ * - Fixed height design (180px) to accommodate all info rows
+ * - No scrollbars - content fits within allocated space
+ * - Consistent panel header styling
+ * - Proper flex layout for info rows
+ * - Dual UI mode support via CSS variables
  */
 
 .component-job-stats {
   border-top: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  flex: 1; /* Fill remaining space instead of fixed height */
-  min-height: 120px; /* Minimum height to ensure content is readable */
+  height: 180px; /* Fixed height to accommodate all info rows */
+  flex-shrink: 0; /* Prevent shrinking below content size */
   overflow: hidden;
 }
 
@@ -22,8 +32,7 @@
 .component-job-stats .panel-content {
   padding: 8px;
   flex: 1;
-  overflow-y: auto; /* Allow scrolling if content overflows */
-  overflow-x: hidden;
+  overflow: hidden; /* No scrolling needed with fixed height */
 }
 
 .component-job-stats .info-row {

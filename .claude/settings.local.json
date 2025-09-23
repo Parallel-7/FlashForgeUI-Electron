@@ -49,7 +49,11 @@
       "Bash(awk:*)",
       "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"tcp.stream == 0 and (tcp.flags.fin == 1 or tcp.flags.reset == 1)\" -T fields -e frame.time_relative -e ip.src -e ip.dst -e tcp.flags)",
       "Bash(\"C:\\Program Files\\Wireshark\\tshark.exe\" -r \"C:\\Users\\Cope\\Documents\\GitHub\\FlashForgeUI-Electron\\dump.pcapng\" -Y \"ip.addr == 192.168.0.177 and tcp.port == 8898 and tcp.analysis.retransmission\" -c 5)",
-      "Bash(findstr:*)"
+      "Bash(findstr:*)",
+      "WebFetch(domain:dev.to)",
+      "WebFetch(domain:stackoverflow.com)",
+      "WebFetch(domain:www.npmjs.com)",
+      "Bash(cat:*)"
     ],
     "deny": [],
     "additionalDirectories": [

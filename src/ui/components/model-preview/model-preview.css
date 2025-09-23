@@ -1,17 +1,28 @@
 /**
- * Model Preview Component Styles
- * Display 3D model thumbnails with panel structure
+ * @fileoverview Model Preview Component Styles
+ *
+ * Component-scoped CSS for the Model Preview Component. These styles provide
+ * layout structure and visual styling for 3D model thumbnails. Image size
+ * constraints are applied via JavaScript for reliable enforcement.
+ *
+ * Key features:
+ * - Consistent panel header styling matching job-stats component
+ * - Dual UI mode support via CSS variables
+ * - Responsive design with proper flex layout
+ * - Image styling (size constraints handled in TypeScript)
+ * - Accessibility and reduced motion support
  */
 
 .component-model-preview {
   border-top: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  flex: 2; /* Increased from 1 to 2 to take more space */
-  min-height: 200px; /* Increased minimum height for better visibility */
+  flex: 1; /* Allow model panel to grow and take remaining space */
+  min-height: 120px; /* Adequate minimum height for thumbnail display */
   overflow: hidden;
 }
 
+/* Panel header styling - matches job-stats panel style */
 .component-model-preview .panel-header {
   background-color: var(--header-bg);
   padding: 4px 8px;
@@ -19,6 +30,7 @@
   flex-shrink: 0;
 }
 
+/* Panel content area with proper flex layout */
 .component-model-preview .panel-content {
   flex: 1;
   display: flex;
@@ -26,25 +38,108 @@
   align-items: center;
   background-color: transparent;
   overflow: hidden;
+  padding: var(--ui-padding, 8px);
 }
 
-/* Style for model preview */
+/* Model preview container */
 .component-model-preview #model-preview {
   width: 100%;
   height: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
+  position: relative;
 }
 
+/* Image styling - size constraints applied via JavaScript */
 .component-model-preview #model-preview img {
-  max-width: 100%;
-  max-height: 100%;
   object-fit: contain;
   background-color: transparent;
+  border-radius: var(--ui-border-radius, 4px);
+  transition: transform 0.2s ease;
 }
 
-.component-model-preview #model-preview span {
-  color: #aaa;
+/* Hover effect for images */
+.component-model-preview #model-preview img:hover {
+  transform: scale(1.02);
+}
+
+/* Placeholder text styling */
+.component-model-preview .preview-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text-color, #aaa);
+  text-align: center;
+}
+
+.component-model-preview .preview-placeholder-text {
   font-style: italic;
+  opacity: 0.8;
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+
+.component-model-preview .preview-placeholder-text p {
+  margin: 4px 0;
+}
+
+.component-model-preview .preview-placeholder-text strong {
+  color: var(--text-color, #fff);
+  font-weight: 600;
+}
+
+/* State-based styling */
+.component-model-preview.loading .preview-placeholder-text {
+  opacity: 0.6;
+}
+
+.component-model-preview.error .preview-placeholder-text {
+  color: var(--error-color, #ff6b6b);
+}
+
+.component-model-preview.has-thumbnail .preview-placeholder {
+  display: none;
+}
+
+/* Responsive design considerations */
+@media (max-width: 768px) {
+  .component-model-preview {
+    min-height: 100px;
+  }
+
+  .component-model-preview .model-panel-header {
+    padding: var(--ui-padding, 6px);
+    font-size: 0.8em;
+  }
+
+  .component-model-preview .model-panel-content {
+    padding: var(--ui-padding, 6px);
+  }
+
+  /* Image size constraints handled via JavaScript - no CSS overrides needed */
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .component-model-preview .model-panel-header {
+    border-bottom-color: #ffffff;
+  }
+
+  .component-model-preview #model-preview img {
+    border: 1px solid var(--text-color);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .component-model-preview #model-preview img {
+    transition: none;
+  }
+
+  .component-model-preview #model-preview img:hover {
+    transform: none;
+  }
 }
