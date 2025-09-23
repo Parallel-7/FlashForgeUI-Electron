@@ -41,14 +41,15 @@ Download the latest release for your OS [here](https://github.com/Parallel-7/Fla
 | 🎮 G&M Code Control      |         ✅         |     ✅     |
 | 📸 Camera Preview        | ⚠️ Setup Required |     ✅     |
 
-## 🔧 Printer Support & Testing Status
-> 💡 Legacy Mode *should* support all older network-enabled printers, but support is not yet confirmed.
+> 💡 Legacy Mode supports all older network-enabled printer
 
+## 🔧 Printer Support & Testing Status
 | Printer Model     | Support Status | Testing Status | API Type         |
 |:------------------|:--------------:|:--------------:|:-----------------|
-| Adventurer 5X     | ⚠️ In Progress |   ❌ Untested   | HTTP (New) + TCP |
-| Adventurer 5M/Pro |     ✅ Full     |    ✅ Tested    | HTTP (New) + TCP |
+| Adventurer 5X     |     ✅ Full     |    ✅ Tested  | HTTP (New) + TCP |
+| Adventurer 5M/Pro |     ✅ Full     |    ✅ Tested   | HTTP (New) + TCP |
 | Adventurer 3/4    |     ✅ Full     |   ⚠️ Partial   | TCP (Legacy)     |
+> The full local file list is not available on the AD5X, and may be removed by FlashForge in future firmware updates to the 5M/Pro.
 
 ## Star History
 
