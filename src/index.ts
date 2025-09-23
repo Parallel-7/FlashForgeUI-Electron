@@ -72,11 +72,6 @@ if (process.platform === 'win32') {
 // This must be set before any services that use app.getPath('userData') are initialized
 app.setName('FlashForgeUI');
 
-// Prevent app from being throttled in background
-app.commandLine.appendSwitch('disable-background-timer-throttling');
-app.commandLine.appendSwitch('disable-backgrounding-occluded-windows');
-app.commandLine.appendSwitch('disable-renderer-backgrounding');
-
 // Initialize global reference for camera IPC handler
 global.printerBackendManager = undefined;
 
@@ -262,7 +257,6 @@ const createMainWindow = async (): Promise<void> => {
       nodeIntegration: false,
       contextIsolation: true,
       backgroundThrottling: false, // Prevent app freezing when not focused
-      offscreen: false, // Prevent offscreen rendering throttling
       webSecurity: true, // Security
       allowRunningInsecureContent: false, // Security
     },
@@ -275,6 +269,9 @@ const createMainWindow = async (): Promise<void> => {
   if (process.platform === 'darwin') {
     mainWindow.setWindowButtonVisibility(false);
   }
+
+  // Ensure background throttling is disabled for WebContents
+  mainWindow.webContents.setBackgroundThrottling(false);
 
   // Load the app using environment-aware path resolution
   try {
