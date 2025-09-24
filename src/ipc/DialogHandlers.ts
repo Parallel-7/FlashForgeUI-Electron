@@ -3,7 +3,7 @@
  * Most handlers have been moved to domain-specific modules in src/ipc/handlers/.
  */
 
-import { ipcMain, dialog } from 'electron';
+import { ipcMain } from 'electron';
 import { getWindowManager } from '../windows/WindowManager';
 import { getPrinterConnectionManager } from '../managers/ConnectionFlowManager';
 import { getLoadingManager } from '../managers/LoadingManager';
@@ -30,19 +30,18 @@ export const setupDialogHandlers = (): void => {
       if (connectionManager.isConnected()) {
         const currentDetails = connectionManager.getCurrentDetails();
         const printerName = currentDetails?.Name || 'Unknown Printer';
-        
-        const response = await dialog.showMessageBox({
-          type: 'warning',
-          title: 'Printer Connected',
-          message: `You are currently connected to ${printerName}`,
-          detail: 'Opening connection options may interfere with ongoing operations. Do you want to continue?',
-          buttons: ['Cancel', 'Continue'],
-          defaultId: 0,
-          cancelId: 0
-        });
 
-        if (response.response === 0) {
-          return; // User cancelled
+        try {
+          // Use custom themed dialog instead of built-in dialog
+          const { createPrinterConnectedWarningDialog } = await import('../windows/factories/DialogWindowFactory');
+          const userWantsToContinue = await createPrinterConnectedWarningDialog({ printerName });
+
+          if (!userWantsToContinue) {
+            return; // User cancelled
+          }
+        } catch (error) {
+          console.error('Error showing printer connected warning dialog:', error);
+          return; // Default to cancel on error
         }
       }
 

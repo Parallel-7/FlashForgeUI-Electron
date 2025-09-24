@@ -138,7 +138,7 @@ export class ConnectionFlowManager extends EventEmitter {
   public async startConnectionFlow(options: ConnectionOptions = {}): Promise<ConnectionResult> {
     try {
       // Check if already connected and warn user
-      if (this.isConnected() && !options.checkForActiveConnection) {
+      if (this.isConnected() && options.checkForActiveConnection !== false) {
         const currentDetails = this.connectionStateManager.getCurrentDetails();
         const shouldContinue = await this.dialogService.confirmDisconnectForScan(currentDetails?.Name);
         if (!shouldContinue) {

@@ -100,13 +100,18 @@ export interface ConnectChoiceDialogData {
   [key: string]: unknown;
 }
 
+// Printer connected warning dialog data interface
+export interface PrinterConnectedWarningData {
+  readonly printerName: string;
+}
+
 // Job picker initialization data interface
 export interface JobPickerInitData {
   readonly isRecentFiles: boolean;
 }
 
 // Window type discriminated union for type safety
-export type WindowType = 
+export type WindowType =
   | { kind: 'Settings' }
   | { kind: 'Status' }
   | { kind: 'InputDialog'; options: InputDialogOptions }
@@ -119,7 +124,8 @@ export type WindowType =
   | { kind: 'MaterialMatching'; data: MaterialMatchingDialogData }
   | { kind: 'SingleColorConfirmation'; data: SingleColorConfirmationDialogData }
   | { kind: 'AutoConnectChoice'; data: AutoConnectChoiceDialogData }
-  | { kind: 'ConnectChoice'; data: ConnectChoiceDialogData };
+  | { kind: 'ConnectChoice'; data: ConnectChoiceDialogData }
+  | { kind: 'PrinterConnectedWarning'; data: PrinterConnectedWarningData };
 
 // Common window size constants
 export const WINDOW_SIZES = {
@@ -206,5 +212,11 @@ export const WINDOW_SIZES = {
     height: createWindowHeight(450),
     minWidth: createWindowMinWidth(450),
     minHeight: createWindowMinHeight(400)
+  },
+  PRINTER_CONNECTED_WARNING: {
+    width: createWindowWidth(450),
+    height: createWindowHeight(380),
+    minWidth: createWindowMinWidth(400),
+    minHeight: createWindowMinHeight(350)
   }
 } as const;

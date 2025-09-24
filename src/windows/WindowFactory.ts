@@ -26,7 +26,8 @@ export {
   createSingleColorConfirmationDialog,
   createMaterialInfoDialog,
   createIFSDialog,
-  createConnectChoiceDialog
+  createConnectChoiceDialog,
+  createPrinterConnectedWarningDialog
 } from './factories/DialogWindowFactory';
 
 // Utility and feature windows

@@ -5,7 +5,6 @@
  */
 
 import { EventEmitter } from 'events';
-import { dialog } from 'electron';
 import type { IpcMainEvent, BrowserWindow } from 'electron';
 import { getWindowManager } from '../windows/WindowManager';
 import { SavedPrinterMatch, DiscoveredPrinter, ConnectionResult, StoredPrinterDetails } from '../types/printer';
@@ -37,18 +36,14 @@ export class DialogIntegrationService extends EventEmitter {
    */
   public async confirmDisconnectForScan(currentPrinterName?: string): Promise<boolean> {
     const printerName = currentPrinterName || 'Unknown Printer';
-    
-    const response = await dialog.showMessageBox({
-      type: 'warning',
-      title: 'Printer Connected',
-      message: `You are currently connected to ${printerName}`,
-      detail: 'Scanning for printers may interfere with ongoing operations. Do you want to continue?',
-      buttons: ['Cancel', 'Continue Scan'],
-      defaultId: 0,
-      cancelId: 0
-    });
 
-    return response.response === 1; // User clicked "Continue Scan"
+    // Dynamic import to avoid circular dependencies
+    return import('../windows/factories/DialogWindowFactory').then(async ({ createPrinterConnectedWarningDialog }) => {
+      return await createPrinterConnectedWarningDialog({ printerName });
+    }).catch(error => {
+      console.error('Error importing DialogWindowFactory:', error);
+      return false; // Default to cancel on error
+    });
   }
 
   /**

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: blob:;
+        connect-src 'self';
+        font-src 'self';
+        object-src 'none';
+        base-uri 'self';
+        form-action 'self';
+    ">
+    <title>Printer Connected</title>
+    <link rel="stylesheet" href="printer-connected-warning.css">
+</head>
+<body>
+    <div class="dialog-container">
+        <div class="dialog-header">
+            <div class="dialog-title" id="dialog-title">Printer Connected</div>
+            <button class="dialog-close" id="dialog-close">×</button>
+        </div>
+
+        <div class="dialog-content">
+            <div class="warning-content">
+                <div class="warning-icon">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
+                    </svg>
+                </div>
+
+                <div class="warning-message">
+                    <p class="primary-message" id="primary-message">You are currently connected to [PrinterName]</p>
+                    <p class="detail-message">Opening connection options may interfere with ongoing operations. Do you want to continue?</p>
+                </div>
+            </div>
+
+            <div class="dialog-buttons">
+                <button class="dialog-button cancel" id="dialog-cancel">Cancel</button>
+                <button class="dialog-button primary" id="dialog-continue">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CommonJS shim for TypeScript compilation compatibility -->
+    <script>
+        if (typeof exports === 'undefined') {
+            var exports = {};
+        }
+    </script>
+    <script src="../../../lib/ui/printer-connected-warning/printer-connected-warning-renderer.js"></script>
+</body>
+</html>

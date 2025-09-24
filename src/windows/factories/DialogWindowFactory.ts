@@ -15,6 +15,7 @@ import {
   SingleColorConfirmationDialogData,
   AutoConnectChoiceDialogData,
   ConnectChoiceDialogData,
+  PrinterConnectedWarningData,
   createPreloadPath,
   WINDOW_SIZES
 } from '../shared/WindowTypes';
@@ -525,5 +526,103 @@ export const createConnectChoiceDialog = (data: ConnectChoiceDialogData): Promis
 
     setupDevTools(connectChoiceDialogWindow);
     windowManager.setConnectChoiceDialogWindow(connectChoiceDialogWindow);
+  });
+};
+
+/**
+ * Create printer connected warning dialog
+ * Shows a warning when user tries to connect while already connected to a printer
+ * @param data - Printer warning data including printer name
+ * @returns Promise that resolves to boolean (true = continue, false = cancel)
+ */
+export const createPrinterConnectedWarningDialog = (data: PrinterConnectedWarningData): Promise<boolean> => {
+  return new Promise((resolve) => {
+    const windowManager = getWindowManager();
+    const mainWindow = windowManager.getMainWindow();
+
+    if (!validateParentWindow(mainWindow, 'printer connected warning dialog')) {
+      resolve(false);
+      return;
+    }
+
+    // Create the dialog window
+    const printerWarningWindow = createModalWindow(
+      mainWindow,
+      WINDOW_SIZES.PRINTER_CONNECTED_WARNING,
+      createPreloadPath(path.join(__dirname, '../../ui/printer-connected-warning/printer-connected-warning-preload.js')),
+      { resizable: false, frame: false, transparent: true }
+    );
+
+    let isHandled = false;
+
+    // Set up IPC handlers for continue and cancel actions
+    const handleContinue = async (): Promise<void> => {
+      if (isHandled) return;
+      isHandled = true;
+
+      // Clean up handlers
+      ipcMain.removeHandler('printer-connected-warning-continue');
+      ipcMain.removeHandler('printer-connected-warning-cancel');
+
+      // Close dialog
+      if (printerWarningWindow && !printerWarningWindow.isDestroyed()) {
+        printerWarningWindow.close();
+      }
+
+      resolve(true);
+    };
+
+    const handleCancel = async (): Promise<void> => {
+      if (isHandled) return;
+      isHandled = true;
+
+      // Clean up handlers
+      ipcMain.removeHandler('printer-connected-warning-continue');
+      ipcMain.removeHandler('printer-connected-warning-cancel');
+
+      // Close dialog
+      if (printerWarningWindow && !printerWarningWindow.isDestroyed()) {
+        printerWarningWindow.close();
+      }
+
+      resolve(false);
+    };
+
+    // Register IPC handlers
+    ipcMain.handle('printer-connected-warning-continue', handleContinue);
+    ipcMain.handle('printer-connected-warning-cancel', handleCancel);
+
+    // Load HTML and setup lifecycle
+    void loadWindowHTML(printerWarningWindow, 'printer-connected-warning');
+
+    // Send dialog data when ready
+    printerWarningWindow.webContents.on('did-finish-load', () => {
+      if (printerWarningWindow && !printerWarningWindow.isDestroyed()) {
+        printerWarningWindow.webContents.send('dialog-init', data);
+      }
+    });
+
+    // Platform detection for styling
+    printerWarningWindow.webContents.on('did-finish-load', () => {
+      if (printerWarningWindow && !printerWarningWindow.isDestroyed()) {
+        printerWarningWindow.webContents.send('platform-info', process.platform);
+      }
+    });
+
+    // Setup window lifecycle with cleanup
+    setupWindowLifecycle(
+      printerWarningWindow,
+      () => {
+        // Clean up if dialog closed without action
+        if (!isHandled) {
+          isHandled = true;
+          ipcMain.removeHandler('printer-connected-warning-continue');
+          ipcMain.removeHandler('printer-connected-warning-cancel');
+          resolve(false);
+        }
+      }
+    );
+
+    setupDevTools(printerWarningWindow);
   });
 };
