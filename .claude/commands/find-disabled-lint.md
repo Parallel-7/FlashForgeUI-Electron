@@ -10,17 +10,15 @@ You MUST follow these steps:
    - If no disable rules found: Congratulate the user on maintaining excellent codebase quality with zero ESLint disable rules.
    - If disable rules found: Proceed to analysis phase.
 
-3. **Analyze each disable rule** using cognitive tools (first pass):
+3. **Analyze each disable rule** using sequential-thinking:
    - Use sequential-thinking to understand why each disable rule exists
-   - Use gemini_collaborate to analyze the context around each disabled rule
    - For each file with disable rules:
      - Read the file to understand the context
      - Identify what ESLint rule is being disabled and why
      - Determine if the disable is justified or if the underlying code should be fixed
 
-4. **Design solutions** using cognitive tools (second pass):
-   - Use sequential-thinking to create proper fixes for each disable rule
-   - Use gemini_collaborate to validate solution approaches
+4. **Design solutions** using sequential-thinking:
+   - Use sequential-thinking to create proper fixes for each disable rule and validate solution approaches
    - Prioritize solutions that:
      - Fix the underlying code issue rather than keeping the disable
      - Follow project coding standards and best practices

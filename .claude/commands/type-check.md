@@ -12,12 +12,8 @@ You MUST follow these steps:
 
 3. If there ARE errors:
    - Use the code context provider tool to get comprehensive information about the areas of the codebase where errors occurred
-   - Use your cognitive tools to analyze the situation and locate the root cause of the type errors:
-     - Use sequential-thinking to break down the type issues
-     - Use gemini_collaborate (provide all needed context, this is a persistent session)
-   - After locating the root cause, use your cognitive tools again to create a solution that addresses the *root cause*:
-     - Use sequential-thinking to plan the fix
-     - Use gemini_collaborate (provide all needed context)
+   - Use sequential-thinking to analyze the situation and locate the root cause of the type errors
+   - After locating the root cause, use sequential-thinking again to plan and create a solution that addresses the *root cause*
    - Present the errors found and your proposed fix to the user
    - Once approved, implement the fix
    - Re-run `npm run type-check` to verify the fix worked

@@ -30,7 +30,7 @@ This step is absolutely mandatory and cannot be skipped under any circumstances.
 - IPC communication between processes
 - Service-oriented architecture
 - Event-driven programming
-- Zod schema validation
+- Runtime data validation
 - Express.js and WebSocket integration
 - Printer backend abstraction patterns
 

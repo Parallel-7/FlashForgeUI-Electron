@@ -16,7 +16,6 @@
 12. [Integration with Existing Patterns](#integration-with-existing-patterns)
 13. [Electron-Specific TypeScript Patterns](#electron-specific-typescript-patterns)
 14. [IPC Type Safety](#ipc-type-safety)
-15. [Zod Integration and Runtime Validation](#zod-integration-and-runtime-validation)
 
 ## Project Setup and Configuration
 
@@ -366,10 +365,10 @@ src/
 │   ├── printer.ts           # Printer-related types
 │   ├── notification.ts      # Notification types
 │   └── ipc.ts              # IPC types
-├── validation/              # Zod schemas
-│   ├── config-schemas.ts
-│   ├── printer-schemas.ts
-│   └── job-schemas.ts
+├── validation/              # Validation utilities
+│   ├── config-validation.ts
+│   ├── printer-validation.ts
+│   └── job-validation.ts
 ├── managers/               # Singleton managers
 │   ├── ConfigManager.ts
 │   └── ConnectionFlowManager.ts
@@ -442,7 +441,6 @@ export { ErrorCode, AppError } from '../utils/error.utils';
 // ✅ Good: Explicit imports for external dependencies
 import { EventEmitter } from 'events';
 import { app, BrowserWindow } from 'electron';
-import { z } from 'zod';
 
 // ✅ Good: Type-only imports when possible
 import type { AppConfig } from '../types/config';
@@ -730,32 +728,29 @@ export function updatePrinterSettings(settings: PrinterSettings): void {
 }
 ```
 
-### 3. Runtime Type Checking with Zod
+### 3. Runtime Type Checking
 
 ```typescript
-// ✅ Good: Combine Zod with type guards
-import { z } from 'zod';
+// ✅ Good: Combine validation with type guards
+export function validatePrinterDetails(data: unknown): data is PrinterDetails {
+  if (typeof data !== 'object' || data === null) {
+    return false;
+  }
 
-const PrinterDetailsSchema = z.object({
-  name: z.string(),
-  ipAddress: z.string().ip(),
-  serialNumber: z.string(),
-  model: z.string(),
-});
-
-export type ValidatedPrinterDetails = z.infer<typeof PrinterDetailsSchema>;
-
-export function validatePrinterDetails(data: unknown): data is ValidatedPrinterDetails {
-  const result = PrinterDetailsSchema.safeParse(data);
-  return result.success;
+  const obj = data as Record<string, unknown>;
+  return (
+    typeof obj.name === 'string' &&
+    typeof obj.ipAddress === 'string' &&
+    typeof obj.serialNumber === 'string' &&
+    typeof obj.model === 'string'
+  );
 }
 
-export function parsePrinterDetails(data: unknown): ValidatedPrinterDetails {
-  const result = PrinterDetailsSchema.safeParse(data);
-  if (!result.success) {
-    throw fromZodError(result.error, ErrorCode.VALIDATION);
+export function parsePrinterDetails(data: unknown): PrinterDetails {
+  if (!validatePrinterDetails(data)) {
+    throw new AppError('Invalid printer details', ErrorCode.VALIDATION);
   }
-  return result.data;
+  return data;
 }
 ```
 
@@ -1236,39 +1231,33 @@ TypedIPC.handleInvoke('printer:connect', async (event, options) => {
 
 ```typescript
 // ✅ Good: Validation at IPC boundaries
-import { z } from 'zod';
-
-const PrinterConnectionOptionsSchema = z.object({
-  ipAddress: z.string().ip(),
-  timeout: z.number().positive(),
-  retries: z.number().min(0).max(10),
-});
-
 export function createValidatedHandler<K extends RendererChannelName>(
   channel: K,
-  schema: z.ZodSchema<IPCChannels['renderer'][K]['args'][0]>,
+  validator: (args: unknown) => args is IPCChannels['renderer'][K]['args'][0],
   handler: (
     event: Electron.IpcMainInvokeEvent,
     validatedArgs: IPCChannels['renderer'][K]['args'][0]
   ) => Promise<IPCChannels['renderer'][K]['return']>
 ): void {
   TypedIPC.handleInvoke(channel, async (event, ...args) => {
-    try {
-      const validatedArgs = schema.parse(args[0]);
-      return await handler(event, validatedArgs);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw fromZodError(error, ErrorCode.VALIDATION);
-      }
-      throw error;
+    if (!validator(args[0])) {
+      throw new AppError('Invalid arguments', ErrorCode.VALIDATION);
     }
+    return await handler(event, args[0]);
   });
 }
 
 // Usage
 createValidatedHandler(
   'printer:connect',
-  PrinterConnectionOptionsSchema,
+  (args): args is PrinterConnectionOptions => {
+    return (
+      typeof args === 'object' &&
+      args !== null &&
+      'ipAddress' in args &&
+      'timeout' in args
+    );
+  },
   async (event, options) => {
     // options is validated and typed
     const result = await connectToPrinter(options);
@@ -1277,207 +1266,6 @@ createValidatedHandler(
 );
 ```
 
-## Zod Integration and Runtime Validation
-
-### 1. Schema Definition Patterns
-
-```typescript
-// ✅ Good: Comprehensive schema definitions
-import { z } from 'zod';
-
-// Base schemas
-export const IPAddressSchema = z.string().ip();
-export const SerialNumberSchema = z.string().min(1);
-export const PortSchema = z.number().int().min(1).max(65535);
-
-// Configuration schemas
-export const AppConfigSchema = z.object({
-  DiscordSync: z.boolean(),
-  AlwaysOnTop: z.boolean(),
-  AlertWhenComplete: z.boolean(),
-  AlertWhenCooled: z.boolean(),
-  AudioAlerts: z.boolean(),
-  VisualAlerts: z.boolean(),
-  DebugMode: z.boolean(),
-  WebhookUrl: z.string(),
-  CustomCamera: z.boolean(),
-  CustomCameraUrl: z.string(),
-  CustomLeds: z.boolean(),
-  ForceLegacyAPI: z.boolean(),
-  DiscordUpdateIntervalMinutes: z.number().min(1).max(60),
-  WebUIEnabled: z.boolean(),
-  WebUIPort: PortSchema,
-  WebUIPassword: z.string(),
-  CameraProxyPort: PortSchema,
-});
-
-// Printer schemas
-export const PrinterDetailsSchema = z.object({
-  Name: z.string(),
-  IPAddress: IPAddressSchema,
-  SerialNumber: SerialNumberSchema,
-  CheckCode: z.string(),
-  ClientType: z.enum(['legacy', 'new']),
-  printerModel: z.string(),
-  modelType: z.enum(['generic-legacy', 'adventurer-5m', 'adventurer-5m-pro', 'ad5x']),
-  lastConnected: z.string().datetime().optional(),
-});
-```
-
-### 2. Type Inference and Validation
-
-```typescript
-// ✅ Good: Type inference from schemas
-export type ValidatedAppConfig = z.infer<typeof AppConfigSchema>;
-export type ValidatedPrinterDetails = z.infer<typeof PrinterDetailsSchema>;
-
-// ✅ Good: Validation helper functions
-export function validateAppConfig(data: unknown): ValidatedAppConfig | null {
-  const result = AppConfigSchema.safeParse(data);
-  return result.success ? result.data : null;
-}
-
-export function parseAppConfig(data: unknown): ValidatedAppConfig {
-  const result = AppConfigSchema.safeParse(data);
-  if (!result.success) {
-    throw fromZodError(result.error, ErrorCode.CONFIG_INVALID);
-  }
-  return result.data;
-}
-
-// ✅ Good: Partial validation for updates
-export const PartialAppConfigSchema = AppConfigSchema.partial();
-export type PartialAppConfig = z.infer<typeof PartialAppConfigSchema>;
-
-export function validateConfigUpdate(data: unknown): PartialAppConfig | null {
-  const result = PartialAppConfigSchema.safeParse(data);
-  return result.success ? result.data : null;
-}
-```
-
-### 3. Integration with Error Handling
-
-```typescript
-// ✅ Good: Zod error transformation
-export function fromZodError(
-  error: z.ZodError,
-  code: ErrorCode = ErrorCode.VALIDATION
-): AppError {
-  const issues = error.issues.map(issue => ({
-    path: issue.path.join('.'),
-    message: issue.message,
-    code: issue.code,
-  }));
-  
-  const message = `Validation failed: ${issues.map(i => `${i.path}: ${i.message}`).join(', ')}`;
-  
-  return new AppError(message, code, { issues }, error);
-}
-
-// ✅ Good: Validation middleware for services
-export function withValidation<TInput, TOutput>(
-  inputSchema: z.ZodSchema<TInput>,
-  handler: (input: TInput) => Promise<TOutput>
-) {
-  return async (input: unknown): Promise<TOutput> => {
-    try {
-      const validatedInput = inputSchema.parse(input);
-      return await handler(validatedInput);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        throw fromZodError(error);
-      }
-      throw error;
-    }
-  };
-}
-
-// Usage
-const connectToPrinter = withValidation(
-  PrinterConnectionOptionsSchema,
-  async (options: PrinterConnectionOptions) => {
-    // Implementation with validated options
-    return establishConnection(options);
-  }
-);
-```
-
-### 4. Schema Composition and Reuse
-
-```typescript
-// ✅ Good: Composable schemas
-export const BaseEntitySchema = z.object({
-  id: z.string().uuid(),
-  createdAt: z.string().datetime(),
-  updatedAt: z.string().datetime(),
-});
-
-export const PrinterEntitySchema = BaseEntitySchema.extend({
-  name: z.string(),
-  ipAddress: IPAddressSchema,
-  serialNumber: SerialNumberSchema,
-  isOnline: z.boolean(),
-});
-
-// ✅ Good: Discriminated union schemas
-export const NotificationSchema = z.discriminatedUnion('type', [
-  z.object({
-    type: z.literal('print-complete'),
-    printerId: z.string(),
-    jobName: z.string(),
-    duration: z.number(),
-  }),
-  z.object({
-    type: z.literal('printer-cooled'),
-    printerId: z.string(),
-    temperature: z.number(),
-  }),
-  z.object({
-    type: z.literal('connection-error'),
-    printerId: z.string(),
-    error: z.string(),
-  }),
-]);
-
-export type NotificationData = z.infer<typeof NotificationSchema>;
-```
-
-### 5. Transform and Preprocessing
-
-```typescript
-// ✅ Good: Data transformation in schemas
-export const ProcessedConfigSchema = z.object({
-  port: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().min(1).max(65535)),
-  timeout: z.string().transform((val) => parseInt(val, 10)).pipe(z.number().positive()),
-  enabled: z.union([z.boolean(), z.string()]).transform((val) => {
-    if (typeof val === 'string') {
-      return val.toLowerCase() === 'true';
-    }
-    return val;
-  }),
-});
-
-// ✅ Good: Preprocessing for normalization
-export const NormalizedPrinterSchema = PrinterDetailsSchema.preprocess((data) => {
-  if (typeof data === 'object' && data !== null) {
-    const normalized = { ...data };
-    
-    // Normalize IP address format
-    if ('ipAddress' in normalized && typeof normalized.ipAddress === 'string') {
-      normalized.ipAddress = normalized.ipAddress.trim();
-    }
-    
-    // Normalize serial number
-    if ('serialNumber' in normalized && typeof normalized.serialNumber === 'string') {
-      normalized.serialNumber = normalized.serialNumber.toUpperCase().trim();
-    }
-    
-    return normalized;
-  }
-  return data;
-});
-```
-
 ---
 
-This documentation provides comprehensive TypeScript best practices specifically tailored for the FlashForgeUI-Electron project. It covers all major aspects from basic type safety to advanced patterns used in Electron applications, with practical examples that align with the existing codebase patterns. The documentation emphasizes the project's use of strict TypeScript, Zod validation, EventEmitter patterns, singleton managers, and type-safe IPC communication.
+This documentation provides comprehensive TypeScript best practices specifically tailored for the FlashForgeUI-Electron project. It covers all major aspects from basic type safety to advanced patterns used in Electron applications, with practical examples that align with the existing codebase patterns. The documentation emphasizes the project's use of strict TypeScript, EventEmitter patterns, singleton managers, and type-safe IPC communication.

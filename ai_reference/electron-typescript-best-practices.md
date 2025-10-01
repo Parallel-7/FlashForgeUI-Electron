@@ -37,7 +37,7 @@ src/
 ├── windows/             # Window factory and management
 ├── ipc/                 # Type-safe IPC handlers
 ├── types/               # TypeScript definitions
-└── validation/          # Zod schemas for runtime validation
+└── validation/          # Runtime validation utilities
 ```
 
 ### TypeScript Configuration Strategy
@@ -226,14 +226,22 @@ export function registerAllIpcHandlers(managers: AppManagers): void {
 
 ### Type-Safe Handler Implementation
 
-Use Zod schemas for runtime validation:
+Use runtime validation for IPC payloads:
 
 ```typescript
 // src/ipc/handlers/connection-handlers.ts
 import { ipcMain } from 'electron';
-import { z } from 'zod';
 
-const ConnectPayloadSchema = z.object({
+function validateConnectPayload(data: unknown): data is ConnectPayload {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'ipAddress' in data &&
+    'timeout' in data
+  );
+}
+
+const ConnectPayload = {
   ipAddress: z.string().ip(),
   port: z.number().int().min(1).max(65535),
   timeout: z.number().int().min(1000).max(30000).optional()
@@ -757,8 +765,8 @@ class ConfigManager {
       const configContent = await fs.readFile(this.configPath, 'utf-8');
       const parsedConfig = JSON.parse(configContent);
       
-      // Validate with Zod schema
-      return ConfigSchema.parse(parsedConfig);
+      // Validate configuration
+      return validateConfig(parsedConfig);
     } catch (error) {
       if (error.code === 'ENOENT') {
         // Config file doesn't exist, return defaults
@@ -1083,7 +1091,7 @@ const createSecureWindow = (): BrowserWindow => {
 
 ### Input Validation and Sanitization
 
-Use Zod schemas for all input validation:
+Use proper validation for all input:
 
 ```typescript
 // Schema definitions for validation
@@ -1117,8 +1125,8 @@ ipcMain.handle('connect-printer', async (event, payload: unknown) => {
     return { success: true, data: result };
     
   } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { 
+    if (error instanceof ValidationError) {
+      return {
         success: false, 
         error: 'Validation failed', 
         details: error.errors 
