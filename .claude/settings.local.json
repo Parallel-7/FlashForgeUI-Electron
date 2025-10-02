@@ -53,7 +53,8 @@
       "WebFetch(domain:dev.to)",
       "WebFetch(domain:stackoverflow.com)",
       "WebFetch(domain:www.npmjs.com)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(curl:*)"
     ],
     "deny": [],
     "additionalDirectories": [

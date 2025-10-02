@@ -28,6 +28,8 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'web-ui-port': 'WebUIPort',
   'web-ui-password': 'WebUIPassword',
   'camera-proxy-port': 'CameraProxyPort',
+  'filament-tracker-enabled': 'FilamentTrackerIntegrationEnabled',
+  'filament-tracker-api-key': 'FilamentTrackerAPIKey',
   'discord-sync': 'DiscordSync',
   'always-on-top': 'AlwaysOnTop',
   'alert-when-complete': 'AlertWhenComplete',
@@ -189,6 +191,10 @@ class SettingsRenderer {
     const webUIEnabled = this.inputs.get('web-ui')?.checked || false;
     this.setInputEnabled('web-ui-port', webUIEnabled);
     this.setInputEnabled('web-ui-password', webUIEnabled);
+
+    // Filament Tracker Integration settings
+    const filamentTrackerEnabled = this.inputs.get('filament-tracker-enabled')?.checked || false;
+    this.setInputEnabled('filament-tracker-api-key', filamentTrackerEnabled);
 
     // Custom Camera settings
     const customCameraEnabled = this.inputs.get('custom-camera')?.checked || false;

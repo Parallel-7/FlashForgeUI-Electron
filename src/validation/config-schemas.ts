@@ -30,7 +30,9 @@ export const AppConfigSchema = z.object({
   WebUIPort: z.number().min(1).max(65535),
   WebUIPassword: z.string(),
   CameraProxyPort: z.number().min(1).max(65535),
-  RoundedUI: z.boolean()
+  RoundedUI: z.boolean(),
+  FilamentTrackerIntegrationEnabled: z.boolean().default(false),
+  FilamentTrackerAPIKey: z.string().default('')
 });
 
 /**
@@ -182,7 +184,9 @@ export function createDefaultConfig(): ValidatedAppConfig {
     WebUIPort: 3000,
     WebUIPassword: 'changeme',
     CameraProxyPort: 8181,
-    RoundedUI: false
+    RoundedUI: false,
+    FilamentTrackerIntegrationEnabled: false,
+    FilamentTrackerAPIKey: ''
   };
 }
 

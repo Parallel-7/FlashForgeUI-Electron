@@ -135,18 +135,48 @@ export function createLoginRateLimiter() {
 
 /**
  * CORS middleware for web UI
+ * Restricts to localhost and private network origins for security while allowing local apps
  */
 export function createCorsMiddleware() {
   return (req: Request, res: Response, next: NextFunction): void => {
-    res.header('Access-Control-Allow-Origin', '*');
+    const origin = req.headers.origin;
+
+    // Allow localhost, 127.0.0.1, and private network ranges (RFC 1918)
+    const allowedOriginPatterns = [
+      // Localhost
+      /^https?:\/\/localhost(:\d+)?$/,
+      /^https?:\/\/127\.0\.0\.1(:\d+)?$/,
+      // Private network Class A: 10.0.0.0 - 10.255.255.255
+      /^https?:\/\/10\.\d{1,3}\.\d{1,3}\.\d{1,3}(:\d+)?$/,
+      // Private network Class B: 172.16.0.0 - 172.31.255.255
+      /^https?:\/\/172\.(1[6-9]|2[0-9]|3[0-1])\.\d{1,3}\.\d{1,3}(:\d+)?$/,
+      // Private network Class C: 192.168.0.0 - 192.168.255.255
+      /^https?:\/\/192\.168\.\d{1,3}\.\d{1,3}(:\d+)?$/
+    ];
+
+    // Check if origin matches allowed patterns or is undefined (non-browser requests)
+    const isAllowed = !origin || allowedOriginPatterns.some(pattern => pattern.test(origin));
+
+    if (isAllowed && origin) {
+      res.header('Access-Control-Allow-Origin', origin);
+    } else if (!origin) {
+      // No origin header (curl, Electron, native apps) - allow by not setting CORS header
+      res.header('Access-Control-Allow-Origin', '*');
+    } else {
+      // Reject non-private network origins
+      res.status(403).json({ success: false, error: 'Origin not allowed' });
+      return;
+    }
+
     res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-api-key');
+    res.header('Access-Control-Allow-Credentials', 'true');
+
     if (req.method === 'OPTIONS') {
       res.sendStatus(200);
       return;
     }
-    
+
     next();
   };
 }

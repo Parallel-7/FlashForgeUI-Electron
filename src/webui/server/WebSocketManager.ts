@@ -480,22 +480,23 @@ export class WebSocketManager extends EventEmitter {
    * Accepts PollingData from the polling service
    */
   public async broadcastPrinterStatus(data: PollingData): Promise<void> {
-    if (!this.isRunning || this.clients.size === 0) return;
-    
-    // Store latest data for new connections
+    // Always store latest data, even if no clients connected (for API access)
     this.latestPollingData = data;
-    
+
+    // Only broadcast to WebSocket clients if server is running and clients are connected
+    if (!this.isRunning || this.clients.size === 0) return;
+
     const formattedStatus = this.formatPollingData(data);
     if (!formattedStatus) {
       return;
     }
-    
+
     const statusMessage: WebSocketMessage = {
       type: 'STATUS_UPDATE',
       timestamp: new Date().toISOString(),
       status: formattedStatus
     };
-    
+
     this.broadcast(statusMessage);
   }
 
@@ -584,6 +585,14 @@ export class WebSocketManager extends EventEmitter {
    */
   public isServerRunning(): boolean {
     return this.isRunning;
+  }
+
+  /**
+   * Get latest polling data
+   * Used by filament tracker integration API
+   */
+  public getLatestPollingData(): PollingData | null {
+    return this.latestPollingData;
   }
   
   /**

@@ -6,7 +6,8 @@
   "main": "lib/index.js",
   "scripts": {
     "start": "npm run build && electron .",
-    "dev": "concurrently \"npm run build:main:watch\" \"npm run build:renderer:watch\"",
+    "dev": "concurrently \"npm run build:main:watch\" \"npm run build:renderer:watch\" \"npm run electron:wait\"",
+    "electron:wait": "node scripts/wait-for-build.js",
     "build": "npm run build:main && npm run build:renderer && npm run build:webui",
     "build:main": "tsc",
     "build:main:watch": "tsc --watch",

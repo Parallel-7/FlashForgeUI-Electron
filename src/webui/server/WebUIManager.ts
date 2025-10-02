@@ -29,6 +29,7 @@ import {
 } from '../schemas/web-api.schemas';
 import { StandardAPIResponse } from '../types/web-api.types';
 import { createAPIRoutes } from './api-routes';
+import { createFilamentTrackerRoutes } from './filament-tracker-routes';
 import { getWebSocketManager } from './WebSocketManager';
 import type { PollingData } from '../../types/polling';
 
@@ -167,17 +168,26 @@ export class WebUIManager extends EventEmitter {
    */
   private setupRoutes(): void {
     if (!this.expressApp) return;
-    
+
     // Authentication routes (no auth required)
     this.setupAuthRoutes();
-    
-    // Protected API routes
-    this.expressApp.use('/api', createAuthMiddleware());
-    
+
+    // Filament tracker integration routes (has its own auth middleware)
+    const filamentTrackerRoutes = createFilamentTrackerRoutes();
+    this.expressApp.use('/api', filamentTrackerRoutes);
+
+    // Protected API routes (WebUI auth required) - skip filament tracker routes
+    this.expressApp.use('/api', (req, res, next) => {
+      if (req.path.startsWith('/filament-tracker')) {
+        return next('route'); // Skip this middleware for filament tracker routes
+      }
+      return createAuthMiddleware()(req, res, next);
+    });
+
     // Import and use API routes
     const apiRoutes = createAPIRoutes();
     this.expressApp.use('/api', apiRoutes);
-    
+
     // Error handling (must be last)
     this.expressApp.use(createErrorMiddleware());
   }
@@ -492,8 +502,9 @@ export class WebUIManager extends EventEmitter {
    * This is the primary way Web UI receives printer status updates
    */
   public handlePollingUpdate(data: PollingData): void {
-    // Forward to WebSocket clients if any are connected
-    if (this.connectedClients > 0 && data.printerStatus) {
+    // Always forward to WebSocket manager to update latest polling data
+    // (needed for filament tracker API even when no WebSocket clients connected)
+    if (data.printerStatus) {
       void this.webSocketManager.broadcastPrinterStatus(data);
     }
   }

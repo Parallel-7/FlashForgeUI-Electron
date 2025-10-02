@@ -23,6 +23,8 @@ export interface AppConfig {
   readonly WebUIPassword: string;
   readonly CameraProxyPort: number;
   readonly RoundedUI: boolean;
+  readonly FilamentTrackerIntegrationEnabled: boolean;
+  readonly FilamentTrackerAPIKey: string;
 }
 
 /**
@@ -47,6 +49,8 @@ export interface MutableAppConfig {
   WebUIPassword: string;
   CameraProxyPort: number;
   RoundedUI: boolean;
+  FilamentTrackerIntegrationEnabled: boolean;
+  FilamentTrackerAPIKey: string;
 }
 
 /**
@@ -70,7 +74,9 @@ export const DEFAULT_CONFIG: AppConfig = {
   WebUIPort: 3000,
   WebUIPassword: 'changeme',
   CameraProxyPort: 8181,
-  RoundedUI: false
+  RoundedUI: false,
+  FilamentTrackerIntegrationEnabled: false,
+  FilamentTrackerAPIKey: ''
 } as const;
 
 /**
