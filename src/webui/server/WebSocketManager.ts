@@ -171,17 +171,17 @@ export class WebSocketManager extends EventEmitter {
     
     // Store client
     this.clients.set(ws, clientInfo);
-    
+
     // Add to token-based map for multi-tab support
     if (!this.clientsByToken.has(token)) {
       this.clientsByToken.set(token, new Set());
     }
     this.clientsByToken.get(token)!.add(ws);
-    
+
     // Update client count
     this.updateClientCount();
-    
-    console.log(`WebSocket client connected: ${clientId}`);
+
+    console.log(`WebSocket client connected: ${clientId} - Total clients: ${this.clients.size}`);
     
     // Send authentication success
     const authMessage: WebSocketMessage = {
@@ -489,16 +489,24 @@ export class WebSocketManager extends EventEmitter {
    * Accepts PollingData from the polling service
    */
   public async broadcastPrinterStatus(data: PollingData): Promise<void> {
+    console.log(`[WebSocketManager] broadcastPrinterStatus called - running: ${this.isRunning}, clients: ${this.clients.size}, hasData: ${!!data.printerStatus}`);
+
     // Always store latest data, even if no clients connected (for API access)
     this.latestPollingData = data;
 
     // Only broadcast to WebSocket clients if server is running and clients are connected
-    if (!this.isRunning || this.clients.size === 0) return;
+    if (!this.isRunning || this.clients.size === 0) {
+      console.log(`[WebSocketManager] Skipping broadcast - running: ${this.isRunning}, clients: ${this.clients.size}`);
+      return;
+    }
 
     const formattedStatus = this.formatPollingData(data);
     if (!formattedStatus) {
+      console.log('[WebSocketManager] No formatted status to broadcast');
       return;
     }
+
+    console.log('[WebSocketManager] Broadcasting status update to', this.clients.size, 'client(s)');
 
     const statusMessage: WebSocketMessage = {
       type: 'STATUS_UPDATE',

@@ -83,6 +83,7 @@ interface PrinterFeaturesResponse extends ApiResponse {
 
 interface CameraProxyConfigResponse extends ApiResponse {
   port?: number;
+  url?: string;
 }
 
 interface FileListResponse extends ApiResponse {
@@ -90,6 +91,20 @@ interface FileListResponse extends ApiResponse {
 }
 
 type PrintJobStartResponse = ApiResponse;
+
+interface PrinterContext {
+  id: string;
+  name: string;
+  model: string;
+  ipAddress: string;
+  serialNumber: string;
+  isActive: boolean;
+}
+
+interface ContextsResponse extends ApiResponse {
+  contexts?: PrinterContext[];
+  activeContextId?: string;
+}
 
 // Extended HTMLElement for temperature dialog
 interface TemperatureDialogElement extends HTMLElement {
@@ -572,6 +587,109 @@ function updatePrinterStateCard(status: PrinterStatus | null): void {
 }
 
 // ============================================================================
+// MULTI-PRINTER CONTEXT MANAGEMENT
+// ============================================================================
+
+async function fetchPrinterContexts(): Promise<void> {
+  if (!state.authToken) {
+    console.log('[Contexts] No auth token, skipping context fetch');
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/contexts', {
+      headers: {
+        'Authorization': `Bearer ${state.authToken}`
+      }
+    });
+
+    const result = await response.json() as ContextsResponse;
+
+    if (result.success && result.contexts) {
+      console.log('[Contexts] Fetched contexts:', result.contexts);
+      updatePrinterSelector(result.contexts, result.activeContextId || '');
+    } else {
+      console.error('[Contexts] Failed to fetch contexts:', result.error);
+    }
+  } catch (error) {
+    console.error('[Contexts] Error fetching contexts:', error);
+  }
+}
+
+function updatePrinterSelector(contexts: PrinterContext[], activeContextId: string): void {
+  const selector = $('printer-selector');
+  const select = $('printer-select') as HTMLSelectElement;
+
+  if (!selector || !select) {
+    console.error('[Contexts] Printer selector elements not found');
+    return;
+  }
+
+  // Show selector only if there are multiple printers
+  if (contexts.length > 1) {
+    showElement('printer-selector');
+  } else {
+    hideElement('printer-selector');
+    return;
+  }
+
+  // Clear existing options
+  select.innerHTML = '';
+
+  // Populate with printer contexts
+  contexts.forEach(context => {
+    const option = document.createElement('option');
+    option.value = context.id;
+    option.textContent = `${context.name} (${context.ipAddress})`;
+
+    if (context.isActive || context.id === activeContextId) {
+      option.selected = true;
+    }
+
+    select.appendChild(option);
+  });
+}
+
+async function switchPrinterContext(contextId: string): Promise<void> {
+  if (!state.authToken) {
+    showToast('Not authenticated', 'error');
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/contexts/switch', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${state.authToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ contextId })
+    });
+
+    const result = await response.json() as ApiResponse;
+
+    if (result.success) {
+      console.log('[Contexts] Switched to context:', contextId);
+      showToast(result.message || 'Switched printer', 'success');
+
+      // Reload features for the new context (handles filtration visibility, etc.)
+      await loadPrinterFeatures();
+
+      // Request fresh status for the new context
+      sendCommand({ command: 'REQUEST_STATUS' });
+
+      // Reload camera stream for the new context (uses updated camera proxy port)
+      await loadCameraStream();
+    } else {
+      showToast(result.error || 'Failed to switch printer', 'error');
+    }
+  } catch (error) {
+    console.error('[Contexts] Error switching context:', error);
+    showToast('Failed to switch printer', 'error');
+  }
+}
+
+// ============================================================================
 // PRINTER CONTROLS
 // ============================================================================
 
@@ -748,10 +866,15 @@ async function loadCameraStream(): Promise<void> {
     }
     
     const config = await response.json() as CameraProxyConfigResponse;
-    const cameraUrl = `http://${window.location.hostname}:${config.port}/camera`;
-    
+
+    if (!config.url) {
+      throw new Error('No camera URL provided by server');
+    }
+
+    const cameraUrl = config.url; // Use the URL from server response
+
     console.log('Loading camera stream from:', cameraUrl);
-    
+
     // Set up the camera stream
     cameraStream.src = cameraUrl;
     
@@ -973,6 +1096,8 @@ function setupEventHandlers(): void {
         showElement('main-ui');
         connectWebSocket();
         await loadPrinterFeatures();
+        // Fetch printer contexts after successful login
+        await fetchPrinterContexts();
       }
       
       loginBtn.textContent = 'Login';
@@ -1083,13 +1208,23 @@ function setupEventHandlers(): void {
     });
   }
   
+  // Printer selector dropdown
+  const printerSelect = $('printer-select') as HTMLSelectElement;
+  if (printerSelect) {
+    printerSelect.addEventListener('change', (e) => {
+      const selectedContextId = (e.target as HTMLSelectElement).value;
+      console.log('[Contexts] Printer selector changed to:', selectedContextId);
+      void switchPrinterContext(selectedContextId);
+    });
+  }
+
   // Keep-alive ping
   setInterval(() => {
     if (state.isConnected && state.websocket && state.websocket.readyState === WebSocket.OPEN) {
       sendCommand({ command: 'PING' });
     }
   }, 30000);
-  
+
   // Note: Status updates now come via WebSocket push, no need to poll
 }
 
@@ -1159,6 +1294,8 @@ async function initialize(): Promise<void> {
     // Load features but handle auth failures gracefully
     try {
       await loadPrinterFeatures();
+      // Fetch printer contexts after features are loaded
+      await fetchPrinterContexts();
     } catch (error) {
       console.error('Failed to load features:', error);
       // If we get here, token might be invalid but we'll let WebSocket retry handle it

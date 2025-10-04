@@ -32,6 +32,13 @@
       <!-- Header Bar -->
       <div class="header">
         <div class="header-title">FlashForge Web UI</div>
+        <!-- Printer Selector (hidden when only one printer) -->
+        <div class="printer-selector hidden" id="printer-selector">
+          <label for="printer-select">Printer:</label>
+          <select id="printer-select" class="printer-select">
+            <option value="">Loading...</option>
+          </select>
+        </div>
         <!-- Connection Status -->
         <div class="connection-status">
           <span class="connection-indicator" id="connection-indicator"></span>

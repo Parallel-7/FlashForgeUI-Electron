@@ -32,6 +32,7 @@ import { createAPIRoutes } from './api-routes';
 import { createFilamentTrackerRoutes } from './filament-tracker-routes';
 import { getWebSocketManager } from './WebSocketManager';
 import type { PollingData } from '../../types/polling';
+import { isHeadlessMode } from '../../utils/HeadlessDetection';
 
 /**
  * Branded type for WebUIManager singleton
@@ -293,8 +294,15 @@ export class WebUIManager extends EventEmitter {
       const environmentService = getEnvironmentDetectionService();
       if (process.platform === 'win32' && !environmentService.isRunningAsAdmin()) {
         console.log('WebUI requires administrator privileges on Windows');
-        
-        // Show dialog to user
+
+        if (isHeadlessMode()) {
+          // In headless mode, log error and exit immediately without dialog
+          console.error('[Headless] ERROR: Administrator privileges required for WebUI on Windows');
+          console.error('[Headless] Please restart the application as an administrator');
+          process.exit(1);
+        }
+
+        // Show dialog to user in normal mode
         await dialog.showMessageBox({
           type: 'error',
           title: 'Administrator Privileges Required',
@@ -303,7 +311,7 @@ export class WebUIManager extends EventEmitter {
           buttons: ['OK'],
           defaultId: 0
         });
-        
+
         // Exit the application after user clicks OK
         console.log('Exiting application due to insufficient privileges for Web UI');
         app.quit();
@@ -502,10 +510,17 @@ export class WebUIManager extends EventEmitter {
    * This is the primary way Web UI receives printer status updates
    */
   public handlePollingUpdate(data: PollingData): void {
+    console.log('[WebUIManager] handlePollingUpdate called, hasStatus:', !!data.printerStatus, 'wsManager:', !!this.webSocketManager);
+
     // Always forward to WebSocket manager to update latest polling data
     // (needed for filament tracker API even when no WebSocket clients connected)
     if (data.printerStatus) {
-      void this.webSocketManager.broadcastPrinterStatus(data);
+      console.log('[WebUIManager] Calling webSocketManager.broadcastPrinterStatus...');
+      this.webSocketManager.broadcastPrinterStatus(data).catch(error => {
+        console.error('[WebUIManager] Error broadcasting printer status:', error);
+      });
+    } else {
+      console.log('[WebUIManager] No printer status in data, skipping broadcast');
     }
   }
   
@@ -570,18 +585,25 @@ export class WebUIManager extends EventEmitter {
    * Send message to UI log panel
    */
   private logToUI(message: string): void {
+    // Skip UI logging in headless mode
+    if (isHeadlessMode()) {
+      // Just log to console in headless mode
+      console.log(`[WebUI] ${message}`);
+      return;
+    }
+
     // Use proper import instead of require to avoid TypeScript warnings
     import('../../windows/WindowManager').then(({ getWindowManager }) => {
       const windowManager = getWindowManager();
       const mainWindow = windowManager.getMainWindow();
-      
+
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('log-message', message);
       }
     }).catch((error) => {
       console.error('Failed to send UI log message:', error);
     });
-    
+
     // Also log to console for development
     console.log(`[WebUI] ${message}`);
   }

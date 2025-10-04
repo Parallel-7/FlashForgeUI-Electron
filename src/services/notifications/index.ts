@@ -43,6 +43,9 @@ export type {
 // Import types for internal use
 import type { NotificationState, NotificationSettings } from '../../types/notification';
 
+// Import headless detection
+import { isHeadlessMode } from '../../utils/HeadlessDetection';
+
 // Re-export factory functions for creating notifications
 export {
   createNotificationId,
@@ -74,21 +77,27 @@ export {
  * Note: Polling integration should be set up separately via coordinator.setPollingService()
  */
 export function initializeNotificationSystem(): void {
+  // Skip notification system in headless mode
+  if (isHeadlessMode()) {
+    console.log('[Headless] Skipping notification system initialization');
+    return;
+  }
+
   console.log('Initializing notification system...');
-  
+
   // Get global instances
   const notificationService = getNotificationService();
   const coordinator = getPrinterNotificationCoordinator();
-  
+
   // Setup error handling
   notificationService.on('notification-failed', (event: { type: string; error: string }) => {
     console.error('Notification failed:', event);
   });
-  
+
   coordinator.on('state-changed', (event: { transition: string }) => {
     console.log('Notification state changed:', event.transition);
   });
-  
+
   console.log('Notification system initialized successfully');
   console.log('Note: Use getPrinterNotificationCoordinator().setPollingService() to connect polling');
 }

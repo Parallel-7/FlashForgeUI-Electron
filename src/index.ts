@@ -37,6 +37,9 @@ import { getStaticFileManager } from './services/StaticFileManager';
 import { initializeNotificationSystem, disposeNotificationSystem } from './services/notifications';
 import { getThumbnailCacheService } from './services/ThumbnailCacheService';
 import { injectUIStyleVariables } from './utils/CSSVariables';
+import { parseHeadlessArguments, validateHeadlessConfig } from './utils/HeadlessArguments';
+import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection';
+import { getHeadlessManager } from './managers/HeadlessManager';
 
 /**
  * Main Electron process entry point. Handles app lifecycle, creates the main window,
@@ -47,6 +50,8 @@ import { injectUIStyleVariables } from './utils/CSSVariables';
 // Note: This project uses NSIS installer, not Squirrel
 // NSIS handles shortcuts and installation events automatically
 
+// Check for headless mode BEFORE single instance lock
+const headlessConfig = parseHeadlessArguments();
 
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
@@ -610,20 +615,66 @@ const initializeApp = async (): Promise<void> => {
   console.log('Thumbnail cache service initialized');
 };
 
-// This method will be called when Electron has finished initialization
-void app.whenReady().then(async () => {
-  await initializeApp();
+/**
+ * Initialize headless mode - no UI, WebUI-only operation
+ */
+async function initializeHeadless(): Promise<void> {
+  if (!headlessConfig) {
+    console.error('Headless config is null');
+    process.exit(1);
+  }
 
-  app.on('activate', () => {
-    // On macOS, re-create a window when the dock icon is clicked
-    if (BrowserWindow.getAllWindows().length === 0) {
-      void createMainWindow();
+  // Validate configuration
+  const validation = validateHeadlessConfig(headlessConfig);
+  if (!validation.valid) {
+    console.error('[Headless] Configuration validation failed:');
+    validation.errors.forEach(error => console.error(`  - ${error}`));
+    process.exit(1);
+  }
+
+  // Set headless mode flag
+  setHeadlessMode(true);
+
+  // Wait for config to be loaded
+  const configManager = getConfigManager();
+  await new Promise<void>((resolve) => {
+    if (configManager.isConfigLoaded()) {
+      resolve();
+    } else {
+      configManager.once('config-loaded', () => resolve());
     }
   });
+
+  // Initialize headless manager
+  const headlessManager = getHeadlessManager();
+  await headlessManager.initialize(headlessConfig);
+}
+
+// This method will be called when Electron has finished initialization
+void app.whenReady().then(async () => {
+  if (headlessConfig) {
+    // Headless mode - no UI
+    await initializeHeadless();
+  } else {
+    // Standard mode with UI
+    await initializeApp();
+
+    app.on('activate', () => {
+      // On macOS, re-create a window when the dock icon is clicked
+      if (BrowserWindow.getAllWindows().length === 0) {
+        void createMainWindow();
+      }
+    });
+  }
 }).catch(console.error);
 
-// Quit when all windows are closed, except on macOS
+// Quit when all windows are closed, except on macOS or headless mode
 app.on('window-all-closed', () => {
+  // In headless mode, no windows are created, so don't quit
+  if (isHeadlessMode()) {
+    return;
+  }
+
   if (process.platform !== 'darwin') {
     app.quit();
   }

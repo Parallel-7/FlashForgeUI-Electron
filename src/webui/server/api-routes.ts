@@ -1262,21 +1262,125 @@ export function createAPIRoutes(): Router {
   });
 
   /**
-   * GET /api/camera/proxy-config - Get camera proxy configuration
+   * GET /api/camera/proxy-config - Get camera proxy configuration for active context
    */
   router.get('/camera/proxy-config', async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const configManager = (await import('../../managers/ConfigManager')).getConfigManager();
-      const cameraProxyPort = configManager.get('CameraProxyPort') || 8181;
+      const { getPrinterContextManager } = await import('../../managers/PrinterContextManager');
+      const contextManager = getPrinterContextManager();
+      const activeContext = contextManager.getActiveContext();
+
+      if (!activeContext) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
+      // Get the camera proxy status for this specific context
+      const { getCameraProxyService } = await import('../../services/CameraProxyService');
+      const cameraProxyService = getCameraProxyService();
+      const status = cameraProxyService.getStatusForContext(activeContext.id);
+
+      if (!status) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'Camera proxy not available for this printer'
+        };
+        return res.status(503).json(response);
+      }
 
       const response = {
         success: true,
-        port: cameraProxyPort,
-        url: `http://${req.hostname}:${cameraProxyPort}/camera`
+        port: status.port,
+        url: `http://${req.hostname}:${status.port}/stream`
       };
 
       return res.json(response);
 
+    } catch (error) {
+      const appError = toAppError(error);
+      const response: StandardAPIResponse = {
+        success: false,
+        error: appError.message
+      };
+      return res.status(500).json(response);
+    }
+  });
+
+  // ============================================================================
+  // MULTI-PRINTER CONTEXT MANAGEMENT
+  // ============================================================================
+
+  /**
+   * GET /api/contexts - Get all connected printer contexts
+   */
+  router.get('/contexts', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const allContexts = contextManager.getAllContexts();
+      const activeContextId = contextManager.getActiveContextId();
+
+      const contexts = allContexts.map(context => ({
+        id: context.id,
+        name: context.printerDetails.Name,
+        model: context.printerDetails.printerModel || 'Unknown',
+        ipAddress: context.printerDetails.IPAddress,
+        serialNumber: context.printerDetails.SerialNumber,
+        isActive: context.id === activeContextId
+      }));
+
+      const response = {
+        success: true,
+        contexts,
+        activeContextId
+      };
+
+      return res.json(response);
+    } catch (error) {
+      const appError = toAppError(error);
+      const response: StandardAPIResponse = {
+        success: false,
+        error: appError.message
+      };
+      return res.status(500).json(response);
+    }
+  });
+
+  /**
+   * POST /api/contexts/switch - Switch active printer context
+   */
+  router.post('/contexts/switch', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { contextId } = req.body;
+
+      if (!contextId || typeof contextId !== 'string') {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'Context ID is required'
+        };
+        return res.status(400).json(response);
+      }
+
+      // Verify context exists
+      const context = contextManager.getContext(contextId);
+      if (!context) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: `Context ${contextId} not found`
+        };
+        return res.status(404).json(response);
+      }
+
+      // Switch to the context
+      contextManager.switchContext(contextId);
+
+      const response: StandardAPIResponse = {
+        success: true,
+        message: `Switched to printer: ${context.printerDetails.Name}`
+      };
+
+      return res.json(response);
     } catch (error) {
       const appError = toAppError(error);
       const response: StandardAPIResponse = {

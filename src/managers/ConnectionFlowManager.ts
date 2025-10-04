@@ -984,6 +984,207 @@ export class ConnectionFlowManager extends EventEmitter {
     return this.connectionStateManager.getConnectionStatus(activeContextId);
   }
 
+  /**
+   * Connect to printers using saved printer details with discovery-based IP update
+   *
+   * For headless mode: Discovers printers on network, matches by serial number,
+   * updates IPs if changed, connects with saved check codes.
+   *
+   * @param savedPrinters Array of saved printer details to connect to
+   * @returns Array of successfully connected contexts with their IDs and printer details
+   */
+  public async connectHeadlessFromSaved(
+    savedPrinters: PrinterDetails[]
+  ): Promise<{ contextId: string; printer: PrinterDetails }[]> {
+    const connectedContexts: { contextId: string; printer: PrinterDetails }[] = [];
+
+    try {
+      // Step 1: Discover all printers on network
+      console.log('[Headless] Scanning network for printers...');
+      const discoveredPrinters = await this.discoveryService.scanNetwork();
+      console.log(`[Headless] Found ${discoveredPrinters.length} printer(s) on network`);
+
+      // Step 2: Match each saved printer against discovered printers by serial number
+      for (const savedPrinter of savedPrinters) {
+        try {
+          console.log(`[Headless] Attempting to connect to ${savedPrinter.Name} (${savedPrinter.SerialNumber})`);
+
+          // Find matching discovered printer by serial number
+          const discoveredMatch = discoveredPrinters.find(
+            (dp) => dp.serialNumber === savedPrinter.SerialNumber
+          );
+
+          let updatedPrinterDetails = savedPrinter;
+
+          // Step 3: Update IP address if discovered printer has different IP
+          if (discoveredMatch && discoveredMatch.ipAddress !== savedPrinter.IPAddress) {
+            console.log(
+              `[Headless] IP changed for ${savedPrinter.Name}: ${savedPrinter.IPAddress} → ${discoveredMatch.ipAddress}`
+            );
+            updatedPrinterDetails = {
+              ...savedPrinter,
+              IPAddress: discoveredMatch.ipAddress
+            };
+            // Save updated IP
+            await this.savedPrinterService.savePrinter(updatedPrinterDetails);
+          }
+
+          // Step 4: Connect using saved details (or updated IP)
+          const result = await this.connectWithSavedDetails(updatedPrinterDetails);
+
+          if (result.success && result.printerDetails) {
+            // Update last connected timestamp
+            await this.savedPrinterService.updateLastConnected(result.printerDetails.SerialNumber);
+
+            // Get the active context ID (connectWithSavedDetails switches to the new context)
+            const contextId = this.contextManager.getActiveContextId();
+            if (contextId) {
+              connectedContexts.push({
+                contextId,
+                printer: result.printerDetails
+              });
+              console.log(`[Headless] Successfully connected to ${result.printerDetails.Name}`);
+            } else {
+              console.error(`[Headless] Connection succeeded but no active context found for ${savedPrinter.Name}`);
+            }
+          } else {
+            console.error(`[Headless] Failed to connect to ${savedPrinter.Name}: ${result.error}`);
+          }
+        } catch (error) {
+          console.error(`[Headless] Error connecting to ${savedPrinter.Name}:`, error);
+        }
+      }
+
+      return connectedContexts;
+    } catch (error) {
+      console.error('[Headless] Discovery or connection failed:', error);
+      return connectedContexts;
+    }
+  }
+
+  /**
+   * Connect directly to printers using explicit IP, type, and check code
+   *
+   * For headless mode: Bypasses discovery, connects directly with provided specifications.
+   *
+   * @param printerSpecs Array of printer specifications (IP, type, check code)
+   * @returns Array of successfully connected contexts with their IDs
+   */
+  public async connectHeadlessDirect(
+    printerSpecs: Array<{ ip: string; type: import('../types/printer').PrinterClientType; checkCode?: string }>
+  ): Promise<{ contextId: string; ip: string }[]> {
+    const connectedContexts: { contextId: string; ip: string }[] = [];
+
+    for (const spec of printerSpecs) {
+      try {
+        console.log(`[Headless] Connecting directly to ${spec.ip} (${spec.type})`);
+
+        const flowId = this.startFlow();
+
+        // Create mock discovered printer
+        const mockDiscoveredPrinter: DiscoveredPrinter = {
+          name: `Printer at ${spec.ip}`,
+          ipAddress: spec.ip,
+          serialNumber: '', // Will be determined during connection
+          model: undefined
+        };
+
+        // Determine if this is a 5M family printer
+        const is5MFamily = spec.type === 'new';
+
+        // Create temporary connection to get printer info
+        const tempResult = await this.connectionService.createTemporaryConnection(mockDiscoveredPrinter);
+        if (!tempResult.success || !tempResult.typeName) {
+          console.error(`[Headless] Failed to connect to ${spec.ip}: ${tempResult.error}`);
+          this.endFlow(flowId);
+          continue;
+        }
+
+        // Extract printer information
+        const printerName =
+          tempResult.printerInfo?.Name && typeof tempResult.printerInfo.Name === 'string'
+            ? tempResult.printerInfo.Name
+            : `Printer at ${spec.ip}`;
+
+        const serialNumber =
+          tempResult.printerInfo?.SerialNumber && typeof tempResult.printerInfo.SerialNumber === 'string'
+            ? tempResult.printerInfo.SerialNumber
+            : `Unknown-${Date.now()}`;
+
+        const modelType = detectPrinterModelType(tempResult.typeName);
+
+        // Use provided check code or default
+        const checkCode = spec.checkCode || getDefaultCheckCode();
+
+        // Update discovered printer with real info
+        const updatedDiscoveredPrinter: DiscoveredPrinter = {
+          name: printerName,
+          ipAddress: spec.ip,
+          serialNumber: serialNumber,
+          model: tempResult.typeName
+        };
+
+        // Establish final connection
+        const ForceLegacyAPI = this.configManager.get('ForceLegacyAPI') || false;
+        const connectionResult = await this.connectionService.establishFinalConnection(
+          updatedDiscoveredPrinter,
+          tempResult.typeName,
+          is5MFamily,
+          checkCode,
+          ForceLegacyAPI
+        );
+
+        if (!connectionResult) {
+          console.error(`[Headless] Failed to establish connection to ${spec.ip}`);
+          this.endFlow(flowId);
+          continue;
+        }
+
+        // Save printer details
+        const printerDetails: PrinterDetails = {
+          Name: formatPrinterName(printerName, serialNumber),
+          IPAddress: spec.ip,
+          SerialNumber: serialNumber,
+          CheckCode: checkCode,
+          ClientType: spec.type,
+          printerModel: tempResult.typeName,
+          modelType
+        };
+
+        await this.savedPrinterService.savePrinter(printerDetails);
+        await this.savedPrinterService.updateLastConnected(serialNumber);
+
+        // Create printer context
+        const contextId = this.contextManager.createContext(printerDetails);
+        this.updateFlowContext(flowId, contextId);
+
+        // Update connection state
+        this.connectionStateManager.setConnected(
+          contextId,
+          printerDetails,
+          connectionResult.primaryClient,
+          connectionResult.secondaryClient
+        );
+
+        // Initialize backend
+        await this.backendManager.initializeBackend(contextId, {
+          printerDetails,
+          primaryClient: connectionResult.primaryClient,
+          secondaryClient: connectionResult.secondaryClient
+        });
+
+        connectedContexts.push({ contextId, ip: spec.ip });
+        console.log(`[Headless] Successfully connected to ${printerName} at ${spec.ip}`);
+
+        this.endFlow(flowId);
+      } catch (error) {
+        console.error(`[Headless] Error connecting to ${spec.ip}:`, error);
+      }
+    }
+
+    return connectedContexts;
+  }
+
   /** Dispose of resources */
   public async dispose(): Promise<void> {
     await this.disconnect();

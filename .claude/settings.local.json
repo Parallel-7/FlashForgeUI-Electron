@@ -57,7 +57,9 @@
       "Bash(curl:*)",
       "Bash(npx tsc:*)",
       "mcp__time__get_current_time",
-      "Read(//c/Users/Cope/AppData/Roaming/FlashForgeUI/**)"
+      "Read(//c/Users/Cope/AppData/Roaming/FlashForgeUI/**)",
+      "Bash(npm run clean:*)",
+      "Bash(npm start:*)"
     ],
     "deny": [],
     "additionalDirectories": [
