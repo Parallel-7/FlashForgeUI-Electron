@@ -59,7 +59,10 @@
       "mcp__time__get_current_time",
       "Read(//c/Users/Cope/AppData/Roaming/FlashForgeUI/**)",
       "Bash(npm run clean:*)",
-      "Bash(npm start:*)"
+      "Bash(npm start:*)",
+      "Bash(npm test:*)",
+      "Read(//c/Users/Cope/Documents/GitHub/slicer-meta/**)",
+      "Bash(node:*)"
     ],
     "deny": [],
     "additionalDirectories": [
