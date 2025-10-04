@@ -10,10 +10,11 @@ import type { getWindowManager } from '../../windows/WindowManager';
 import { getPrinterBackendManager } from '../../managers/PrinterBackendManager';
 import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager';
 import { getWebUIManager } from '../../webui/server/WebUIManager';
-import { cameraProxyService } from '../../services/CameraProxyService';
+import { getCameraProxyService } from '../../services/CameraProxyService';
 import { getModelDisplayName } from '../../utils/PrinterUtils';
 import { FiveMClient, FlashForgeClient } from 'ff-api';
 import { getLogService } from '../../services/LogService';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager';
 
 type WindowManager = ReturnType<typeof getWindowManager>;
 import type { AppConfig } from '../../types/config';
@@ -91,8 +92,11 @@ export function registerDialogHandlers(
       // Get printer information
       const connectionManager = getPrinterConnectionManager();
       const backendManager = getPrinterBackendManager();
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
       const isConnected = connectionManager.isConnected();
-      
+
       let printerInfo = {
         model: 'Not Connected',
         machineType: 'Unknown',
@@ -102,9 +106,9 @@ export function registerDialogHandlers(
         ipAddress: 'Not Connected',
         isConnected: false
       };
-      
-      if (isConnected && backendManager.isBackendReady()) {
-        const backend = backendManager.getBackend();
+
+      if (isConnected && contextId && backendManager.isBackendReady(contextId)) {
+        const backend = backendManager.getBackendForContext(contextId);
         if (backend) {
           const backendStatus = backend.getBackendStatus();
           const connectionState = connectionManager.getConnectionState();
@@ -164,6 +168,7 @@ export function registerDialogHandlers(
       const webUIStatus = webUIManager.getStatus();
       
       // Get camera proxy status
+      const cameraProxyService = getCameraProxyService();
       const cameraStatus = cameraProxyService.getStatus();
       
       // Get network interfaces for WebUI URL
@@ -316,18 +321,24 @@ export function registerDialogHandlers(
 
   ipcMain.handle('send-cmds:send-command', async (_, command: string) => {
     console.log('Sending command:', command);
-    
+
     try {
       // Get the backend manager instance
       const backendManager = getPrinterBackendManager();
-      
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+
       // Check if backend is ready
-      if (!backendManager.isBackendReady()) {
+      if (!backendManager.isBackendReady(contextId)) {
         return { success: false, error: 'Printer not connected' };
       }
-      
+
       // Execute the G-code command using the backend manager
-      const result = await backendManager.executeGCodeCommand(command);
+      const result = await backendManager.executeGCodeCommand(contextId, command);
       
       if (result.success) {
         return { 
@@ -360,13 +371,24 @@ export function registerDialogHandlers(
   ipcMain.handle('is-ad5x-printer', async (): Promise<boolean> => {
     try {
       const backendManager = getPrinterBackendManager();
-      if (!backendManager.isBackendReady()) {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
         return false;
       }
-      
-      const backend = backendManager.getBackend();
+
+      if (!backendManager.isBackendReady(contextId)) {
+        return false;
+      }
+
+      const backend = backendManager.getBackendForContext(contextId);
+      if (!backend) {
+        return false;
+      }
+
       // Check if the backend is an instance of AD5XBackend
-      return backend?.constructor.name === 'AD5XBackend';
+      return backend.constructor.name === 'AD5XBackend';
     } catch (error) {
       console.warn('Error checking AD5X printer status:', error);
       return false;
@@ -388,7 +410,22 @@ export function registerDialogHandlers(
 
   ipcMain.on('ifs-request-material-station', (event) => {
     const backendManager = getPrinterBackendManager();
-    const materialStationData = backendManager.getMaterialStationStatus();
+    const contextManager = getPrinterContextManager();
+    const contextId = contextManager.getActiveContextId();
+
+    if (!contextId) {
+      // Send empty/disconnected state
+      const emptyData = {
+        connected: false,
+        slots: [],
+        activeSlot: null,
+        errorMessage: 'No active printer context'
+      };
+      event.sender.send('ifs-dialog-update-material-station', emptyData);
+      return;
+    }
+
+    const materialStationData = backendManager.getMaterialStationStatus(contextId);
     
     if (materialStationData) {
       // Transform backend data to dialog format

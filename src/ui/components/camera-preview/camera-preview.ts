@@ -88,15 +88,45 @@ export class CameraPreviewComponent extends BaseComponent {
 
   /**
    * Set up event listeners for the integrated component
-   * Includes camera preview toggle button
+   * Includes camera preview toggle button and context switching
    */
   protected async setupEventListeners(): Promise<void> {
     const previewButton = this.findElementById<HTMLButtonElement>('btn-preview');
-    
+
     if (previewButton) {
       this.addEventListener(previewButton, 'click', this.handleCameraPreviewToggle.bind(this));
     } else {
       console.warn('Camera Preview: Preview button not found during setup');
+    }
+
+    // Listen for context switches to reload camera for new printer
+    window.api.receive('printer-context-switched', (...args: unknown[]) => {
+      const event = args[0] as { contextId: string };
+      void this.handleContextSwitch(event.contextId);
+    });
+  }
+
+  /**
+   * Handle context switch - reload camera stream for new printer
+   */
+  private async handleContextSwitch(contextId: string): Promise<void> {
+    console.log(`[CameraPreview] Context switched to ${contextId}`);
+
+    const button = this.findElementById<HTMLButtonElement>('btn-preview');
+    const cameraView = this.findElement('.camera-view');
+    if (!button || !cameraView) return;
+
+    // If preview is enabled, reload it for the new context
+    if (this.previewEnabled) {
+      // Disable current preview
+      await this.disableCameraPreview(button, cameraView);
+
+      // Re-enable for new context
+      await this.enableCameraPreview(button, cameraView);
+    } else {
+      // If preview is disabled, clear any stale image and show "Preview Disabled" state
+      this.cleanupCameraStream();
+      cameraView.innerHTML = '<div class="no-camera">Preview Disabled</div>';
     }
   }
 
@@ -187,8 +217,12 @@ export class CameraPreviewComponent extends BaseComponent {
   private async enableCameraPreview(button: HTMLElement, cameraView: HTMLElement): Promise<void> {
     this.updateComponentState('loading');
 
+    console.log('[CameraPreview] Enabling camera preview...');
+
     // Check camera availability
+    console.log('[CameraPreview] Calling window.api.camera.getConfig()...');
     const cameraConfigRaw = await window.api.camera.getConfig();
+    console.log('[CameraPreview] Got camera config:', cameraConfigRaw);
     const cameraConfig = cameraConfigRaw as ResolvedCameraConfig | null;
 
     if (!cameraConfig) {
@@ -210,8 +244,11 @@ export class CameraPreviewComponent extends BaseComponent {
     }
 
     // Camera is available - get proxy URL and show stream
+    console.log('[CameraPreview] Calling window.api.camera.getProxyUrl()...');
     const proxyUrl = await window.api.camera.getProxyUrl();
+    console.log('[CameraPreview] Got proxy URL:', proxyUrl);
     const streamUrl = `${proxyUrl}`; // The proxy URL already includes /camera
+    console.log('[CameraPreview] Final stream URL:', streamUrl);
 
     console.log(`Enabling camera preview from: ${cameraConfig.sourceType} camera`);
 

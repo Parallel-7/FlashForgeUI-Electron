@@ -19,6 +19,8 @@ interface ElectronAPI {
   onPlatformInfo: (callback: (platform: string) => void) => void;
   loading: LoadingAPI;
   camera: CameraAPI;
+  printerContexts: PrinterContextsAPI;
+  connectionState: ConnectionStateAPI;
 }
 
 // Camera API interface
@@ -29,6 +31,22 @@ interface CameraAPI {
   getConfig: () => Promise<unknown>;
   getProxyUrl: () => Promise<string>;
   restoreStream: () => Promise<boolean>;
+  getStreamUrl: (contextId?: string) => Promise<string | null>;
+}
+
+// Printer Context API interface
+interface PrinterContextsAPI {
+  getAll: () => Promise<unknown>;
+  getActive: () => Promise<unknown>;
+  switch: (contextId: string) => Promise<void>;
+  remove: (contextId: string) => Promise<void>;
+  create: (printerDetails: unknown) => Promise<string>;
+}
+
+// Connection State API interface
+interface ConnectionStateAPI {
+  isConnected: (contextId?: string) => Promise<boolean>;
+  getState: (contextId?: string) => Promise<unknown>;
 }
 
 // Input dialog options interface
@@ -121,7 +139,7 @@ const validSendChannels = [
 const validReceiveChannels = [
   'printer-data',
   'backend-initialized',
-  'backend-initialization-failed', 
+  'backend-initialization-failed',
   'backend-disposed',
   'printer-connected',
   'printer-disconnected',
@@ -141,7 +159,11 @@ const validReceiveChannels = [
   'loading-message-updated',
   'loading-cancelled',
   'polling-update',
-  'platform-info'
+  'platform-info',
+  'printer-context-created',
+  'printer-context-switched',
+  'printer-context-removed',
+  'printer-context-updated'
 ];
 
 // Expose camera URL for renderer
@@ -241,7 +263,15 @@ contextBridge.exposeInMainWorld('api', {
       'webui:start',
       'webui:stop',
       'webui:get-status',
-      'webui:broadcast-status'
+      'webui:broadcast-status',
+      'printer-contexts:get-all',
+      'printer-contexts:get-active',
+      'printer-contexts:switch',
+      'printer-contexts:remove',
+      'printer-contexts:create',
+      'connection-state:is-connected',
+      'connection-state:get-state',
+      'camera:get-stream-url'
     ];
     
     if (validInvokeChannels.includes(channel)) {
@@ -323,27 +353,66 @@ contextBridge.exposeInMainWorld('api', {
       const result: unknown = await ipcRenderer.invoke('camera:get-proxy-port');
       return typeof result === 'number' ? result : 8181;
     },
-    
+
     getStatus: async (): Promise<unknown> => {
       return await ipcRenderer.invoke('camera:get-status');
     },
-    
+
     setEnabled: async (enabled: boolean): Promise<void> => {
       await ipcRenderer.invoke('camera:set-enabled', enabled);
     },
-    
+
     getConfig: async (): Promise<unknown> => {
       return await ipcRenderer.invoke('camera:get-config');
     },
-    
+
     getProxyUrl: async (): Promise<string> => {
       const result: unknown = await ipcRenderer.invoke('camera:get-proxy-url');
       return typeof result === 'string' ? result : 'http://localhost:8181/camera';
     },
-    
+
     restoreStream: async (): Promise<boolean> => {
       const result: unknown = await ipcRenderer.invoke('camera:restore-stream');
       return typeof result === 'boolean' ? result : false;
+    },
+
+    getStreamUrl: async (contextId?: string): Promise<string | null> => {
+      const result: unknown = await ipcRenderer.invoke('camera:get-stream-url', contextId);
+      return typeof result === 'string' ? result : null;
+    }
+  },
+
+  printerContexts: {
+    getAll: async (): Promise<unknown> => {
+      return await ipcRenderer.invoke('printer-contexts:get-all');
+    },
+
+    getActive: async (): Promise<unknown> => {
+      return await ipcRenderer.invoke('printer-contexts:get-active');
+    },
+
+    switch: async (contextId: string): Promise<void> => {
+      await ipcRenderer.invoke('printer-contexts:switch', contextId);
+    },
+
+    remove: async (contextId: string): Promise<void> => {
+      await ipcRenderer.invoke('printer-contexts:remove', contextId);
+    },
+
+    create: async (printerDetails: unknown): Promise<string> => {
+      const result: unknown = await ipcRenderer.invoke('printer-contexts:create', printerDetails);
+      return typeof result === 'string' ? result : '';
+    }
+  },
+
+  connectionState: {
+    isConnected: async (contextId?: string): Promise<boolean> => {
+      const result: unknown = await ipcRenderer.invoke('connection-state:is-connected', contextId);
+      return typeof result === 'boolean' ? result : false;
+    },
+
+    getState: async (contextId?: string): Promise<unknown> => {
+      return await ipcRenderer.invoke('connection-state:get-state', contextId);
     }
   }
 } as ElectronAPI);

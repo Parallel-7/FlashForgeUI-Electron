@@ -21,12 +21,15 @@ import { app, BrowserWindow, dialog, powerSaveBlocker, ipcMain } from 'electron'
 import { getConfigManager } from './managers/ConfigManager';
 import { getPrinterConnectionManager } from './managers/ConnectionFlowManager';
 import { getPrinterBackendManager } from './managers/PrinterBackendManager';
+import { getPrinterContextManager } from './managers/PrinterContextManager';
 import { getWindowManager } from './windows/WindowManager';
 import { setupWindowControlHandlers } from './ipc/WindowControlHandlers';
 import { setupDialogHandlers } from './ipc/DialogHandlers';
 import { registerAllIpcHandlers } from './ipc/handlers';
-import { getMainProcessPollingCoordinator } from './services/MainProcessPollingCoordinator';
-import { cameraProxyService } from './services/CameraProxyService';
+import { setupPrinterContextHandlers, setupConnectionStateHandlers, setupCameraContextHandlers } from './ipc/printer-context-handlers';
+// import { getMainProcessPollingCoordinator } from './services/MainProcessPollingCoordinator';
+import { getMultiContextPollingCoordinator } from './services/MultiContextPollingCoordinator';
+import { getCameraProxyService } from './services/CameraProxyService';
 import { cameraIPCHandler } from './ipc/camera-ipc-handler';
 import { getWebUIManager } from './webui/server/WebUIManager';
 import { getEnvironmentDetectionService } from './services/EnvironmentDetectionService';
@@ -80,28 +83,13 @@ let powerSaveBlockerId: number | null = null;
 
 /**
  * Initialize the camera proxy service
+ * In multi-context architecture, camera proxies are created on-demand per context
+ * This function is now a no-op but kept for backward compatibility
  */
 const initializeCameraService = async (): Promise<void> => {
-  try {
-    const configManager = getConfigManager();
-    const cameraProxyPort = configManager.get('CameraProxyPort') || 8181;
-    
-    await cameraProxyService.initialize({
-      port: cameraProxyPort,
-      fallbackPort: cameraProxyPort + 1,
-      autoStart: true,
-      reconnection: {
-        enabled: true,
-        maxRetries: 5,
-        retryDelay: 2000,
-        exponentialBackoff: true
-      }
-    });
-    
-    console.log('Camera proxy service initialized');
-  } catch (error) {
-    console.error('Failed to initialize camera proxy service:', error);
-  }
+  // Camera proxies are now created automatically when printer contexts are established
+  // Each context gets its own camera proxy on a unique port (8181-8191 range)
+  console.log('Camera proxy service ready (multi-context mode)');
 };
 
 /**
@@ -359,30 +347,112 @@ const createMainWindow = async (): Promise<void> => {
 /**
  * Setup connection state event forwarding
  */
+/**
+ * Set up printer context event forwarding to renderer process
+ */
+const setupPrinterContextEventForwarding = (): void => {
+  const contextManager = getPrinterContextManager();
+  const windowManager = getWindowManager();
+  const multiContextPollingCoordinator = getMultiContextPollingCoordinator();
+  const backendManager = getPrinterBackendManager();
+
+  // Forward context-created events to renderer
+  contextManager.on('context-created', (event: unknown) => {
+    const contextEvent = event as import('./types/PrinterContext').ContextCreatedEvent;
+
+    console.log('[Context Event] Received context-created:', JSON.stringify(contextEvent, null, 2));
+
+    // Forward to renderer
+    const mainWindow = windowManager.getMainWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('printer-context-created', contextEvent);
+      console.log(`[Context Event] Forwarded context-created event: ${contextEvent.contextId}`);
+    }
+
+    // NOTE: Polling and camera setup happen in backend-initialized event
+    // because they require the backend to be ready
+  });
+
+  // Start polling and camera when backend is initialized for a context
+  backendManager.on('backend-initialized', (event: unknown) => {
+    const backendEvent = event as { contextId: string; modelType: string };
+
+    console.log(`[MultiContext] Backend initialized for context ${backendEvent.contextId}`);
+
+    // Start polling for this context
+    try {
+      multiContextPollingCoordinator.startPollingForContext(backendEvent.contextId);
+      console.log(`[MultiContext] Started polling for context ${backendEvent.contextId}`);
+    } catch (error) {
+      console.error(`[MultiContext] Failed to start polling for context ${backendEvent.contextId}:`, error);
+    }
+
+    // Setup camera for this context
+    void cameraIPCHandler.handlePrinterConnected(backendEvent.contextId);
+  });
+
+  // Forward polling data from active context to renderer
+  multiContextPollingCoordinator.on('polling-data', (contextId: string, data: unknown) => {
+    // Only forward polling data from the active context to avoid flooding the renderer
+    const activeContextId = contextManager.getActiveContextId();
+    if (contextId === activeContextId) {
+      const mainWindow = windowManager.getMainWindow();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('polling-update', data);
+      }
+    }
+  });
+
+  // Forward context-switched events
+  contextManager.on('context-switched', (event: unknown) => {
+    const mainWindow = windowManager.getMainWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('printer-context-switched', event);
+      const contextEvent = event as { contextId: string };
+      console.log(`Forwarded context-switched event: ${contextEvent.contextId}`);
+    }
+  });
+
+  // Forward context-removed events
+  contextManager.on('context-removed', (event: unknown) => {
+    const mainWindow = windowManager.getMainWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('printer-context-removed', event);
+      const contextEvent = event as { contextId: string };
+      console.log(`Forwarded context-removed event: ${contextEvent.contextId}`);
+    }
+  });
+
+  console.log('Printer context event forwarding set up');
+};
+
 const setupConnectionEventForwarding = (): void => {
   const connectionManager = getPrinterConnectionManager();
   const windowManager = getWindowManager();
   const backendManager = getPrinterBackendManager();
-  const pollingCoordinator = getMainProcessPollingCoordinator();
+  const multiContextPollingCoordinator = getMultiContextPollingCoordinator();
   const webUIManager = getWebUIManager();
-  
+
   // Set global reference for camera IPC handler
   global.printerBackendManager = backendManager;
   
   // Stop polling BEFORE disconnect to prevent commands during logout
+  // NOTE: In multi-context mode, polling is managed per-context by MultiContextPollingCoordinator
+  // which automatically stops polling when contexts are removed
   connectionManager.on('pre-disconnect', () => {
-    console.log('Pre-disconnect event - stopping polling service');
-    pollingCoordinator.stopPolling();
-    
+    console.log('Pre-disconnect event received');
+    // Polling cleanup is handled by context-removed events in MultiContextPollingCoordinator
+
     // Also handle camera disconnection
-    cameraIPCHandler.handlePrinterDisconnected();
+    void cameraIPCHandler.handlePrinterDisconnected();
   });
   
-  // Backend initialization starts polling
+  // Backend initialization notification
+  // NOTE: In multi-context mode, polling and camera setup happen in context-created events
   connectionManager.on('backend-initialized', (data: unknown) => {
     // Send only serializable data, not the backend instance
     const eventData = data as { printerDetails?: { Name?: string; IPAddress?: string }; modelType?: string };
-    
+
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('backend-initialized', {
@@ -391,15 +461,11 @@ const setupConnectionEventForwarding = (): void => {
         modelType: eventData.modelType || 'unknown',
         timestamp: new Date().toISOString()
       });
-      
-      // Set up camera for the connected printer
-      void cameraIPCHandler.handlePrinterConnected(eventData.printerDetails?.IPAddress);
     }
-    
-    // Start polling after backend is ready
-    console.log('Backend initialized, starting main process polling');
-    pollingCoordinator.startPolling();
-    
+
+    // Polling and camera setup happen automatically when context is created
+    console.log('Backend initialized - polling and camera will start when context is created');
+
     // Start WebUI server now that printer is connected
     void webUIManager.startForPrinter(eventData.printerDetails?.Name || 'Unknown');
   });
@@ -418,13 +484,13 @@ const setupConnectionEventForwarding = (): void => {
   });
   
   connectionManager.on('backend-disposed', () => {
-    // Stop polling when backend is disposed
-    console.log('Backend disposed, stopping polling');
-    pollingCoordinator.stopPolling();
-    
+    // In multi-context mode, polling is stopped automatically when contexts are removed
+    console.log('Backend disposed');
+    // Polling cleanup is handled by context-removed events in MultiContextPollingCoordinator
+
     // Stop WebUI server when printer disconnects
     void webUIManager.stopForPrinter();
-    
+
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('backend-disposed', {
@@ -507,7 +573,13 @@ const initializeApp = async (): Promise<void> => {
   };
   registerAllIpcHandlers(managers);
   console.log('All IPC handlers registered');
-  
+
+  // Setup printer context IPC handlers
+  setupPrinterContextHandlers();
+  setupConnectionStateHandlers();
+  setupCameraContextHandlers();
+  console.log('Printer context IPC handlers registered');
+
   // Setup legacy dialog handlers (printer selection enhancement, loading overlay)
   setupDialogHandlers();
   
@@ -520,7 +592,8 @@ const initializeApp = async (): Promise<void> => {
   
   // Setup event forwarding
   setupConnectionEventForwarding();
-  
+  setupPrinterContextEventForwarding();
+
   // Initialize camera service
   await initializeCameraService();
   
@@ -566,9 +639,9 @@ app.on('before-quit', async () => {
       console.log('Power save blocker stopped');
     }
     
-    // Stop polling first
-    const pollingCoordinator = getMainProcessPollingCoordinator();
-    pollingCoordinator.stopPolling();
+    // Stop polling first (multi-context mode)
+    const multiContextPollingCoordinator = getMultiContextPollingCoordinator();
+    multiContextPollingCoordinator.stopAllPolling();
     
     // Dispose notification system
     disposeNotificationSystem();
@@ -580,6 +653,7 @@ app.on('before-quit', async () => {
     console.log('Printer disconnected and logged out during app close');
     
     // Shutdown camera proxy service
+    const cameraProxyService = getCameraProxyService();
     await cameraProxyService.shutdown();
     console.log('Camera proxy service shut down');
     

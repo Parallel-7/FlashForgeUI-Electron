@@ -34,3 +34,6 @@ export { PrinterStatusComponent } from './printer-status';
 export { TemperatureControlsComponent } from './temperature-controls';
 export { FiltrationControlsComponent } from './filtration-controls';
 export { AdditionalInfoComponent } from './additional-info';
+
+// Multi-Printer Support Components
+export { PrinterTabsComponent } from './printer-tabs';

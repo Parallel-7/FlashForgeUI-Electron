@@ -14,6 +14,7 @@
 import { EventEmitter } from 'events';
 import type { PrinterBackendManager } from '../managers/PrinterBackendManager';
 import type { PrinterModelType } from '../types/printer-backend';
+import { getPrinterContextManager } from '../managers/PrinterContextManager';
 
 /**
  * Request item in the queue
@@ -288,14 +289,22 @@ export class ThumbnailRequestQueue extends EventEmitter {
     
     try {
       console.log(`[ThumbnailQueue] Processing ${item.fileName}`);
-      
+
+      // Get active context ID
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        throw new Error('No active printer context');
+      }
+
       // Check if backend is ready
-      if (!this.backendManager || !this.backendManager.isBackendReady()) {
+      if (!this.backendManager || !this.backendManager.isBackendReady(contextId)) {
         throw new Error('Backend not ready');
       }
-      
+
       // Request thumbnail from backend
-      const thumbnail = await this.backendManager.getJobThumbnail(item.fileName);
+      const thumbnail = await this.backendManager.getJobThumbnail(contextId, item.fileName);
       
       if (thumbnail) {
         const result: ThumbnailResult = {
@@ -367,15 +376,23 @@ export class ThumbnailRequestQueue extends EventEmitter {
     if (!this.backendManager) {
       return { modelType: 'generic-legacy', maxConcurrent: 1, requestDelay: 100 };
     }
-    
-    const backend = this.backendManager.getBackend();
+
+    // Get active context ID
+    const contextManager = getPrinterContextManager();
+    const contextId = contextManager.getActiveContextId();
+
+    if (!contextId) {
+      return { modelType: 'generic-legacy', maxConcurrent: 1, requestDelay: 100 };
+    }
+
+    const backend = this.backendManager.getBackendForContext(contextId);
     if (!backend) {
       return { modelType: 'generic-legacy', maxConcurrent: 1, requestDelay: 100 };
     }
-    
+
     const modelType = backend.getBackendStatus().capabilities.modelType;
     const config = this.backendConcurrency.find(c => c.modelType === modelType);
-    
+
     return config || { modelType: 'generic-legacy', maxConcurrent: 1, requestDelay: 100 };
   }
   

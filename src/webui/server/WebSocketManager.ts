@@ -10,6 +10,7 @@ import { EventEmitter } from 'events';
 import { getAuthManager } from './AuthManager';
 import { getWebUIManager } from './WebUIManager';
 import { getPrinterBackendManager } from '../../managers/PrinterBackendManager';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager';
 import { AppError, toAppError, ErrorCode } from '../../utils/error.utils';
 import { 
   WebSocketCommandSchema,
@@ -275,8 +276,16 @@ export class WebSocketManager extends EventEmitter {
           if (!command.gcode) {
             throw new AppError('G-code command required', ErrorCode.VALIDATION);
           }
-          const result = await this.backendManager.executeGCodeCommand(command.gcode);
-          
+
+          const contextManager = getPrinterContextManager();
+          const contextId = contextManager.getActiveContextId();
+
+          if (!contextId) {
+            throw new AppError('No active printer context', ErrorCode.PRINTER_NOT_CONNECTED);
+          }
+
+          const result = await this.backendManager.executeGCodeCommand(contextId, command.gcode);
+
           const response: WebSocketMessage = {
             type: 'COMMAND_RESULT',
             timestamp: new Date().toISOString(),

@@ -1,37 +1,44 @@
 // src/managers/PrinterDetailsManager.ts
 // TypeScript implementation of multi-printer details persistence manager
 // Handles saving/loading multiple printer connection details to/from printer_details.json
+// Now supports per-context last-used tracking for multi-printer contexts
 
 import * as fs from 'fs';
 import * as path from 'path';
 import { app } from 'electron';
-import { 
-  PrinterDetails, 
-  StoredPrinterDetails, 
+import {
+  PrinterDetails,
+  StoredPrinterDetails,
   MultiPrinterConfig,
-  ValidatedPrinterDetails 
+  ValidatedPrinterDetails
 } from '../types/printer';
 import { detectPrinterModelType } from '../utils/PrinterUtils';
+import { getPrinterContextManager } from './PrinterContextManager';
 
 /**
  * Manager for multi-printer details persistence
  * Handles printer_details.json file operations with multi-printer support
+ * Supports per-context last-used tracking
  */
 export class PrinterDetailsManager {
   private readonly filePath: string;
   private currentConfig: MultiPrinterConfig;
+  private readonly contextManager = getPrinterContextManager();
+
+  // Per-context last-used tracking (not persisted, runtime only)
+  private readonly contextLastUsed = new Map<string, string>(); // contextId -> serialNumber
 
   constructor() {
     // Store printer details in userData directory
     const userDataPath = app.getPath('userData');
     this.filePath = path.join(userDataPath, 'printer_details.json');
-    
+
     // Initialize with empty config
     this.currentConfig = {
       lastUsedPrinterSerial: null,
       printers: {}
     };
-    
+
     this.loadPrinterConfig();
   }
 
@@ -294,9 +301,22 @@ export class PrinterDetailsManager {
   }
 
   /**
-   * Get the last used printer
+   * Get the last used printer (context-aware)
+   *
+   * @param contextId - Optional context ID for context-specific tracking
+   * @returns Last used printer details or null
    */
-  public getLastUsedPrinter(): StoredPrinterDetails | null {
+  public getLastUsedPrinter(contextId?: string): StoredPrinterDetails | null {
+    // If contextId provided, use context-specific tracking
+    if (contextId) {
+      const serialNumber = this.contextLastUsed.get(contextId);
+      if (serialNumber) {
+        return this.getSavedPrinter(serialNumber);
+      }
+      return null;
+    }
+
+    // Otherwise use global last used (for backward compatibility)
     if (!this.currentConfig.lastUsedPrinterSerial) {
       return null;
     }
@@ -305,14 +325,18 @@ export class PrinterDetailsManager {
 
   /**
    * Save a printer (add new or update existing)
+   * Context-aware version
+   *
+   * @param details - Printer details to save
+   * @param contextId - Optional context ID for context-specific last-used tracking
    */
-  public async savePrinter(details: PrinterDetails): Promise<void> {
+  public async savePrinter(details: PrinterDetails, contextId?: string): Promise<void> {
     if (!this.validatePrinterDetails(details)) {
       throw new Error('Invalid printer details provided');
     }
 
     const storedDetails = this.toStoredPrinterDetails(details);
-    
+
     this.currentConfig = {
       ...this.currentConfig,
       printers: {
@@ -322,8 +346,15 @@ export class PrinterDetailsManager {
       lastUsedPrinterSerial: details.SerialNumber
     };
 
+    // If contextId provided, track context-specific last used
+    if (contextId) {
+      this.contextLastUsed.set(contextId, details.SerialNumber);
+      console.log(`Saved printer for context ${contextId}: ${details.Name} (${details.SerialNumber})`);
+    } else {
+      console.log(`Saved printer: ${details.Name} (${details.SerialNumber})`);
+    }
+
     await this.saveConfigToFile();
-    console.log(`Saved printer: ${details.Name} (${details.SerialNumber})`);
   }
 
   /**
@@ -395,11 +426,24 @@ export class PrinterDetailsManager {
     } catch (error) {
       console.error('Error clearing printer details file:', error);
     }
-    
+
     this.currentConfig = {
       lastUsedPrinterSerial: null,
       printers: {}
     };
+
+    // Clear context-specific tracking
+    this.contextLastUsed.clear();
+  }
+
+  /**
+   * Clear context-specific last-used tracking
+   *
+   * @param contextId - Context ID to clear tracking for
+   */
+  public clearContextTracking(contextId: string): void {
+    this.contextLastUsed.delete(contextId);
+    console.log(`Cleared context tracking for ${contextId}`);
   }
 
   // =============================================================================

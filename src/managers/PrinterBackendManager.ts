@@ -11,6 +11,7 @@ import { Adventurer5MProBackend } from '../printer-backends/Adventurer5MProBacke
 import { AD5XBackend } from '../printer-backends/AD5XBackend';
 import { getConfigManager } from './ConfigManager';
 import { getLoadingManager } from './LoadingManager';
+import { getPrinterContextManager } from './PrinterContextManager';
 import { PrinterDetails } from '../types/printer';
 import {
   PrinterModelType,
@@ -28,8 +29,8 @@ import {
   BackendStatus,
   BackendCapabilities
 } from '../types/printer-backend';
-import { 
-  detectPrinterModelType, 
+import {
+  detectPrinterModelType,
   getModelDisplayName
 } from '../utils/PrinterUtils';
 
@@ -65,14 +66,16 @@ interface BackendInitializationResult {
  */
 export class PrinterBackendManager extends EventEmitter {
   private static instance: PrinterBackendManagerInstance | null = null;
-  
+
   private readonly configManager = getConfigManager();
   private readonly loadingManager = getLoadingManager();
-  
-  private currentBackend: BasePrinterBackend | null = null;
-  private currentPrinterDetails: PrinterDetails | null = null;
-  private initializationPromise: Promise<BackendInitializationResult> | null = null;
-  
+  private readonly contextManager = getPrinterContextManager();
+
+  // Multi-context backend storage
+  private readonly contextBackends = new Map<string, BasePrinterBackend>();
+  private readonly contextPrinterDetails = new Map<string, PrinterDetails>();
+  private readonly contextInitPromises = new Map<string, Promise<BackendInitializationResult>>();
+
   private constructor() {
     super();
     this.setupEventHandlers();
@@ -94,68 +97,86 @@ export class PrinterBackendManager extends EventEmitter {
   private setupEventHandlers(): void {
     // Monitor configuration changes that affect backend features
     this.configManager.on('configUpdated', (event: { changedKeys: string[] }) => {
-      if (this.currentBackend) {
-        this.handleConfigurationChange(event.changedKeys);
-      }
+      this.handleConfigurationChange(event.changedKeys);
     });
-    
+
     // Monitor loading manager for UI coordination
     this.loadingManager.on('loadingStateChanged', (state: string) => {
       this.emit('loading-state-changed', state);
     });
   }
-  
+
   /**
    * Handle configuration changes that affect backend features
    */
   private handleConfigurationChange(changedKeys: string[]): void {
     const featureKeys = ['CustomCamera', 'CustomCameraUrl', 'CustomLeds', 'ForceLegacyAPI'];
     const hasFeatureChanges = changedKeys.some(key => featureKeys.includes(key));
-    
-    if (hasFeatureChanges && this.currentBackend) {
-      console.log('Configuration changes detected, backend features may be affected');
-      this.emit('backend-features-changed', {
-        backend: this.currentBackend,
-        changedKeys
-      });
+
+    if (hasFeatureChanges) {
+      const activeContextId = this.contextManager.getActiveContextId();
+      if (activeContextId) {
+        const backend = this.contextBackends.get(activeContextId);
+        if (backend) {
+          console.log('Configuration changes detected, backend features may be affected');
+          this.emit('backend-features-changed', {
+            backend,
+            contextId: activeContextId,
+            changedKeys
+          });
+        }
+      }
     }
   }
   
   /**
    * Initialize backend based on printer details
+   * Now context-aware - requires contextId
+   *
+   * @param contextId - Context ID for this backend
+   * @param options - Backend initialization options
+   * @returns Promise resolving to initialization result
    */
-  public async initializeBackend(options: BackendInitializationOptions): Promise<BackendInitializationResult> {
-    // Prevent multiple simultaneous initialization attempts
-    if (this.initializationPromise) {
-      console.log('Backend initialization already in progress, waiting for completion');
-      return await this.initializationPromise;
+  public async initializeBackend(
+    contextId: string,
+    options: BackendInitializationOptions
+  ): Promise<BackendInitializationResult> {
+    // Prevent multiple simultaneous initialization attempts for same context
+    if (this.contextInitPromises.has(contextId)) {
+      console.log(`Backend initialization already in progress for context ${contextId}, waiting for completion`);
+      return await this.contextInitPromises.get(contextId)!;
     }
-    
-    this.initializationPromise = this.performBackendInitialization(options);
-    
+
+    const initPromise = this.performBackendInitialization(contextId, options);
+    this.contextInitPromises.set(contextId, initPromise);
+
     try {
-      const result = await this.initializationPromise;
+      const result = await initPromise;
       return result;
     } finally {
-      this.initializationPromise = null;
+      this.contextInitPromises.delete(contextId);
     }
   }
   
   /**
    * Perform the actual backend initialization
+   * Context-aware implementation
    */
-  private async performBackendInitialization(options: BackendInitializationOptions): Promise<BackendInitializationResult> {
+  private async performBackendInitialization(
+    contextId: string,
+    options: BackendInitializationOptions
+  ): Promise<BackendInitializationResult> {
     try {
       // RACE CONDITION FIX: Check if we had an old backend before disposal
-      const hadOldBackend = this.currentBackend !== null;
-      
-      // Dispose of existing backend if any
-      await this.disposeBackend();
-      
-      // Add delay to ensure old client cleanup completes
-      // This prevents the old client's keepalive from interfering with new connection
+      const hadOldBackend = this.contextBackends.has(contextId);
+
+      // Dispose of existing backend for this context if any
       if (hadOldBackend) {
-        console.log('PrinterBackendManager: Waiting for old backend cleanup to complete...');
+        await this.disposeContext(contextId);
+
+        // Add delay to ensure old client cleanup completes
+        // This prevents the old client's keepalive from interfering with new connection
+        console.log(`PrinterBackendManager: Waiting for old backend cleanup to complete for context ${contextId}...`);
         await new Promise(resolve => setTimeout(resolve, 500)); // 500ms delay
       }
       
@@ -178,28 +199,32 @@ export class PrinterBackendManager extends EventEmitter {
       
       // Create backend instance
       const backend = this.createBackend(modelType, options);
-      
+
       // Initialize the backend
       await backend.initialize();
-      
-      // Store references
-      this.currentBackend = backend;
-      this.currentPrinterDetails = options.printerDetails;
-      
+
+      // Store references in context map
+      this.contextBackends.set(contextId, backend);
+      this.contextPrinterDetails.set(contextId, options.printerDetails);
+
+      // Update context manager with backend reference
+      this.contextManager.updateBackend(contextId, backend);
+
       // Setup backend event forwarding
-      this.setupBackendEventForwarding(backend);
+      this.setupBackendEventForwarding(backend, contextId);
       
       // Success!
       this.loadingManager.showSuccess(`Backend initialized for ${getModelDisplayName(modelType)}`, 3000);
       
       this.emit('backend-initialized', {
+        contextId,
         backend,
         modelType,
         printerDetails: options.printerDetails
       });
-      
-      console.log(`PrinterBackendManager: Successfully initialized ${getModelDisplayName(modelType)} backend`);
-      
+
+      console.log(`PrinterBackendManager: Successfully initialized ${getModelDisplayName(modelType)} backend for context ${contextId}`);
+
       return {
         success: true,
         backend,
@@ -267,97 +292,124 @@ export class PrinterBackendManager extends EventEmitter {
   
   /**
    * Setup event forwarding from backend to manager
+   * Now includes contextId for multi-context support
    */
-  private setupBackendEventForwarding(backend: BasePrinterBackend): void {
-    // Forward all backend events
+  private setupBackendEventForwarding(backend: BasePrinterBackend, contextId: string): void {
+    // Forward all backend events with context ID
     backend.on('backend-event', (event) => {
-      this.emit('backend-event', event);
+      this.emit('backend-event', { ...event, contextId });
     });
-    
-    // Forward specific events
+
+    // Forward specific events with context ID
     backend.on('feature-updated', (data) => {
-      this.emit('feature-updated', data);
+      this.emit('feature-updated', { ...data, contextId });
     });
-    
+
     backend.on('error', (event) => {
-      this.emit('backend-error', event);
+      this.emit('backend-error', { ...event, contextId });
     });
-    
+
     backend.on('disconnected', () => {
-      this.emit('backend-disconnected');
+      this.emit('backend-disconnected', { contextId });
     });
   }
   
   /**
-   * Dispose of current backend
+   * Dispose of backend for a specific context
+   *
+   * @param contextId - Context ID to dispose
    */
-  public async disposeBackend(): Promise<void> {
-    if (this.currentBackend) {
+  public async disposeContext(contextId: string): Promise<void> {
+    const backend = this.contextBackends.get(contextId);
+    if (backend) {
       try {
-        console.log('Disposing current backend...');
-        
-        // Enhanced cleanup coordination - capture references before clearing
-        const backendToDispose = this.currentBackend;
-        const printerName = this.currentPrinterDetails?.Name || 'unknown printer';
-        
-        this.currentBackend = null;
-        this.currentPrinterDetails = null;
-        
+        const printerDetails = this.contextPrinterDetails.get(contextId);
+        const printerName = printerDetails?.Name || 'unknown printer';
+
+        console.log(`Disposing backend for context ${contextId} (${printerName})...`);
+
+        // Remove from maps first
+        this.contextBackends.delete(contextId);
+        this.contextPrinterDetails.delete(contextId);
+
+        // Update context manager
+        this.contextManager.updateBackend(contextId, null);
+
         // Dispose the backend (this calls client.dispose())
-        await backendToDispose.dispose();
-        
+        await backend.dispose();
+
         // Additional cleanup delay to ensure ff-api client internal timers stop
         await new Promise(resolve => setTimeout(resolve, 100));
-        
-        console.log('Backend disposed for', printerName);
-        this.emit('backend-disposed');
-        
+
+        console.log(`Backend disposed for context ${contextId} (${printerName})`);
+        this.emit('backend-disposed', { contextId });
+
       } catch (error) {
-        console.error('Error disposing backend:', error);
+        console.error(`Error disposing backend for context ${contextId}:`, error);
         // Clear references even if disposal fails
-        this.currentBackend = null;
-        this.currentPrinterDetails = null;
+        this.contextBackends.delete(contextId);
+        this.contextPrinterDetails.delete(contextId);
       }
     }
   }
+
   
   /**
-   * Get current backend instance
+   * Get backend instance for a specific context
+   *
+   * @param contextId - Context ID (required)
+   * @returns Backend instance or null
    */
-  public getBackend(): BasePrinterBackend | null {
-    return this.currentBackend;
+  public getBackendForContext(contextId: string): BasePrinterBackend | null {
+    return this.contextBackends.get(contextId) || null;
+  }
+
+  /**
+   * Get printer details for a specific context
+   *
+   * @param contextId - Context ID (required)
+   * @returns Printer details or null
+   */
+  public getPrinterDetailsForContext(contextId: string): PrinterDetails | null {
+    return this.contextPrinterDetails.get(contextId) || null;
   }
   
   /**
-   * Get current printer details
+   * Check if backend is initialized and ready for a specific context
+   *
+   * @param contextId - Context ID to check
+   * @returns True if backend is ready
    */
-  public getCurrentPrinterDetails(): PrinterDetails | null {
-    return this.currentPrinterDetails;
+  public isBackendReady(contextId: string): boolean {
+    return this.contextBackends.has(contextId);
   }
-  
+
   /**
-   * Check if backend is initialized and ready
+   * Check if a specific feature is available for a context
+   *
+   * @param contextId - Context ID
+   * @param feature - Feature to check
+   * @returns True if feature is available
    */
-  public isBackendReady(): boolean {
-    return this.currentBackend !== null;
-  }
-  
-  /**
-   * Check if a specific feature is available
-   */
-  public isFeatureAvailable(feature: PrinterFeatureType): boolean {
-    if (!this.currentBackend) {
+  public isFeatureAvailable(contextId: string, feature: PrinterFeatureType): boolean {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       return false;
     }
-    
-    return this.currentBackend.isFeatureAvailable(feature);
+
+    return backend.isFeatureAvailable(feature);
   }
-  
+
   /**
    * Get feature stub information for UI
+   *
+   * @param contextId - Context ID
+   * @param feature - Feature to get info for
+   * @returns Feature stub info or null
    */
-  public getFeatureStubInfo(feature: PrinterFeatureType): FeatureStubInfo | null {
-    if (!this.currentBackend) {
+  public getFeatureStubInfo(contextId: string, feature: PrinterFeatureType): FeatureStubInfo | null {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       return {
         feature,
         printerModel: 'No Printer Connected',
@@ -365,39 +417,52 @@ export class PrinterBackendManager extends EventEmitter {
         canBeEnabled: false
       };
     }
-    
-    return this.currentBackend.getFeatureStubInfo(feature);
+
+    return backend.getFeatureStubInfo(feature);
   }
-  
+
   /**
    * Get backend status for monitoring
+   *
+   * @param contextId - Context ID
+   * @returns Backend status or null
    */
-  public getBackendStatus(): BackendStatus | null {
-    if (!this.currentBackend) {
+  public getBackendStatus(contextId: string): BackendStatus | null {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       return null;
     }
-    
-    return this.currentBackend.getBackendStatus();
+
+    return backend.getBackendStatus();
   }
-  
+
   /**
    * Get backend capabilities
+   *
+   * @param contextId - Context ID
+   * @returns Backend capabilities or null
    */
-  public getBackendCapabilities(): BackendCapabilities | null {
-    if (!this.currentBackend) {
+  public getBackendCapabilities(contextId: string): BackendCapabilities | null {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       return null;
     }
-    
-    return this.currentBackend.getCapabilities();
+
+    return backend.getCapabilities();
   }
-  
-  // Forward backend operations to current backend
-  
+
+  // Forward backend operations to context backend
+
   /**
    * Execute G-code command
+   *
+   * @param contextId - Context ID
+   * @param command - G-code command to execute
+   * @returns Command result
    */
-  public async executeGCodeCommand(command: string): Promise<GCodeCommandResult> {
-    if (!this.currentBackend) {
+  public async executeGCodeCommand(contextId: string, command: string): Promise<GCodeCommandResult> {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       return {
         success: false,
         command,
@@ -406,15 +471,19 @@ export class PrinterBackendManager extends EventEmitter {
         timestamp: new Date()
       };
     }
-    
-    return await this.currentBackend.executeGCodeCommand(command);
+
+    return await backend.executeGCodeCommand(command);
   }
-  
+
   /**
    * Get current printer status
+   *
+   * @param contextId - Context ID
+   * @returns Printer status
    */
-  public async getPrinterStatus(): Promise<StatusResult> {
-    if (!this.currentBackend) {
+  public async getPrinterStatus(contextId: string): Promise<StatusResult> {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       return {
         success: false,
         error: 'No backend initialized',
@@ -429,15 +498,19 @@ export class PrinterBackendManager extends EventEmitter {
         }
       };
     }
-    
-    return await this.currentBackend.getPrinterStatus();
+
+    return await backend.getPrinterStatus();
   }
-  
+
   /**
    * Get list of local jobs
+   *
+   * @param contextId - Context ID
+   * @returns Job list result
    */
-  public async getLocalJobs(): Promise<JobListResult> {
-    if (!this.currentBackend) {
+  public async getLocalJobs(contextId: string): Promise<JobListResult> {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       return {
         success: false,
         error: 'No backend initialized',
@@ -447,15 +520,19 @@ export class PrinterBackendManager extends EventEmitter {
         timestamp: new Date()
       };
     }
-    
-    return await this.currentBackend.getLocalJobs();
+
+    return await backend.getLocalJobs();
   }
-  
+
   /**
    * Get list of recent jobs
+   *
+   * @param contextId - Context ID
+   * @returns Job list result
    */
-  public async getRecentJobs(): Promise<JobListResult> {
-    if (!this.currentBackend) {
+  public async getRecentJobs(contextId: string): Promise<JobListResult> {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       return {
         success: false,
         error: 'No backend initialized',
@@ -465,15 +542,20 @@ export class PrinterBackendManager extends EventEmitter {
         timestamp: new Date()
       };
     }
-    
-    return await this.currentBackend.getRecentJobs();
+
+    return await backend.getRecentJobs();
   }
-  
+
   /**
    * Start a job
+   *
+   * @param contextId - Context ID
+   * @param params - Job operation parameters
+   * @returns Job start result
    */
-  public async startJob(params: JobOperationParams): Promise<JobStartResult> {
-    if (!this.currentBackend) {
+  public async startJob(contextId: string, params: JobOperationParams): Promise<JobStartResult> {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       return {
         success: false,
         error: 'No backend initialized',
@@ -482,77 +564,102 @@ export class PrinterBackendManager extends EventEmitter {
         timestamp: new Date()
       };
     }
-    
-    return await this.currentBackend.startJob(params);
+
+    return await backend.startJob(params);
   }
-  
+
   /**
    * Pause current job
+   *
+   * @param contextId - Context ID
+   * @returns Command result
    */
-  public async pauseJob(): Promise<CommandResult> {
-    if (!this.currentBackend) {
+  public async pauseJob(contextId: string): Promise<CommandResult> {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       return {
         success: false,
         error: 'No backend initialized',
         timestamp: new Date()
       };
     }
-    
-    return await this.currentBackend.pauseJob();
+
+    return await backend.pauseJob();
   }
-  
+
   /**
    * Resume paused job
+   *
+   * @param contextId - Context ID
+   * @returns Command result
    */
-  public async resumeJob(): Promise<CommandResult> {
-    if (!this.currentBackend) {
+  public async resumeJob(contextId: string): Promise<CommandResult> {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       return {
         success: false,
         error: 'No backend initialized',
         timestamp: new Date()
       };
     }
-    
-    return await this.currentBackend.resumeJob();
+
+    return await backend.resumeJob();
   }
-  
+
   /**
    * Cancel current job
+   *
+   * @param contextId - Context ID
+   * @returns Command result
    */
-  public async cancelJob(): Promise<CommandResult> {
-    if (!this.currentBackend) {
+  public async cancelJob(contextId: string): Promise<CommandResult> {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       return {
         success: false,
         error: 'No backend initialized',
         timestamp: new Date()
       };
     }
-    
-    return await this.currentBackend.cancelJob();
+
+    return await backend.cancelJob();
   }
-  
+
   /**
    * Get material station status (if supported)
+   *
+   * @param contextId - Context ID
+   * @returns Material station status or null
    */
-  public getMaterialStationStatus(): MaterialStationStatus | null {
-    if (!this.currentBackend) {
+  public getMaterialStationStatus(contextId: string): MaterialStationStatus | null {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       return null;
     }
-    
-    return this.currentBackend.getMaterialStationStatus();
+
+    return backend.getMaterialStationStatus();
   }
-  
+
   /**
    * Upload file to AD5X printer with material station support
    * Only available for AD5X printers with material station functionality
+   *
+   * @param contextId - Context ID
+   * @param filePath - Path to file to upload
+   * @param startPrint - Whether to start printing after upload
+   * @param levelingBeforePrint - Whether to level before printing
+   * @param materialMappings - Material mappings for multi-material prints
+   * @returns Job start result
    */
   public async uploadFileAD5X(
+    contextId: string,
     filePath: string,
     startPrint: boolean,
     levelingBeforePrint: boolean,
     materialMappings?: AD5XMaterialMapping[]
   ): Promise<JobStartResult> {
-    if (!this.currentBackend) {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       return {
         success: false,
         error: 'No backend initialized',
@@ -561,9 +668,9 @@ export class PrinterBackendManager extends EventEmitter {
         timestamp: new Date()
       };
     }
-    
+
     // Check if backend supports AD5X upload
-    if (!('uploadFileAD5X' in this.currentBackend)) {
+    if (!('uploadFileAD5X' in backend)) {
       return {
         success: false,
         error: 'Current printer does not support AD5X upload functionality',
@@ -572,9 +679,9 @@ export class PrinterBackendManager extends EventEmitter {
         timestamp: new Date()
       };
     }
-    
+
     // Use interface assertion for better type safety
-    const ad5xBackend = this.currentBackend as { uploadFileAD5X: (filePath: string, startPrint: boolean, levelingBeforePrint: boolean, materialMappings?: AD5XMaterialMapping[]) => Promise<JobStartResult> };
+    const ad5xBackend = backend as { uploadFileAD5X: (filePath: string, startPrint: boolean, levelingBeforePrint: boolean, materialMappings?: AD5XMaterialMapping[]) => Promise<JobStartResult> };
     return await ad5xBackend.uploadFileAD5X(
       filePath,
       startPrint,
@@ -582,78 +689,105 @@ export class PrinterBackendManager extends EventEmitter {
       materialMappings
     );
   }
-  
+
   /**
    * Get model preview image for current print job
    * Returns base64 PNG string or null if no preview available
+   *
+   * @param contextId - Context ID
+   * @returns Base64 PNG string or null
    */
-  public async getModelPreview(): Promise<string | null> {
-    if (!this.currentBackend) {
+  public async getModelPreview(contextId: string): Promise<string | null> {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       throw new Error('No printer backend initialized');
     }
-    
-    return this.currentBackend.getModelPreview();
+
+    return backend.getModelPreview();
   }
 
   /**
    * Get thumbnail image for any job file by filename
    * Returns base64 PNG string or null if no preview available
+   *
+   * @param contextId - Context ID
+   * @param fileName - Job filename to get thumbnail for
+   * @returns Base64 PNG string or null
    */
-  public async getJobThumbnail(fileName: string): Promise<string | null> {
-    if (!this.currentBackend) {
+  public async getJobThumbnail(contextId: string, fileName: string): Promise<string | null> {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       throw new Error('No printer backend initialized');
     }
-    
-    return this.currentBackend.getJobThumbnail(fileName);
+
+    return backend.getJobThumbnail(fileName);
   }
-  
+
   /**
    * Get printer features for UI integration
    * Convenience method to get features from backend status
+   *
+   * @param contextId - Context ID
+   * @returns Printer feature set or null
    */
-  public getFeatures(): PrinterFeatureSet | null {
-    if (!this.currentBackend) {
+  public getFeatures(contextId: string): PrinterFeatureSet | null {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
       return null;
     }
-    
-    const status = this.currentBackend.getBackendStatus();
+
+    const status = backend.getBackendStatus();
     return status.features;
   }
   
   /**
    * Handle connection established event
+   * Now requires contextId parameter
+   *
+   * @param contextId - Context ID for this connection
+   * @param printerDetails - Printer details from connection
+   * @param primaryClient - Primary API client
+   * @param secondaryClient - Optional secondary API client
    */
-  public async onConnectionEstablished(printerDetails: PrinterDetails, primaryClient: FiveMClient | FlashForgeClient, secondaryClient?: FlashForgeClient): Promise<void> {
+  public async onConnectionEstablished(
+    contextId: string,
+    printerDetails: PrinterDetails,
+    primaryClient: FiveMClient | FlashForgeClient,
+    secondaryClient?: FlashForgeClient
+  ): Promise<void> {
     try {
-      console.log('PrinterBackendManager: Connection established, initializing backend...');
-      
+      console.log(`PrinterBackendManager: Connection established for context ${contextId}, initializing backend...`);
+
       // Check if ForceLegacyAPI mode is enabled
       const ForceLegacyAPI = this.configManager.get('ForceLegacyAPI') || false;
-      
-      const initResult = await this.initializeBackend({
+
+      const initResult = await this.initializeBackend(contextId, {
         printerDetails,
         primaryClient,
         secondaryClient,
         ForceLegacyAPI
       });
-      
+
       if (initResult.success) {
-        console.log('PrinterBackendManager: Backend successfully initialized after connection');
+        console.log(`PrinterBackendManager: Backend successfully initialized for context ${contextId}`);
         this.emit('connection-backend-ready', {
+          contextId,
           backend: initResult.backend,
           printerDetails
         });
       } else {
-        console.error('PrinterBackendManager: Failed to initialize backend after connection:', initResult.error);
+        console.error(`PrinterBackendManager: Failed to initialize backend for context ${contextId}:`, initResult.error);
         this.emit('connection-backend-failed', {
+          contextId,
           error: initResult.error,
           printerDetails
         });
       }
-      
+
     } catch (error) {
-      console.error('PrinterBackendManager: Error during connection backend initialization:', error);
+      console.error(`PrinterBackendManager: Error during connection backend initialization for context ${contextId}:`, error);
       this.emit('connection-backend-failed', {
+        contextId,
         error: error instanceof Error ? error.message : String(error),
         printerDetails
       });
@@ -662,29 +796,42 @@ export class PrinterBackendManager extends EventEmitter {
   
   /**
    * Handle connection lost event
+   * Now requires contextId parameter
+   *
+   * @param contextId - Context ID for the lost connection
    */
-  public async onConnectionLost(): Promise<void> {
-    console.log('PrinterBackendManager: Connection lost, disposing backend...');
-    
-    await this.disposeBackend();
-    
-    this.emit('connection-backend-disposed');
+  public async onConnectionLost(contextId: string): Promise<void> {
+    console.log(`PrinterBackendManager: Connection lost for context ${contextId}, disposing backend...`);
+
+    await this.disposeContext(contextId);
+
+    this.emit('connection-backend-disposed', { contextId });
   }
   
   /**
    * Cleanup and dispose of all resources
    */
   public async cleanup(): Promise<void> {
-    console.log('PrinterBackendManager: Cleaning up...');
-    
-    // Dispose of current backend
-    await this.disposeBackend();
-    
+    console.log('PrinterBackendManager: Cleaning up all contexts...');
+
+    // Dispose of all context backends
+    const contextIds = Array.from(this.contextBackends.keys());
+    for (const contextId of contextIds) {
+      await this.disposeContext(contextId);
+    }
+
+    // Clear all maps
+    this.contextBackends.clear();
+    this.contextPrinterDetails.clear();
+    this.contextInitPromises.clear();
+
     // Remove all event listeners
     this.removeAllListeners();
-    
+
     // Clear singleton instance
     PrinterBackendManager.instance = null;
+
+    console.log('PrinterBackendManager: Cleanup complete');
   }
 }
 

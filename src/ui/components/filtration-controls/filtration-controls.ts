@@ -78,12 +78,16 @@ export class FiltrationControlsComponent extends BaseComponent {
 
       if (printerStatus && isConnected) {
         const filtrationStatus = printerStatus.filtration;
-        
+
+        // Always update display to ensure TVOC resets properly when switching contexts
+        this.updateFiltrationDisplay(filtrationStatus);
+
+        // Always update button states to ensure proper enable/disable when switching contexts
+        this.updateButtonStates(printerStatus.state, true, filtrationStatus);
+
         // Check if filtration is available
         if (filtrationStatus.available) {
           this.showComponent();
-          this.updateFiltrationDisplay(filtrationStatus);
-          this.updateButtonStates(printerStatus.state, true, filtrationStatus);
         } else {
           this.hideComponent();
         }

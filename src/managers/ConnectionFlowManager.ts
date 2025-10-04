@@ -9,6 +9,7 @@ import { FiveMClient, FlashForgeClient } from 'ff-api';
 import { getConfigManager } from './ConfigManager';
 import { getLoadingManager } from './LoadingManager';
 import { getPrinterBackendManager } from './PrinterBackendManager';
+import { getPrinterContextManager } from './PrinterContextManager';
 import { getPrinterDiscoveryService } from '../services/PrinterDiscoveryService';
 import { getThumbnailRequestQueue } from '../services/ThumbnailRequestQueue';
 import { getSavedPrinterService } from '../services/SavedPrinterService';
@@ -48,18 +49,34 @@ interface InputDialogOptions {
  * Main connection flow orchestrator
  * Coordinates all services to handle the complete printer connection workflow
  */
+/**
+ * Connection flow state for tracking multiple concurrent flows
+ */
+interface ConnectionFlowState {
+  flowId: string;
+  contextId: string | null;
+  startTime: Date;
+}
+
 export class ConnectionFlowManager extends EventEmitter {
   private readonly configManager = getConfigManager();
   private readonly loadingManager = getLoadingManager();
   private readonly backendManager = getPrinterBackendManager();
+  private readonly contextManager = getPrinterContextManager();
   private readonly discoveryService = getPrinterDiscoveryService();
   private readonly savedPrinterService = getSavedPrinterService();
   private readonly autoConnectService = getAutoConnectService();
   private readonly connectionStateManager = getConnectionStateManager();
   private readonly dialogService = getDialogIntegrationService();
   private readonly connectionService = getConnectionEstablishmentService();
-  
+
   private inputDialogHandler: ((options: InputDialogOptions) => Promise<string | null>) | null = null;
+
+  /** Map of active connection flows for tracking concurrent connections */
+  private readonly activeFlows = new Map<string, ConnectionFlowState>();
+
+  /** Counter for generating unique flow IDs */
+  private flowIdCounter = 0;
 
   constructor() {
     super();
@@ -124,14 +141,60 @@ export class ConnectionFlowManager extends EventEmitter {
     this.inputDialogHandler = handler;
   }
 
+  /** Generate unique flow ID */
+  private generateFlowId(): string {
+    this.flowIdCounter++;
+    return `flow-${this.flowIdCounter}-${Date.now()}`;
+  }
+
+  /** Start tracking a new connection flow */
+  private startFlow(contextId: string | null = null): string {
+    const flowId = this.generateFlowId();
+    const flowState: ConnectionFlowState = {
+      flowId,
+      contextId,
+      startTime: new Date()
+    };
+    this.activeFlows.set(flowId, flowState);
+    return flowId;
+  }
+
+  /** Update flow with context ID */
+  private updateFlowContext(flowId: string, contextId: string): void {
+    const flow = this.activeFlows.get(flowId);
+    if (flow) {
+      flow.contextId = contextId;
+    }
+  }
+
+  /** End flow tracking */
+  private endFlow(flowId: string): void {
+    this.activeFlows.delete(flowId);
+  }
+
   /** Check if printer is currently connected */
   public isConnected(): boolean {
-    return this.connectionStateManager.isConnected();
+    const activeContextId = this.contextManager.getActiveContextId();
+    if (!activeContextId) {
+      return false;
+    }
+    return this.connectionStateManager.isConnected(activeContextId);
   }
 
   /** Get current connection state */
   public getConnectionState(): PrinterConnectionState {
-    return this.connectionStateManager.getState();
+    const activeContextId = this.contextManager.getActiveContextId();
+    if (!activeContextId) {
+      return {
+        isConnected: false,
+        printerName: undefined,
+        ipAddress: undefined,
+        clientType: undefined,
+        isPrinting: false,
+        lastConnected: new Date()
+      };
+    }
+    return this.connectionStateManager.getState(activeContextId);
   }
 
   /** Start the printer connection flow */
@@ -139,7 +202,10 @@ export class ConnectionFlowManager extends EventEmitter {
     try {
       // Check if already connected and warn user
       if (this.isConnected() && options.checkForActiveConnection !== false) {
-        const currentDetails = this.connectionStateManager.getCurrentDetails();
+        const activeContextId = this.contextManager.getActiveContextId();
+        const currentDetails = activeContextId
+          ? this.connectionStateManager.getCurrentDetails(activeContextId)
+          : null;
         const shouldContinue = await this.dialogService.confirmDisconnectForScan(currentDetails?.Name);
         if (!shouldContinue) {
           return { success: false, error: 'User cancelled - connection in progress' };
@@ -351,43 +417,59 @@ export class ConnectionFlowManager extends EventEmitter {
     }
   }
 
-  /** Disconnect from current printer with proper logout */
+  /** Disconnect from current printer with proper logout (uses active context) */
   public async disconnect(): Promise<void> {
-    const currentDetails = this.connectionStateManager.getCurrentDetails();
-    
-    if (!this.connectionStateManager.isConnected()) {
+    const activeContextId = this.contextManager.getActiveContextId();
+    if (!activeContextId) {
+      console.log('No active context to disconnect');
       return;
     }
 
+    await this.disconnectContext(activeContextId);
+  }
+
+  /** Disconnect a specific printer context with proper cleanup */
+  public async disconnectContext(contextId: string): Promise<void> {
+    const context = this.contextManager.getContext(contextId);
+    if (!context) {
+      console.warn(`Cannot disconnect - context ${contextId} not found`);
+      return;
+    }
+
+    const currentDetails = context.printerDetails;
+
     try {
-      console.log('Starting disconnect sequence...');
-      
+      console.log(`Starting disconnect sequence for context ${contextId}...`);
+
       // Stop polling first
-      this.emit('pre-disconnect');
+      this.emit('pre-disconnect', contextId);
       await new Promise(resolve => setTimeout(resolve, 100));
-      
-      // Get clients for disposal
-      const primaryClient = this.connectionStateManager.getPrimaryClient();
-      const secondaryClient = this.connectionStateManager.getSecondaryClient();
-      
-      // Dispose backend
-      await this.backendManager.onConnectionLost();
-      
+
+      // Get clients for disposal from connection state
+      const primaryClient = this.connectionStateManager.getPrimaryClient(contextId);
+      const secondaryClient = this.connectionStateManager.getSecondaryClient(contextId);
+
+      // Dispose backend for this context
+      await this.backendManager.disposeContext(contextId);
+
       // Dispose clients through connection service (handles logout)
       await this.connectionService.disposeClients(
         primaryClient,
         secondaryClient,
         currentDetails?.ClientType
       );
-      
-      // Update state
-      this.connectionStateManager.setDisconnected();
-      
+
+      // Update connection state
+      this.connectionStateManager.setDisconnected(contextId);
+
+      // Remove context from manager
+      this.contextManager.removeContext(contextId);
+
       // Emit disconnected event
       this.emit('disconnected', currentDetails?.Name);
-      
+
     } catch (error) {
-      console.error('Error during disconnect:', error);
+      console.error(`Error during disconnect for context ${contextId}:`, error);
     }
   }
 
@@ -429,8 +511,10 @@ export class ConnectionFlowManager extends EventEmitter {
 
   /** Connect to a selected printer with proper type detection and pairing */
   private async connectToPrinter(discoveredPrinter: DiscoveredPrinter): Promise<ConnectionResult> {
+    // Start tracking this connection flow
+    const flowId = this.startFlow();
+
     this.loadingManager.show({ message: `Connecting to ${discoveredPrinter.name}...`, canCancel: false });
-    this.connectionStateManager.setConnecting(discoveredPrinter);
     this.emit('connecting-to-printer', discoveredPrinter.name);
 
     try {
@@ -550,32 +634,51 @@ export class ConnectionFlowManager extends EventEmitter {
       // Update last connected timestamp
       await this.savedPrinterService.updateLastConnected(printerDetails.SerialNumber);
 
-      // Step 7: Update connection state
+      // Step 7: Create printer context
+      this.loadingManager.updateMessage('Creating printer context...');
+      const contextId = this.contextManager.createContext(printerDetails);
+      this.updateFlowContext(flowId, contextId);
+      console.log(`Created context ${contextId} for printer ${printerDetails.Name}`);
+
+      // Step 8: Update connection state for this context
       this.connectionStateManager.setConnected(
+        contextId,
         printerDetails,
         connectionResult.primaryClient,
         connectionResult.secondaryClient
       );
 
-      // Step 8: Initialize backend manager
-      await this.backendManager.onConnectionEstablished(
-        printerDetails, 
-        connectionResult.primaryClient,
-        connectionResult.secondaryClient
-      );
+      // Step 9: Initialize backend for this context
+      await this.backendManager.initializeBackend(contextId, {
+        printerDetails,
+        primaryClient: connectionResult.primaryClient,
+        secondaryClient: connectionResult.secondaryClient
+      });
+
+      // Step 10: Switch to the new context
+      this.contextManager.switchContext(contextId);
+      console.log(`Switched to context ${contextId}`);
 
       this.loadingManager.showSuccess(`Connected to ${printerDetails.Name} at ${printerDetails.IPAddress}`, 4000);
       this.emit('connected', printerDetails);
-      return { 
-        success: true, 
-        printerDetails, 
-        clientInstance: connectionResult.primaryClient 
+
+      // End flow tracking
+      this.endFlow(flowId);
+
+      return {
+        success: true,
+        printerDetails,
+        clientInstance: connectionResult.primaryClient
       };
 
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
       this.loadingManager.showError(`Connection failed: ${errorMessage}`, 5000);
       this.emit('connection-failed', errorMessage);
+
+      // End flow tracking on error
+      this.endFlow(flowId);
+
       return { success: false, error: errorMessage };
     }
   }
@@ -723,6 +826,9 @@ export class ConnectionFlowManager extends EventEmitter {
 
   /** Connect using saved printer details */
   public async connectWithSavedDetails(details: PrinterDetails): Promise<ConnectionResult> {
+    // Start tracking this connection flow
+    const flowId = this.startFlow();
+
     try {
       const ForceLegacyAPI = this.configManager.get('ForceLegacyAPI') || false;
       const familyInfo = detectPrinterFamily(details.printerModel);
@@ -748,30 +854,48 @@ export class ConnectionFlowManager extends EventEmitter {
         throw new Error('Failed to establish connection');
       }
 
-      // Update connection state
+      // Create printer context
+      const contextId = this.contextManager.createContext(details);
+      this.updateFlowContext(flowId, contextId);
+      console.log(`Created context ${contextId} for saved printer ${details.Name}`);
+
+      // Update connection state for this context
       this.connectionStateManager.setConnected(
+        contextId,
         details,
         connectionResult.primaryClient,
         connectionResult.secondaryClient
       );
-      
-      // Initialize backend
-      await this.backendManager.onConnectionEstablished(
-        details, 
-        connectionResult.primaryClient,
-        connectionResult.secondaryClient
-      );
+
+      // Initialize backend for this context
+      await this.backendManager.initializeBackend(contextId, {
+        printerDetails: details,
+        primaryClient: connectionResult.primaryClient,
+        secondaryClient: connectionResult.secondaryClient
+      });
+
+      // Switch to the new context
+      this.contextManager.switchContext(contextId);
+      console.log(`Switched to context ${contextId}`);
 
       this.emit('connected', details);
-      return { 
-        success: true, 
-        printerDetails: details, 
-        clientInstance: connectionResult.primaryClient 
+
+      // End flow tracking
+      this.endFlow(flowId);
+
+      return {
+        success: true,
+        printerDetails: details,
+        clientInstance: connectionResult.primaryClient
       };
 
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
       this.emit('auto-connect-failed', errorMessage);
+
+      // End flow tracking on error
+      this.endFlow(flowId);
+
       return { success: false, error: errorMessage };
     }
   }
@@ -806,17 +930,29 @@ export class ConnectionFlowManager extends EventEmitter {
 
   /** Get current printer client instance (primary) */
   public getCurrentClient(): FiveMClient | FlashForgeClient | null {
-    return this.connectionStateManager.getPrimaryClient();
+    const activeContextId = this.contextManager.getActiveContextId();
+    if (!activeContextId) {
+      return null;
+    }
+    return this.connectionStateManager.getPrimaryClient(activeContextId);
   }
-  
+
   /** Get secondary client instance */
   public getSecondaryClient(): FlashForgeClient | null {
-    return this.connectionStateManager.getSecondaryClient();
+    const activeContextId = this.contextManager.getActiveContextId();
+    if (!activeContextId) {
+      return null;
+    }
+    return this.connectionStateManager.getSecondaryClient(activeContextId);
   }
 
   /** Get current printer details */
   public getCurrentDetails(): PrinterDetails | null {
-    return this.connectionStateManager.getCurrentDetails();
+    const activeContextId = this.contextManager.getActiveContextId();
+    if (!activeContextId) {
+      return null;
+    }
+    return this.connectionStateManager.getCurrentDetails(activeContextId);
   }
   
   /** Get backend manager instance */
@@ -826,7 +962,11 @@ export class ConnectionFlowManager extends EventEmitter {
   
   /** Check if backend is ready */
   public isBackendReady(): boolean {
-    return this.backendManager.isBackendReady();
+    const activeContextId = this.contextManager.getActiveContextId();
+    if (!activeContextId) {
+      return false;
+    }
+    return this.backendManager.isBackendReady(activeContextId);
   }
 
   /** Clear saved printer details */
@@ -837,7 +977,11 @@ export class ConnectionFlowManager extends EventEmitter {
 
   /** Get connection status as formatted string */
   public getConnectionStatus(): string {
-    return this.connectionStateManager.getConnectionStatus();
+    const activeContextId = this.contextManager.getActiveContextId();
+    if (!activeContextId) {
+      return 'Disconnected';
+    }
+    return this.connectionStateManager.getConnectionStatus(activeContextId);
   }
 
   /** Dispose of resources */

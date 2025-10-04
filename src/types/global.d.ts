@@ -44,6 +44,22 @@ interface CameraAPI {
   getConfig(): Promise<unknown>;
   getProxyUrl(): Promise<string>;
   restoreStream(): Promise<boolean>;
+  getStreamUrl(contextId?: string): Promise<string | null>;
+}
+
+// Printer Context API interface
+interface PrinterContextsAPI {
+  getAll(): Promise<unknown>;
+  getActive(): Promise<unknown>;
+  switch(contextId: string): Promise<void>;
+  remove(contextId: string): Promise<void>;
+  create(printerDetails: unknown): Promise<string>;
+}
+
+// Connection State API interface
+interface ConnectionStateAPI {
+  isConnected(contextId?: string): Promise<boolean>;
+  getState(contextId?: string): Promise<unknown>;
 }
 
 // API interface for type safety
@@ -61,6 +77,8 @@ interface ElectronAPI {
   onPlatformInfo: (callback: (platform: string) => void) => void;
   loading: LoadingAPI;
   camera: CameraAPI;
+  printerContexts: PrinterContextsAPI;
+  connectionState: ConnectionStateAPI;
 }
 
 // Window controls interface for sub-windows

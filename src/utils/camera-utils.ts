@@ -137,7 +137,7 @@ export function getCameraUserConfig(): CameraUserConfig {
  * Format camera proxy URL for client consumption
  */
 export function formatCameraProxyUrl(port: number): string {
-  return `http://localhost:${port}/camera`;
+  return `http://localhost:${port}/stream`;
 }
 
 /**

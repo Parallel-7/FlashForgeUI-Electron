@@ -126,30 +126,30 @@ export class DialogIntegrationService extends EventEmitter {
         // Set up one-time event handlers for this specific selection session
         const handleSavedPrinterSelection = async (_: IpcMainEvent, printer: unknown): Promise<void> => {
           console.log('Saved printer selected:', printer);
-          
+
           try {
             if (!this.validatePrinterSelection(printer)) {
               resolve({ success: false, error: 'Invalid printer data received' });
               return;
             }
-            
+
             // Now TypeScript knows printer has serialNumber property
             const printerSerial = printer.serialNumber;
-            
-            // Use the callback to handle the connection
-            const result = await onSelection(printerSerial);
-            resolve(result);
-            
-          } catch (error) {
-            console.error('Error handling saved printer selection:', error);
-            resolve({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
-          } finally {
-            // Always clean up - close window and remove listeners
+
+            // Close dialog immediately so user can see the loading dialog
             this.cleanupSavedSelectionListeners();
             const currentWindow = this.windowManager.getPrinterSelectionWindow();
             if (currentWindow && !currentWindow.isDestroyed()) {
               currentWindow.close();
             }
+
+            // Use the callback to handle the connection
+            const result = await onSelection(printerSerial);
+            resolve(result);
+
+          } catch (error) {
+            console.error('Error handling saved printer selection:', error);
+            resolve({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
           }
         };
         

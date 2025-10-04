@@ -54,7 +54,10 @@
       "WebFetch(domain:stackoverflow.com)",
       "WebFetch(domain:www.npmjs.com)",
       "Bash(cat:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "Bash(npx tsc:*)",
+      "mcp__time__get_current_time",
+      "Read(//c/Users/Cope/AppData/Roaming/FlashForgeUI/**)"
     ],
     "deny": [],
     "additionalDirectories": [

@@ -7,6 +7,7 @@
 import { Router, Response } from 'express';
 import { getPrinterBackendManager } from '../../managers/PrinterBackendManager';
 import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager';
 import { AuthenticatedRequest } from './auth-middleware';
 import {
   TemperatureSetRequestSchema,
@@ -74,6 +75,7 @@ export function createAPIRoutes(): Router {
   const router = Router();
   const backendManager = getPrinterBackendManager();
   const connectionManager = getPrinterConnectionManager();
+  const contextManager = getPrinterContextManager();
 
   // ============================================================================
   // HELPER FUNCTIONS
@@ -85,6 +87,17 @@ export function createAPIRoutes(): Router {
    */
   async function handleLedControl(enabled: boolean, res: Response): Promise<void> {
     try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        res.status(503).json(response);
+        return;
+      }
+
       if (!connectionManager.isConnected()) {
         const response: StandardAPIResponse = {
           success: false,
@@ -94,7 +107,7 @@ export function createAPIRoutes(): Router {
         return;
       }
 
-      if (!backendManager.isFeatureAvailable('led-control')) {
+      if (!backendManager.isFeatureAvailable(contextId, 'led-control')) {
         const response: StandardAPIResponse = {
           success: false,
           error: 'LED control not available on this printer'
@@ -104,7 +117,7 @@ export function createAPIRoutes(): Router {
       }
 
       // Get backend and check if it supports LED control
-      const backend = backendManager.getBackend();
+      const backend = backendManager.getBackendForContext(contextId);
 
       if (!backend) {
         const response: StandardAPIResponse = {
@@ -145,6 +158,16 @@ export function createAPIRoutes(): Router {
    */
   router.get('/printer/status', async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: PrinterStatusResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
       if (!connectionManager.isConnected()) {
         const response: PrinterStatusResponse = {
           success: false,
@@ -153,7 +176,7 @@ export function createAPIRoutes(): Router {
         return res.status(503).json(response);
       }
 
-      const statusResult = await backendManager.getPrinterStatus();
+      const statusResult = await backendManager.getPrinterStatus(contextId);
 
       if (!statusResult.success) {
         const response: PrinterStatusResponse = {
@@ -239,6 +262,16 @@ export function createAPIRoutes(): Router {
    */
   router.get('/printer/features', async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
       if (!connectionManager.isConnected()) {
         const response: StandardAPIResponse = {
           success: false,
@@ -247,7 +280,7 @@ export function createAPIRoutes(): Router {
         return res.status(503).json(response);
       }
 
-      const features = backendManager.getFeatures();
+      const features = backendManager.getFeatures(contextId);
 
       if (!features) {
         const response: StandardAPIResponse = {
@@ -258,10 +291,10 @@ export function createAPIRoutes(): Router {
       }
 
       const featureResponse: PrinterFeatures = {
-        hasCamera: backendManager.isFeatureAvailable('camera'),
-        hasLED: backendManager.isFeatureAvailable('led-control'),
-        hasFiltration: backendManager.isFeatureAvailable('filtration'),
-        hasMaterialStation: backendManager.isFeatureAvailable('material-station'),
+        hasCamera: backendManager.isFeatureAvailable(contextId, 'camera'),
+        hasLED: backendManager.isFeatureAvailable(contextId, 'led-control'),
+        hasFiltration: backendManager.isFeatureAvailable(contextId, 'filtration'),
+        hasMaterialStation: backendManager.isFeatureAvailable(contextId, 'material-station'),
         canPause: features.jobManagement.pauseResume,
         canResume: features.jobManagement.pauseResume,
         canCancel: features.jobManagement.cancelJobs,
@@ -293,6 +326,16 @@ export function createAPIRoutes(): Router {
    */
   router.post('/printer/control/home', async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
       if (!connectionManager.isConnected()) {
         const response: StandardAPIResponse = {
           success: false,
@@ -301,7 +344,7 @@ export function createAPIRoutes(): Router {
         return res.status(503).json(response);
       }
 
-      const result = await backendManager.executeGCodeCommand('~G28');
+      const result = await backendManager.executeGCodeCommand(contextId, '~G28');
 
       const response: StandardAPIResponse = {
         success: result.success,
@@ -326,6 +369,16 @@ export function createAPIRoutes(): Router {
    */
   router.post('/printer/control/pause', async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
       if (!connectionManager.isConnected()) {
         const response: StandardAPIResponse = {
           success: false,
@@ -334,7 +387,7 @@ export function createAPIRoutes(): Router {
         return res.status(503).json(response);
       }
 
-      const result = await backendManager.pauseJob();
+      const result = await backendManager.pauseJob(contextId);
 
       const response: StandardAPIResponse = {
         success: result.success,
@@ -359,6 +412,16 @@ export function createAPIRoutes(): Router {
    */
   router.post('/printer/control/resume', async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
       if (!connectionManager.isConnected()) {
         const response: StandardAPIResponse = {
           success: false,
@@ -367,7 +430,7 @@ export function createAPIRoutes(): Router {
         return res.status(503).json(response);
       }
 
-      const result = await backendManager.resumeJob();
+      const result = await backendManager.resumeJob(contextId);
 
       const response: StandardAPIResponse = {
         success: result.success,
@@ -392,6 +455,16 @@ export function createAPIRoutes(): Router {
    */
   router.post('/printer/control/cancel', async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
       if (!connectionManager.isConnected()) {
         const response: StandardAPIResponse = {
           success: false,
@@ -400,7 +473,7 @@ export function createAPIRoutes(): Router {
         return res.status(503).json(response);
       }
 
-      const result = await backendManager.cancelJob();
+      const result = await backendManager.cancelJob(contextId);
 
       const response: StandardAPIResponse = {
         success: result.success,
@@ -439,7 +512,17 @@ export function createAPIRoutes(): Router {
    */
   router.post('/printer/control/clear-status', async (req: AuthenticatedRequest, res: Response) => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         const response: StandardAPIResponse = {
           success: false,
           error: 'Printer not connected'
@@ -447,7 +530,7 @@ export function createAPIRoutes(): Router {
         return res.status(503).json(response);
       }
 
-      const backend = backendManager.getBackend();
+      const backend = backendManager.getBackendForContext(contextId);
       if (!backend) {
         const response: StandardAPIResponse = {
           success: false,
@@ -506,6 +589,16 @@ export function createAPIRoutes(): Router {
    */
   router.post('/printer/temperature/bed', async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
       if (!connectionManager.isConnected()) {
         const response: StandardAPIResponse = {
           success: false,
@@ -526,7 +619,7 @@ export function createAPIRoutes(): Router {
       }
 
       const temperature = Math.round(validation.data.temperature);
-      const result = await backendManager.executeGCodeCommand(`~M140 S${temperature}`);
+      const result = await backendManager.executeGCodeCommand(contextId, `~M140 S${temperature}`);
 
       const response: StandardAPIResponse = {
         success: result.success,
@@ -551,6 +644,16 @@ export function createAPIRoutes(): Router {
    */
   router.post('/printer/temperature/bed/off', async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
       if (!connectionManager.isConnected()) {
         const response: StandardAPIResponse = {
           success: false,
@@ -559,7 +662,7 @@ export function createAPIRoutes(): Router {
         return res.status(503).json(response);
       }
 
-      const result = await backendManager.executeGCodeCommand('~M140 S0');
+      const result = await backendManager.executeGCodeCommand(contextId, '~M140 S0');
 
       const response: StandardAPIResponse = {
         success: result.success,
@@ -584,6 +687,16 @@ export function createAPIRoutes(): Router {
    */
   router.post('/printer/temperature/extruder', async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
       if (!connectionManager.isConnected()) {
         const response: StandardAPIResponse = {
           success: false,
@@ -604,7 +717,7 @@ export function createAPIRoutes(): Router {
       }
 
       const temperature = Math.round(validation.data.temperature);
-      const result = await backendManager.executeGCodeCommand(`~M104 S${temperature}`);
+      const result = await backendManager.executeGCodeCommand(contextId, `~M104 S${temperature}`);
 
       const response: StandardAPIResponse = {
         success: result.success,
@@ -629,6 +742,16 @@ export function createAPIRoutes(): Router {
    */
   router.post('/printer/temperature/extruder/off', async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
       if (!connectionManager.isConnected()) {
         const response: StandardAPIResponse = {
           success: false,
@@ -637,7 +760,7 @@ export function createAPIRoutes(): Router {
         return res.status(503).json(response);
       }
 
-      const result = await backendManager.executeGCodeCommand('~M104 S0');
+      const result = await backendManager.executeGCodeCommand(contextId, '~M104 S0');
 
       const response: StandardAPIResponse = {
         success: result.success,
@@ -666,7 +789,17 @@ export function createAPIRoutes(): Router {
    */
   router.post('/printer/filtration/external', async (req: AuthenticatedRequest, res: Response) => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         const response: StandardAPIResponse = {
           success: false,
           error: 'Printer not connected'
@@ -674,7 +807,7 @@ export function createAPIRoutes(): Router {
         return res.status(503).json(response);
       }
 
-      const backend = backendManager.getBackend();
+      const backend = backendManager.getBackendForContext(contextId);
       if (!backend) {
         const response: StandardAPIResponse = {
           success: false,
@@ -727,7 +860,17 @@ export function createAPIRoutes(): Router {
    */
   router.post('/printer/filtration/internal', async (req: AuthenticatedRequest, res: Response) => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         const response: StandardAPIResponse = {
           success: false,
           error: 'Printer not connected'
@@ -735,7 +878,7 @@ export function createAPIRoutes(): Router {
         return res.status(503).json(response);
       }
 
-      const backend = backendManager.getBackend();
+      const backend = backendManager.getBackendForContext(contextId);
       if (!backend) {
         const response: StandardAPIResponse = {
           success: false,
@@ -788,7 +931,17 @@ export function createAPIRoutes(): Router {
    */
   router.post('/printer/filtration/off', async (req: AuthenticatedRequest, res: Response) => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         const response: StandardAPIResponse = {
           success: false,
           error: 'Printer not connected'
@@ -796,7 +949,7 @@ export function createAPIRoutes(): Router {
         return res.status(503).json(response);
       }
 
-      const backend = backendManager.getBackend();
+      const backend = backendManager.getBackendForContext(contextId);
       if (!backend) {
         const response: StandardAPIResponse = {
           success: false,
@@ -853,6 +1006,16 @@ export function createAPIRoutes(): Router {
    */
   router.get('/jobs/local', async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
       if (!connectionManager.isConnected()) {
         const response: StandardAPIResponse = {
           success: false,
@@ -861,7 +1024,7 @@ export function createAPIRoutes(): Router {
         return res.status(503).json(response);
       }
 
-      const result = await backendManager.getLocalJobs();
+      const result = await backendManager.getLocalJobs(contextId);
 
       if (!result.success) {
         const response: StandardAPIResponse = {
@@ -898,6 +1061,16 @@ export function createAPIRoutes(): Router {
    */
   router.get('/jobs/recent', async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
       if (!connectionManager.isConnected()) {
         const response: StandardAPIResponse = {
           success: false,
@@ -906,7 +1079,7 @@ export function createAPIRoutes(): Router {
         return res.status(503).json(response);
       }
 
-      const result = await backendManager.getRecentJobs();
+      const result = await backendManager.getRecentJobs(contextId);
 
       if (!result.success) {
         const response: StandardAPIResponse = {
@@ -943,6 +1116,16 @@ export function createAPIRoutes(): Router {
    */
   router.post('/jobs/start', async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
       if (!connectionManager.isConnected()) {
         const response: StandardAPIResponse = {
           success: false,
@@ -962,7 +1145,7 @@ export function createAPIRoutes(): Router {
         return res.status(400).json(response);
       }
 
-      const result = await backendManager.startJob({
+      const result = await backendManager.startJob(contextId, {
         operation: 'start',
         fileName: validation.data.filename,
         startNow: validation.data.startNow,
@@ -992,6 +1175,16 @@ export function createAPIRoutes(): Router {
    */
   router.get('/jobs/thumbnail/:filename', async (req: AuthenticatedRequest, res: Response) => {
     try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
       if (!connectionManager.isConnected()) {
         const response: StandardAPIResponse = {
           success: false,
@@ -1010,7 +1203,7 @@ export function createAPIRoutes(): Router {
         return res.status(400).json(response);
       }
 
-      const thumbnail = await backendManager.getJobThumbnail(filename);
+      const thumbnail = await backendManager.getJobThumbnail(contextId, filename);
 
       if (!thumbnail) {
         const response: StandardAPIResponse = {
@@ -1045,7 +1238,8 @@ export function createAPIRoutes(): Router {
    */
   router.get('/camera/status', async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const isAvailable = backendManager.isFeatureAvailable('camera');
+      const contextId = contextManager.getActiveContextId();
+      const isAvailable = contextId ? backendManager.isFeatureAvailable(contextId, 'camera') : false;
 
       // TODO: Get actual camera status from camera manager when available
       const response: CameraStatusResponse = {
