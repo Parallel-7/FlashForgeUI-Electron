@@ -31,6 +31,7 @@ import { StandardAPIResponse } from '../types/web-api.types';
 import { createAPIRoutes } from './api-routes';
 import { createFilamentTrackerRoutes } from './filament-tracker-routes';
 import { getWebSocketManager } from './WebSocketManager';
+import { getRtspStreamService } from '../../services/RtspStreamService';
 import type { PollingData } from '../../types/polling';
 import { isHeadlessMode } from '../../utils/HeadlessDetection';
 
@@ -88,6 +89,9 @@ export class WebUIManager extends EventEmitter {
   
   // WebSocket manager
   private readonly webSocketManager = getWebSocketManager();
+
+  // RTSP stream service for RTSP camera streaming
+  private readonly rtspStreamService = getRtspStreamService();
   
   private constructor() {
     super();
@@ -175,7 +179,7 @@ export class WebUIManager extends EventEmitter {
 
     // Filament tracker integration routes (has its own auth middleware)
     const filamentTrackerRoutes = createFilamentTrackerRoutes();
-    this.expressApp.use('/api', filamentTrackerRoutes);
+    this.expressApp.use('/api/filament-tracker', filamentTrackerRoutes);
 
     // Protected API routes (WebUI auth required) - skip filament tracker routes
     this.expressApp.use('/api', (req, res, next) => {
@@ -321,17 +325,20 @@ export class WebUIManager extends EventEmitter {
       // Initialize Express application
       this.expressApp = express();
       this.port = config.WebUIPort;
-      
+
+      // Initialize RTSP stream service (check ffmpeg availability)
+      await this.rtspStreamService.initialize();
+
       // Setup middleware and routes
       this.setupMiddleware();
       this.setupRoutes();
-      
+
       // Determine server IP
       this.serverIP = await this.determineServerIP();
-      
+
       // Create HTTP server
       this.httpServer = http.createServer(this.expressApp!);
-      
+
       // Initialize WebSocket server
       this.webSocketManager.initialize(this.httpServer);
       

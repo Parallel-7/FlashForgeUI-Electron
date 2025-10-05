@@ -10,9 +10,16 @@ interface ISettingsAPI {
   removeListeners: () => void;
 }
 
+interface IPrinterSettingsAPI {
+  get: () => Promise<unknown>;
+  update: (settings: unknown) => Promise<boolean>;
+  getPrinterName: () => Promise<string | null>;
+}
+
 declare global {
   interface Window {
     settingsAPI?: ISettingsAPI;
+    printerSettingsAPI?: IPrinterSettingsAPI;
   }
 }
 
@@ -46,11 +53,22 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'rounded-ui': 'RoundedUI'
 };
 
+/**
+ * Mutable settings tracker for internal use during editing session
+ */
+interface MutableSettings {
+  // Global settings (stored in config.json)
+  global: Record<string, unknown>;
+  // Per-printer settings (stored in printer_details.json)
+  perPrinter: Record<string, unknown>;
+}
+
 class SettingsRenderer {
   private readonly inputs: Map<string, HTMLInputElement> = new Map();
   private saveStatusElement: HTMLElement | null = null;
   private statusTimeout: NodeJS.Timeout | null = null;
-  private currentConfig: Partial<AppConfig> = {};
+  private settings: MutableSettings = { global: {}, perPrinter: {} };
+  private printerName: string | null = null;
   private hasUnsavedChanges: boolean = false;
 
   constructor() {
@@ -114,7 +132,27 @@ class SettingsRenderer {
     if (window.settingsAPI) {
       try {
         const config = await window.settingsAPI.requestConfig();
-        this.loadConfiguration(config);
+        console.log('[Settings] Loaded config from config.json:', config);
+
+        // Load global settings
+        this.settings.global = { ...config };
+
+        // Also load per-printer settings if available
+        if (window.printerSettingsAPI) {
+          const printerSettings = await window.printerSettingsAPI.get() as Record<string, unknown> | null;
+          this.printerName = await window.printerSettingsAPI.getPrinterName();
+          console.log('[Settings] Loaded per-printer settings:', printerSettings);
+          console.log('[Settings] Printer name:', this.printerName);
+
+          if (printerSettings) {
+            this.settings.perPrinter = { ...printerSettings };
+          }
+        } else {
+          console.log('[Settings] No printerSettings API available');
+        }
+
+        this.loadConfiguration();
+        this.updatePrinterContextIndicator();
       } catch (error) {
         console.error('Failed to request config:', error);
       }
@@ -123,15 +161,31 @@ class SettingsRenderer {
     }
   }
 
-  private loadConfiguration(config: AppConfig): void {
-    this.currentConfig = { ...config };
-
+  private loadConfiguration(): void {
     // Populate form with current configuration
     this.inputs.forEach((input, inputId) => {
       const configKey = INPUT_TO_CONFIG_MAP[inputId];
-      
-      if (configKey && configKey in config) {
-        const value = config[configKey];
+
+      if (configKey) {
+        let value: unknown;
+
+        // For per-printer settings, ONLY use printer settings (never config.json)
+        if (this.isPerPrinterSetting(configKey)) {
+          const perPrinterKey = this.configKeyToPerPrinterKey(configKey);
+
+          if (this.settings.perPrinter[perPrinterKey] !== undefined) {
+            // Use per-printer value
+            value = this.settings.perPrinter[perPrinterKey];
+            console.log(`[Settings] Loading per-printer setting ${configKey} (${perPrinterKey}):`, value);
+          } else {
+            // No active printer - use empty/false defaults
+            value = (configKey === 'CustomCamera' || configKey === 'CustomLeds' || configKey === 'ForceLegacyAPI') ? false : '';
+            console.log(`[Settings] No printer, using default for ${configKey}:`, value);
+          }
+        } else {
+          // For global settings, use config.json
+          value = this.settings.global[configKey];
+        }
 
         if (input.type === 'checkbox') {
           input.checked = Boolean(value);
@@ -175,11 +229,15 @@ class SettingsRenderer {
       value = input.value;
     }
 
-    // Update current config
-    this.currentConfig = {
-      ...this.currentConfig,
-      [configKey]: value as AppConfig[typeof configKey]
-    };
+    // Update appropriate settings store
+    if (this.isPerPrinterSetting(configKey)) {
+      const perPrinterKey = this.configKeyToPerPrinterKey(configKey);
+      this.settings.perPrinter[perPrinterKey] = value;
+      console.log(`[Settings] Updated per-printer setting ${perPrinterKey}:`, value);
+    } else {
+      this.settings.global[configKey] = value;
+      console.log(`[Settings] Updated global setting ${configKey}:`, value);
+    }
 
     this.hasUnsavedChanges = true;
     this.updateSaveButtonState();
@@ -250,7 +308,22 @@ class SettingsRenderer {
 
     if (window.settingsAPI) {
       try {
-        const success = await window.settingsAPI.saveConfig(this.currentConfig);
+        // Save global config
+        console.log('[Settings] Saving global config:', this.settings.global);
+        const success = await window.settingsAPI.saveConfig(this.settings.global as Partial<AppConfig>);
+
+        // Save per-printer settings if we have any and a printer is connected
+        if (Object.keys(this.settings.perPrinter).length > 0 && window.printerSettingsAPI && this.printerName) {
+          console.log('[Settings] Saving per-printer settings:', this.settings.perPrinter);
+          const perPrinterSuccess = await window.printerSettingsAPI.update(this.settings.perPrinter);
+          console.log('[Settings] Per-printer save result:', perPrinterSuccess);
+
+          if (!perPrinterSuccess) {
+            this.showSaveStatus('Failed to save per-printer settings', true);
+            return;
+          }
+        }
+
         if (success) {
           this.hasUnsavedChanges = false;
           this.updateSaveButtonState();
@@ -293,6 +366,55 @@ class SettingsRenderer {
       this.statusTimeout = setTimeout(() => {
         this.saveStatusElement?.classList.remove('visible');
       }, isError ? 3000 : 2000);
+    }
+  }
+
+  /**
+   * Check if a config key is a per-printer setting
+   */
+  private isPerPrinterSetting(configKey: keyof AppConfig): boolean {
+    return ['CustomCamera', 'CustomCameraUrl', 'CustomLeds', 'ForceLegacyAPI'].includes(configKey);
+  }
+
+  /**
+   * Convert AppConfig key to per-printer settings key
+   */
+  private configKeyToPerPrinterKey(configKey: keyof AppConfig): string {
+    const map: Record<string, string> = {
+      'CustomCamera': 'customCameraEnabled',
+      'CustomCameraUrl': 'customCameraUrl',
+      'CustomLeds': 'customLedsEnabled',
+      'ForceLegacyAPI': 'forceLegacyMode'
+    };
+    return map[configKey] || configKey;
+  }
+
+  /**
+   * Update printer context indicator in the UI
+   */
+  private updatePrinterContextIndicator(): void {
+    // Find or create the context indicator element
+    let indicator = document.getElementById('printer-context-indicator');
+
+    if (!indicator) {
+      // Create indicator if it doesn't exist
+      const settingsHeader = document.querySelector('.settings-header');
+      if (settingsHeader) {
+        indicator = document.createElement('div');
+        indicator.id = 'printer-context-indicator';
+        indicator.style.cssText = 'margin-top: 10px; padding: 8px; background: #f0f0f0; border-radius: 4px; font-size: 12px; color: #666;';
+        settingsHeader.appendChild(indicator);
+      }
+    }
+
+    if (indicator) {
+      if (this.printerName) {
+        indicator.textContent = `Per-printer settings for: ${this.printerName}`;
+        indicator.style.display = 'block';
+      } else {
+        indicator.textContent = 'Global settings (no printer connected)';
+        indicator.style.display = 'block';
+      }
     }
   }
 

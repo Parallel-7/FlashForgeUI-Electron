@@ -26,6 +26,10 @@ export interface BackendInitOptions {
     readonly ipAddress: string;
     readonly serialNumber: string;
     readonly typeName: string;
+    readonly customCameraEnabled?: boolean;
+    readonly customCameraUrl?: string;
+    readonly customLedsEnabled?: boolean;
+    readonly forceLegacyMode?: boolean;
   };
 }
 

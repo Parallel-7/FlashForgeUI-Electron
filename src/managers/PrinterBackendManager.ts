@@ -260,7 +260,11 @@ export class PrinterBackendManager extends EventEmitter {
         name: options.printerDetails.Name,
         ipAddress: options.printerDetails.IPAddress,
         serialNumber: options.printerDetails.SerialNumber,
-        typeName: options.printerDetails.printerModel
+        typeName: options.printerDetails.printerModel,
+        customCameraEnabled: options.printerDetails.customCameraEnabled,
+        customCameraUrl: options.printerDetails.customCameraUrl,
+        customLedsEnabled: options.printerDetails.customLedsEnabled,
+        forceLegacyMode: options.printerDetails.forceLegacyMode
       },
       primaryClient: options.primaryClient,
       secondaryClient: options.secondaryClient

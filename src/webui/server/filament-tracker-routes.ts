@@ -97,7 +97,7 @@ export function createFilamentTrackerRoutes(): Router {
    * GET /api/filament-tracker/status
    * Returns comprehensive status including connection, printer state, and current job info
    */
-  router.get('/filament-tracker/status', (req: Request, res: Response) => {
+  router.get('/status', (req: Request, res: Response) => {
     try {
       const isConnected = connectionManager.isConnected();
       const pollingData = wsManager.getLatestPollingData();
@@ -149,7 +149,7 @@ export function createFilamentTrackerRoutes(): Router {
    * GET /api/filament-tracker/current
    * Returns current job filament usage only
    */
-  router.get('/filament-tracker/current', (req: Request, res: Response) => {
+  router.get('/current', (req: Request, res: Response) => {
     try {
       const isConnected = connectionManager.isConnected();
       const pollingData = wsManager.getLatestPollingData();
@@ -191,7 +191,7 @@ export function createFilamentTrackerRoutes(): Router {
    * GET /api/filament-tracker/lifetime
    * Returns lifetime statistics
    */
-  router.get('/filament-tracker/lifetime', (req: Request, res: Response) => {
+  router.get('/lifetime', (req: Request, res: Response) => {
     try {
       const isConnected = connectionManager.isConnected();
       const pollingData = wsManager.getLatestPollingData();

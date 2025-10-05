@@ -40,29 +40,41 @@ export abstract class BasePrinterBackend extends EventEmitter {
   protected readonly ipAddress: string;
   protected readonly serialNumber: string;
   protected readonly typeName: string;
-  
+
   protected primaryClient: FiveMClient | FlashForgeClient;
   protected secondaryClient: FlashForgeClient | null = null;
   protected readonly configManager = getConfigManager();
-  
+
   private initialized = false;
   private connected = false;
   private features: PrinterFeatureSet | null = null;
   private lastStatusUpdate = new Date();
   private featureOverrides: Record<string, unknown> = {};
-  
+
+  // Per-printer settings
+  private readonly customCameraEnabled: boolean;
+  private readonly customCameraUrl: string;
+  private readonly customLedsEnabled: boolean;
+  private readonly forceLegacyMode: boolean;
+
   constructor(options: BackendInitOptions) {
     super();
-    
+
     this.modelType = options.printerModel;
     this.printerName = options.printerDetails.name;
     this.ipAddress = options.printerDetails.ipAddress;
     this.serialNumber = options.printerDetails.serialNumber;
     this.typeName = options.printerDetails.typeName;
-    
+
+    // Store per-printer settings from printer details
+    this.customCameraEnabled = options.printerDetails.customCameraEnabled ?? false;
+    this.customCameraUrl = options.printerDetails.customCameraUrl ?? '';
+    this.customLedsEnabled = options.printerDetails.customLedsEnabled ?? false;
+    this.forceLegacyMode = options.printerDetails.forceLegacyMode ?? false;
+
     this.primaryClient = options.primaryClient;
     this.secondaryClient = options.secondaryClient || null;
-    
+
     this.setupEventHandlers();
     this.loadFeatureOverrides();
   }
@@ -265,14 +277,15 @@ export abstract class BasePrinterBackend extends EventEmitter {
   }
   
   /**
-   * Get settings overrides from configuration
+   * Get settings overrides from per-printer settings
+   * NOTE: Per-printer settings are now stored in printer_details.json, not config.json
    */
   private getSettingsOverrides(): Record<string, unknown> {
     return {
-      customCameraEnabled: this.configManager.get('CustomCamera') || false,
-      customCameraUrl: this.configManager.get('CustomCameraUrl') || '',
-      customLEDControl: this.configManager.get('CustomLeds') || false,
-      ForceLegacyAPI: this.configManager.get('ForceLegacyAPI') || false
+      customCameraEnabled: this.customCameraEnabled,
+      customCameraUrl: this.customCameraUrl,
+      customLEDControl: this.customLedsEnabled,
+      ForceLegacyAPI: this.forceLegacyMode
     };
   }
   

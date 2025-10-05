@@ -62,6 +62,13 @@ interface ConnectionStateAPI {
   getState(contextId?: string): Promise<unknown>;
 }
 
+// Printer Settings API interface
+interface PrinterSettingsAPI {
+  get(): Promise<unknown>;
+  update(settings: unknown): Promise<boolean>;
+  getPrinterName(): Promise<string | null>;
+}
+
 // API interface for type safety
 interface ElectronAPI {
   send: (channel: string, data?: unknown) => void;
@@ -79,6 +86,7 @@ interface ElectronAPI {
   camera: CameraAPI;
   printerContexts: PrinterContextsAPI;
   connectionState: ConnectionStateAPI;
+  printerSettings: PrinterSettingsAPI;
 }
 
 // Window controls interface for sub-windows

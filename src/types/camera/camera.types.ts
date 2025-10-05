@@ -14,6 +14,11 @@ import { PrinterFeatureSet } from '../printer-backend';
 export type CameraSourceType = 'builtin' | 'custom' | 'none';
 
 /**
+ * Camera stream protocol types
+ */
+export type CameraStreamType = 'mjpeg' | 'rtsp';
+
+/**
  * Camera proxy server configuration
  */
 export interface CameraProxyConfig {
@@ -52,6 +57,8 @@ export interface CameraUserConfig {
 export interface ResolvedCameraConfig {
   /** Source type of the camera */
   readonly sourceType: CameraSourceType;
+  /** Stream protocol type (MJPEG or RTSP) */
+  readonly streamType?: CameraStreamType;
   /** Final camera stream URL (null if no camera available) */
   readonly streamUrl: string | null;
   /** Whether camera feature is available */

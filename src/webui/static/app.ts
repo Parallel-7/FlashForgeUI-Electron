@@ -82,8 +82,12 @@ interface PrinterFeaturesResponse extends ApiResponse {
 }
 
 interface CameraProxyConfigResponse extends ApiResponse {
-  port?: number;
+  streamType?: 'mjpeg' | 'rtsp';
+  port?: number;  // For MJPEG camera proxy
+  wsPort?: number;  // For RTSP WebSocket port
   url?: string;
+  wsPath?: string;
+  ffmpegAvailable?: boolean;
 }
 
 interface FileListResponse extends ApiResponse {
@@ -866,6 +870,56 @@ async function loadCameraStream(): Promise<void> {
     }
     
     const config = await response.json() as CameraProxyConfigResponse;
+
+    // Handle RTSP cameras with JSMpeg player
+    if (config.streamType === 'rtsp') {
+      console.log('RTSP camera detected - setting up JSMpeg player');
+
+      if (config.ffmpegAvailable === false) {
+        showElement('camera-placeholder');
+        hideElement('camera-stream');
+        if (cameraPlaceholder) {
+          cameraPlaceholder.textContent = 'RTSP Camera: ffmpeg required for browser viewing';
+        }
+        return;
+      }
+
+      if (!config.wsPort) {
+        throw new Error('No WebSocket port provided for RTSP stream');
+      }
+
+      // Setup JSMpeg player for RTSP stream
+      const canvas = document.getElementById('camera-canvas') as HTMLCanvasElement;
+      if (!canvas) {
+        console.error('Camera canvas element not found');
+        return;
+      }
+
+      // Construct WebSocket URL for node-rtsp-stream
+      const wsUrl = `ws://${window.location.hostname}:${config.wsPort}`;
+      console.log('Connecting to RTSP stream at:', wsUrl);
+
+      // Hide img, show canvas
+      hideElement('camera-stream');
+      showElement('camera-canvas');
+      hideElement('camera-placeholder');
+
+      // Initialize JSMpeg player
+      // @ts-ignore - JSMpeg loaded via CDN
+      new JSMpeg.Player(wsUrl, {
+        canvas: canvas,
+        autoplay: true,
+        audio: false,
+        onSourceEstablished: () => {
+          console.log('RTSP stream connected');
+        },
+        onSourceCompleted: () => {
+          console.log('RTSP stream ended');
+        }
+      });
+
+      return;
+    }
 
     if (!config.url) {
       throw new Error('No camera URL provided by server');

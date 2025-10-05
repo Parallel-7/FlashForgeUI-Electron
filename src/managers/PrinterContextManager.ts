@@ -349,6 +349,24 @@ export class PrinterContextManager extends EventEmitter {
   }
 
   /**
+   * Update context printer details (for settings changes)
+   *
+   * @param contextId - Context to update
+   * @param printerDetails - Updated printer details
+   */
+  public updatePrinterDetails(contextId: string, printerDetails: PrinterDetails): void {
+    const context = this.contexts.get(contextId);
+    if (context) {
+      context.printerDetails = printerDetails;
+      context.lastActivity = new Date();
+      console.log(`[PrinterContextManager] Updated printer details for context ${contextId}`);
+
+      // Emit context-updated event for listeners (e.g., camera setup)
+      this.emit('context-updated', contextId);
+    }
+  }
+
+  /**
    * Update context polling service reference
    *
    * @param contextId - Context to update

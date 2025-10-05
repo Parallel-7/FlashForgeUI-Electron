@@ -20,6 +20,13 @@ export interface PrinterDetails {
   readonly ClientType: PrinterClientType;
   readonly printerModel: string; // typeName from API for future auto-connect logic
   readonly modelType?: PrinterModelType; // Specific model type for backend selection
+
+  // Per-printer settings (overrides global config if set)
+  // These are mutable so they can be updated via settings UI
+  customCameraEnabled?: boolean;
+  customCameraUrl?: string; // Supports http://, https://, and rtsp:// URLs
+  customLedsEnabled?: boolean;
+  forceLegacyMode?: boolean;
 }
 
 /**

@@ -21,6 +21,7 @@ interface ElectronAPI {
   camera: CameraAPI;
   printerContexts: PrinterContextsAPI;
   connectionState: ConnectionStateAPI;
+  printerSettings: PrinterSettingsAPI;
 }
 
 // Camera API interface
@@ -47,6 +48,13 @@ interface PrinterContextsAPI {
 interface ConnectionStateAPI {
   isConnected: (contextId?: string) => Promise<boolean>;
   getState: (contextId?: string) => Promise<unknown>;
+}
+
+// Printer Settings API interface
+interface PrinterSettingsAPI {
+  get: () => Promise<unknown>;
+  update: (settings: unknown) => Promise<boolean>;
+  getPrinterName: () => Promise<string | null>;
 }
 
 // Input dialog options interface
@@ -271,7 +279,11 @@ contextBridge.exposeInMainWorld('api', {
       'printer-contexts:create',
       'connection-state:is-connected',
       'connection-state:get-state',
-      'camera:get-stream-url'
+      'camera:get-stream-url',
+      'camera:get-rtsp-relay-info',
+      'printer-settings:get',
+      'printer-settings:update',
+      'printer-settings:get-printer-name'
     ];
     
     if (validInvokeChannels.includes(channel)) {
@@ -413,6 +425,22 @@ contextBridge.exposeInMainWorld('api', {
 
     getState: async (contextId?: string): Promise<unknown> => {
       return await ipcRenderer.invoke('connection-state:get-state', contextId);
+    }
+  },
+
+  printerSettings: {
+    get: async (): Promise<unknown> => {
+      return await ipcRenderer.invoke('printer-settings:get');
+    },
+
+    update: async (settings: unknown): Promise<boolean> => {
+      const result: unknown = await ipcRenderer.invoke('printer-settings:update', settings);
+      return typeof result === 'boolean' ? result : false;
+    },
+
+    getPrinterName: async (): Promise<string | null> => {
+      const result: unknown = await ipcRenderer.invoke('printer-settings:get-printer-name');
+      return typeof result === 'string' ? result : null;
     }
   }
 } as ElectronAPI);

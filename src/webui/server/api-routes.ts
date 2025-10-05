@@ -1263,10 +1263,13 @@ export function createAPIRoutes(): Router {
 
   /**
    * GET /api/camera/proxy-config - Get camera proxy configuration for active context
+   * Now supports both MJPEG and RTSP streams
    */
   router.get('/camera/proxy-config', async (req: AuthenticatedRequest, res: Response) => {
     try {
       const { getPrinterContextManager } = await import('../../managers/PrinterContextManager');
+      const { resolveCameraConfig, getCameraUserConfig } = await import('../../utils/camera-utils');
+      const { getPrinterBackendManager } = await import('../../managers/PrinterBackendManager');
       const contextManager = getPrinterContextManager();
       const activeContext = contextManager.getActiveContext();
 
@@ -1278,26 +1281,88 @@ export function createAPIRoutes(): Router {
         return res.status(503).json(response);
       }
 
-      // Get the camera proxy status for this specific context
-      const { getCameraProxyService } = await import('../../services/CameraProxyService');
-      const cameraProxyService = getCameraProxyService();
-      const status = cameraProxyService.getStatusForContext(activeContext.id);
+      // Get camera configuration for this context
+      const backendManager = getPrinterBackendManager();
+      const backend = backendManager.getBackendForContext(activeContext.id);
 
-      if (!status) {
+      if (!backend) {
         const response: StandardAPIResponse = {
           success: false,
-          error: 'Camera proxy not available for this printer'
+          error: 'Backend not found for context'
         };
         return res.status(503).json(response);
       }
 
-      const response = {
-        success: true,
-        port: status.port,
-        url: `http://${req.hostname}:${status.port}/stream`
-      };
+      const backendStatus = backend.getBackendStatus();
+      const cameraConfig = resolveCameraConfig({
+        printerIpAddress: activeContext.printerDetails.IPAddress,
+        printerFeatures: backendStatus.features,
+        userConfig: getCameraUserConfig(activeContext.id)
+      });
 
-      return res.json(response);
+      if (!cameraConfig.isAvailable || !cameraConfig.streamUrl) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'Camera not available for this printer'
+        };
+        return res.status(503).json(response);
+      }
+
+      // Handle based on stream type
+      if (cameraConfig.streamType === 'rtsp') {
+        // RTSP: Provide WebSocket port for node-rtsp-stream
+        const { getRtspStreamService } = await import('../../services/RtspStreamService');
+        const rtspStreamService = getRtspStreamService();
+        const streamStatus = rtspStreamService.getStreamStatus(activeContext.id);
+        const ffmpegStatus = rtspStreamService.getFfmpegStatus();
+
+        if (!ffmpegStatus.available) {
+          const response = {
+            success: false,
+            error: 'ffmpeg required to view RTSP cameras in browser',
+            streamType: 'rtsp' as const,
+            ffmpegAvailable: false
+          };
+          return res.status(503).json(response);
+        }
+
+        if (!streamStatus) {
+          const response: StandardAPIResponse = {
+            success: false,
+            error: 'RTSP stream not available'
+          };
+          return res.status(503).json(response);
+        }
+
+        const response = {
+          success: true,
+          streamType: 'rtsp' as const,
+          wsPort: streamStatus.wsPort,
+          ffmpegAvailable: true
+        };
+        return res.json(response);
+      } else {
+        // MJPEG: Use camera proxy service
+        const { getCameraProxyService } = await import('../../services/CameraProxyService');
+        const cameraProxyService = getCameraProxyService();
+        const status = cameraProxyService.getStatusForContext(activeContext.id);
+
+        if (!status) {
+          const response: StandardAPIResponse = {
+            success: false,
+            error: 'Camera proxy not available for this printer'
+          };
+          return res.status(503).json(response);
+        }
+
+        const response = {
+          success: true,
+          streamType: 'mjpeg' as const,
+          port: status.port,
+          url: `http://${req.hostname}:${status.port}/stream`
+        };
+        return res.json(response);
+      }
 
     } catch (error) {
       const appError = toAppError(error);

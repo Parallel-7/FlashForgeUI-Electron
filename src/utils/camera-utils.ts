@@ -7,14 +7,32 @@
  * 3. No camera available
  */
 
-import { 
-  CameraUrlResolutionParams, 
+import {
+  CameraUrlResolutionParams,
   ResolvedCameraConfig,
   CameraUrlValidationResult,
   CameraUserConfig,
+  CameraStreamType,
   DEFAULT_CAMERA_PATTERNS
 } from '../types/camera';
 import { getConfigManager } from '../managers/ConfigManager';
+import { getPrinterContextManager } from '../managers/PrinterContextManager';
+
+/**
+ * Detect stream type from camera URL
+ *
+ * @param url - Camera URL to analyze
+ * @returns Stream type (mjpeg or rtsp)
+ */
+export function detectStreamType(url: string): CameraStreamType {
+  try {
+    const parsedUrl = new URL(url);
+    return parsedUrl.protocol === 'rtsp:' ? 'rtsp' : 'mjpeg';
+  } catch {
+    // Default to MJPEG for invalid URLs
+    return 'mjpeg';
+  }
+}
 
 /**
  * Validate a camera URL
@@ -72,9 +90,11 @@ export function resolveCameraConfig(params: CameraUrlResolutionParams): Resolved
       // but no URL is specified. This supports cameras installed on printers that
       // don't have them by default.
       const autoUrl = `http://${printerIpAddress}:8080/?action=stream`;
-      
+
+
       return {
         sourceType: 'custom',
+        streamType: 'mjpeg', // Auto URL is always MJPEG
         streamUrl: autoUrl,
         isAvailable: true
       };
@@ -86,6 +106,7 @@ export function resolveCameraConfig(params: CameraUrlResolutionParams): Resolved
     if (validation.isValid) {
       return {
         sourceType: 'custom',
+        streamType: detectStreamType(userConfig.customCameraUrl),
         streamUrl: userConfig.customCameraUrl,
         isAvailable: true
       };
@@ -104,9 +125,11 @@ export function resolveCameraConfig(params: CameraUrlResolutionParams): Resolved
   if (printerFeatures.camera.builtin) {
     // Use default FlashForge MJPEG pattern
     const streamUrl = DEFAULT_CAMERA_PATTERNS.FLASHFORGE_MJPEG(printerIpAddress);
-    
+
+
     return {
       sourceType: 'builtin',
+      streamType: 'mjpeg', // Built-in cameras are always MJPEG
       streamUrl,
       isAvailable: true
     };
@@ -123,10 +146,34 @@ export function resolveCameraConfig(params: CameraUrlResolutionParams): Resolved
 
 /**
  * Get camera configuration from user settings
+ * Now context-aware: reads from per-printer settings if contextId provided,
+ * otherwise falls back to global config (for backward compatibility)
+ *
+ * @param contextId - Optional context ID to get per-printer camera settings
+ * @returns Camera user configuration
  */
-export function getCameraUserConfig(): CameraUserConfig {
+export function getCameraUserConfig(contextId?: string): CameraUserConfig {
   const configManager = getConfigManager();
-  
+
+  // If contextId provided, try to get per-printer settings first
+  if (contextId) {
+    const contextManager = getPrinterContextManager();
+    const context = contextManager.getContext(contextId);
+
+    if (context?.printerDetails) {
+      const { customCameraEnabled, customCameraUrl } = context.printerDetails;
+
+      // Per-printer settings override global config
+      if (customCameraEnabled !== undefined) {
+        return {
+          customCameraEnabled,
+          customCameraUrl: customCameraUrl || null
+        };
+      }
+    }
+  }
+
+  // Fall back to global config
   return {
     customCameraEnabled: configManager.get('CustomCamera') || false,
     customCameraUrl: configManager.get('CustomCameraUrl') || null

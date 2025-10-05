@@ -619,6 +619,17 @@ export class ConnectionFlowManager extends EventEmitter {
 
       // Step 6: Save printer details
       this.loadingManager.updateMessage('Saving printer details...');
+
+      // Check if printer already exists to preserve per-printer settings
+      const existingPrinter = this.savedPrinterService.getSavedPrinter(serialNumber);
+      console.log('[ConnectionFlow] Existing printer check for', serialNumber, ':', existingPrinter);
+      console.log('[ConnectionFlow] Existing settings:', {
+        customCameraEnabled: existingPrinter?.customCameraEnabled,
+        customCameraUrl: existingPrinter?.customCameraUrl,
+        customLedsEnabled: existingPrinter?.customLedsEnabled,
+        forceLegacyMode: existingPrinter?.forceLegacyMode
+      });
+
       const printerDetails: PrinterDetails = {
         Name: formatPrinterName(printerName, serialNumber),
         IPAddress: discoveredPrinter.ipAddress,
@@ -626,8 +637,15 @@ export class ConnectionFlowManager extends EventEmitter {
         CheckCode: checkCode,
         ClientType: ForceLegacyAPI ? 'legacy' : clientType,
         printerModel: tempResult.typeName,
-        modelType
+        modelType,
+        // Preserve existing per-printer settings or use defaults for new printers
+        customCameraEnabled: existingPrinter?.customCameraEnabled ?? false,
+        customCameraUrl: existingPrinter?.customCameraUrl ?? '',
+        customLedsEnabled: existingPrinter?.customLedsEnabled ?? false,
+        forceLegacyMode: existingPrinter?.forceLegacyMode ?? false
       };
+
+      console.log('[ConnectionFlow] Final printer details to save:', printerDetails);
 
       await this.savedPrinterService.savePrinter(printerDetails);
 
@@ -830,23 +848,41 @@ export class ConnectionFlowManager extends EventEmitter {
     const flowId = this.startFlow();
 
     try {
+      // Ensure per-printer settings have defaults if not set
+      const detailsWithDefaults: PrinterDetails = {
+        ...details,
+        customCameraEnabled: details.customCameraEnabled ?? false,
+        customCameraUrl: details.customCameraUrl ?? '',
+        customLedsEnabled: details.customLedsEnabled ?? false,
+        forceLegacyMode: details.forceLegacyMode ?? false
+      };
+
+      // If we added defaults, save them back to printer_details.json
+      if (details.customCameraEnabled === undefined ||
+          details.customCameraUrl === undefined ||
+          details.customLedsEnabled === undefined ||
+          details.forceLegacyMode === undefined) {
+        await this.savedPrinterService.savePrinter(detailsWithDefaults);
+        console.log(`Initialized default per-printer settings for ${detailsWithDefaults.Name}`);
+      }
+
       const ForceLegacyAPI = this.configManager.get('ForceLegacyAPI') || false;
-      const familyInfo = detectPrinterFamily(details.printerModel);
+      const familyInfo = detectPrinterFamily(detailsWithDefaults.printerModel);
 
       // Create a mock discovered printer for connection establishment
       const discoveredPrinter: DiscoveredPrinter = {
-        name: details.Name,
-        ipAddress: details.IPAddress,
-        serialNumber: details.SerialNumber,
-        model: details.printerModel
+        name: detailsWithDefaults.Name,
+        ipAddress: detailsWithDefaults.IPAddress,
+        serialNumber: detailsWithDefaults.SerialNumber,
+        model: detailsWithDefaults.printerModel
       };
 
       // Establish connection
       const connectionResult = await this.connectionService.establishFinalConnection(
         discoveredPrinter,
-        details.printerModel,
+        detailsWithDefaults.printerModel,
         familyInfo.is5MFamily,
-        details.CheckCode,
+        detailsWithDefaults.CheckCode,
         ForceLegacyAPI
       );
 
@@ -855,21 +891,21 @@ export class ConnectionFlowManager extends EventEmitter {
       }
 
       // Create printer context
-      const contextId = this.contextManager.createContext(details);
+      const contextId = this.contextManager.createContext(detailsWithDefaults);
       this.updateFlowContext(flowId, contextId);
       console.log(`Created context ${contextId} for saved printer ${details.Name}`);
 
       // Update connection state for this context
       this.connectionStateManager.setConnected(
         contextId,
-        details,
+        detailsWithDefaults,
         connectionResult.primaryClient,
         connectionResult.secondaryClient
       );
 
       // Initialize backend for this context
       await this.backendManager.initializeBackend(contextId, {
-        printerDetails: details,
+        printerDetails: detailsWithDefaults,
         primaryClient: connectionResult.primaryClient,
         secondaryClient: connectionResult.secondaryClient
       });
@@ -878,14 +914,14 @@ export class ConnectionFlowManager extends EventEmitter {
       this.contextManager.switchContext(contextId);
       console.log(`Switched to context ${contextId}`);
 
-      this.emit('connected', details);
+      this.emit('connected', detailsWithDefaults);
 
       // End flow tracking
       this.endFlow(flowId);
 
       return {
         success: true,
-        printerDetails: details,
+        printerDetails: detailsWithDefaults,
         clientInstance: connectionResult.primaryClient
       };
 
@@ -1148,7 +1184,12 @@ export class ConnectionFlowManager extends EventEmitter {
           CheckCode: checkCode,
           ClientType: spec.type,
           printerModel: tempResult.typeName,
-          modelType
+          modelType,
+          // Initialize per-printer settings with defaults for new printers
+          customCameraEnabled: false,
+          customCameraUrl: '',
+          customLedsEnabled: false,
+          forceLegacyMode: false
         };
 
         await this.savedPrinterService.savePrinter(printerDetails);

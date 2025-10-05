@@ -53,7 +53,7 @@ export class PrinterDetailsManager {
 
     const detailsObj = details as Record<string, unknown>;
     const required = ['Name', 'IPAddress', 'SerialNumber', 'CheckCode', 'ClientType', 'printerModel'];
-    const hasAllFields = required.every(field => 
+    const hasAllFields = required.every(field =>
       field in detailsObj && typeof detailsObj[field] === 'string' && (detailsObj[field] as string).length > 0
     );
 
@@ -71,6 +71,20 @@ export class PrinterDetailsManager {
     const ipAddress = detailsObj.IPAddress as string;
     const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
     if (!ipRegex.test(ipAddress)) {
+      return false;
+    }
+
+    // Validate optional per-printer settings fields if present
+    if ('customCameraEnabled' in detailsObj && typeof detailsObj.customCameraEnabled !== 'boolean') {
+      return false;
+    }
+    if ('customCameraUrl' in detailsObj && typeof detailsObj.customCameraUrl !== 'string') {
+      return false;
+    }
+    if ('customLedsEnabled' in detailsObj && typeof detailsObj.customLedsEnabled !== 'boolean') {
+      return false;
+    }
+    if ('forceLegacyMode' in detailsObj && typeof detailsObj.forceLegacyMode !== 'boolean') {
       return false;
     }
 
@@ -331,11 +345,21 @@ export class PrinterDetailsManager {
    * @param contextId - Optional context ID for context-specific last-used tracking
    */
   public async savePrinter(details: PrinterDetails, contextId?: string): Promise<void> {
+    console.log('[PrinterDetailsManager] savePrinter called with:', {
+      details,
+      contextId,
+      hasCustomCamera: 'customCameraEnabled' in details,
+      customCameraEnabled: details.customCameraEnabled,
+      customCameraUrl: details.customCameraUrl
+    });
+
     if (!this.validatePrinterDetails(details)) {
+      console.error('[PrinterDetailsManager] Validation failed for printer details:', details);
       throw new Error('Invalid printer details provided');
     }
 
     const storedDetails = this.toStoredPrinterDetails(details);
+    console.log('[PrinterDetailsManager] Stored details after conversion:', storedDetails);
 
     this.currentConfig = {
       ...this.currentConfig,
@@ -346,6 +370,8 @@ export class PrinterDetailsManager {
       lastUsedPrinterSerial: details.SerialNumber
     };
 
+    console.log('[PrinterDetailsManager] Updated config in memory:', this.currentConfig.printers[details.SerialNumber]);
+
     // If contextId provided, track context-specific last used
     if (contextId) {
       this.contextLastUsed.set(contextId, details.SerialNumber);
@@ -355,6 +381,7 @@ export class PrinterDetailsManager {
     }
 
     await this.saveConfigToFile();
+    console.log('[PrinterDetailsManager] File saved successfully');
   }
 
   /**

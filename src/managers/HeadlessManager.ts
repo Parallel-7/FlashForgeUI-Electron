@@ -155,7 +155,11 @@ export class HeadlessManager extends EventEmitter {
       CheckCode: lastUsedPrinter.CheckCode,
       ClientType: lastUsedPrinter.ClientType as PrinterClientType,
       printerModel: lastUsedPrinter.printerModel,
-      modelType: lastUsedPrinter.modelType
+      modelType: lastUsedPrinter.modelType,
+      customCameraEnabled: lastUsedPrinter.customCameraEnabled,
+      customCameraUrl: lastUsedPrinter.customCameraUrl,
+      customLedsEnabled: lastUsedPrinter.customLedsEnabled,
+      forceLegacyMode: lastUsedPrinter.forceLegacyMode
     };
 
     const results = await this.connectionManager.connectHeadlessFromSaved([printerDetails]);
@@ -184,7 +188,11 @@ export class HeadlessManager extends EventEmitter {
       CheckCode: saved.CheckCode,
       ClientType: saved.ClientType as PrinterClientType,
       printerModel: saved.printerModel,
-      modelType: saved.modelType
+      modelType: saved.modelType,
+      customCameraEnabled: saved.customCameraEnabled,
+      customCameraUrl: saved.customCameraUrl,
+      customLedsEnabled: saved.customLedsEnabled,
+      forceLegacyMode: saved.forceLegacyMode
     }));
 
     const results = await this.connectionManager.connectHeadlessFromSaved(printerDetailsList);

@@ -19,6 +19,23 @@ contextBridge.exposeInMainWorld('settingsAPI', {
   }
 });
 
+// Expose printer settings API (reusing same implementation as main preload)
+contextBridge.exposeInMainWorld('printerSettingsAPI', {
+  get: async (): Promise<unknown> => {
+    return await ipcRenderer.invoke('printer-settings:get');
+  },
+
+  update: async (settings: unknown): Promise<boolean> => {
+    const result: unknown = await ipcRenderer.invoke('printer-settings:update', settings);
+    return typeof result === 'boolean' ? result : false;
+  },
+
+  getPrinterName: async (): Promise<string | null> => {
+    const result: unknown = await ipcRenderer.invoke('printer-settings:get-printer-name');
+    return typeof result === 'string' ? result : null;
+  }
+});
+
 // Generic window controls for sub-windows
 contextBridge.exposeInMainWorld('windowControls', {
   minimize: () => ipcRenderer.send('dialog-window-minimize'),
