@@ -68,7 +68,11 @@
       "Bash(npm uninstall:*)",
       "Bash(npm install:*)",
       "mcp__cloudscraper-mcp__scrape_url",
-      "Bash(npm run build:webui:*)"
+      "Bash(npm run build:webui:*)",
+      "Bash(npm run tsr:check:all:*)",
+      "Bash(npx knip:*)",
+      "Bash(npm run knip:*)",
+      "Bash(tee:*)"
     ],
     "deny": [],
     "additionalDirectories": [

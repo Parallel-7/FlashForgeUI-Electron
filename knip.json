@@ -1,0 +1,33 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "entry": [
+    "src/index.ts",
+    "src/renderer.ts",
+    "src/preload.ts",
+    "src/ui/**/*-preload.ts",
+    "src/ui/**/*-renderer.ts",
+    "src/webui/server/WebUIManager.ts",
+    "src/webui/static/app.ts"
+  ],
+  "project": [
+    "src/**/*.{ts,tsx,js,jsx}",
+    "src/**/*.html"
+  ],
+  "ignore": [
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "**/__tests__/**"
+  ],
+  "ignoreDependencies": [
+    "ff-api",
+    "slicer-meta"
+  ],
+  "ignoreBinaries": [
+    "powershell"
+  ],
+  "ignoreUnresolved": [
+    "@typescript-eslint/eslint-config-recommended",
+    "jest-environment-jsdom",
+    "C:/Users/Cope/Documents/GitHub/FlashForgeUI-Electron/__mocks__/fileMock.js"
+  ]
+}
