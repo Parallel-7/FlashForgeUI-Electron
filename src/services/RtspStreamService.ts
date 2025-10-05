@@ -197,11 +197,23 @@ export class RtspStreamService extends EventEmitter {
         streamUrl: rtspUrl,
         wsPort,
         ffmpegOptions: {
-          '-stats': '',
+          // DO NOT include '-stats' - it enables verbose output
+          '-nostats': '',  // Disable progress statistics output
+          '-loglevel': 'quiet',  // Suppress ffmpeg banner and info
           '-r': 30,  // 30 fps
           '-q:v': '3'  // Quality (1-5, lower is better)
         }
       });
+
+      // Suppress ffmpeg stderr output (node-rtsp-stream emits it as 'ffmpegStderr' event)
+      // This prevents ffmpeg logs from appearing in console
+      stream.on('ffmpegStderr', () => {
+        // Consume but don't log ffmpeg stderr output
+      });
+
+      // Get ffmpeg child process reference from node-rtsp-stream
+      // The library exposes it as stream.mpeg1Muxer.stream
+      const ffmpegProcess = stream.mpeg1Muxer?.stream;
 
       // Store stream configuration with ffmpeg process reference
       const streamConfig: RtspStreamConfig = {
@@ -210,7 +222,7 @@ export class RtspStreamService extends EventEmitter {
         wsPort,
         stream,
         isActive: true,
-        ffmpegProcess: stream.mpeg1Muxer?.stream  // Store ffmpeg child process reference
+        ffmpegProcess
       };
 
       this.streams.set(contextId, streamConfig);
@@ -241,9 +253,30 @@ export class RtspStreamService extends EventEmitter {
 
     try {
       // First, explicitly kill the ffmpeg process if we have a reference
-      if (streamConfig.ffmpegProcess) {
+      if (streamConfig.ffmpegProcess && !streamConfig.ffmpegProcess.killed) {
         console.log(`[RtspStreamService] Killing ffmpeg process for context ${contextId}`);
-        streamConfig.ffmpegProcess.kill('SIGKILL');  // Force kill ffmpeg
+
+        // Wait for process to exit with timeout
+        const killPromise = new Promise<void>((resolve) => {
+          streamConfig.ffmpegProcess.once('exit', () => {
+            console.log(`[RtspStreamService] ffmpeg process exited for context ${contextId}`);
+            resolve();
+          });
+
+          // Force kill - on Windows, just use kill() without signal
+          streamConfig.ffmpegProcess.kill();
+
+          // Timeout after 2 seconds
+          setTimeout(() => {
+            if (!streamConfig.ffmpegProcess.killed) {
+              console.warn(`[RtspStreamService] ffmpeg process did not exit cleanly, force killing`);
+              streamConfig.ffmpegProcess.kill('SIGKILL');
+            }
+            resolve();
+          }, 2000);
+        });
+
+        await killPromise;
       }
 
       // Then stop the stream (which will try to clean up WebSocket server)

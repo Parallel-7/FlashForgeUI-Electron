@@ -58,6 +58,7 @@ interface PrinterFeatures {
   canPause: boolean;
   canResume: boolean;
   canCancel: boolean;
+  ledUsesLegacyAPI?: boolean; // Whether custom LED control is enabled
 }
 
 interface JobFile {
@@ -749,12 +750,13 @@ async function loadPrinterFeatures(): Promise<void> {
 
 function updateFeatureVisibility(): void {
   if (!state.printerFeatures) return;
-  
-  // LED controls
+
+  // LED controls - enable if printer has built-in LEDs OR custom LED control is enabled
   const ledOn = $('btn-led-on') as HTMLButtonElement;
   const ledOff = $('btn-led-off') as HTMLButtonElement;
-  if (ledOn) ledOn.disabled = !state.printerFeatures.hasLED;
-  if (ledOff) ledOff.disabled = !state.printerFeatures.hasLED;
+  const ledEnabled = state.printerFeatures.hasLED || state.printerFeatures.ledUsesLegacyAPI || false;
+  if (ledOn) ledOn.disabled = !ledEnabled;
+  if (ledOff) ledOff.disabled = !ledEnabled;
   
   // Filtration controls (AD5M Pro only)
   if (state.printerFeatures.hasFiltration) {

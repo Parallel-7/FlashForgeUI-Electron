@@ -67,7 +67,8 @@
       "mcp__context7__resolve-library-id",
       "Bash(npm uninstall:*)",
       "Bash(npm install:*)",
-      "mcp__cloudscraper-mcp__scrape_url"
+      "mcp__cloudscraper-mcp__scrape_url",
+      "Bash(npm run build:webui:*)"
     ],
     "deny": [],
     "additionalDirectories": [

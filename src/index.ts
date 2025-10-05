@@ -405,6 +405,10 @@ const setupPrinterContextEventForwarding = (): void => {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('polling-update', data);
       }
+
+      // Forward to WebUI for WebSocket clients
+      const webUIManager = getWebUIManager();
+      webUIManager.handlePollingUpdate(data as any);
     }
   });
 
@@ -444,12 +448,12 @@ const setupConnectionEventForwarding = (): void => {
   // Stop polling BEFORE disconnect to prevent commands during logout
   // NOTE: In multi-context mode, polling is managed per-context by MultiContextPollingCoordinator
   // which automatically stops polling when contexts are removed
-  connectionManager.on('pre-disconnect', () => {
+  connectionManager.on('pre-disconnect', (contextId: string) => {
     console.log('Pre-disconnect event received');
     // Polling cleanup is handled by context-removed events in MultiContextPollingCoordinator
 
-    // Also handle camera disconnection
-    void cameraIPCHandler.handlePrinterDisconnected();
+    // Also handle camera disconnection for the specific context
+    void cameraIPCHandler.handlePrinterDisconnected(contextId);
   });
   
   // Backend initialization notification

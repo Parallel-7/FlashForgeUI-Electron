@@ -15,6 +15,14 @@ const srcDir = 'src/webui/static';
 const destDir = 'dist/webui/static';
 const filesToCopy = ['index.html', 'webui.css'];
 
+// Vendor library to copy from node_modules
+const vendorLibraries = [
+  {
+    src: 'node_modules/@cycjimmy/jsmpeg-player/dist/jsmpeg-player.umd.min.js',
+    dest: 'jsmpeg.min.js'
+  }
+];
+
 // Main function
 function copyWebUIAssets() {
   try {
@@ -41,7 +49,27 @@ function copyWebUIAssets() {
     }
     
     console.log(`✅ WebUI asset copy complete: ${copiedCount}/${filesToCopy.length} files copied`);
-    
+
+    // Copy vendor libraries
+    let vendorCount = 0;
+    for (const vendor of vendorLibraries) {
+      const srcPath = vendor.src;
+      const destPath = path.join(destDir, vendor.dest);
+
+      // Check if source file exists
+      if (!fs.existsSync(srcPath)) {
+        console.warn(`Warning: Vendor library not found: ${srcPath}`);
+        continue;
+      }
+
+      // Copy the vendor library
+      fs.copyFileSync(srcPath, destPath);
+      console.log(`Copied vendor library: ${vendor.dest}`);
+      vendorCount++;
+    }
+
+    console.log(`✅ Vendor library copy complete: ${vendorCount}/${vendorLibraries.length} libraries copied`);
+
   } catch (error) {
     console.error('❌ Error copying WebUI assets:', error.message);
     process.exit(1);

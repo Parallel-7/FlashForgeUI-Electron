@@ -322,13 +322,14 @@ export class CameraIPCHandler {
   
   /**
    * Handle printer disconnection - clear camera URL
+   * @param contextId - Optional context ID (defaults to active context if not provided)
    */
-  public async handlePrinterDisconnected(): Promise<void> {
+  public async handlePrinterDisconnected(contextId?: string): Promise<void> {
     console.log('Clearing camera stream URL due to printer disconnection');
     this.currentPrinterIpAddress = null;
-    const contextId = this.getActiveContextId();
-    await this.cameraProxyService.removeContext(contextId);
-    await this.rtspStreamService.stopStream(contextId);
+    const targetContextId = contextId || this.getActiveContextId();
+    await this.cameraProxyService.removeContext(targetContextId);
+    await this.rtspStreamService.stopStream(targetContextId);
   }
   
   /**
