@@ -1,6 +1,40 @@
 /**
- * Safe DOM manipulation utilities to prevent null reference errors.
- * Provides type-safe element queries and manipulation helpers.
+ * @fileoverview Type-safe DOM manipulation utilities providing null-safe element querying,
+ * manipulation, and event handling. Eliminates null reference errors through consistent
+ * defensive programming patterns while maintaining TypeScript type safety. Includes specialized
+ * helpers for form inputs, visibility management, class manipulation, and attribute handling.
+ *
+ * Key Features:
+ * - Null-safe element querying with optional required validation
+ * - Type-safe generic element accessors with HTMLElement specialization
+ * - Form input value getters/setters with null handling
+ * - Class manipulation helpers (add/remove/toggle)
+ * - Visibility utilities with "hidden" class convention
+ * - Attribute management with safe get/set/remove/toggle
+ * - Event listener attachment with cleanup callback returns
+ * - Basic XSS prevention in innerHTML operations
+ *
+ * Utility Categories:
+ * 1. Element Query: Safe querySelector/querySelectorAll/getElementById with type parameters
+ * 2. Element Manipulation: Text content, innerHTML (sanitized), class management
+ * 3. Form Elements: Input values, checkbox states, select values with null safety
+ * 4. Event Handling: Click and change listeners with automatic cleanup functions
+ * 5. Visibility: Show/hide/toggle with "hidden" class convention
+ * 6. Attributes: Get/set/remove/toggle with null-safe operations
+ *
+ * Design Patterns:
+ * - All functions return boolean success indicators or null for failures
+ * - Accepts both selector strings and HTMLElement references
+ * - Generic type parameters for specialized element types
+ * - Consistent null-coalescing for safe default returns
+ *
+ * Security:
+ * - XSS prevention: Strips script tags from innerHTML operations
+ * - Safe attribute manipulation preventing injection attacks
+ *
+ * Usage Context:
+ * Primarily used in renderer processes for UI manipulation, providing a consistent
+ * API for DOM operations across all dialog and main window renderers.
  */
 
 import { AppError, ErrorCode } from './error.utils';

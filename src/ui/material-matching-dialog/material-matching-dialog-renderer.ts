@@ -1,3 +1,22 @@
+/**
+ * @fileoverview Renderer process for interactive material-to-slot matching interface.
+ *
+ * Implements dual-panel selection UI for mapping print job material requirements to physical
+ * material station slots. Validates material type compatibility, warns on color differences,
+ * and prevents invalid mappings (empty slots, type mismatches, duplicate assignments). Provides
+ * visual feedback through color swatches, selection states, and real-time mapping display.
+ * Context-aware button text (Start Print vs Confirm) based on workflow origin.
+ *
+ * Key features:
+ * - Dual-panel selection: print requirements and available IFS slots
+ * - Material type compatibility validation with error messages
+ * - Color difference warnings (allowed but highlighted)
+ * - Real-time mapping visualization with removal capability
+ * - Disabled states for empty and already-assigned slots
+ * - Complete mapping requirement before confirmation
+ * - Context-aware UI (job-start vs file-upload workflows)
+ */
+
 // Material Matching Dialog Renderer
 // Handles material mapping between print requirements and IFS slots
 

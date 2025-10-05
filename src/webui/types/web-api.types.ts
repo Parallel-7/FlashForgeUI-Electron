@@ -1,7 +1,21 @@
 /**
- * TypeScript type definitions for WebUI API.
- * Defines all request/response types for communication between web client and server.
- * Uses discriminated unions for type-safe message handling.
+ * @fileoverview TypeScript type definitions for WebUI API communication and message protocols.
+ *
+ * Provides comprehensive type definitions for all communication between WebUI browser clients
+ * and the WebUI server including authentication payloads, WebSocket message protocols, API
+ * request/response structures, and printer command types. Uses discriminated union types for
+ * type-safe message handling and readonly properties to prevent accidental mutation. The unified
+ * PrinterStatusData interface ensures consistency across WebSocket messages, API responses, and
+ * frontend state management. All types follow strict TypeScript patterns with readonly modifiers,
+ * literal types for enums, and branded types where appropriate for compile-time safety.
+ *
+ * Key exports:
+ * - Authentication: WebUILoginRequest, WebUILoginResponse, WebUIAuthStatus
+ * - WebSocket: WebSocketMessage, WebSocketCommand, WebSocketMessageType, WebSocketCommandType
+ * - Printer data: PrinterStatusData (unified status interface), PrinterFeatures
+ * - API responses: PrinterStatusResponse, StandardAPIResponse, CameraStatusResponse
+ * - Commands: PRINTER_COMMANDS constant object, PrinterCommand type
+ * - Errors: WebUIError, WEB_UI_ERROR_CODES constant object, WebUIErrorCode type
  */
 
 // ============================================================================

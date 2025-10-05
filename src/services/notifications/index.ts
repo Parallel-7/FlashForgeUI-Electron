@@ -1,14 +1,25 @@
-// src/services/notifications/index.ts
-
 /**
- * Notifications module entry point providing centralized access to the desktop
- * notification system for printer events, upload status, and connection changes.
- * 
- * Core Responsibilities:
- * - Export all notification services and types
- * - Provide easy access to global instances
- * - Centralize notification system initialization
- * - Support both singleton and custom instances
+ * @fileoverview Notifications module entry point for desktop notification system
+ *
+ * Provides centralized access to the complete desktop notification system for printer
+ * events, upload status, and connection state changes. Manages initialization and disposal
+ * of notification services, exports factory functions for creating typed notifications,
+ * and provides convenient wrapper functions for common notification scenarios.
+ *
+ * Key Exports:
+ * - NotificationService: Core Electron notification wrapper with OS support detection
+ * - PrinterNotificationCoordinator: Business logic for printer state-based notifications
+ * - Factory functions: Type-safe notification creation with proper data validation
+ * - Utility functions: Settings extraction, state checking, and temperature monitoring
+ * - Initialization: Complete system setup with error handling and headless mode support
+ *
+ * Integration Points:
+ * - ConfigManager: Notification preferences and alert settings
+ * - PrinterPollingService: Real-time printer state monitoring
+ * - BasePrinterBackend: Upload completion and error notifications
+ * - ConnectionEstablishmentService: Connection state change notifications
+ *
+ * @module services/notifications
  */
 
 // Core services

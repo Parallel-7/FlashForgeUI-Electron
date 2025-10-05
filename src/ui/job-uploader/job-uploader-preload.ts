@@ -1,3 +1,20 @@
+/**
+ * @fileoverview Preload script for job uploader dialog with 3MF multi-color support.
+ *
+ * Provides secure IPC bridge for uploading print jobs with comprehensive slicer metadata parsing.
+ * Enhanced with AD5X 3MF multi-color upload capabilities including material matching dialog
+ * integration, progress reporting, and intelligent routing based on printer model and file type.
+ * Supports file browsing, metadata extraction, and upload completion notifications.
+ *
+ * Key exports:
+ * - uploaderAPI: Complete API for file upload workflow
+ * - Material matching integration for 3MF multi-color files
+ * - AD5X-specific upload path with material mappings
+ * - Progress reporting with percentage and status updates
+ * - Metadata parsing from slicer-meta library integration
+ * - Single-color confirmation dialog support
+ */
+
 // job-uploader-preload.ts
 // IPC bridge for Job Uploader Dialog communication between main and renderer processes
 // ENHANCED: Now supports 3MF multi-color upload for AD5X printers

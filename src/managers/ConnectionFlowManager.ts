@@ -1,6 +1,28 @@
 /**
- * ConnectionFlowManager.ts - Orchestrates printer connection flow using specialized services
- * Coordinates discovery, saved printer management, auto-connect, and connection state
+ * @fileoverview Connection flow orchestrator for managing printer discovery and connection workflows.
+ *
+ * Provides high-level coordination of printer connection operations in multi-context environment:
+ * - Network discovery flow management with printer selection
+ * - Direct IP connection support with check code prompts
+ * - Auto-connect functionality for previously connected printers
+ * - Saved printer management and connection restoration
+ * - Connection state tracking and event forwarding
+ * - Multi-context connection flow tracking for concurrent connections
+ *
+ * Key exports:
+ * - ConnectionFlowManager class: Main connection orchestrator
+ * - getPrinterConnectionManager(): Singleton accessor function
+ *
+ * The manager coordinates multiple specialized services:
+ * - PrinterDiscoveryService: Network scanning and printer detection
+ * - SavedPrinterService: Persistent printer storage
+ * - AutoConnectService: Automatic connection on startup
+ * - ConnectionStateManager: Connection state tracking
+ * - DialogIntegrationService: User interaction dialogs
+ * - ConnectionEstablishmentService: Low-level connection setup
+ *
+ * Supports concurrent connection flows with unique flow IDs and context tracking,
+ * enabling multi-printer connections while maintaining proper state isolation.
  */
 
 import { EventEmitter } from 'events';

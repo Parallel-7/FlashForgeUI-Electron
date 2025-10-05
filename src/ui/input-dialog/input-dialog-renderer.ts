@@ -1,3 +1,19 @@
+/**
+ * @fileoverview Renderer process for generic modal input dialog with keyboard support.
+ *
+ * Implements interactive input dialog supporting multiple modes (text, password, hidden) with
+ * comprehensive keyboard navigation and accessibility features. Handles dialog initialization,
+ * user input validation, and result submission. Includes auto-focus, text selection, and
+ * escape/enter keyboard shortcuts. Hidden mode supports confirmation dialogs without input fields.
+ *
+ * Key features:
+ * - Multiple input types: text, password, hidden (for confirmations)
+ * - Keyboard shortcuts: Enter to submit, Escape to cancel
+ * - Auto-focus and text selection for improved UX
+ * - Dynamic UI configuration from initialization options
+ * - Type-safe event handlers with proper DOM element validation
+ */
+
 // input-dialog-renderer.ts
 // TypeScript renderer logic for the generic input dialog
 // Handles user interaction, keyboard shortcuts, and dialog state management

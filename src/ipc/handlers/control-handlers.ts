@@ -1,6 +1,21 @@
 /**
- * Printer control IPC handlers for temperature, LED, print control, and other operations.
- * Handles all direct printer control commands including G-code operations.
+ * @fileoverview Printer control IPC handlers for temperature, LED, print control, and operational commands.
+ *
+ * Provides IPC handlers for direct printer control operations with dual-API support:
+ * - Temperature control (bed/extruder set/cancel) via legacy G-code client
+ * - LED control (on/off) with support for built-in and custom LED configurations
+ * - Print job control (pause/resume/cancel) via backend manager
+ * - Axis homing operations via legacy G-code client
+ * - Filtration control (off/internal/external) for 5M Pro printers
+ * - Platform clearing operations for new API printers
+ *
+ * Key exports:
+ * - registerControlHandlers(): Registers all printer control IPC handlers
+ * - getLegacyClient(): Helper to extract legacy FlashForgeClient from backend
+ *
+ * The handlers intelligently route operations to the appropriate client (FiveMClient for new API,
+ * FlashForgeClient for legacy/G-code operations) based on printer capabilities and operation type.
+ * All operations are context-aware and operate on the active printer context.
  */
 
 import { ipcMain } from 'electron';

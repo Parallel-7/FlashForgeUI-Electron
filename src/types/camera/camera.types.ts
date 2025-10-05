@@ -1,9 +1,27 @@
 /**
- * Camera type definitions for the camera proxy system
- * 
- * Provides comprehensive types for camera configuration, status monitoring,
- * proxy management, and URL resolution logic. Supports both built-in printer
- * cameras and custom camera URLs with proper type safety.
+ * @fileoverview Comprehensive type definitions for camera proxy system
+ *
+ * Provides complete type safety for camera configuration, proxy server management,
+ * stream URL resolution, and client connection tracking. Supports both built-in printer
+ * cameras (MJPEG/RTSP) and custom camera URLs with proper validation and type guards.
+ *
+ * Key Type Groups:
+ * - Configuration: CameraProxyConfig, CameraUserConfig, ResolvedCameraConfig
+ * - Status & Monitoring: CameraProxyStatus, CameraProxyClient, CameraProxyEvent
+ * - URL Resolution: CameraUrlResolutionParams, CameraUrlBuilder, validation results
+ * - Service Interfaces: ICameraProxyService, CameraIPCMethods for main/renderer bridge
+ * - Protocol Support: MJPEG and RTSP stream types with default URL patterns
+ *
+ * Camera Source Priority:
+ * 1. Custom camera URL (if enabled in user config)
+ * 2. Built-in printer camera (if supported by printer features)
+ * 3. None (camera unavailable with reason tracking)
+ *
+ * Type Guards:
+ * - isCameraAvailable: Validates camera configuration availability
+ * - isCustomCamera/isBuiltinCamera: Source type discrimination
+ *
+ * @module types/camera/camera.types
  */
 
 import { PrinterFeatureSet } from '../printer-backend';

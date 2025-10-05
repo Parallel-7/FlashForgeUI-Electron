@@ -1,8 +1,28 @@
-// src/types/config.ts
-
 /**
- * Application configuration interface that exactly matches the legacy JS format.
- * Property names must remain consistent for user config migration compatibility.
+ * @fileoverview Application configuration type definitions with legacy format compatibility
+ *
+ * Defines the complete application configuration schema with exact property name matching
+ * to the legacy JavaScript implementation for seamless config migration. Includes type-safe
+ * defaults, validation functions, sanitization helpers, and change event tracking.
+ *
+ * Key Features:
+ * - AppConfig interface with readonly properties for immutability
+ * - MutableAppConfig for internal modification scenarios
+ * - DEFAULT_CONFIG with type-safe constant values
+ * - Configuration validation with isValidConfig type guard
+ * - Sanitization function for safe config loading
+ * - ConfigUpdateEvent for change tracking and listeners
+ * - Port number validation (1-65535 range)
+ *
+ * Configuration Categories:
+ * - Notifications: AlertWhenComplete, AlertWhenCooled, AudioAlerts, VisualAlerts
+ * - UI Behavior: AlwaysOnTop, RoundedUI, DebugMode
+ * - Camera: CustomCamera, CustomCameraUrl, CameraProxyPort
+ * - WebUI: WebUIEnabled, WebUIPort, WebUIPassword
+ * - Integrations: DiscordSync, FilamentTrackerIntegrationEnabled
+ * - Advanced: ForceLegacyAPI, CustomLeds
+ *
+ * @module types/config
  */
 export interface AppConfig {
   readonly DiscordSync: boolean;

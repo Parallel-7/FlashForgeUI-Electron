@@ -1,6 +1,18 @@
 /**
- * Connection-related IPC handlers for printer discovery and connection management.
- * Handles all printer connection operations including discovery, selection, and saved printer connections.
+ * @fileoverview Connection-related IPC handlers for printer discovery and connection management.
+ *
+ * Provides IPC handlers for managing printer connections in multi-context environment:
+ * - Network discovery initiation and flow management
+ * - Manual IP address connection support
+ * - Printer selection dialog control (open/cancel)
+ * - Integration with ConnectionFlowManager for connection orchestration
+ *
+ * Key exports:
+ * - registerConnectionHandlers(): Registers all connection-related IPC handlers
+ *
+ * Note: Direct printer selection handlers have been removed to prevent duplicate connections.
+ * Connection is now handled exclusively through DialogIntegrationService to ensure proper
+ * context creation and resource management in the multi-printer architecture.
  */
 
 import { ipcMain } from 'electron';

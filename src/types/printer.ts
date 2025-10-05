@@ -1,3 +1,19 @@
+/**
+ * @fileoverview Core printer connection and configuration type definitions.
+ *
+ * Defines comprehensive TypeScript interfaces for printer discovery, connection management,
+ * and multi-printer configuration storage. Supports both legacy and modern API clients with
+ * per-printer settings including custom camera URLs, LED control, and material station features.
+ * Includes types for auto-connect workflows, printer family detection, and saved printer matching.
+ *
+ * Key exports:
+ * - PrinterDetails: Complete printer configuration with per-printer overrides
+ * - MultiPrinterConfig: Top-level configuration structure for multiple saved printers
+ * - DiscoveredPrinter: Network discovery results
+ * - ConnectionResult: Connection flow outcomes
+ * - AutoConnectDecision: Auto-connect strategy determination
+ */
+
 // src/types/printer.ts
 // TypeScript type definitions for printer connection system
 

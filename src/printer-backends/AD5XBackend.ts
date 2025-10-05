@@ -1,7 +1,23 @@
-// src/printer-backends/AD5XBackend.ts
-// Backend implementation for AD5X printer with material station support
-// REFACTORED: Now extends DualAPIBackend to reduce code duplication
-// UPDATED: Implements new job start methods using ff-api's AD5X-specific functionality
+/**
+ * @fileoverview Backend implementation for AD5X printers with material station support.
+ *
+ * Provides backend functionality specific to the AD5X series with advanced material management:
+ * - Dual API support (FiveMClient + FlashForgeClient)
+ * - Material station integration with 4-slot filament management
+ * - Multi-color printing support with material mapping
+ * - AD5X-specific job operations (upload 3MF with material mappings)
+ * - Material station status monitoring (slot contents, active slot, heating status)
+ * - No built-in camera (custom camera URL supported)
+ * - Custom LED control via G-code (when enabled)
+ * - No built-in filtration control
+ *
+ * Key exports:
+ * - AD5XBackend class: Backend for AD5X series printers
+ *
+ * This backend extends DualAPIBackend and adds material station functionality through
+ * ff-api's AD5X-specific methods. It handles material validation, slot mapping, and
+ * multi-color job preparation using the integrated filament feeding system.
+ */
 
 import { DualAPIBackend } from './DualAPIBackend';
 import {

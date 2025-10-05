@@ -1,11 +1,82 @@
-// src/windows/WindowManager.ts - Centralized window state management
-import { BrowserWindow } from 'electron';
-
 /**
- * WindowManager provides centralized management of all BrowserWindow instances
- * in the application. Uses a singleton pattern to ensure consistent state
- * across all modules while providing type-safe access to window references.
+ * @fileoverview WindowManager provides centralized management of all BrowserWindow instances
+ * in the application.
+ *
+ * This singleton service manages the lifecycle and state of all application windows, providing
+ * type-safe access to window references while preventing common errors like accessing destroyed
+ * windows or creating duplicate window instances. The manager uses a Map-based storage system
+ * with an enum-based window type system to ensure compile-time type safety and runtime validation.
+ * All window factory modules use WindowManager to register, retrieve, and cleanup window references,
+ * ensuring consistent state management across the entire application.
+ *
+ * Key Features:
+ * - Singleton pattern ensuring single source of truth for window state
+ * - Type-safe window reference storage using Map with WindowType enum keys
+ * - Automatic destroyed window detection in hasWindow() checks
+ * - Convenience methods for all window types with type-safe return values
+ * - Bulk operations for closing multiple windows (closeAll, closeAllExceptMain)
+ * - Active window enumeration filtering out destroyed windows
+ * - Null-safe access patterns preventing undefined errors
+ *
+ * Core Responsibilities:
+ * - Store and retrieve BrowserWindow references by type with null safety
+ * - Validate window existence and destroyed state before returning references
+ * - Provide convenience methods for common window types (main, settings, status, dialogs)
+ * - Support bulk operations for window management (close all, get active)
+ * - Initialize all window type slots as null to ensure consistent state
+ * - Clear window references on window close events via factory lifecycle handlers
+ *
+ * Window Type Enumeration:
+ * The WindowType enum defines all possible window types in the application:
+ * - MAIN: Main application window
+ * - SETTINGS: Settings configuration window
+ * - STATUS: Printer status display window
+ * - LOG_DIALOG: Application log viewer
+ * - INPUT_DIALOG: Text input dialog
+ * - JOB_UPLOADER: File upload interface
+ * - PRINTER_SELECTION: Printer management window
+ * - JOB_PICKER: File selection from printer
+ * - SEND_COMMANDS: Direct command interface
+ * - IFS_DIALOG: Material station display
+ * - MATERIAL_INFO_DIALOG: Material slot information
+ * - MATERIAL_MATCHING_DIALOG: Material configuration
+ * - SINGLE_COLOR_CONFIRMATION_DIALOG: Print validation
+ * - AUTO_CONNECT_CHOICE_DIALOG: Saved printer selection
+ * - CONNECT_CHOICE_DIALOG: Connection method selection
+ *
+ * Usage Pattern:
+ * ```typescript
+ * const windowManager = getWindowManager();
+ *
+ * // Set window reference (usually in factory)
+ * windowManager.setSettingsWindow(settingsWindow);
+ *
+ * // Check if window exists and is not destroyed
+ * if (windowManager.hasSettingsWindow()) {
+ *   const window = windowManager.getSettingsWindow();
+ *   window?.focus();
+ * }
+ *
+ * // Clear reference (usually in lifecycle handler)
+ * windowManager.setSettingsWindow(null);
+ * ```
+ *
+ * Convenience Methods:
+ * Each window type has three convenience methods:
+ * - get{Type}Window(): Returns BrowserWindow | null
+ * - set{Type}Window(window): Sets window reference
+ * - has{Type}Window(): Returns boolean (true if window exists and not destroyed)
+ *
+ * Bulk Operations:
+ * - getActiveWindows(): Returns array of all non-destroyed windows
+ * - closeAllExceptMain(): Closes all windows except main window
+ * - closeAll(): Closes all windows including main window
+ *
+ * @exports WindowType - Enum of all window types in the application
+ * @exports WindowManager - Main window management class (not directly exported, use getWindowManager)
+ * @exports getWindowManager - Singleton instance accessor function
  */
+import { BrowserWindow } from 'electron';
 
 export enum WindowType {
   MAIN = 'main',

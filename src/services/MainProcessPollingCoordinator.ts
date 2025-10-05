@@ -1,7 +1,21 @@
 /**
- * MainProcessPollingCoordinator - Centralized polling management in the main process.
- * Polls the printer backend directly and distributes updates to all consumers (renderer, WebUI).
- * This eliminates the need for complex IPC polling chains.
+ * @fileoverview Centralized polling coordinator running in main process for single-printer mode.
+ *
+ * Manages centralized printer status polling and distribution to all consumers:
+ * - Direct backend polling without IPC chains
+ * - Update distribution to renderer process via IPC
+ * - Update distribution to WebUI clients via WebSocket
+ * - Polling pause/resume control
+ * - Polling data caching for immediate access
+ * - Notification coordination for status changes
+ *
+ * Key exports:
+ * - MainProcessPollingCoordinator class: Centralized polling manager
+ * - getMainProcessPollingCoordinator(): Singleton accessor
+ *
+ * Note: This coordinator is used for single-printer mode. For multi-printer support,
+ * see MultiContextPollingCoordinator which handles polling across multiple printer
+ * contexts with dynamic frequency adjustment based on active context.
  */
 
 import { EventEmitter } from 'events';

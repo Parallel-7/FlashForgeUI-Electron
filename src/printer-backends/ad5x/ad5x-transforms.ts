@@ -1,8 +1,23 @@
 /**
- * AD5X Data Transformation Functions
- * 
- * Transforms ff-api data structures to our UI-specific types for consistent
- * presentation across dialogs and components.
+ * @fileoverview AD5X data transformation functions for converting API responses to UI-friendly structures.
+ *
+ * Provides transformation functions to convert ff-api data structures to UI-specific types:
+ * - Material station transformation (MatlStationInfo → MaterialStationStatus)
+ * - Slot information transformation (SlotInfo → MaterialSlotInfo)
+ * - Status determination and state mapping
+ * - Empty state creation for error conditions
+ *
+ * Key exports:
+ * - transformMaterialStation(): Convert API material station to UI structure
+ * - transformSlotInfo(): Convert API slot to UI slot (0-based indexing, isEmpty flag)
+ * - createEmptyMaterialStation(): Generate disconnected state for error cases
+ * - determineOverallStatus(): Map API state to UI status indicators
+ *
+ * Transformations handle:
+ * - Index conversion (1-based API → 0-based UI)
+ * - Field inversions (hasFilament → isEmpty for UI clarity)
+ * - Status mapping (stateAction/stateStep → ready/warming/error/disconnected)
+ * - Error state creation with appropriate default values
  */
 
 import { 

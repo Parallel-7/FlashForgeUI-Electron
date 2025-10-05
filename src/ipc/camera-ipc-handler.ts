@@ -1,8 +1,21 @@
 /**
- * Camera IPC Handler
- * 
- * Manages IPC communication for camera-related operations between main and renderer processes.
- * Handles camera proxy status, configuration, and control operations.
+ * @fileoverview Camera IPC handler for managing camera streaming operations across printer contexts.
+ *
+ * Provides comprehensive camera management through IPC handlers for both MJPEG and RTSP streaming:
+ * - Multi-context camera support with per-printer camera proxy servers
+ * - Automatic camera configuration resolution based on printer capabilities and user preferences
+ * - RTSP stream relay for streaming RTSP camera feeds via WebSocket (5M Pro)
+ * - MJPEG camera proxy setup with unique port allocation per context
+ * - Camera stream restoration and error recovery mechanisms
+ * - Integration with per-printer settings for camera source configuration
+ *
+ * Key exports:
+ * - CameraIPCHandler class: Main handler for all camera-related IPC operations
+ * - cameraIPCHandler singleton: Pre-initialized handler instance
+ *
+ * The handler coordinates with CameraProxyService, RtspStreamService, and PrinterContextManager
+ * to provide seamless camera streaming across multiple printer connections. Each printer context
+ * maintains its own camera proxy on a unique port (8181-8191 range).
  */
 
 import { ipcMain, IpcMainInvokeEvent } from 'electron';

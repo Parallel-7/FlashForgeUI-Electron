@@ -1,4 +1,19 @@
-// src/ipc/WindowControlHandlers.ts - Window control IPC handlers with WindowManager integration
+/**
+ * @fileoverview Window control IPC handlers for main window frame operations.
+ *
+ * Provides IPC handlers for custom title bar window controls:
+ * - Window minimize operation
+ * - Window maximize/restore toggle operation
+ * - Window close operation (triggers app quit)
+ *
+ * Key exports:
+ * - setupWindowControlHandlers(): Registers all window control IPC handlers
+ *
+ * These handlers enable the custom frameless window title bar to control the main window,
+ * replacing the native OS window controls. The close handler directly quits the application
+ * to ensure proper process cleanup when using a custom title bar.
+ */
+
 import { ipcMain, app } from 'electron';
 import { getWindowManager } from '../windows/WindowManager';
 

@@ -1,7 +1,22 @@
 /**
- * WebSocketManager - Handles real-time bidirectional communication for the web UI.
- * Manages WebSocket connections, authentication, and message broadcasting.
- * Integrates with WebUIManager to receive printer status updates and forward them to clients.
+ * @fileoverview WebSocket server manager for real-time bidirectional WebUI communication.
+ *
+ * Manages all WebSocket connections for the WebUI providing real-time printer status updates,
+ * command execution, and bidirectional communication between browser clients and the main process.
+ * Implements connection authentication via token validation, automatic reconnection handling,
+ * keep-alive ping/pong mechanisms, and efficient message broadcasting to all connected clients.
+ * Integrates with WebUIManager to receive polling updates from the main process and forwards
+ * formatted status data to clients. Supports multi-tab sessions per authentication token with
+ * proper client tracking and cleanup. All messages follow a type-safe protocol with discriminated
+ * union types for robust error handling.
+ *
+ * Key exports:
+ * - WebSocketManager class: Main WebSocket server with singleton pattern
+ * - getWebSocketManager(): Singleton accessor function
+ * - Connection management: initialize, shutdown, getClientCount, disconnectToken
+ * - Broadcasting: broadcastPrinterStatus, broadcastToToken
+ * - Status access: getLatestPollingData (for API access without WebSocket clients)
+ * - Message types: AUTH_SUCCESS, STATUS_UPDATE, ERROR, COMMAND_RESULT, PONG
  */
 
 import { WebSocketServer, WebSocket, RawData } from 'ws';

@@ -1,7 +1,20 @@
 /**
- * API route handlers for WebUI printer control endpoints.
- * Wraps backend manager methods with HTTP/REST interface, authentication, and validation.
- * All routes return discriminated union results for type-safe error handling.
+ * @fileoverview Express API route definitions for WebUI remote printer control and monitoring.
+ *
+ * Provides comprehensive REST API endpoints for browser-based printer control, wrapping
+ * backend manager methods with HTTP interfaces, authentication middleware, and request validation.
+ * All routes support multi-printer contexts through optional contextId parameters, defaulting to
+ * the active context when not specified. Routes are organized into logical groups: printer status,
+ * control operations (home, pause, resume, cancel), temperature management, filtration controls
+ * (AD5M Pro), job management, camera access, and multi-printer context switching. Each route
+ * returns standardized JSON responses with discriminated union types for type-safe error handling.
+ *
+ * Key exports:
+ * - createAPIRoutes(): Router factory function that returns configured Express router
+ * - Route groups: /printer/status, /printer/control/*, /printer/temperature/*, /printer/filtration/*,
+ *   /jobs/*, /camera/*, /contexts/*
+ * - Multi-printer support: All routes accept active context or explicit contextId parameter
+ * - Security: All routes require WebUI authentication via AuthenticatedRequest type
  */
 
 import { Router, Response } from 'express';

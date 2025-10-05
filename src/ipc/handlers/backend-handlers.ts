@@ -1,6 +1,18 @@
 /**
- * Backend-related IPC handlers for printer status and data operations.
- * Handles all backend data requests including status, preview, and feature queries.
+ * @fileoverview Backend-related IPC handlers for printer status and data retrieval operations.
+ *
+ * Provides IPC handlers for accessing printer backend data in multi-context environment:
+ * - Model preview retrieval for current print jobs
+ * - General printer data requests (legacy compatibility)
+ * - Material station status queries
+ * - Printer feature detection and capability information
+ *
+ * Key exports:
+ * - registerBackendHandlers(): Registers all backend-related IPC handlers
+ *
+ * All handlers are context-aware and operate on the active printer context by default.
+ * The centralized polling system (MainProcessPollingCoordinator) provides real-time updates
+ * via the 'polling-update' IPC channel, reducing the need for manual polling from renderer.
  */
 
 import { ipcMain } from 'electron';

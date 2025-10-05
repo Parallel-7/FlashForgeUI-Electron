@@ -1,6 +1,27 @@
-// src/printer-backends/BasePrinterBackend.ts
-// Abstract base class for all printer-specific backends
-// Provides common functionality for client management, feature detection, and command execution
+/**
+ * @fileoverview Abstract base class for all printer-specific backend implementations.
+ *
+ * Provides common functionality and enforces interface contracts for printer backends:
+ * - Client management (primary and optional secondary clients)
+ * - Feature detection and capability reporting
+ * - Command execution routing (G-code and printer control)
+ * - Status monitoring and data retrieval
+ * - Event emission for backend state changes
+ * - Per-printer settings integration (camera, LEDs, legacy mode)
+ * - Feature override mechanism for UI-driven capability changes
+ *
+ * Key exports:
+ * - BasePrinterBackend abstract class: Foundation for all backend implementations
+ *
+ * All printer backends must extend this class and implement:
+ * - getBaseFeatures(): Define printer-specific feature set
+ * - getPrinterStatus(): Fetch current printer status
+ * - Various operation methods (job control, material station, etc.)
+ *
+ * The backend system supports dual-API printers (FiveMClient + FlashForgeClient) and
+ * legacy printers (FlashForgeClient only), providing a unified interface for UI operations
+ * regardless of the underlying API implementation.
+ */
 
 import { EventEmitter } from 'events';
 import { FiveMClient, FlashForgeClient } from 'ff-api';

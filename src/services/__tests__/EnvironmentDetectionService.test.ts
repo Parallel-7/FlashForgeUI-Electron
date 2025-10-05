@@ -1,6 +1,20 @@
 /**
- * Tests for EnvironmentDetectionService
- * Verifies environment detection, path resolution, and asset validation functionality
+ * @fileoverview Unit tests for EnvironmentDetectionService
+ *
+ * Comprehensive test suite validating environment detection, path resolution, and asset
+ * validation functionality across development and production environments. Tests cover
+ * singleton pattern implementation, packaged vs unpackaged detection, environment-aware
+ * path generation, file system validation, and diagnostic information reporting.
+ *
+ * Key Features Tested:
+ * - Singleton instance management and consistency
+ * - Environment detection (development/production, packaged/unpackaged)
+ * - Path resolution for WebUI, assets, static files, and preload scripts
+ * - Asset existence and accessibility validation
+ * - Critical asset validation with comprehensive error reporting
+ * - Platform-specific path handling and diagnostic logging
+ *
+ * @module services/__tests__/EnvironmentDetectionService.test
  */
 
 // Mock fs module

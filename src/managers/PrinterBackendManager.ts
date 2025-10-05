@@ -1,6 +1,29 @@
-// src/managers/PrinterBackendManager.ts
-// Single coordinator for all printer backend operations
-// Manages backend selection, lifecycle, and feature queries for UI integration
+/**
+ * @fileoverview Central coordinator for printer backend operations in multi-context environment.
+ *
+ * Provides unified management of printer backends with support for multiple concurrent connections:
+ * - Backend selection and instantiation based on printer model type
+ * - Multi-context backend lifecycle management (initialization/disposal)
+ * - Feature detection and capability queries for UI adaptation
+ * - Job operations routing to appropriate backend (start/pause/resume/cancel)
+ * - Material station operations for AD5X printers
+ * - G-code command execution with client type routing
+ * - Event forwarding for backend state changes
+ *
+ * Supported backends:
+ * - Adventurer5MBackend: For Adventurer 5M printers
+ * - Adventurer5MProBackend: For Adventurer 5M Pro printers
+ * - AD5XBackend: For AD5X series printers with material station
+ * - GenericLegacyBackend: Fallback for legacy/unknown printers
+ *
+ * Key exports:
+ * - PrinterBackendManager class: Main backend coordinator
+ * - getPrinterBackendManager(): Singleton accessor function
+ *
+ * The manager maintains a context-to-backend mapping, enabling independent backend operations
+ * for each connected printer. All operations accept an optional contextId parameter, defaulting
+ * to the active context if not provided.
+ */
 
 import { EventEmitter } from 'events';
 import { FiveMClient, FlashForgeClient, AD5XMaterialMapping } from 'ff-api';

@@ -1,6 +1,25 @@
-// src/services/PrinterDataTransformer.ts
-// Service for transforming raw printer API data into structured types
-// Separates data transformation logic from polling logic
+/**
+ * @fileoverview Service for transforming raw printer API data into structured, type-safe formats.
+ *
+ * Provides data transformation functions for printer status and material station data:
+ * - Raw API data to PrinterStatus transformation
+ * - Material station data normalization
+ * - State mapping (printer states, print states)
+ * - Safe data extraction with fallbacks
+ * - Default/empty state creation
+ * - Time conversion utilities (seconds to minutes)
+ *
+ * Key exports:
+ * - printerDataTransformer singleton: Main transformation service
+ * - transformPrinterStatus(): Convert raw printer data to PrinterStatus
+ * - transformMaterialStation(): Convert raw material station data
+ * - createDefaultStatus(): Generate default PrinterStatus
+ * - createDefaultMaterialStation(): Generate empty material station status
+ *
+ * Separates data transformation logic from polling logic, providing a single source of
+ * truth for data structure conversions. Uses safe extraction utilities to handle missing
+ * or malformed data gracefully.
+ */
 
 import {
   safeExtractNumber,

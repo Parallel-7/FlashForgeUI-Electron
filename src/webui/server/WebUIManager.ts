@@ -1,7 +1,21 @@
 /**
- * WebUIManager - Central coordinator for the web UI server.
- * Manages Express server lifecycle, WebSocket connections, and integration with printer backend.
- * Provides remote control access via browser interface with real-time status updates.
+ * @fileoverview Central WebUI server coordinator managing Express HTTP server and WebSocket lifecycle.
+ *
+ * Provides comprehensive management of the WebUI server including Express HTTP server initialization,
+ * static file serving, middleware configuration, API route registration, WebSocket server setup,
+ * and integration with printer backend services. Automatically starts when a printer connects
+ * (if enabled in settings) and stops on disconnect. Handles administrator privilege requirements
+ * on Windows platforms, network interface detection for LAN access, and configuration changes
+ * for dynamic server restart. Coordinates between HTTP API routes, WebSocket real-time updates,
+ * and polling data from the main process to provide seamless remote printer control and monitoring.
+ *
+ * Key exports:
+ * - WebUIManager class: Main server coordinator with singleton pattern
+ * - getWebUIManager(): Singleton accessor function
+ * - Lifecycle: start, stop, initialize, startForPrinter, stopForPrinter
+ * - Status: getStatus, isServerRunning, getExpressApp, getHttpServer
+ * - Integration: handlePollingUpdate (receives status from main process)
+ * - Events: 'server-started', 'server-stopped', 'printer-connected', 'printer-disconnected'
  */
 
 import { EventEmitter } from 'events';

@@ -1,3 +1,20 @@
+/**
+ * @fileoverview Preload script for printer selection dialog with dual-mode support.
+ *
+ * Provides secure IPC bridge for printer selection supporting both network-discovered printers
+ * and saved printer lists. Handles mode switching (discovered/saved), printer metadata display,
+ * connection status updates, and discovery error reporting. Routes selections to appropriate
+ * IPC channels based on current mode for correct connection flow handling.
+ *
+ * Key exports:
+ * - printerSelectionAPI: Dual-mode printer selection interface
+ * - PrinterInfo: Discovered printer metadata from network scan
+ * - SavedPrinterInfo: Saved printer with online status and IP change detection
+ * - Mode-aware IPC channel routing (discovered vs saved selection)
+ * - Discovery status and error event handling
+ * - Connection progress and failure notifications
+ */
+
 // printer-selection-preload.ts
 // IPC bridge for Printer Selection Dialog communication between main and renderer processes
 // Extended to support both discovered and saved printer selection modes

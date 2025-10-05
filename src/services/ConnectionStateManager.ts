@@ -1,7 +1,21 @@
 /**
- * ConnectionStateManager.ts
- * Manages printer connection state and client instances per context
- * Tracks connection status, printer details, and API client references for multiple printers
+ * @fileoverview Manager for tracking printer connection state across multiple printer contexts.
+ *
+ * Provides centralized connection state management for multi-printer support:
+ * - Per-context connection state tracking
+ * - Client instance storage (primary and secondary clients)
+ * - Printer details management
+ * - Connection status monitoring (connected/disconnected, timestamps)
+ * - Event emission for connection state changes
+ * - Activity tracking for connection health monitoring
+ *
+ * Key exports:
+ * - ConnectionStateManager class: Multi-context connection state tracker
+ * - getConnectionStateManager(): Singleton accessor
+ *
+ * The manager maintains a separate connection state for each printer context, enabling
+ * independent tracking of multiple simultaneous printer connections. State includes client
+ * instances, printer details, connection status, and activity timestamps.
  */
 
 import { EventEmitter } from 'events';

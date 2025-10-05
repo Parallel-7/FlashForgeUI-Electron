@@ -1,10 +1,37 @@
 /**
- * Camera URL resolution utilities
- * 
- * Implements the priority-based camera URL resolution logic:
- * 1. Custom camera URL (if enabled and provided)
- * 2. Built-in camera URL (if printer has camera capability)
- * 3. No camera available
+ * @fileoverview Camera configuration resolution and validation utilities implementing priority-based
+ * camera URL selection logic. Supports both built-in printer cameras and custom camera URLs (MJPEG/RTSP),
+ * with context-aware settings retrieval for multi-printer environments. Provides stream type detection,
+ * URL validation, and human-readable status messaging.
+ *
+ * Key Features:
+ * - Priority-based camera resolution: custom camera > built-in camera > none
+ * - MJPEG and RTSP stream type detection and validation
+ * - Context-aware camera configuration (per-printer or global settings)
+ * - Automatic URL generation for custom cameras without explicit URLs
+ * - Comprehensive URL validation (protocol, hostname, format)
+ * - Camera availability checking with detailed unavailability reasons
+ * - Proxy URL formatting for client consumption
+ *
+ * Resolution Priority:
+ * 1. Custom camera (if enabled): Uses user-provided URL or auto-generates default FlashForge URL
+ * 2. Built-in camera: Uses default FlashForge MJPEG pattern if printer supports camera
+ * 3. No camera: Returns unavailable status with reason
+ *
+ * Stream Types Supported:
+ * - MJPEG (Motion JPEG over HTTP/HTTPS)
+ * - RTSP (Real-Time Streaming Protocol)
+ *
+ * Context Awareness:
+ * - Supports per-printer camera settings when contextId is provided
+ * - Falls back to global configuration for backward compatibility
+ * - Integrates with PrinterContextManager for multi-printer camera configurations
+ *
+ * Usage:
+ * - resolveCameraConfig(): Main resolution function with comprehensive config object
+ * - validateCameraUrl(): Standalone URL validation with detailed error messages
+ * - getCameraUserConfig(): Context-aware settings retrieval
+ * - isCameraFeatureAvailable(): Boolean availability check
  */
 
 import {

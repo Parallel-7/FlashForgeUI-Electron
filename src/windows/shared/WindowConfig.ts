@@ -1,8 +1,74 @@
 /**
- * WindowConfig provides shared utility functions for standardized window
- * configuration across all factory modules. This module ensures consistent
- * security settings, window dimensions, development tools setup, and modal
- * window creation patterns throughout the application.
+ * @fileoverview WindowConfig provides shared utility functions for standardized window
+ * configuration across all factory modules.
+ *
+ * This utility module serves as the foundation for consistent window creation throughout the application,
+ * providing reusable functions for security configuration, dimension standardization, HTML loading,
+ * lifecycle management, and IPC communication setup. All factory modules depend on these utilities
+ * to ensure consistent behavior, security settings, and error handling patterns across different
+ * window types. The module centralizes common patterns to reduce code duplication and maintain
+ * consistency as the application evolves.
+ *
+ * Key Features:
+ * - Standardized security configuration with contextIsolation and disabled nodeIntegration
+ * - Window dimension resolution from WINDOW_SIZES constants for consistent sizing
+ * - Modal window creation with parent window relationships and configurable options
+ * - Environment-aware HTML loading with proper error handling and CSS variable injection
+ * - Lifecycle event handling with ready-to-show and closed event patterns
+ * - Development tools setup with automatic DevTools opening in development mode
+ * - Unique dialog ID generation for IPC communication channel isolation
+ * - Response channel naming conventions for consistent IPC patterns
+ * - Parent window validation to prevent creation errors
+ * - Existing window focus behavior for single-instance enforcement
+ * - UI configuration integration for frame and transparency settings
+ *
+ * Core Responsibilities:
+ * - Provide secure web preferences factory for all BrowserWindows (preload, contextIsolation, no nodeIntegration)
+ * - Generate standardized window dimensions from WINDOW_SIZES constants
+ * - Create modal windows with consistent parent relationships and security settings
+ * - Load HTML files from src directory structure with environment awareness
+ * - Setup standard window lifecycle handlers for ready-to-show and closed events
+ * - Configure development tools automatically based on NODE_ENV
+ * - Generate unique dialog IDs for IPC channel isolation between dialog instances
+ * - Create response channel names following consistent naming conventions
+ * - Validate parent window existence before child window creation
+ * - Focus existing windows to enforce single-instance behavior
+ *
+ * Security Configuration:
+ * - contextIsolation: true - Isolates renderer context from Electron APIs
+ * - nodeIntegration: false - Prevents Node.js API access in renderer
+ * - preload scripts: Required for all windows to expose safe IPC APIs
+ *
+ * Window Creation Options:
+ * - resizable: Configurable per window type (default: true)
+ * - frame: Configurable based on UI settings or explicit override (default: true)
+ * - transparent: Configurable based on UI settings or explicit override (default: false)
+ * - useUIConfig: Whether to use RoundedUI setting for frame/transparency (default: true)
+ *
+ * Lifecycle Event Patterns:
+ * - ready-to-show: Show window and execute onReady callback
+ * - closed: Execute onClosed callback for cleanup and WindowManager deregistration
+ *
+ * IPC Communication Utilities:
+ * - Dialog ID format: `dialog-${timestamp}-${random9char}`
+ * - Response channel format: `dialog-result-${dialogId}`
+ *
+ * HTML Loading:
+ * - Injects CSS variables before loading HTML to ensure availability during CSS parsing
+ * - Loads HTML files from src/ui/ directory structure (not copied to lib during build)
+ * - Provides error handling with console logging for load failures
+ *
+ * @exports createSecureWebPreferences - Create standardized secure web preferences
+ * @exports getWindowDimensions - Get standardized window dimensions for a window type
+ * @exports setupDevTools - Setup development tools for a window
+ * @exports createModalWindow - Create a base modal window with common configuration
+ * @exports createUIPreloadPath - Create preload path for a specific UI component
+ * @exports loadWindowHTML - Load HTML file for a window with error handling
+ * @exports setupWindowLifecycle - Setup standard window lifecycle handlers
+ * @exports generateDialogId - Generate unique dialog ID for IPC communication
+ * @exports createResponseChannelName - Create response channel name for dialog communication
+ * @exports validateParentWindow - Validate parent window exists before creating child window
+ * @exports focusExistingWindow - Focus existing window if it exists
  */
 
 import { BrowserWindow, WebPreferences } from 'electron';

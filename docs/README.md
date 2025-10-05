@@ -15,16 +15,31 @@ The Adventurer 5M, 5M Pro, and AD5X require a pairing code when connecting for t
 You can find the code in this settings menu on the printer (Printer ID = pairing code)
 <img width="816" height="447" alt="image" src="https://github.com/user-attachments/assets/63ceea70-c956-4626-9690-c4ce20d74018" />
 
+## Custom Camera Setup
+For users with an Adventurer 5M or AD5X with the official camera, simply enable the "Custom Camera" option in settings. The program will automatically set the stream URL internally , based on your printer's IP.
+
+For anyone with a custom RTSP camera, enable that same option , and paste your rtsp:// url in the camera url box. You'll then be able to view it from the Desktop / WebUI
+
+## Custom LED Setup
+For users with an Adventurer 5M or AD5X that have installed custom LEDs , you'll need to enable the "Custom LEDs" option in settings. This tells the program that you've installed your own LEDs, and allows you to control them from the Desktop / WebUI
+
 
 ## Headless Mode Usage
-For Linux and MacOS, replace `FlashForgeUI.exe` with the correct way to start from the CLI, for your OS
+For Linux and MacOS, replace `FlashForgeUI.exe` with the correct way to start from the CLI, for your OS. The `--enable-logging` flag is only needed for Windows, or if it's not spawning a new CLI window after starting the program.
+
+For MacOS, the command structure starts with
+```bash
+open "/Applications/FlashForgeUI.app/Contents/MacOS/FlashForgeUI"
+```
+
+For Linux, (coming soon...)
 
 ## Starting Headless Mode
 
 Launch FlashForgeUI with the `--headless` flag:
 
 ```bash
-FlashForgeUI.exe --headless
+FlashForgeUI.exe --enable-logging --headless
 ```
 
 The WebUI will be accessible at `http://localhost:3001` by default.
@@ -43,14 +58,14 @@ The WebUI will be accessible at `http://localhost:3001` by default.
 **`--last-used`**
 - Connects to the last printer you used
 ```bash
-FlashForgeUI.exe --headless --last-used
+FlashForgeUI.exe --enable-logging --headless --last-used
 ```
 
 **`--all-saved-printers`**
 - Connects to all saved printers
 - Enables multi-printer mode with dropdown selector
 ```bash
-FlashForgeUI.exe --headless --all-saved-printers
+FlashForgeUI.exe --enable-logging --headless --all-saved-printers
 ```
 
 **`--printers=<spec>`**
@@ -61,12 +76,12 @@ FlashForgeUI.exe --headless --all-saved-printers
 
 Single printer example:
 ```bash
-FlashForgeUI.exe --headless --printers="192.168.1.100:new:12345678"
+FlashForgeUI.exe --enable-logging --headless --printers="192.168.1.100:new:12345678"
 ```
 
 Multiple printers example:
 ```bash
-FlashForgeUI.exe --headless --printers="192.168.1.100:new:12345678,192.168.1.101:legacy"
+FlashForgeUI.exe --enable-logging --headless --printers="192.168.1.100:new:12345678,192.168.1.101:legacy"
 ```
 
 ### WebUI Server Configuration
@@ -74,45 +89,45 @@ FlashForgeUI.exe --headless --printers="192.168.1.100:new:12345678,192.168.1.101
 **`--webui-port=<port>`**
 - Sets the WebUI server port (default: 3001)
 ```bash
-FlashForgeUI.exe --headless --webui-port=8080
+FlashForgeUI.exe --enable-logging --headless --webui-port=8080
 ```
 
 **`--webui-password=<password>`**
 - Overrides the default WebUI password
 ```bash
-FlashForgeUI.exe --headless --webui-password=mypassword
+FlashForgeUI.exe --enable-logging --headless --webui-password=mypassword
 ```
 
 ## Common Usage Examples
 
 ### Single Printer (Last Used)
 ```bash
-FlashForgeUI.exe --headless --last-used
+FlashForgeUI.exe --enable-logging --headless --last-used
 ```
 
 ### Multiple Printers (All Saved)
 ```bash
-FlashForgeUI.exe --headless --all-saved-printers
+FlashForgeUI.exe --enable-logging --headless --all-saved-printers
 ```
 
 ### Specific Printer by IP (New API)
 ```bash
-FlashForgeUI.exe --headless --printers="192.168.1.146:new:12345678"
+FlashForgeUI.exe --enable-logging --headless --printers="192.168.1.146:new:12345678"
 ```
 
 ### Specific Printer by IP (Legacy API)
 ```bash
-FlashForgeUI.exe --headless --printers="192.168.1.100:legacy"
+FlashForgeUI.exe --enable-logging -headless --printers="192.168.1.100:legacy"
 ```
 
 ### Multiple Specific Printers
 ```bash
-FlashForgeUI.exe --headless --printers="192.168.1.146:new:12345678,192.168.1.129:new:87654321"
+FlashForgeUI.exe --enable-logging --headless --printers="192.168.1.146:new:12345678,192.168.1.129:new:87654321"
 ```
 
 ### Custom Port and Password
 ```bash
-FlashForgeUI.exe --headless --last-used --webui-port=8080 --webui-password=secret
+FlashForgeUI.exe --enable-logging --headless --last-used --webui-port=8080 --webui-password=secret
 ```
 
 ## Accessing the WebUI
@@ -133,3 +148,13 @@ When using `--all-saved-printers` or specifying multiple printers with `--printe
 - **Per-Printer Camera**: Each printer gets its own camera stream (ports 8181+)
 - **Independent Control**: Each printer maintains its own state and features
 
+## Troubleshooting
+
+### My printer is not being discovered automatically
+- If your printer is before the 5M series, automatic discovery won't work. Use the direct IP connection option, and it will be saved for future usage.
+- If your printer is 5M series+, first make sure LAN-only mode has been properly enabled. After verifying, make sure your PC and printer are on the same network. Occasionally the printer will not respond to the scan, so simply re-scanning can cause your printer to appear.
+
+### ETA and/or filament usage is not correct/being reported
+- The file has been sliced with OrcaSlicer and lacks the correct (and correct ordering of) metadata. FlashForge printers only "broadcast" this information to the API for files sliced by Orca-FlashForge. Both slicers include the information, but in different formats, and FlashForge printers only look for/accept the format from Orca-FlashForge.
+- I am developing a post-process script that fixes this, but it will only work for .gcode files.
+- Currently, the only solution is to slice the file with Orca-FlashForge

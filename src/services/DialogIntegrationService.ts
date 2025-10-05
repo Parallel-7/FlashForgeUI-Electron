@@ -1,7 +1,20 @@
 /**
- * DialogIntegrationService.ts
- * Handles integration with printer selection dialogs
- * Manages dialog creation, IPC communication, and user interaction flow
+ * @fileoverview Service for integrating printer selection dialogs with connection workflows.
+ *
+ * Manages user interaction through dialogs during printer connection:
+ * - Printer selection dialog creation and management
+ * - Disconnect confirmation prompts
+ * - Dialog IPC communication setup
+ * - User choice handling (discovered vs saved printers)
+ * - Dialog lifecycle management (creation, data population, cleanup)
+ *
+ * Key exports:
+ * - DialogIntegrationService class: Dialog integration coordinator
+ * - getDialogIntegrationService(): Singleton accessor
+ *
+ * This service bridges the gap between connection workflows and user interaction,
+ * presenting discovered and saved printers in a selection dialog and handling user
+ * choices to complete connection establishment.
  */
 
 import { EventEmitter } from 'events';

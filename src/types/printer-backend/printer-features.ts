@@ -1,3 +1,19 @@
+/**
+ * @fileoverview Printer feature capability definitions and configuration interfaces.
+ *
+ * Defines comprehensive feature sets available across different FlashForge printer models including
+ * camera streaming, LED control, filtration, G-code execution, status monitoring, job management,
+ * and material station support. Each feature includes availability flags, API routing information,
+ * and model-specific configuration options. Supports feature overrides from user settings.
+ *
+ * Key exports:
+ * - PrinterFeatureSet: Complete feature configuration for a printer instance
+ * - MaterialStationStatus: AD5X material station slot information
+ * - FeatureAvailabilityResult: UI query results for feature availability
+ * - CameraFeature/LEDControlFeature: Individual feature configurations
+ * - FeatureDisableReason: User-facing explanations for unavailable features
+ */
+
 // src/types/printer-backend/printer-features.ts
 // Type definitions for printer feature management and capabilities
 

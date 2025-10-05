@@ -1,3 +1,38 @@
+/**
+ * @fileoverview Status Dialog renderer process providing comprehensive system and printer
+ * status monitoring with auto-refresh capabilities. Displays printer information, WebUI server
+ * status, camera proxy status, and application health metrics in a formatted dashboard interface.
+ *
+ * Key Features:
+ * - Auto-refreshing status display (5-second intervals)
+ * - Comprehensive printer information panel (model, firmware, serial, IP, connection state)
+ * - WebUI server monitoring (status, active clients, access URL)
+ * - Camera proxy status tracking (enabled, streaming, clients, ports)
+ * - System health metrics (uptime, memory usage)
+ * - Visual status indicators with color-coded states
+ * - Human-readable formatting for durations and memory values
+ *
+ * Display Sections:
+ * - Printer Information: Hardware details and connection status
+ * - WebUI Server: Server availability and client connections
+ * - Camera System: Proxy status and streaming state
+ * - System Information: Application health metrics
+ *
+ * Auto-Refresh:
+ * - 5-second polling interval for real-time updates
+ * - Automatic start on dialog load
+ * - Cleanup on window unload to prevent memory leaks
+ *
+ * Formatting Utilities:
+ * - formatUptime(): Converts seconds to "Xh Ym Zs" format
+ * - formatMemory(): Converts bytes to "X.X MB" format
+ * - Status indicators: Active (green) / Inactive (gray) visual cues
+ *
+ * Context:
+ * Used for system diagnostics, troubleshooting connectivity issues, monitoring resource
+ * usage, and verifying WebUI/camera server availability. Essential for technical support.
+ */
+
 // src/ui/status-dialog/status-dialog-renderer.ts
 
 interface IStatusAPI {

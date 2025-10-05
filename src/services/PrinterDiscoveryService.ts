@@ -1,7 +1,21 @@
 /**
- * PrinterDiscoveryService.ts
- * Handles network scanning and printer discovery operations
- * Provides methods to discover printers on the network and scan specific IP addresses
+ * @fileoverview Service for network scanning and printer discovery operations.
+ *
+ * Provides network-based printer discovery functionality:
+ * - Network-wide printer scanning
+ * - Specific IP address printer detection
+ * - Discovery timeout and interval configuration
+ * - Discovered printer data normalization
+ * - Discovery state management (in-progress tracking)
+ * - Integration with ff-api's FlashForgePrinterDiscovery
+ *
+ * Key exports:
+ * - PrinterDiscoveryService class: Network discovery coordinator
+ * - getPrinterDiscoveryService(): Singleton accessor
+ *
+ * This service encapsulates all network scanning logic, providing a simple interface
+ * for discovering FlashForge printers on the local network. Used by ConnectionFlowManager
+ * during the printer connection workflow to present available printers to the user.
  */
 
 import { EventEmitter } from 'events';

@@ -1,7 +1,28 @@
-// src/managers/PrinterDetailsManager.ts
-// TypeScript implementation of multi-printer details persistence manager
-// Handles saving/loading multiple printer connection details to/from printer_details.json
-// Now supports per-context last-used tracking for multi-printer contexts
+/**
+ * @fileoverview Multi-printer details persistence manager for storing printer connection information.
+ *
+ * Provides comprehensive printer details storage and retrieval with multi-printer support:
+ * - Multi-printer configuration persistence to printer_details.json
+ * - Printer details validation and sanitization
+ * - Last-used printer tracking (global and per-context)
+ * - Per-printer settings storage (camera, LEDs, legacy mode)
+ * - Runtime per-context last-used tracking
+ * - Automatic migration of legacy single-printer configurations
+ *
+ * Key exports:
+ * - PrinterDetailsManager class: Main persistence manager
+ * - getPrinterDetailsManager(): Singleton accessor function
+ *
+ * Storage structure:
+ * - Global last-used printer serial number
+ * - Per-printer details keyed by serial number
+ * - Per-printer custom settings (camera URLs, LED configuration)
+ * - Runtime context-to-printer mapping (not persisted)
+ *
+ * The manager validates all printer details before persistence, ensuring required fields
+ * (Name, IPAddress, SerialNumber, CheckCode, ClientType, printerModel) are present and
+ * properly formatted. Supports backward compatibility with legacy single-printer storage.
+ */
 
 import * as fs from 'fs';
 import * as path from 'path';

@@ -1,3 +1,42 @@
+/**
+ * @fileoverview Single Color Confirmation Dialog renderer process for material verification
+ * before starting single-color print jobs on material-station-equipped printers. Displays the
+ * active material slot's type and color, validates material availability, and collects user
+ * confirmation with optional bed leveling toggle.
+ *
+ * Key Features:
+ * - Material station status integration for active slot detection
+ * - Visual material type and color display from active IFS slot
+ * - Empty slot detection with error messaging and print blocking
+ * - Bed leveling toggle with default preference handling
+ * - Real-time material station communication errors
+ * - Graceful handling of disconnected material stations
+ *
+ * Workflow:
+ * 1. Receives initialization data (file name, default leveling state)
+ * 2. Queries material station for active slot information
+ * 3. Displays active slot material type and color swatch
+ * 4. Validates material is loaded (blocks print if empty)
+ * 5. Collects confirmation with optional leveling adjustment
+ *
+ * Error Handling:
+ * - Material station not connected
+ * - No active slot selected
+ * - Active slot is empty
+ * - Material station query failures
+ *
+ * UI Components:
+ * - File name display
+ * - Slot label and material type indicator
+ * - Color swatch visualization
+ * - Leveling checkbox
+ * - Start/Cancel buttons with conditional enablement
+ *
+ * Context:
+ * Specifically designed for AD5X and similar printers with Intelligent Filament System (IFS)
+ * material stations to prevent print failures from incorrect material selection.
+ */
+
 // Single Color Confirmation Dialog Renderer
 // Shows active IFS slot material before starting single-color print
 

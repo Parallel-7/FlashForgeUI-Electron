@@ -1,6 +1,23 @@
 /**
- * Material station related IPC handlers.
- * Handles material station status requests and future material control operations.
+ * @fileoverview Material station IPC handlers for material management operations.
+ *
+ * Provides IPC handlers for material station operations on AD5X printers:
+ * - Material station status monitoring (currently via centralized polling)
+ * - Future material control operations (slot selection, eject, load)
+ * - Material information queries
+ *
+ * Key exports:
+ * - registerMaterialHandlers(): Registers material station IPC handlers
+ *
+ * Note: Material station status is currently provided through the centralized polling system
+ * via MainProcessPollingCoordinator and the 'polling-update' IPC channel. This module serves
+ * as a placeholder for future direct material control operations when implemented.
+ *
+ * Planned future handlers:
+ * - set-active-material-slot: Change active material slot
+ * - eject-material: Eject filament from slot
+ * - load-material: Load filament into slot
+ * - get-material-info: Query detailed material information
  */
 
 import type { PrinterBackendManager } from '../../managers/PrinterBackendManager';

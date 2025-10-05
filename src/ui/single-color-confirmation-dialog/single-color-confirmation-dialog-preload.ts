@@ -1,3 +1,33 @@
+/**
+ * @fileoverview Single Color Confirmation Dialog preload script providing secure IPC bridge
+ * for confirming single-color print jobs on printers with material station (IFS) support.
+ * Exposes APIs for displaying active material slot information and collecting print confirmation
+ * with optional bed leveling setting.
+ *
+ * Key Features:
+ * - Secure contextBridge API for material station status retrieval
+ * - Print job initialization data handling (file name, leveling preference)
+ * - Material slot information display (type, color, empty status)
+ * - Dialog confirmation/cancellation workflow
+ * - Type-safe IPC communication with structured data interfaces
+ *
+ * Exposed API (window.singleColorConfirmAPI):
+ * - onInit(callback): Receives file name and initial leveling preference
+ * - getMaterialStationStatus(): Fetches current material station state and active slot
+ * - confirmPrint(leveling): Sends confirmation with leveling option to start print
+ * - closeDialog(): Cancels and closes the dialog
+ *
+ * Data Flow:
+ * 1. Dialog receives init data (file name, default leveling state)
+ * 2. Fetches material station status to identify active slot
+ * 3. Displays active slot material information to user
+ * 4. User confirms or cancels, optionally toggling leveling
+ *
+ * Context:
+ * Used exclusively for AD5X and other material-station-equipped printers to ensure
+ * users verify the correct material is loaded before starting single-color prints.
+ */
+
 // Single Color Confirmation Dialog Preload Script
 // Provides secure IPC bridge for single color print confirmation
 

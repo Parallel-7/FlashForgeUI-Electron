@@ -1,3 +1,31 @@
+/**
+ * @fileoverview Settings Dialog preload script providing secure IPC bridges for both global
+ * application configuration and per-printer settings management. Exposes dual APIs for reading
+ * and updating settings stored in config.json and per-printer printer_details.json files.
+ *
+ * Key Features:
+ * - Dual API exposure: settingsAPI for global config, printerSettingsAPI for per-printer settings
+ * - Type-safe configuration read/write operations
+ * - Window lifecycle management (minimize, close)
+ * - Secure contextBridge implementation for sandboxed renderer
+ * - Unified window controls for dialog management
+ *
+ * Exposed APIs:
+ * - window.settingsAPI: Global application settings (config.json)
+ *   - requestConfig(): Loads current configuration
+ *   - saveConfig(config): Persists configuration changes
+ *   - receiveConfig(callback): Listens for configuration updates
+ *   - closeWindow(): Closes settings dialog
+ *
+ * - window.printerSettingsAPI: Per-printer settings (printer_details.json)
+ *   - get(): Retrieves active printer's settings
+ *   - update(settings): Saves printer-specific settings
+ *   - getPrinterName(): Returns active printer's display name
+ *
+ * - window.windowControls: Generic window operations
+ *   - minimize/close/closeGeneric: Window state management
+ */
+
 // src/ui/settings/settings-preload.ts
 
 import { contextBridge, ipcRenderer } from 'electron';

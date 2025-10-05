@@ -1,6 +1,19 @@
 /**
- * Zod validation schemas for printer-related data structures.
- * Provides runtime type validation for external printer API responses.
+ * @fileoverview Zod validation schemas for printer status, material station data, and backend responses.
+ *
+ * Provides comprehensive runtime type validation for all printer-related data structures received
+ * from backend APIs and hardware interfaces. Schemas cover printer state monitoring, temperature
+ * data, job progress tracking, material station status, and command execution results. These
+ * validators ensure type safety when processing data from external printer APIs (both legacy and
+ * new API formats), preventing runtime errors from malformed or unexpected data structures.
+ *
+ * Key exports:
+ * - Printer state schemas: PrinterStateSchema, PrinterStatusSchema, ConnectionStatusSchema
+ * - Temperature schemas: TemperatureDataSchema, PrinterTemperaturesSchema
+ * - Job tracking schemas: JobProgressSchema, CurrentJobInfoSchema, JobListResultSchema
+ * - Material station schemas: MaterialStationStatusSchema, MaterialSlotSchema
+ * - Validation helpers: parsePrinterStatus, parseMaterialStationStatus, validateCommandResult
+ * - Type exports: ValidatedPrinterStatus, ValidatedMaterialStationStatus, ValidatedPollingData
  */
 
 import { z } from 'zod';

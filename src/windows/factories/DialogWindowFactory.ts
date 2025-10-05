@@ -1,9 +1,74 @@
 /**
- * DialogWindowFactory handles all modal dialog window creation with user interaction
- * and promise-based results. This module manages complex IPC communication patterns,
- * unique dialog ID generation, and response channel management for input dialogs,
- * material selection dialogs, and confirmation dialogs with proper cleanup and
- * error handling throughout the dialog lifecycle.
+ * @fileoverview DialogWindowFactory handles all modal dialog window creation with user interaction
+ * and promise-based result handling.
+ *
+ * This factory module provides creation functions for interactive modal dialogs that require user
+ * input and return results via promises. It manages complex IPC communication patterns using unique
+ * dialog IDs, response channels, and proper handler cleanup to prevent memory leaks and race conditions.
+ * All dialogs are created as modal children of the main window or job picker window with standardized
+ * lifecycle management and comprehensive error handling throughout the dialog interaction lifecycle.
+ *
+ * Key Features:
+ * - Promise-based dialog results for clean async/await patterns in calling code
+ * - Unique dialog ID generation for each dialog instance to prevent channel conflicts
+ * - Dynamic IPC response channel creation and cleanup per dialog instance
+ * - Global IPC handler management with duplicate registration prevention
+ * - Proper cleanup of IPC handlers on dialog close to prevent memory leaks
+ * - Race condition prevention with immediate window destruction on response
+ * - Window data storage pattern using typed extensions of BrowserWindow
+ * - Parent window validation with fallback to job picker or main window
+ * - Initialization data passing via IPC events on did-finish-load
+ *
+ * Core Responsibilities:
+ * - Create input dialogs with text/password/hidden input types and return user input as promise
+ * - Create material matching dialogs for printer material configuration and return material mappings
+ * - Create single color confirmation dialogs for print job validation and return boolean confirmation
+ * - Create material info dialogs for displaying material station slot information (void return)
+ * - Create IFS dialogs for material station display and management (void return)
+ * - Create auto-connect choice dialogs for saved printer selection and return user choice
+ * - Create connect choice dialogs for connection method selection and return selected method
+ * - Create printer connected warning dialogs when attempting to connect while already connected
+ * - Manage unique dialog IDs and response channels for each dialog instance
+ * - Handle proper IPC handler registration, invocation, and cleanup
+ * - Prevent race conditions during dialog close and result handling
+ *
+ * Dialog Types and Return Values:
+ * - Input Dialog: Promise<string | null> - Returns user input or null if cancelled
+ * - Material Matching Dialog: Promise<unknown[] | null> - Returns material mappings or null if cancelled
+ * - Single Color Confirmation: Promise<boolean> - Returns true if confirmed, false if cancelled
+ * - Material Info Dialog: void - Display-only, no return value
+ * - IFS Dialog: void - Display-only, no return value
+ * - Auto-Connect Choice: Promise<string | null> - Returns action choice or null if cancelled
+ * - Connect Choice: Promise<string | null> - Returns action choice or null if cancelled
+ * - Printer Connected Warning: Promise<boolean> - Returns true to continue, false to cancel
+ *
+ * IPC Communication Patterns:
+ * - Generate unique dialog ID using timestamp + random string
+ * - Create response channel name: `dialog-result-${dialogId}`
+ * - Register IPC handler for response channel using ipcMain.handle()
+ * - Send initialization data to renderer via webContents.send()
+ * - Renderer invokes response channel with result
+ * - Handler processes result, cleans up, closes window, and resolves promise
+ * - Global handlers for reusable dialogs to prevent duplicate registrations
+ *
+ * Window Specifications:
+ * - Input Dialog: 420x300 (min 380x280), non-resizable, frameless, transparent
+ * - Material Matching: 700x650 (min 600x550), non-resizable, frameless, transparent
+ * - Single Color Confirmation: 450x500 (min 400x450), non-resizable, frameless, transparent
+ * - Material Info: 600x500 (min 450x400), non-resizable, frameless, transparent
+ * - IFS Dialog: 600x700 (min 600x650), non-resizable, frameless, transparent
+ * - Auto-Connect Choice: 500x480 (min 450x420), non-resizable, frameless, transparent
+ * - Connect Choice: 480x450 (min 450x400), non-resizable, frameless, transparent
+ * - Printer Connected Warning: 450x380 (min 400x350), non-resizable, frameless, transparent
+ *
+ * @exports createInputDialog - Create input dialog for user text input
+ * @exports createMaterialMatchingDialog - Create material matching dialog for printer configuration
+ * @exports createSingleColorConfirmationDialog - Create single color confirmation for print validation
+ * @exports createMaterialInfoDialog - Create material info dialog for slot information
+ * @exports createIFSDialog - Create IFS dialog for material station management
+ * @exports createAutoConnectChoiceDialog - Create auto-connect choice dialog for saved printers
+ * @exports createConnectChoiceDialog - Create connect choice dialog for connection method
+ * @exports createPrinterConnectedWarningDialog - Create warning dialog for existing connections
  */
 
 import { BrowserWindow, ipcMain } from 'electron';

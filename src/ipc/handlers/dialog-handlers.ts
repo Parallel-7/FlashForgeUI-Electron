@@ -1,6 +1,22 @@
 /**
- * Dialog-related IPC handlers for window management and dialog-specific operations.
- * Handles opening dialogs, dialog-specific data requests, and window controls.
+ * @fileoverview Dialog-related IPC handlers for application dialogs and window management.
+ *
+ * Provides comprehensive IPC handlers for all application dialogs and their operations:
+ * - Settings dialog (open/close/save configuration)
+ * - Status dialog (system stats, printer info, WebUI/camera status)
+ * - Log dialog (view/clear application logs with real-time updates)
+ * - Input dialog (generic user input prompts)
+ * - Job management dialogs (uploader, picker)
+ * - Send commands dialog (G-code/command execution)
+ * - Material dialogs (IFS, material info, matching, single-color confirmation)
+ * - Generic window controls (minimize/close for sub-windows)
+ *
+ * Key exports:
+ * - registerDialogHandlers(): Registers all dialog-related IPC handlers
+ *
+ * The handlers coordinate with multiple managers (ConfigManager, WindowManager, BackendManager)
+ * and services (LogService, WebUIManager, CameraProxyService) to provide comprehensive dialog
+ * functionality. Supports context-aware operations for multi-printer architecture.
  */
 
 import { ipcMain, BrowserWindow } from 'electron';

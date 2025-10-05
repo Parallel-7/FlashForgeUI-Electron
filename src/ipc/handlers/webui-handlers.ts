@@ -1,7 +1,20 @@
 /**
- * IPC handlers for WebUI server control.
- * Provides main process API for starting/stopping the web server and getting status.
- * Integrates with WebUIManager to control server lifecycle from renderer process.
+ * @fileoverview IPC handlers for WebUI server control and status management.
+ *
+ * Provides main process API for controlling the embedded web server from renderer process:
+ * - Start/stop WebUI server operations
+ * - Server status queries (running state, URL, port, client count)
+ * - Printer status broadcasting to connected WebUI clients
+ * - Integration with WebUIManager for server lifecycle management
+ *
+ * Key exports:
+ * - registerWebUIHandlers(): Registers WebUI server control IPC handlers
+ * - unregisterWebUIHandlers(): Cleanup function for handler removal
+ *
+ * The WebUI server provides remote access to printer monitoring and control through a
+ * web interface accessible from any device on the local network. These handlers enable
+ * the desktop application to manage the server lifecycle and forward printer status
+ * updates to connected web clients via WebSocket.
  */
 
 import { ipcMain, IpcMainInvokeEvent } from 'electron';

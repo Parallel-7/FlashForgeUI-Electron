@@ -1,6 +1,23 @@
-// src/managers/LoadingManager.ts
-// Centralized loading state management for preventing user interaction during async operations
-// Provides secure IPC communication with renderer for modal loading overlays
+/**
+ * @fileoverview Centralized loading state manager for modal loading overlays and user feedback.
+ *
+ * Provides comprehensive loading state management for preventing user interaction during async operations:
+ * - Modal loading overlay control (show/hide/progress)
+ * - Success and error state display with auto-hide functionality
+ * - Progress tracking with percentage updates
+ * - Cancelable operations support
+ * - Event-driven state updates for renderer synchronization
+ *
+ * Key exports:
+ * - LoadingManager class: Main loading state controller
+ * - getLoadingManager(): Singleton accessor function
+ * - LoadingState type: State enumeration (hidden/loading/success/error)
+ * - LoadingOptions interface: Configuration for loading operations
+ *
+ * The manager emits events that are forwarded to the renderer process via IPC handlers,
+ * enabling synchronized loading state display across the application. Supports auto-hide
+ * functionality for success/error states with configurable timeout values.
+ */
 
 import { EventEmitter } from 'events';
 

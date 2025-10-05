@@ -1,4 +1,29 @@
-// src/preload.ts
+/**
+ * @fileoverview Preload script for secure renderer-to-main process IPC communication.
+ *
+ * Provides the context bridge API that exposes safe IPC methods to the renderer process:
+ * - Core IPC methods (send/receive/invoke with channel validation)
+ * - Printer status and data request APIs
+ * - Loading overlay control API
+ * - Camera management API (proxy, config, streaming)
+ * - Printer context management API (multi-printer support)
+ * - Connection state API
+ * - Per-printer settings API
+ *
+ * Key exports:
+ * - ElectronAPI: Main API exposed to renderer via window.electronAPI
+ * - Specialized sub-APIs: LoadingAPI, CameraAPI, PrinterContextsAPI, etc.
+ *
+ * Security features:
+ * - Whitelisted IPC channels for send/invoke operations
+ * - Listener management with cleanup support
+ * - Type-safe API interfaces for renderer consumption
+ * - Isolated context bridge to prevent prototype pollution
+ *
+ * The preload script runs in a privileged context with access to Node.js and Electron APIs,
+ * while exposing only safe, validated methods to the renderer process through contextBridge.
+ */
+
 import { contextBridge, ipcRenderer } from 'electron';
 
 // IPC event listener function type

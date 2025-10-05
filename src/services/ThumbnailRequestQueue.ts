@@ -1,14 +1,29 @@
 /**
- * ThumbnailRequestQueue - Sequential/limited concurrent thumbnail request processing
- * 
- * Manages thumbnail requests with backend-aware concurrency limits to prevent TCP socket
- * overload on legacy printers while allowing higher throughput on modern printers.
- * 
- * Features:
- * - Backend-specific concurrency limits
- * - Request deduplication
- * - Cancellation support
- * - Priority queue processing
+ * @fileoverview Backend-aware thumbnail request queue with controlled concurrency
+ *
+ * Manages thumbnail requests with printer model-specific concurrency limits to prevent
+ * TCP socket exhaustion on legacy printers while maximizing throughput on modern models.
+ * Implements request deduplication, priority ordering, automatic retry logic, and
+ * graceful cancellation support.
+ *
+ * Key Features:
+ * - Backend-specific concurrency (legacy: 1, modern: 3 concurrent requests)
+ * - Request deduplication to avoid redundant network calls
+ * - Priority-based queue ordering with FIFO within priority levels
+ * - Automatic retry with exponential backoff (up to 2 retries)
+ * - Multi-context support via PrinterContextManager integration
+ * - Comprehensive statistics tracking and event emission
+ * - Graceful cancellation and queue reset capabilities
+ *
+ * Backend Concurrency Configuration:
+ * - generic-legacy: 1 concurrent, 100ms delay (prevents TCP overload)
+ * - adventurer-5m/pro: 3 concurrent, 50ms delay (optimized throughput)
+ * - ad5x: 3 concurrent, 50ms delay (optimized throughput)
+ *
+ * Singleton Pattern:
+ * Access via getThumbnailRequestQueue() factory function.
+ *
+ * @module services/ThumbnailRequestQueue
  */
 
 import { EventEmitter } from 'events';

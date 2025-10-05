@@ -1,6 +1,23 @@
 /**
- * Central registration point for all IPC handlers.
- * Coordinates the registration of domain-specific handler modules.
+ * @fileoverview Central registration point for all IPC handlers in the application.
+ *
+ * Provides unified registration of all domain-specific IPC handler modules:
+ * - Connection handlers for printer discovery and connection management
+ * - Backend handlers for printer status and data retrieval
+ * - Job handlers for job management and file operations
+ * - Dialog handlers for application dialogs and window management
+ * - Material handlers for material station operations
+ * - Control handlers for printer control commands
+ * - WebUI handlers for web server control
+ * - Camera handlers for camera streaming operations
+ * - Printer settings handlers for per-printer configuration
+ *
+ * Key exports:
+ * - AppManagers interface: Required managers for IPC handler initialization
+ * - registerAllIpcHandlers(): Main registration function called during app initialization
+ *
+ * This module serves as the single entry point for IPC handler registration, ensuring
+ * consistent initialization order and dependency injection for all handler modules.
  */
 
 import type { ConfigManager } from '../../managers/ConfigManager';

@@ -1,6 +1,26 @@
 /**
- * Job-related IPC handlers for job management and file operations.
- * Handles job listing, starting, uploading, and thumbnail requests.
+ * @fileoverview Job-related IPC handlers for print job management and file operations.
+ *
+ * Provides comprehensive job management IPC handlers with support for different printer types:
+ * - Local job listing and retrieval from printer storage
+ * - Recent job listing from printer history
+ * - Job starting with leveling and material mapping support
+ * - File upload with progress tracking (standard and AD5X workflows)
+ * - Thumbnail retrieval with caching and queue management
+ * - Slicer file metadata parsing and validation
+ *
+ * Key exports:
+ * - registerJobHandlers(): Registers all job-related IPC handlers
+ *
+ * Special features:
+ * - AD5X upload workflow with material station integration
+ * - Progress simulation for user feedback during uploads
+ * - Thumbnail caching with printer serial number keying
+ * - Request queue management for efficient thumbnail fetching
+ * - Integration with ThumbnailCacheService and ThumbnailRequestQueue
+ *
+ * All handlers are context-aware and operate on the active printer context, with feature
+ * detection to ensure operations are only available on supported printer models.
  */
 
 import { ipcMain, dialog } from 'electron';

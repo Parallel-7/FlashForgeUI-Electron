@@ -1,6 +1,22 @@
-// src/printer-backends/GenericLegacyBackend.ts
-// Backend implementation for legacy printers using FlashForgeClient only
-// Features: No built-in features, custom camera URL support, G/M code commands, job control
+/**
+ * @fileoverview Backend implementation for legacy FlashForge printers using FlashForgeClient only.
+ *
+ * Provides backend support for legacy printers that only support the legacy TCP API:
+ * - Single client operation (FlashForgeClient only, no FiveMClient)
+ * - Basic job control (pause/resume/cancel via G-code)
+ * - G-code command execution
+ * - Status monitoring through legacy status parsing
+ * - Custom camera URL support (no built-in camera)
+ * - Custom LED control via G-code (when enabled)
+ * - No built-in features (filtration, material station)
+ *
+ * Key exports:
+ * - GenericLegacyBackend class: Backend for legacy printer models
+ *
+ * This backend serves as a fallback for older printer models that don't support the
+ * newer HTTP-based FiveMClient API. It provides basic functionality through G-code
+ * commands and legacy status parsing, ensuring compatibility with all FlashForge printers.
+ */
 
 import { FlashForgeClient, TempInfo, TempData, EndstopStatus, MachineStatus, PrintStatus } from 'ff-api';
 import { BasePrinterBackend } from './BasePrinterBackend';

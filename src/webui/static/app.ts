@@ -1,7 +1,22 @@
 /**
- * Web UI Client Application
- * Handles authentication, WebSocket communication, and UI updates.
- * Written in TypeScript for type safety and better maintainability.
+ * @fileoverview Browser-based WebUI client application for remote printer control and monitoring.
+ *
+ * Provides comprehensive browser interface for remote FlashForge printer control including
+ * authentication with token persistence, real-time WebSocket communication for status updates,
+ * printer control operations (temperature, job management, LED, filtration), multi-printer
+ * context switching, camera stream viewing (MJPEG and RTSP with JSMpeg), file selection dialogs,
+ * and responsive UI updates. Implements automatic reconnection logic, keep-alive ping mechanisms,
+ * and graceful degradation when features are unavailable. All communication uses type-safe
+ * interfaces with proper error handling and user feedback via toast notifications.
+ *
+ * Key features:
+ * - Authentication: Login with remember-me, token persistence in localStorage/sessionStorage
+ * - WebSocket: Real-time status updates, command execution, automatic reconnection
+ * - Printer control: Temperature set/off, job pause/resume/cancel, home axes, LED control
+ * - Multi-printer: Context switching with dynamic UI updates and feature detection
+ * - Camera: MJPEG proxy streaming and RTSP streaming via JSMpeg with WebSocket
+ * - File management: Recent/local file browsing, file selection dialogs, job start with options
+ * - UI updates: Real-time temperature, progress, layer info, ETA, lifetime statistics, thumbnails
  */
 
 // ============================================================================

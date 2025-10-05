@@ -1,6 +1,23 @@
 /**
- * Authentication middleware for Express routes.
- * Validates tokens and protects API endpoints from unauthorized access.
+ * @fileoverview Express middleware for WebUI authentication, CORS, rate limiting, and request logging.
+ *
+ * Provides comprehensive middleware stack for securing and monitoring WebUI API endpoints including
+ * authentication token validation, login rate limiting to prevent brute force attacks, CORS policy
+ * enforcement restricted to private network origins, error handling with standardized responses,
+ * and request logging for debugging. The authentication middleware extends Express Request with
+ * auth information and validates Bearer tokens on all protected routes. Rate limiting middleware
+ * tracks login attempts by IP address with configurable thresholds and time windows. CORS middleware
+ * restricts access to localhost and RFC 1918 private network ranges for security while enabling
+ * local development and deployment scenarios.
+ *
+ * Key exports:
+ * - createAuthMiddleware(): Required authentication for protected routes
+ * - createOptionalAuthMiddleware(): Optional authentication that checks but doesn't require tokens
+ * - createLoginRateLimiter(): Rate limiting for login endpoint (5 attempts per 15 minutes)
+ * - createCorsMiddleware(): CORS policy for private network and localhost origins
+ * - createErrorMiddleware(): Centralized error handling with standardized responses
+ * - createRequestLogger(): Request logging with method, path, status code, and duration
+ * - AuthenticatedRequest: Extended Request interface with auth property
  */
 
 import { Request, Response, NextFunction } from 'express';

@@ -1,3 +1,34 @@
+/**
+ * @fileoverview Settings Dialog renderer process managing both global application settings
+ * and per-printer configuration through a unified UI. Implements intelligent settings routing
+ * (global vs. per-printer), real-time validation, dependency-aware input state management,
+ * and unsaved changes protection.
+ *
+ * Key Features:
+ * - Dual settings management: global config (config.json) and per-printer settings (printer_details.json)
+ * - Automatic settings categorization and routing based on setting type
+ * - Real-time input validation with visual feedback
+ * - Dependent input state management (e.g., port fields enabled only when feature is enabled)
+ * - Unsaved changes detection with confirmation prompts
+ * - Per-printer context indicator showing which printer's settings are being edited
+ * - macOS compatibility handling (rounded UI disabled on macOS)
+ * - Port number validation with range checking (1-65535)
+ *
+ * Settings Categories:
+ * - Global Settings: WebUI, Discord, alerts, filament tracker, debug mode
+ * - Per-Printer Settings: Custom camera, custom LEDs, force legacy mode
+ *
+ * UI State Management:
+ * - Dynamic enable/disable of dependent fields
+ * - Save button state based on unsaved changes
+ * - Status message display with auto-hide timers
+ * - Input-to-config property mapping for consistency
+ *
+ * Dependencies:
+ * Integrates with ConfigManager for global settings and PrinterDetailsManager for per-printer
+ * settings through the exposed IPC APIs.
+ */
+
 // src/ui/settings/settings-renderer.ts
 
 import { AppConfig } from '../../types/config';

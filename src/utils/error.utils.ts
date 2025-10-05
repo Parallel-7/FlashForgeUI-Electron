@@ -1,6 +1,47 @@
 /**
- * Custom error handling utilities for structured error management.
- * Provides typed errors with context for better debugging and user feedback.
+ * @fileoverview Structured error handling system with typed error codes, contextual metadata,
+ * and user-friendly message generation. Provides custom AppError class extending Error with
+ * categorized error codes, serialization support, and comprehensive error factory functions
+ * for common error scenarios across the application.
+ *
+ * Key Features:
+ * - Typed error code enumeration covering all application error categories
+ * - Enhanced AppError class with context, timestamp, and original error tracking
+ * - User-friendly message generation from error codes
+ * - JSON serialization support for IPC transmission and logging
+ * - Error factory functions for common scenarios (network, timeout, validation, etc.)
+ * - Zod validation error conversion to structured AppError
+ * - Error handling utilities (type guards, async wrappers, logging)
+ * - IPC-compatible error result formatting
+ *
+ * Error Categories:
+ * - General: UNKNOWN, VALIDATION, NETWORK, TIMEOUT
+ * - Printer: NOT_CONNECTED, BUSY, ERROR, COMMUNICATION
+ * - Backend: NOT_INITIALIZED, OPERATION_FAILED, UNSUPPORTED
+ * - File: NOT_FOUND, TOO_LARGE, INVALID_FORMAT, UPLOAD_FAILED
+ * - Configuration: INVALID, SAVE_FAILED, LOAD_FAILED
+ * - IPC: CHANNEL_INVALID, TIMEOUT, HANDLER_NOT_FOUND
+ *
+ * AppError Properties:
+ * - code: ErrorCode enum value for programmatic handling
+ * - context: Record of additional metadata (printer info, operation details, etc.)
+ * - timestamp: Error occurrence time for debugging
+ * - originalError: Wrapped native Error for stack trace preservation
+ *
+ * Factory Functions:
+ * - fromZodError(): Converts Zod validation errors with issue details
+ * - networkError(): Creates network-related errors with context
+ * - timeoutError(): Timeout errors with operation and duration info
+ * - printerError(): Printer-specific errors with contextual data
+ * - backendError(): Backend operation failures
+ * - fileError(): File operation errors with file name context
+ *
+ * Utilities:
+ * - isAppError(): Type guard for AppError instances
+ * - toAppError(): Converts unknown errors to AppError
+ * - withErrorHandling(): Async wrapper with error handling
+ * - createErrorResult(): Formats errors for IPC responses
+ * - logError(): Structured error logging with context
  */
 
 import { ZodError } from 'zod';

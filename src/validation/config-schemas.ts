@@ -1,6 +1,57 @@
 /**
- * Zod validation schemas for application configuration.
- * Ensures configuration data from files or IPC is valid and type-safe.
+ * @fileoverview Zod validation schemas for application configuration, printer details,
+ * and multi-printer management. Provides type-safe runtime validation for config.json,
+ * printer_details.json, and window configuration data with comprehensive schema definitions
+ * matching legacy format requirements exactly.
+ *
+ * Key Features:
+ * - Complete AppConfig schema matching legacy config.json structure
+ * - Partial config schema for incremental updates
+ * - Printer details schema with IP validation and client type enforcement
+ * - Multi-printer configuration schema for saved printer management
+ * - Window bounds schema for dialog positioning
+ * - Camera configuration schema with port validation
+ * - Type inference for validated data structures
+ * - Validation helper functions for common operations
+ *
+ * Primary Schemas:
+ * - AppConfigSchema: Full application configuration (Discord, alerts, WebUI, camera, etc.)
+ * - PartialAppConfigSchema: Subset of config for update operations
+ * - StoredPrinterDetailsSchema: Per-printer saved details (IP, serial, check code, model type)
+ * - MultiPrinterConfigSchema: Collection of saved printers with last-used tracking
+ * - WindowBoundsSchema: Dialog window position and size
+ * - CameraConfigSchema: Camera settings with URL and proxy port
+ *
+ * Enums:
+ * - ClientTypeSchema: 'legacy' | 'new' for API version selection
+ * - PrinterModelTypeSchema: 'generic-legacy' | 'adventurer-5m' | 'adventurer-5m-pro' | 'ad5x'
+ *
+ * Validation Helpers:
+ * - validateAppConfig(data): Validates complete config, returns null on failure
+ * - validatePartialConfig(data): Validates partial config for updates
+ * - validateStoredPrinterDetails(data): Validates printer details
+ * - validateMultiPrinterConfig(data): Validates multi-printer configuration
+ * - createDefaultConfig(): Generates default configuration with all required fields
+ * - mergeConfigUpdate(current, update): Safely merges partial updates into current config
+ *
+ * Type Exports:
+ * - ValidatedAppConfig: Inferred type from AppConfigSchema
+ * - ValidatedPartialAppConfig: Inferred type for partial updates
+ * - ValidatedStoredPrinterDetails: Inferred printer details type
+ * - ValidatedMultiPrinterConfig: Inferred multi-printer config type
+ * - ValidatedCameraConfig: Inferred camera config type
+ *
+ * Validation Features:
+ * - IP address regex validation for printer connections
+ * - Port number range validation (1-65535)
+ * - Required vs. optional field enforcement
+ * - Default value support for new config keys
+ * - Type coercion where appropriate
+ *
+ * Context:
+ * Used by ConfigManager, PrinterDetailsManager, and IPC handlers to ensure all configuration
+ * data is valid before persistence or application. Prevents runtime errors from malformed
+ * config files and provides clear error messages for debugging.
  */
 
 import { z } from 'zod';

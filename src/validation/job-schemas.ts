@@ -1,6 +1,18 @@
 /**
- * Zod validation schemas for job and file-related data.
- * Validates job information, file uploads, and slicer metadata.
+ * @fileoverview Zod validation schemas for job operations, file management, and slicer metadata.
+ *
+ * Provides runtime type validation for all job-related data structures including job operations
+ * (start, pause, resume, cancel), file metadata, slicer information, and job file lists. These
+ * schemas ensure type safety when receiving data from external sources such as file system parsers,
+ * slicer software, and user input dialogs. All schemas follow Zod's compositional validation
+ * pattern with dedicated helper functions for safe parsing and type guards for file type checking.
+ *
+ * Key exports:
+ * - Job operation schemas: JobOperationSchema, JobStartParamsSchema
+ * - File metadata schemas: FileMetadataSchema, SupportedFileTypeSchema
+ * - Slicer metadata schemas: SlicerMetadataSchema, SlicerPrintSettingsSchema
+ * - Validation helpers: validateJobStartParams, isSupportedFileType, getFileType
+ * - Type exports: ValidatedJobStartParams, ValidatedFileMetadata, ValidatedSlicerMetadata
  */
 
 import { z } from 'zod';
