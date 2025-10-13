@@ -922,7 +922,6 @@ async function loadCameraStream(): Promise<void> {
       hideElement('camera-placeholder');
 
       // Initialize JSMpeg player
-      // @ts-ignore - JSMpeg loaded via CDN
       new JSMpeg.Player(wsUrl, {
         canvas: canvas,
         autoplay: true,

@@ -26,7 +26,7 @@ import './printer-tabs.css';
  * Simple event emitter for browser environment
  */
 class SimpleEventEmitter {
-  private events: Map<string, Array<(...args: unknown[]) => void>> = new Map();
+  private readonly events: Map<string, Array<(...args: unknown[]) => void>> = new Map();
 
   on(event: string, handler: (...args: unknown[]) => void): void {
     if (!this.events.has(event)) {
@@ -68,7 +68,7 @@ class SimpleEventEmitter {
 export class PrinterTabsComponent extends SimpleEventEmitter {
   private tabsContainer: HTMLElement | null = null;
   private addTabButton: HTMLElement | null = null;
-  private tabs = new Map<string, HTMLElement>();
+  private readonly tabs = new Map<string, HTMLElement>();
   private isInitialized = false;
 
   /**

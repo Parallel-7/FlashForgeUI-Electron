@@ -9,7 +9,6 @@
  */
 
 import { EventEmitter } from 'events';
-import { app } from 'electron';
 import type { HeadlessConfig, PrinterSpec } from '../utils/HeadlessArguments';
 import { HeadlessLogger } from '../utils/HeadlessLogger';
 import { getConfigManager } from './ConfigManager';

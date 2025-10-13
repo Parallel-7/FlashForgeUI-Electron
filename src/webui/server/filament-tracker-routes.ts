@@ -16,7 +16,6 @@ import { Router, Request, Response } from 'express';
 import { createFilamentTrackerAuth } from './filament-tracker-auth';
 import { getWebSocketManager } from './WebSocketManager';
 import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager';
-import type { PollingData } from '../../types/polling';
 
 /**
  * Standard API response for successful requests

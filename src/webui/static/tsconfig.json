@@ -19,6 +19,6 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
   },
-  "files": ["app.ts"],
+  "files": ["app.ts", "../../../src/types/jsmpeg.d.ts"],
   "exclude": ["node_modules"]
 }

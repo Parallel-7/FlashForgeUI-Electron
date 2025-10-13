@@ -24,11 +24,9 @@ import { getRtspStreamService } from '../services/RtspStreamService';
 import {
   resolveCameraConfig,
   getCameraUserConfig,
-  formatCameraProxyUrl,
-  detectStreamType
+  formatCameraProxyUrl
 } from '../utils/camera-utils';
 import { getConfigManager } from '../managers/ConfigManager';
-import { getPrinterConnectionManager } from '../managers/ConnectionFlowManager';
 import { getPrinterBackendManager } from '../managers/PrinterBackendManager';
 import { getPrinterContextManager } from '../managers/PrinterContextManager';
 import { ResolvedCameraConfig, CameraProxyStatus } from '../types/camera';
@@ -114,7 +112,7 @@ export class CameraIPCHandler {
       console.log(`[camera:get-proxy-url] Status for context ${activeContextId}:`, status);
 
       if (!status || !status.isRunning) {
-        console.log(`[camera:get-proxy-url] No camera running, returning invalid URL`);
+        console.log('[camera:get-proxy-url] No camera running, returning invalid URL');
         return 'http://localhost:0/camera'; // Invalid port signals no camera
       }
 

@@ -25,9 +25,11 @@ import { BaseComponent } from '../base/component';
 import type { ComponentUpdateData } from '../base/types';
 import type { ResolvedCameraConfig } from '../../../types/camera/camera.types';
 import type { PollingData, PrinterState, CurrentJobInfo } from '../../../types/polling';
-// @ts-ignore - JSMpeg doesn't have official TypeScript types
-import JSMpeg from '@cycjimmy/jsmpeg-player';
+import type { JSMpegPlayerInstance, JSMpegStatic } from '../../../types/jsmpeg';
 import './camera-preview.css';
+
+// Import JSMpeg library (no official types available)
+const JSMpeg: JSMpegStatic = require('@cycjimmy/jsmpeg-player') as JSMpegStatic;
 
 /**
  * Camera preview states for visual feedback
@@ -72,7 +74,7 @@ export class CameraPreviewComponent extends BaseComponent {
   private cameraStreamElement: HTMLImageElement | HTMLCanvasElement | null = null;
 
   /** JSMpeg player instance for RTSP streams */
-  private jsmpegPlayer: any = null;
+  private jsmpegPlayer: JSMpegPlayerInstance | null = null;
 
   /** Current camera state for visual feedback */
   private currentState: CameraState = 'disabled';
@@ -346,7 +348,6 @@ export class CameraPreviewComponent extends BaseComponent {
 
     try {
       // Initialize JSMpeg player with WebSocket URL from node-rtsp-stream
-      // JSMpeg.Player(url, options)
       this.jsmpegPlayer = new JSMpeg.Player(wsUrl, {
         canvas: canvasElement,
         autoplay: true,
@@ -375,6 +376,7 @@ export class CameraPreviewComponent extends BaseComponent {
     // Clean up JSMpeg player if it exists
     if (this.jsmpegPlayer) {
       try {
+        // The player is already typed as JSMpegPlayerInstance | null
         this.jsmpegPlayer.destroy();
         console.log('[CameraPreview] JSMpeg player destroyed');
       } catch (error) {

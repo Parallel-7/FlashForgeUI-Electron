@@ -70,7 +70,7 @@ export function setupPrinterContextHandlers(): void {
       }
 
       // Import ConnectionFlowManager to properly disconnect
-      const { getPrinterConnectionManager } = require('../managers/ConnectionFlowManager');
+      const { getPrinterConnectionManager } = require('../managers/ConnectionFlowManager') as typeof import('../managers/ConnectionFlowManager');
       const connectionManager = getPrinterConnectionManager();
 
       // Disconnect the printer (this will also remove the context)
@@ -109,13 +109,15 @@ export function setupConnectionStateHandlers(): void {
   console.log('Setting up connection state IPC handlers...');
 
   // Import dynamically to avoid circular dependencies
-  const getConnectionStateManager = require('../services/ConnectionStateManager').getConnectionStateManager;
+  const { getConnectionStateManager } = require('../services/ConnectionStateManager') as typeof import('../services/ConnectionStateManager');
+  const contextManager = getPrinterContextManager();
 
   // Check if connected (with optional context ID)
   ipcMain.handle('connection-state:is-connected', async (_event: IpcMainInvokeEvent, contextId?: string) => {
     try {
       const connectionStateManager = getConnectionStateManager();
-      return connectionStateManager.isConnected(contextId);
+      const targetContextId = contextId || contextManager.getActiveContextId() || '';
+      return connectionStateManager.isConnected(targetContextId);
     } catch (error) {
       console.error('Failed to check connection state:', error);
       return false;
@@ -126,7 +128,8 @@ export function setupConnectionStateHandlers(): void {
   ipcMain.handle('connection-state:get-state', async (_event: IpcMainInvokeEvent, contextId?: string) => {
     try {
       const connectionStateManager = getConnectionStateManager();
-      return connectionStateManager.getState(contextId);
+      const targetContextId = contextId || contextManager.getActiveContextId() || '';
+      return connectionStateManager.getState(targetContextId);
     } catch (error) {
       console.error('Failed to get connection state:', error);
       return { state: 'disconnected' };
@@ -143,7 +146,7 @@ export function setupCameraContextHandlers(): void {
   console.log('Setting up camera context IPC handlers...');
 
   // Import camera service getter
-  const { getCameraProxyService } = require('../services/CameraProxyService');
+  const { getCameraProxyService } = require('../services/CameraProxyService') as typeof import('../services/CameraProxyService');
 
   // Get camera stream URL (with optional context ID)
   ipcMain.handle('camera:get-stream-url', async (_event: IpcMainInvokeEvent, contextId?: string) => {

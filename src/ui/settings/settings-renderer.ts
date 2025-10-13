@@ -98,7 +98,7 @@ class SettingsRenderer {
   private readonly inputs: Map<string, HTMLInputElement> = new Map();
   private saveStatusElement: HTMLElement | null = null;
   private statusTimeout: NodeJS.Timeout | null = null;
-  private settings: MutableSettings = { global: {}, perPrinter: {} };
+  private readonly settings: MutableSettings = { global: {}, perPrinter: {} };
   private printerName: string | null = null;
   private hasUnsavedChanges: boolean = false;
 

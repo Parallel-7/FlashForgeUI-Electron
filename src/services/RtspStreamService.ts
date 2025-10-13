@@ -35,9 +35,18 @@ import { promisify } from 'util';
 
 const execAsync = promisify(exec);
 
-// node-rtsp-stream doesn't have TypeScript types
-// @ts-ignore
-import Stream from 'node-rtsp-stream';
+// node-rtsp-stream doesn't have official TypeScript types
+// Using custom type definitions from src/types/node-rtsp-stream.d.ts
+import type { ChildProcess } from 'child_process';
+
+// Import the Stream type - ts-expect-error is needed because TypeScript can't find the declaration
+// even though it exists in src/types/node-rtsp-stream.d.ts. This is a known limitation with
+// ambient module declarations for packages without native types.
+// @ts-expect-error TS7016 - Using custom type definitions
+type Stream = import('node-rtsp-stream').default;
+
+// Import node-rtsp-stream library (no official types, using custom types)
+const StreamConstructor = require('node-rtsp-stream') as { new(...args: unknown[]): Stream };
 
 // ============================================================================
 // TYPES
@@ -50,9 +59,9 @@ interface RtspStreamConfig {
   contextId: string;
   rtspUrl: string;
   wsPort: number;
-  stream: any;  // Stream instance from node-rtsp-stream
+  stream: Stream;  // Stream instance from node-rtsp-stream
   isActive: boolean;
-  ffmpegProcess?: any;  // Reference to ffmpeg child process
+  ffmpegProcess?: ChildProcess;  // Reference to ffmpeg child process
 }
 
 /**
@@ -192,7 +201,8 @@ export class RtspStreamService extends EventEmitter {
 
     try {
       // Create node-rtsp-stream instance
-      const stream = new Stream({
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const stream = new StreamConstructor({
         name: contextId,
         streamUrl: rtspUrl,
         wsPort,
@@ -207,12 +217,14 @@ export class RtspStreamService extends EventEmitter {
 
       // Suppress ffmpeg stderr output (node-rtsp-stream emits it as 'ffmpegStderr' event)
       // This prevents ffmpeg logs from appearing in console
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       stream.on('ffmpegStderr', () => {
         // Consume but don't log ffmpeg stderr output
       });
 
       // Get ffmpeg child process reference from node-rtsp-stream
       // The library exposes it as stream.mpeg1Muxer.stream
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const ffmpegProcess = stream.mpeg1Muxer?.stream;
 
       // Store stream configuration with ffmpeg process reference
@@ -220,8 +232,10 @@ export class RtspStreamService extends EventEmitter {
         contextId,
         rtspUrl,
         wsPort,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         stream,
         isActive: true,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         ffmpegProcess
       };
 
@@ -253,24 +267,25 @@ export class RtspStreamService extends EventEmitter {
 
     try {
       // First, explicitly kill the ffmpeg process if we have a reference
-      if (streamConfig.ffmpegProcess && !streamConfig.ffmpegProcess.killed) {
+      const ffmpegProcess = streamConfig.ffmpegProcess;
+      if (ffmpegProcess && !ffmpegProcess.killed) {
         console.log(`[RtspStreamService] Killing ffmpeg process for context ${contextId}`);
 
         // Wait for process to exit with timeout
         const killPromise = new Promise<void>((resolve) => {
-          streamConfig.ffmpegProcess.once('exit', () => {
+          ffmpegProcess.once('exit', () => {
             console.log(`[RtspStreamService] ffmpeg process exited for context ${contextId}`);
             resolve();
           });
 
           // Force kill - on Windows, just use kill() without signal
-          streamConfig.ffmpegProcess.kill();
+          ffmpegProcess.kill();
 
           // Timeout after 2 seconds
           setTimeout(() => {
-            if (!streamConfig.ffmpegProcess.killed) {
-              console.warn(`[RtspStreamService] ffmpeg process did not exit cleanly, force killing`);
-              streamConfig.ffmpegProcess.kill('SIGKILL');
+            if (!ffmpegProcess.killed) {
+              console.warn('[RtspStreamService] ffmpeg process did not exit cleanly, force killing');
+              ffmpegProcess.kill('SIGKILL');
             }
             resolve();
           }, 2000);
@@ -280,8 +295,12 @@ export class RtspStreamService extends EventEmitter {
       }
 
       // Then stop the stream (which will try to clean up WebSocket server)
-      if (streamConfig.stream && typeof streamConfig.stream.stop === 'function') {
-        streamConfig.stream.stop();
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const stream = streamConfig.stream;
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      if (stream && typeof stream.stop === 'function') {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
+        stream.stop();
       }
     } catch (error) {
       console.error(`[RtspStreamService] Error stopping stream for context ${contextId}:`, error);

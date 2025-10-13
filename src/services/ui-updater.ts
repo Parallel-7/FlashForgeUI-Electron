@@ -511,12 +511,6 @@ export function updateGeneralStatus(data: PollingData): void {
     updateLabelSpanElement('filament-used', 'Filament used:', '0m');
   }
 
-  // Update connection status in title if needed
-  const titleElement = document.querySelector('.title');
-  if (titleElement) {
-    const connectionStatus = data.isConnected ? 'Connected' : 'Disconnected';
-    titleElement.textContent = `FlashForge UI 1.0 - ${connectionStatus}`;
-  }
 }
 
 // ============================================================================

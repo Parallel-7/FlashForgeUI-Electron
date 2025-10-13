@@ -195,20 +195,20 @@ export type WindowType =
 // Common window size constants
 export const WINDOW_SIZES = {
   SETTINGS: {
-    width: createWindowWidth(600),
-    height: createWindowHeight(500),
-    minWidth: createWindowMinWidth(500),
-    minHeight: createWindowMinHeight(400)
+    width: createWindowWidth(700),
+    height: createWindowHeight(700),
+    minWidth: createWindowMinWidth(700),
+    minHeight: createWindowMinHeight(700)
   },
   STATUS: {
-    width: createWindowWidth(650),
-    height: createWindowHeight(600),
-    minWidth: createWindowMinWidth(500),
-    minHeight: createWindowMinHeight(500)
+    width: createWindowWidth(750),
+    height: createWindowHeight(900),
+    minWidth: createWindowMinWidth(750),
+    minHeight: createWindowMinHeight(800)
   },
   LOG_DIALOG: {
     width: createWindowWidth(800),
-    height: createWindowHeight(600),
+    height: createWindowHeight(700),
     minWidth: createWindowMinWidth(600),
     minHeight: createWindowMinHeight(400)
   },
@@ -231,10 +231,10 @@ export const WINDOW_SIZES = {
     minHeight: createWindowMinHeight(350)
   },
   JOB_PICKER: {
-    width: createWindowWidth(600),
-    height: createWindowHeight(500),
-    minWidth: createWindowMinWidth(500),
-    minHeight: createWindowMinHeight(400)
+    width: createWindowWidth(700),
+    height: createWindowHeight(700),
+    minWidth: createWindowMinWidth(700),
+    minHeight: createWindowMinHeight(700)
   },
   SEND_COMMANDS: {
     width: createWindowWidth(600),

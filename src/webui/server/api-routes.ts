@@ -1430,7 +1430,7 @@ export function createAPIRoutes(): Router {
    */
   router.post('/contexts/switch', async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { contextId } = req.body;
+      const { contextId } = req.body as { contextId?: string };
 
       if (!contextId || typeof contextId !== 'string') {
         const response: StandardAPIResponse = {

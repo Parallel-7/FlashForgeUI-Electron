@@ -27,6 +27,7 @@ import { setupWindowControlHandlers } from './ipc/WindowControlHandlers';
 import { setupDialogHandlers } from './ipc/DialogHandlers';
 import { registerAllIpcHandlers } from './ipc/handlers';
 import { setupPrinterContextHandlers, setupConnectionStateHandlers, setupCameraContextHandlers } from './ipc/printer-context-handlers';
+import type { PollingData } from './types/polling';
 // import { getMainProcessPollingCoordinator } from './services/MainProcessPollingCoordinator';
 import { getMultiContextPollingCoordinator } from './services/MultiContextPollingCoordinator';
 import { getCameraProxyService } from './services/CameraProxyService';
@@ -286,13 +287,9 @@ const createMainWindow = async (): Promise<void> => {
     console.log('Continuing despite load error...');
   }
 
-  // Send platform information and start power save blocker once window is ready
+  // Start power save blocker once window is ready
   mainWindow.once('ready-to-show', () => {
     console.log('Main window ready and displayed');
-
-    // Send platform information to renderer for platform-specific styling
-    console.log(`Sending platform info: ${process.platform}`);
-    mainWindow.webContents.send('platform-info', process.platform);
 
     // Start power save blocker to prevent OS throttling
     if (powerSaveBlockerId === null) {
@@ -408,7 +405,7 @@ const setupPrinterContextEventForwarding = (): void => {
 
       // Forward to WebUI for WebSocket clients
       const webUIManager = getWebUIManager();
-      webUIManager.handlePollingUpdate(data as any);
+      webUIManager.handlePollingUpdate(data as PollingData);
     }
   });
 
@@ -439,7 +436,6 @@ const setupConnectionEventForwarding = (): void => {
   const connectionManager = getPrinterConnectionManager();
   const windowManager = getWindowManager();
   const backendManager = getPrinterBackendManager();
-  const multiContextPollingCoordinator = getMultiContextPollingCoordinator();
   const webUIManager = getWebUIManager();
 
   // Set global reference for camera IPC handler
@@ -543,6 +539,16 @@ const setupEventDrivenServices = (): void => {
   // Listen for renderer-ready signal to start auto-connect
   ipcMain.handle('renderer-ready', async () => {
     console.log('Renderer ready signal received - checking config status');
+
+    const windowManager = getWindowManager();
+    const mainWindow = windowManager.getMainWindow();
+
+    // Send platform information to renderer for platform-specific styling
+    // This must happen AFTER renderer is ready to avoid race conditions on fast systems
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      console.log(`Sending platform info to ready renderer: ${process.platform}`);
+      mainWindow.webContents.send('platform-info', process.platform);
+    }
 
     const configManager = getConfigManager();
 
