@@ -126,6 +126,10 @@ module.exports = {
         perMachine: false,
         allowToChangeInstallationDirectory: true,
         deleteAppDataOnUninstall: true,
+
+        // Ensure shortcuts are created for Windows notification support
+        createDesktopShortcut: true,
+        createStartMenuShortcut: true,
     },
 
     // DMG configuration

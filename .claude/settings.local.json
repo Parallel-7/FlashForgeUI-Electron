@@ -72,7 +72,11 @@
       "Bash(npm run tsr:check:all:*)",
       "Bash(npx knip:*)",
       "Bash(npm run knip:*)",
-      "Bash(tee:*)"
+      "Bash(tee:*)",
+      "WebFetch(domain:www.electron.build)",
+      "Bash(reg query:*)",
+      "Bash(powershell:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "additionalDirectories": [

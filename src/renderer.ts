@@ -697,13 +697,13 @@ function setupBasicButtons(): void {
     if (button) {
       button.addEventListener('click', async () => {
 
-        
+
         // Special handling for preview button
         if (buttonId === 'btn-preview') {
           void handleCameraToggle(button);
           return;
         }
-        
+
         // Special handling for temperature setting buttons
         if (buttonId === 'btn-bed-set' || buttonId === 'btn-extruder-set') {
           void handleTemperatureDialog(buttonId);

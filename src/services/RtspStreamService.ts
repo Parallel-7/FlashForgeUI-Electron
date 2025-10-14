@@ -17,7 +17,7 @@
  * await service.initialize();
  *
  * // Setup RTSP stream for a context
- * const wsPort = await service.setupStream(contextId, rtspUrl);
+ * const wsPort = await service.setupStream(contextId, rtspUrl, { frameRate: 30, quality: 3 });
  * // Client connects to ws://localhost:${wsPort}
  *
  * // Stop stream when context disconnects
@@ -176,9 +176,17 @@ export class RtspStreamService extends EventEmitter {
    *
    * @param contextId - Context ID for this stream
    * @param rtspUrl - RTSP stream URL
+   * @param options - Optional stream configuration (frame rate, quality)
    * @returns WebSocket port for client connection
    */
-  public async setupStream(contextId: string, rtspUrl: string): Promise<number> {
+  public async setupStream(
+    contextId: string,
+    rtspUrl: string,
+    options?: {
+      frameRate?: number;
+      quality?: number;
+    }
+  ): Promise<number> {
     if (!this.ffmpegStatus?.available) {
       throw new Error('ffmpeg not available - cannot setup RTSP stream');
     }
@@ -199,6 +207,12 @@ export class RtspStreamService extends EventEmitter {
     // Allocate a unique WebSocket port for this stream
     const wsPort = this.allocatePort();
 
+    // Get settings with defaults
+    const frameRate = options?.frameRate ?? 30;
+    const quality = options?.quality ?? 3;
+
+    console.log(`[RtspStreamService] Stream settings: ${frameRate} FPS, quality ${quality}`);
+
     try {
       // Create node-rtsp-stream instance
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
@@ -210,8 +224,8 @@ export class RtspStreamService extends EventEmitter {
           // DO NOT include '-stats' - it enables verbose output
           '-nostats': '',  // Disable progress statistics output
           '-loglevel': 'quiet',  // Suppress ffmpeg banner and info
-          '-r': 30,  // 30 fps
-          '-q:v': '3'  // Quality (1-5, lower is better)
+          '-r': frameRate,    // Use configurable frame rate
+          '-q:v': String(quality)      // Use configurable quality
         }
       });
 

@@ -195,10 +195,10 @@ export type WindowType =
 // Common window size constants
 export const WINDOW_SIZES = {
   SETTINGS: {
-    width: createWindowWidth(700),
-    height: createWindowHeight(700),
-    minWidth: createWindowMinWidth(700),
-    minHeight: createWindowMinHeight(700)
+    width: createWindowWidth(760),
+    height: createWindowHeight(780),
+    minWidth: createWindowMinWidth(760),
+    minHeight: createWindowMinHeight(780)
   },
   STATUS: {
     width: createWindowWidth(750),

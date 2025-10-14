@@ -81,7 +81,9 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'custom-leds': 'CustomLeds',
   'force-legacy-api': 'ForceLegacyAPI',
   'discord-update-interval': 'DiscordUpdateIntervalMinutes',
-  'rounded-ui': 'RoundedUI'
+  'rounded-ui': 'RoundedUI',
+  'rtsp-frame-rate': 'RtspFrameRate',
+  'rtsp-quality': 'RtspQuality'
 };
 
 /**
@@ -209,9 +211,9 @@ class SettingsRenderer {
             value = this.settings.perPrinter[perPrinterKey];
             console.log(`[Settings] Loading per-printer setting ${configKey} (${perPrinterKey}):`, value);
           } else {
-            // No active printer - use empty/false defaults
-            value = (configKey === 'CustomCamera' || configKey === 'CustomLeds' || configKey === 'ForceLegacyAPI') ? false : '';
-            console.log(`[Settings] No printer, using default for ${configKey}:`, value);
+            // No value set - skip this setting (let input use its HTML default value)
+            console.log(`[Settings] No value for ${configKey}, using input default`);
+            return;
           }
         } else {
           // For global settings, use config.json
@@ -253,6 +255,20 @@ class SettingsRenderer {
       if (configKey === 'WebUIPort' || configKey === 'CameraProxyPort') {
         if (value < 1 || value > 65535) {
           this.showSaveStatus('Invalid port number (1-65535)', true);
+          return;
+        }
+      }
+      // Validate RTSP frame rate
+      if (configKey === 'RtspFrameRate') {
+        if (value < 1 || value > 60) {
+          this.showSaveStatus('Frame rate must be between 1-60 FPS', true);
+          return;
+        }
+      }
+      // Validate RTSP quality
+      if (configKey === 'RtspQuality') {
+        if (value < 1 || value > 5) {
+          this.showSaveStatus('Quality must be between 1-5', true);
           return;
         }
       }
@@ -404,7 +420,14 @@ class SettingsRenderer {
    * Check if a config key is a per-printer setting
    */
   private isPerPrinterSetting(configKey: keyof AppConfig): boolean {
-    return ['CustomCamera', 'CustomCameraUrl', 'CustomLeds', 'ForceLegacyAPI'].includes(configKey);
+    return [
+      'CustomCamera',
+      'CustomCameraUrl',
+      'CustomLeds',
+      'ForceLegacyAPI',
+      'RtspFrameRate',
+      'RtspQuality'
+    ].includes(configKey);
   }
 
   /**
@@ -415,7 +438,9 @@ class SettingsRenderer {
       'CustomCamera': 'customCameraEnabled',
       'CustomCameraUrl': 'customCameraUrl',
       'CustomLeds': 'customLedsEnabled',
-      'ForceLegacyAPI': 'forceLegacyMode'
+      'ForceLegacyAPI': 'forceLegacyMode',
+      'RtspFrameRate': 'rtspFrameRate',
+      'RtspQuality': 'rtspQuality'
     };
     return map[configKey] || configKey;
   }

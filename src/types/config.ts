@@ -45,6 +45,8 @@ export interface AppConfig {
   readonly RoundedUI: boolean;
   readonly FilamentTrackerIntegrationEnabled: boolean;
   readonly FilamentTrackerAPIKey: string;
+  readonly RtspFrameRate: number;        // Per-printer, not saved to config.json
+  readonly RtspQuality: number;          // Per-printer, not saved to config.json
 }
 
 /**
@@ -71,6 +73,8 @@ export interface MutableAppConfig {
   RoundedUI: boolean;
   FilamentTrackerIntegrationEnabled: boolean;
   FilamentTrackerAPIKey: string;
+  RtspFrameRate: number;
+  RtspQuality: number;
 }
 
 /**
@@ -96,7 +100,9 @@ export const DEFAULT_CONFIG: AppConfig = {
   CameraProxyPort: 8181,
   RoundedUI: false,
   FilamentTrackerIntegrationEnabled: false,
-  FilamentTrackerAPIKey: ''
+  FilamentTrackerAPIKey: '',
+  RtspFrameRate: 30,           // Default 30 FPS
+  RtspQuality: 3               // Default quality 3
 } as const;
 
 /**

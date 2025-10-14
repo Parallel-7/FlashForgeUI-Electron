@@ -17,6 +17,10 @@ export interface PrinterSettings {
   customCameraUrl?: string;
   customLedsEnabled?: boolean;
   forceLegacyMode?: boolean;
+
+  // RTSP configuration
+  rtspFrameRate?: number;
+  rtspQuality?: number;
 }
 
 /**
@@ -40,13 +44,15 @@ export function initializePrinterSettingsHandlers(): void {
       console.log('[printer-settings:get] Active context:', activeContext.id);
       console.log('[printer-settings:get] Printer details:', activeContext.printerDetails);
 
-      const { customCameraEnabled, customCameraUrl, customLedsEnabled, forceLegacyMode } = activeContext.printerDetails;
+      const { customCameraEnabled, customCameraUrl, customLedsEnabled, forceLegacyMode, rtspFrameRate, rtspQuality } = activeContext.printerDetails;
 
       const settings = {
         customCameraEnabled,
         customCameraUrl,
         customLedsEnabled,
-        forceLegacyMode
+        forceLegacyMode,
+        rtspFrameRate,
+        rtspQuality
       };
 
       console.log('[printer-settings:get] Returning settings:', settings);

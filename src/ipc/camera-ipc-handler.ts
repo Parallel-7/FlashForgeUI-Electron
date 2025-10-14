@@ -210,7 +210,13 @@ export class CameraIPCHandler {
       // Handle based on stream type
       if (config.streamType === 'rtsp') {
         try {
-          await this.rtspStreamService.setupStream(contextId, config.streamUrl);
+          // Get RTSP settings from printer details
+          const { rtspFrameRate, rtspQuality } = context.printerDetails;
+
+          await this.rtspStreamService.setupStream(contextId, config.streamUrl, {
+            frameRate: rtspFrameRate,
+            quality: rtspQuality
+          });
           console.log(`[CameraIPC] RTSP stream setup for context ${contextId}`);
         } catch (error) {
           console.warn(`[CameraIPC] Failed to setup RTSP stream for context ${contextId}:`, error);
@@ -314,7 +320,13 @@ export class CameraIPCHandler {
       if (config.streamType === 'rtsp') {
         // RTSP: Setup stream for desktop JSMpeg player
         try {
-          await this.rtspStreamService.setupStream(contextId, config.streamUrl);
+          // Get RTSP settings from printer details
+          const { rtspFrameRate, rtspQuality } = context.printerDetails;
+
+          await this.rtspStreamService.setupStream(contextId, config.streamUrl, {
+            frameRate: rtspFrameRate,
+            quality: rtspQuality
+          });
           console.log(`RTSP stream setup for context ${contextId}`);
         } catch (error) {
           console.warn(`Failed to setup RTSP stream for context ${contextId}:`, error);

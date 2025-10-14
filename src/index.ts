@@ -74,7 +74,8 @@ if (!gotTheLock) {
 
 // Set platform-specific settings
 if (process.platform === 'win32') {
-  app.setAppUserModelId(app.name);
+  // Set AppUserModelId to match electron-builder appId for proper notification icon display
+  app.setAppUserModelId('com.ghosttypes.flashforgeui');
 }
 
 // Ensure app uses the correct name for userData directory

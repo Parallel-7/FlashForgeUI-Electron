@@ -32,7 +32,8 @@
  * @exports NotificationTrackingInfo - Type for notification tracking data
  */
 
-import { Notification as ElectronNotification } from 'electron';
+import { Notification as ElectronNotification, app } from 'electron';
+import path from 'path';
 import { EventEmitter } from '../../utils/EventEmitter';
 import type {
   Notification,
@@ -211,12 +212,41 @@ export class NotificationService extends EventEmitter<NotificationServiceEventMa
       timeoutType: this.getTimeoutType(notification.priority)
     };
 
-    // Add icon if specified
+    // Add icon - use custom icon if specified, otherwise use app icon
     if (notification.options?.icon) {
       baseOptions.icon = notification.options.icon;
+    } else {
+      // Automatically add app icon based on platform
+      baseOptions.icon = this.getAppIconPath();
     }
 
     return baseOptions;
+  }
+
+  /**
+   * Get platform-specific app icon path for notifications
+   *
+   * Note: macOS automatically uses the app bundle icon and ignores this property,
+   * but we return a path anyway for consistency.
+   */
+  private getAppIconPath(): string {
+    // Get the app root directory
+    const appPath = app.getAppPath();
+
+    // Determine icon file based on platform
+    let iconFile: string;
+    if (process.platform === 'win32') {
+      iconFile = 'icon.ico';
+    } else if (process.platform === 'darwin') {
+      // macOS ignores the notification icon property and uses the app bundle icon (.icns) automatically
+      // We return .png here for development/fallback, but it won't actually be used by macOS notifications
+      iconFile = 'icon.png';
+    } else {
+      iconFile = 'icon.png'; // Linux uses PNG
+    }
+
+    // Icon is located in src/icons directory
+    return path.join(appPath, 'src', 'icons', iconFile);
   }
 
   /**
