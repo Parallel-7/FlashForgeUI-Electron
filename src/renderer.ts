@@ -1214,12 +1214,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Set up platform detection listener for platform-specific styling
-  window.api.onPlatformInfo((platform: string) => {
-    console.log(`Received platform info: ${platform}`);
-    document.body.classList.add(`platform-${platform}`);
-    logMessage(`Platform-specific styling applied: platform-${platform}`);
-  });
+  // Apply platform-specific styling IMMEDIATELY (no IPC needed)
+  if (window.PLATFORM) {
+    document.body.classList.add(`platform-${window.PLATFORM}`);
+    console.log(`Platform-specific styling applied: platform-${window.PLATFORM}`);
+    logMessage(`Platform detected: ${window.PLATFORM}`);
+  }
 
   console.log('IPC listeners configured for component system integration');
 

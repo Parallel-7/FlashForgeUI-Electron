@@ -120,6 +120,7 @@ declare global {
   interface Window {
     api: ElectronAPI;
     CAMERA_URL: string;
+    PLATFORM: string;
     windowControls?: WindowControls;
     logMessage?: (message: string) => void;
   }

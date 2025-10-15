@@ -217,6 +217,9 @@ try {
   contextBridge.exposeInMainWorld('CAMERA_URL', `http://localhost:8181/camera?session=${sessionId}`);
 }
 
+// Expose platform directly (no IPC needed) - available synchronously to renderer
+contextBridge.exposeInMainWorld('PLATFORM', process.platform);
+
 // Expose the API to the renderer process
 contextBridge.exposeInMainWorld('api', {
   isProxyAvailable: true,
