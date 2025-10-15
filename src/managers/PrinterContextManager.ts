@@ -51,6 +51,7 @@ import { EventEmitter } from 'events';
 import { PrinterDetails } from '../types/printer';
 import type { BasePrinterBackend } from '../printer-backends/BasePrinterBackend';
 import type { PrinterPollingService } from '../services/PrinterPollingService';
+import type { PrinterNotificationCoordinator } from '../services/notifications/PrinterNotificationCoordinator';
 import type {
   PrinterContextInfo,
   ContextConnectionState,
@@ -81,6 +82,9 @@ export interface PrinterContext {
 
   /** Polling service for this context (null if not active) */
   pollingService: PrinterPollingService | null;
+
+  /** Notification coordinator for this context (null if not active) */
+  notificationCoordinator: PrinterNotificationCoordinator | null;
 
   /** Camera proxy port for this context (null if no camera) */
   cameraProxyPort: number | null;
@@ -158,6 +162,7 @@ export class PrinterContextManager extends EventEmitter {
       backend: null,
       connectionState: 'connecting',
       pollingService: null,
+      notificationCoordinator: null,
       cameraProxyPort: null,
       isActive: false,
       createdAt: now,
@@ -376,6 +381,20 @@ export class PrinterContextManager extends EventEmitter {
     const context = this.contexts.get(contextId);
     if (context) {
       context.pollingService = pollingService;
+      context.lastActivity = new Date();
+    }
+  }
+
+  /**
+   * Update context notification coordinator reference
+   *
+   * @param contextId - Context to update
+   * @param notificationCoordinator - Notification coordinator instance or null
+   */
+  public updateNotificationCoordinator(contextId: string, notificationCoordinator: PrinterNotificationCoordinator | null): void {
+    const context = this.contexts.get(contextId);
+    if (context) {
+      context.notificationCoordinator = notificationCoordinator;
       context.lastActivity = new Date();
     }
   }

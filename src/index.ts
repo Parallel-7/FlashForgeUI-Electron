@@ -30,6 +30,7 @@ import { setupPrinterContextHandlers, setupConnectionStateHandlers, setupCameraC
 import type { PollingData } from './types/polling';
 // import { getMainProcessPollingCoordinator } from './services/MainProcessPollingCoordinator';
 import { getMultiContextPollingCoordinator } from './services/MultiContextPollingCoordinator';
+import { getMultiContextNotificationCoordinator } from './services/MultiContextNotificationCoordinator';
 import { getCameraProxyService } from './services/CameraProxyService';
 import { cameraIPCHandler } from './ipc/camera-ipc-handler';
 import { getWebUIManager } from './webui/server/WebUIManager';
@@ -72,11 +73,9 @@ if (!gotTheLock) {
   });
 }
 
-// Set platform-specific settings
-if (process.platform === 'win32') {
-  // Set AppUserModelId to match electron-builder appId for proper notification icon display
-  app.setAppUserModelId('com.ghosttypes.flashforgeui');
-}
+// Set AppUserModelId to match electron-builder appId for proper notification routing
+// This works across all platforms (Windows uses it for Action Center, macOS for notification attribution)
+app.setAppUserModelId('com.ghosttypes.flashforgeui');
 
 // Ensure app uses the correct name for userData directory
 // This must be set before any services that use app.getPath('userData') are initialized
@@ -612,14 +611,19 @@ const initializeApp = async (): Promise<void> => {
 
   // Initialize camera service
   await initializeCameraService();
-  
+
   // Note: WebUI server initialization moved to non-blocking context
   // (will be initialized after renderer-ready signal to prevent startup crashes)
-  
-  // Initialize notification system (polling integration will be done separately)
+
+  // Initialize notification system (base system only, per-context coordinators created when polling starts)
   initializeNotificationSystem();
   console.log('Notification system initialized');
-  
+
+  // Initialize multi-context notification coordinator
+  const multiContextNotificationCoordinator = getMultiContextNotificationCoordinator();
+  multiContextNotificationCoordinator.initialize();
+  console.log('Multi-context notification coordinator initialized');
+
   // Initialize thumbnail cache service
   const thumbnailCacheService = getThumbnailCacheService();
   await thumbnailCacheService.initialize();

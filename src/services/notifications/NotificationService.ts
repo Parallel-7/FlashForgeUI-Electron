@@ -95,7 +95,7 @@ export class NotificationService extends EventEmitter<NotificationServiceEventMa
   private checkNotificationSupport(): void {
     try {
       this.isSupported = ElectronNotification.isSupported();
-      
+
       if (!this.isSupported) {
         console.warn('Desktop notifications are not supported on this platform');
       }
