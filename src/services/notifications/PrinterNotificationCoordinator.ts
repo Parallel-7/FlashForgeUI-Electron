@@ -428,11 +428,13 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     });
 
     if (shouldNotify && shouldSendNotification(NotificationType.PrinterCooled, this.currentSettings)) {
-      await this.sendPrinterCooledNotification(status);
+      // Update state BEFORE sending to prevent race condition from polling updates
       this.updateNotificationState({
         hasSentPrinterCooledNotification: true
       }, NotificationStateTransition.PrinterCooled);
-      
+
+      await this.sendPrinterCooledNotification(status);
+
       // Stop temperature monitoring
       this.stopTemperatureMonitoring();
     }

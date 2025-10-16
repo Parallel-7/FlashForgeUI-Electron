@@ -76,7 +76,9 @@
       "WebFetch(domain:www.electron.build)",
       "Bash(reg query:*)",
       "Bash(powershell:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(Select-String -Pattern \"src\\index.ts\" -Context 0,5)",
+      "Bash(Select-String \"Total console\\.log statements found:\")"
     ],
     "deny": [],
     "additionalDirectories": [

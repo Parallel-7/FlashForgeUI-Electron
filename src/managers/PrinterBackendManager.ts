@@ -190,7 +190,7 @@ export class PrinterBackendManager extends EventEmitter {
     options: BackendInitializationOptions
   ): Promise<BackendInitializationResult> {
     try {
-      // RACE CONDITION FIX: Check if we had an old backend before disposal
+      // Check if we had an old backend before disposal
       const hadOldBackend = this.contextBackends.has(contextId);
 
       // Dispose of existing backend for this context if any
