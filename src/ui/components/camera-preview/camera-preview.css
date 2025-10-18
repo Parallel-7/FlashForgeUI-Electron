@@ -56,131 +56,159 @@
   z-index: 1;
 }
 
-/* Integrated job info overlay at bottom - compact like reference */
+/* Integrated job info overlay at bottom - Enhanced modern design */
 .component-camera-preview .job-info-overlay {
   flex: 0 0 auto;
-  background-color: var(--dark-bg);
-  padding: 8px;
-  border-top: 1px solid var(--border-color);
+  background: linear-gradient(180deg, rgba(30, 30, 30, 0.95) 0%, rgba(25, 25, 25, 0.98) 100%);
+  padding: 12px 14px;
+  border-top: 1px solid var(--border-color-light);
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
 }
 
-/* Job and progress row styling */
+/* Job and progress row styling - Enhanced typography */
 .component-camera-preview .job-row,
 .component-camera-preview .progress-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   color: var(--text-color);
-  font-size: 0.85em;
-  margin-bottom: 2px;
+  font-size: 14px;
+  margin-bottom: 4px;
 }
 
 .component-camera-preview .job-row span:first-child,
 .component-camera-preview .progress-row span:first-child {
-  font-weight: 500;
-  color: var(--text-color);
+  font-weight: 600;
+  color: var(--text-color-secondary);
+  letter-spacing: 0.3px;
 }
 
 .component-camera-preview .job-row span:last-child,
 .component-camera-preview .progress-row span:last-child {
   color: var(--accent-color);
-  font-weight: 600;
+  font-weight: 700;
+  text-shadow: 0 0 8px rgba(66, 133, 244, 0.3);
 }
 
-/* Progress bar styling */
+/* Progress bar styling - Modern and smooth */
 .component-camera-preview progress {
   width: 100%;
-  height: 6px;
+  height: 8px;
   border: none;
-  border-radius: 2px;
-  background-color: var(--darker-bg);
-  margin: 2px 0;
+  border-radius: 6px;
+  background-color: rgba(0, 0, 0, 0.4);
+  margin: 6px 0;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 /* Progress bar value styling with state-based colors */
 .component-camera-preview progress::-webkit-progress-bar {
-  background-color: var(--darker-bg);
-  border-radius: 2px;
+  background-color: rgba(0, 0, 0, 0.4);
+  border-radius: 6px;
 }
 
 .component-camera-preview progress::-webkit-progress-value {
-  background: linear-gradient(90deg, #1976d2, #42a5f5);
-  border-radius: 2px;
-  transition: background 0.3s ease;
+  background: linear-gradient(90deg, var(--accent-color), var(--button-hover));
+  border-radius: 6px;
+  transition: background var(--transition-normal);
+  box-shadow: 0 0 10px rgba(66, 133, 244, 0.5);
 }
 
 .component-camera-preview progress::-moz-progress-bar {
-  background: linear-gradient(90deg, #1976d2, #42a5f5);
-  border-radius: 2px;
-  transition: background 0.3s ease;
+  background: linear-gradient(90deg, var(--accent-color), var(--button-hover));
+  border-radius: 6px;
+  transition: background var(--transition-normal);
+  box-shadow: 0 0 10px rgba(66, 133, 244, 0.5);
 }
 
 /* Progress bar state styling - printing state */
 .component-camera-preview progress.printing::-webkit-progress-value {
   background: linear-gradient(90deg, var(--success-color), #66bb6a);
+  box-shadow: 0 0 12px rgba(0, 230, 118, 0.6);
 }
 
 .component-camera-preview progress.printing::-moz-progress-bar {
   background: linear-gradient(90deg, var(--success-color), #66bb6a);
+  box-shadow: 0 0 12px rgba(0, 230, 118, 0.6);
 }
 
 /* Progress bar state styling - paused state */
 .component-camera-preview progress.paused::-webkit-progress-value {
   background: linear-gradient(90deg, var(--warning-color), #ffb74d);
+  box-shadow: 0 0 12px rgba(255, 152, 0, 0.6);
 }
 
 .component-camera-preview progress.paused::-moz-progress-bar {
   background: linear-gradient(90deg, var(--warning-color), #ffb74d);
+  box-shadow: 0 0 12px rgba(255, 152, 0, 0.6);
 }
 
 /* Progress bar state styling - completed state */
 .component-camera-preview progress.completed::-webkit-progress-value {
   background: linear-gradient(90deg, var(--success-color), #66bb6a);
+  box-shadow: 0 0 12px rgba(0, 230, 118, 0.6);
 }
 
 .component-camera-preview progress.completed::-moz-progress-bar {
   background: linear-gradient(90deg, var(--success-color), #66bb6a);
+  box-shadow: 0 0 12px rgba(0, 230, 118, 0.6);
 }
 
 /* Progress bar state styling - error state */
 .component-camera-preview progress.error::-webkit-progress-value {
   background: linear-gradient(90deg, var(--error-color), #ef5350);
+  box-shadow: 0 0 12px rgba(244, 67, 54, 0.6);
 }
 
 .component-camera-preview progress.error::-moz-progress-bar {
   background: linear-gradient(90deg, var(--error-color), #ef5350);
+  box-shadow: 0 0 12px rgba(244, 67, 54, 0.6);
 }
 
-/* Camera controls styling - integrated seamlessly */
+/* Camera controls styling - Modern and polished */
 .component-camera-preview .camera-controls {
   display: flex;
   justify-content: flex-end;
-  gap: 4px;
-  margin-top: 4px;
+  gap: 8px;
+  margin-top: 6px;
 }
 
 .component-camera-preview .camera-controls button {
-  background-color: var(--button-bg);
+  background: linear-gradient(135deg, var(--button-bg) 0%, var(--button-active) 100%);
   color: white;
-  border: none;
-  padding: 4px 8px;
-  border-radius: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  padding: 6px 12px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 0.8em;
-  transition: background-color 0.2s ease;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
 }
 
 .component-camera-preview .camera-controls button:hover {
-  background-color: var(--button-hover);
+  background: linear-gradient(135deg, var(--button-hover) 0%, var(--button-bg) 100%);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.component-camera-preview .camera-controls button:active {
+  transform: translateY(0);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .component-camera-preview .camera-controls button:disabled {
-  background-color: var(--darker-bg);
-  color: #888;
+  background: linear-gradient(135deg, rgba(50, 50, 50, 0.6) 0%, rgba(40, 40, 40, 0.6) 100%);
+  color: var(--text-color-muted);
   cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+  box-shadow: none;
 }
 
 /* Camera state indicators */

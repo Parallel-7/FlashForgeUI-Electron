@@ -16,9 +16,10 @@
   flex: 1;
   min-height: 0; /* Important for flex children to allow shrinking */
   overflow: auto;
-  background-color: var(--dark-bg);
-  padding: 8px;
+  background-color: var(--darker-bg);
+  padding: 12px;
   position: relative;
+  gap: 12px;
 }
 
 /* ============================================================================
@@ -30,20 +31,23 @@
 }
 
 .grid-stack-item-content {
-  /* Content container styling */
-  background-color: var(--darker-bg);
+  /* Content container styling - Modern glass-morphic appearance */
+  background: linear-gradient(135deg, var(--card-bg) 0%, rgba(30, 30, 30, 0.95) 100%);
   border: 1px solid var(--border-color);
-  border-radius: 4px;
+  border-radius: 8px;
   overflow: hidden;
   inset: 0;
   position: absolute;
   display: flex;
   flex-direction: column;
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-normal), border-color var(--transition-normal), transform var(--transition-fast);
+  backdrop-filter: blur(10px);
 }
 
 .grid-stack-item-content:hover {
-  border-color: rgba(66, 133, 244, 0.3);
+  border-color: var(--border-color-light);
+  box-shadow: var(--shadow-md);
 }
 
 .grid-stack-item-remove {
@@ -80,7 +84,7 @@
    EDIT MODE STYLING
    ============================================================================ */
 
-/* Edit mode indicator */
+/* Edit mode indicator - Enhanced visual prominence */
 .edit-mode-indicator {
   position: fixed;
   top: 50px;
@@ -88,14 +92,18 @@
   z-index: 9999;
   display: none; /* Hidden by default, shown when edit mode is active */
   align-items: center;
-  gap: 8px;
-  padding: 12px 20px;
-  background-color: var(--accent-color);
+  gap: 10px;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, var(--accent-color) 0%, var(--button-hover) 100%);
   color: white;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-  font-weight: 500;
-  animation: slideIn 0.3s ease-out;
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg), 0 0 20px rgba(66, 133, 244, 0.4);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  backdrop-filter: blur(10px);
 }
 
 @keyframes slideIn {
@@ -129,12 +137,12 @@ body.edit-mode .grid-stack-item:active {
 
 body.edit-mode .grid-stack-item-content {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.2);
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.25), var(--shadow-md);
 }
 
 body.edit-mode .grid-stack-item-content:hover {
-  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.4);
-  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.5), var(--shadow-lg);
+  border-color: var(--button-hover);
 }
 
 body.edit-mode .grid-stack-item-remove {
@@ -158,14 +166,22 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   pointer-events: auto;
 }
 
-/* Style the resize handles */
+/* Style the resize handles - Modern and prominent */
 .grid-stack-item > .ui-resizable-se,
 .grid-stack-item > .ui-resizable-sw {
-  width: 20px !important;
-  height: 20px !important;
-  background-color: var(--accent-color);
-  border: 2px solid var(--darker-bg);
-  border-radius: 4px;
+  width: 24px !important;
+  height: 24px !important;
+  background: linear-gradient(135deg, var(--accent-color) 0%, var(--button-hover) 100%);
+  border: 2px solid rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.grid-stack-item > .ui-resizable-se:hover,
+.grid-stack-item > .ui-resizable-sw:hover {
+  transform: scale(1.1);
+  box-shadow: var(--shadow-md);
 }
 
 .grid-stack-item > .ui-resizable-se {

@@ -1,33 +1,39 @@
 /**
  * @fileoverview Model Preview Component Styles
  *
- * Component-scoped CSS for the Model Preview Component. These styles provide
- * layout structure and visual styling for 3D model thumbnails. Image size
- * constraints are applied via JavaScript for reliable enforcement.
+ * Modern, professional 3D model thumbnail display optimized for grid layouts.
+ * Features enhanced visual styling and responsive behavior for various sizes.
  *
  * Key features:
- * - Consistent panel header styling matching job-stats component
- * - Dual UI mode support via CSS variables
- * - Responsive design with proper flex layout
- * - Image styling (size constraints handled in TypeScript)
- * - Accessibility and reduced motion support
+ * - Modern panel header matching unified design language
+ * - Flexible sizing that adapts to grid item dimensions
+ * - Enhanced image presentation with smooth transitions
+ * - Professional placeholder styling
+ * - Full accessibility and reduced motion support
  */
 
 .component-model-preview {
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--border-color-light);
   display: flex;
   flex-direction: column;
   flex: 1; /* Allow model panel to grow and take remaining space */
-  min-height: 120px; /* Adequate minimum height for thumbnail display */
+  min-height: 0; /* Remove fixed minimum - let grid control sizing */
   overflow: hidden;
+  background: transparent;
 }
 
-/* Panel header styling - matches job-stats panel style */
+/* Panel header styling - modern and consistent */
 .component-model-preview .panel-header {
-  background-color: var(--header-bg);
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(25, 25, 25, 0.95) 100%);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color-light);
   flex-shrink: 0;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  color: var(--text-color);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 /* Panel content area with proper flex layout */
@@ -38,7 +44,8 @@
   align-items: center;
   background-color: transparent;
   overflow: hidden;
-  padding: var(--ui-padding, 8px);
+  padding: 16px;
+  min-height: 0;
 }
 
 /* Model preview container */
@@ -51,53 +58,61 @@
   position: relative;
 }
 
-/* Image styling - size constraints applied via JavaScript */
+/* Image styling - Enhanced with modern presentation */
 .component-model-preview #model-preview img {
   object-fit: contain;
   background-color: transparent;
-  border-radius: var(--ui-border-radius, 4px);
-  transition: transform 0.2s ease;
+  border-radius: 8px;
+  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  box-shadow: var(--shadow-sm);
+  max-width: 100%;
+  max-height: 100%;
 }
 
-/* Hover effect for images */
+/* Hover effect for images - Subtle and professional */
 .component-model-preview #model-preview img:hover {
-  transform: scale(1.02);
+  transform: scale(1.03);
+  box-shadow: var(--shadow-md);
 }
 
-/* Placeholder text styling */
+/* Placeholder text styling - Enhanced readability */
 .component-model-preview .preview-placeholder {
   display: flex;
   justify-content: center;
   align-items: center;
   width: 100%;
   height: 100%;
-  color: var(--text-color, #aaa);
+  color: var(--text-color-muted);
   text-align: center;
 }
 
 .component-model-preview .preview-placeholder-text {
   font-style: italic;
-  opacity: 0.8;
-  font-size: 0.9em;
-  line-height: 1.4;
+  opacity: 0.7;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 20px;
 }
 
 .component-model-preview .preview-placeholder-text p {
-  margin: 4px 0;
+  margin: 6px 0;
 }
 
 .component-model-preview .preview-placeholder-text strong {
-  color: var(--text-color, #fff);
+  color: var(--text-color-secondary);
   font-weight: 600;
+  font-style: normal;
 }
 
-/* State-based styling */
+/* State-based styling - Enhanced visibility */
 .component-model-preview.loading .preview-placeholder-text {
-  opacity: 0.6;
+  opacity: 0.5;
+  color: var(--accent-color);
 }
 
 .component-model-preview.error .preview-placeholder-text {
-  color: var(--error-color, #ff6b6b);
+  color: var(--error-color);
+  opacity: 0.9;
 }
 
 .component-model-preview.has-thumbnail .preview-placeholder {

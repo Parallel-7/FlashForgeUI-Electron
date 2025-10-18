@@ -1,42 +1,48 @@
 /**
  * @fileoverview Job Statistics Component Styles
  *
- * Component-scoped CSS for the Job Statistics Component. These styles provide
- * layout structure for displaying real-time job information including layer
- * progress, ETA, timing, and material usage data.
+ * Modern, professional job statistics display with enhanced readability
+ * and visual hierarchy. Optimized for grid-based layouts with dynamic sizing.
  *
  * Key features:
- * - Flexible height that fills available widget space
- * - Responsive typography with wrapping rows on narrow layouts
- * - Consistent panel header styling
- * - Smooth scrolling when content exceeds available room
- * - Dual UI mode support via CSS variables
+ * - Flexible height that adapts to grid item size
+ * - Enhanced typography with proper visual hierarchy
+ * - Modern card-based panel header
+ * - Smooth scrolling with refined scrollbar styling
+ * - Consistent with unified design language
  */
 
 .component-job-stats {
-  border-top: 1px solid var(--border-color);
+  border-top: 1px solid var(--border-color-light);
   display: flex;
   flex-direction: column;
   height: 100%;
   min-height: 0;
   flex: 1 1 auto;
   overflow: hidden;
+  background: transparent;
 }
 
 .component-job-stats .panel-header {
-  background-color: var(--header-bg);
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(25, 25, 25, 0.95) 100%);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color-light);
   flex-shrink: 0;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  color: var(--text-color);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .component-job-stats .panel-content {
-  padding: 12px 12px 16px;
+  padding: 16px 14px 18px;
   flex: 1 1 auto;
   overflow: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   min-height: 0;
 }
 
@@ -44,23 +50,35 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
   flex-wrap: wrap;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
 
+.component-job-stats .info-row:last-child {
+  border-bottom: none;
+}
 
 .component-job-stats .info-label {
-  font-size: clamp(0.8rem, 1.4vw, 0.95rem);
+  font-size: clamp(11px, 1.4vw, 13px);
   font-weight: 600;
-  color: var(--text-muted, #9ea3af);
-  letter-spacing: 0.3px;
+  color: var(--text-color-secondary);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
 
 .component-job-stats .info-value {
-  font-size: clamp(0.9rem, 1.6vw, 1.1rem);
+  font-size: clamp(14px, 1.6vw, 16px);
   font-weight: 700;
-  color: var(--text-primary, #f5f5f5);
+  color: var(--text-color);
   word-break: break-word;
+  text-align: right;
+  transition: color var(--transition-normal);
+}
+
+.component-job-stats .info-row:hover .info-value {
+  color: var(--accent-color);
 }
 
 @media (max-width: 900px) {

@@ -1,17 +1,18 @@
 /**
  * Temperature Controls Component Styles
- * Responsive, theme-aligned redesign with adaptive layout and modern visuals
+ * Unified design language matching all other components
+ * Modern, professional appearance with enhanced readability
  */
 
 .temperature-controls {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
   height: 100%;
   min-height: 0;
-  padding: 18px 16px;
-  background: var(--darker-bg);
+  padding: 18px 14px;
+  background: transparent;
   border-radius: 0;
   border: none;
   box-shadow: none;
@@ -23,15 +24,17 @@
   z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
+  margin-bottom: 4px;
 }
 
 .temperature-controls__title {
-  font-size: clamp(1.15rem, 1.6vw, 1.4rem);
-  font-weight: 600;
-  color: var(--text-primary, #f5f7ff);
-  letter-spacing: 0.4px;
+  font-size: clamp(14px, 1.4vw, 16px);
+  font-weight: 700;
+  color: var(--text-color);
+  letter-spacing: 0.5px;
   margin: 0;
+  text-transform: uppercase;
 }
 
 .temperature-controls__content {
@@ -41,43 +44,37 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 14px;
   overflow-y: auto;
-  padding-right: 2px;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
-.temperature-controls__content::-webkit-scrollbar {
-  width: 0;
-  height: 0;
+  padding-right: 4px;
 }
 
 .temperature-controls__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 16px;
-  padding-top: 4px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
 }
 
 .temp-card {
   position: relative;
-  background: var(--card-bg, #2f313a);
-  border-radius: 10px;
-  border: 1px solid rgba(90, 96, 120, 0.35);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 14px rgba(0, 0, 0, 0.22);
-  padding: 18px 20px;
+  background: linear-gradient(135deg, rgba(45, 45, 45, 0.8) 0%, rgba(35, 35, 35, 0.9) 100%);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), var(--shadow-sm);
+  padding: 16px 18px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
   min-height: 0;
-  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  transition: all var(--transition-normal);
+  backdrop-filter: blur(8px);
 }
 
 .temp-card:hover {
-  transform: translateY(-2px);
-  border-color: rgba(110, 138, 210, 0.45);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 16px 28px rgba(0, 0, 0, 0.32);
+  transform: translateY(-1px);
+  border-color: var(--border-color-light);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--shadow-md);
+  background: linear-gradient(135deg, rgba(50, 50, 50, 0.85) 0%, rgba(40, 40, 40, 0.95) 100%);
 }
 
 .temp-card__meta {
@@ -89,20 +86,20 @@
 }
 
 .temp-card__label {
-  font-size: 0.95rem;
+  font-size: 12px;
   font-weight: 700;
-  color: rgba(216, 224, 255, 0.85);
+  color: var(--text-color-secondary);
   text-transform: uppercase;
-  letter-spacing: 0.18rem;
+  letter-spacing: 0.8px;
 }
 
 .temp-card__reading {
-  font-size: clamp(1.15rem, 2.2vw, 1.8rem);
+  font-size: clamp(16px, 2vw, 20px);
   font-weight: 700;
-  color: #f2f6ff;
-  font-family: 'Segoe UI', 'Roboto Mono', monospace;
-  letter-spacing: 0.04em;
-  transition: color 0.2s ease, text-shadow 0.2s ease;
+  color: var(--text-color);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  letter-spacing: 0.3px;
+  transition: color var(--transition-normal), text-shadow var(--transition-normal);
 }
 
 .temp-card__actions {
@@ -117,103 +114,115 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 10px 18px;
-  border-radius: 10px;
-  font-size: 0.85rem;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.12rem;
-  border: none;
+  letter-spacing: 0.8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-  min-width: 96px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 8px 18px rgba(0, 0, 0, 0.35);
+  transition: all var(--transition-fast);
+  min-width: 90px;
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
 .temp-btn--primary {
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-  color: #f5f8ff;
+  background: linear-gradient(135deg, var(--button-bg) 0%, var(--button-active) 100%);
+  color: #ffffff;
 }
 
 .temp-btn--critical {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  color: #fff5f5;
+  background: linear-gradient(135deg, var(--error-color) 0%, #c0392b 100%);
+  color: #ffffff;
 }
 
 .temp-btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 12px 24px rgba(0, 0, 0, 0.4);
-  filter: brightness(1.05);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 .temp-btn:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.25);
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .temp-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.45;
-  box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.25);
-  filter: grayscale(0.3);
+  opacity: 0.5;
+  background: linear-gradient(135deg, rgba(50, 50, 50, 0.6) 0%, rgba(40, 40, 40, 0.6) 100%);
+  color: var(--text-color-muted);
+  border-color: rgba(255, 255, 255, 0.05);
+  transform: none;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 .temperature-controls__status {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
 }
 
 .fan-card {
   position: relative;
   padding: 14px 16px;
-  border-radius: 12px;
-  border: 1px solid rgba(90, 96, 120, 0.35);
-  background: var(--dark-bg);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: linear-gradient(135deg, rgba(45, 45, 45, 0.8) 0%, rgba(35, 35, 35, 0.9) 100%);
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 72px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 10px 20px rgba(0, 0, 0, 0.28);
-  transition: border-color 0.25s ease, transform 0.25s ease;
+  min-height: 60px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), var(--shadow-sm);
+  transition: all var(--transition-normal);
+  backdrop-filter: blur(8px);
 }
 
 .fan-card:hover {
   transform: translateY(-1px);
-  border-color: rgba(110, 138, 210, 0.45);
+  border-color: var(--border-color-light);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--shadow-md);
+  background: linear-gradient(135deg, rgba(50, 50, 50, 0.85) 0%, rgba(40, 40, 40, 0.95) 100%);
 }
 
 .fan-card__label {
-  font-size: 0.8rem;
-  font-weight: 600;
+  font-size: 11px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.22rem;
-  color: rgba(210, 220, 255, 0.7);
+  letter-spacing: 0.8px;
+  color: var(--text-color-secondary);
 }
 
 .fan-card__value {
-  font-size: clamp(1rem, 2vw, 1.4rem);
+  font-size: clamp(14px, 1.8vw, 16px);
   font-weight: 700;
-  color: #ffffff;
-  font-family: 'Segoe UI', 'Roboto Mono', monospace;
+  color: var(--text-color);
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   padding: 6px 12px;
-  border-radius: 999px;
-  background: rgba(64, 82, 230, 0.12);
-  border: 1px solid rgba(110, 138, 210, 0.35);
-  min-width: 64px;
+  border-radius: 6px;
+  background: rgba(66, 133, 244, 0.12);
+  border: 1px solid rgba(66, 133, 244, 0.25);
+  min-width: 60px;
   text-align: center;
+  transition: all var(--transition-normal);
+}
+
+.fan-card:hover .fan-card__value {
+  background: rgba(66, 133, 244, 0.18);
+  border-color: rgba(66, 133, 244, 0.35);
 }
 
 .temp-heating {
-  color: #ffca80;
-  text-shadow: 0 0 14px rgba(255, 193, 94, 0.55);
+  color: var(--warning-color);
+  text-shadow: 0 0 10px rgba(255, 152, 0, 0.4);
 }
 
 .temp-at-target {
-  color: #6fffd4;
-  text-shadow: 0 0 12px rgba(111, 255, 212, 0.45);
+  color: var(--success-color);
+  text-shadow: 0 0 10px rgba(0, 230, 118, 0.4);
 }
 
 @media (max-width: 900px) {
