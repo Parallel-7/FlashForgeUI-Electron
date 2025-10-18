@@ -1,218 +1,247 @@
 /**
  * Temperature Controls Component Styles
- * Modern, professional temperature control interface with clean typography and intuitive layout
+ * Responsive, theme-aligned redesign with adaptive layout and modern visuals
  */
 
-.temperature-controls-section {
-  padding: 16px 12px;
-  flex: 1;
+.temperature-controls {
+  position: relative;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  gap: 12px;
-  min-width: 200px;
+  gap: 18px;
   height: 100%;
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  min-height: 0;
+  padding: 18px 16px;
+  background: var(--darker-bg);
+  border-radius: 0;
+  border: none;
+  box-shadow: none;
+  overflow: hidden;
 }
 
-/* Temperature Row Layout */
-.temperature-controls-section .temp-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 14px;
-  background: linear-gradient(135deg, #373737 0%, #404040 100%);
-  border-radius: 6px;
-  border: 1px solid #4a4a4a;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 
-              0 2px 4px rgba(0,0,0,0.15);
-  transition: all 0.2s ease;
-  min-height: 44px;
-}
-
-.temperature-controls-section .temp-row:hover {
-  border-color: #5a5a5a;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 
-              0 3px 6px rgba(0,0,0,0.2);
-}
-
-/* Temperature Label and Display */
-.temperature-controls-section .temp-row > span:first-child {
-  font-size: 13px;
-  font-weight: 600;
-  color: #e6e6e6;
-  letter-spacing: 0.3px;
-  text-transform: uppercase;
-  min-width: 80px;
+.temperature-controls__header {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-direction: column;
-  gap: 2px;
-}
-
-/* Temperature Reading Styles */
-.temperature-controls-section #bed-temp-display,
-.temperature-controls-section #extruder-temp-display {
-  font-size: 15px;
-  font-weight: 700;
-  color: #ffffff;
-  font-family: 'Segoe UI', monospace;
-  letter-spacing: 0.5px;
-  text-transform: none;
-  margin-top: 2px;
-}
-
-/* Button Container */
-.temperature-controls-section .temp-buttons {
-  display: flex;
   gap: 6px;
-  flex-shrink: 0;
-  align-items: center;
 }
 
-/* Modern Button Design */
-.temperature-controls-section .temp-btn {
-  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-  color: #ffffff;
-  border: none;
-  padding: 8px 14px;
-  border-radius: 5px;
-  font-size: 12px;
+.temperature-controls__title {
+  font-size: clamp(1.15rem, 1.6vw, 1.4rem);
   font-weight: 600;
-  cursor: pointer;
-  min-width: 40px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  transition: all 0.15s ease;
-  box-shadow: 0 2px 4px rgba(74, 144, 226, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-  border: 1px solid rgba(255,255,255,0.1);
+  color: var(--text-primary, #f5f7ff);
+  letter-spacing: 0.4px;
+  margin: 0;
 }
 
-.temperature-controls-section .temp-btn:hover:not(:disabled) {
-  background: linear-gradient(135deg, #5ba0f2 0%, #4585c7 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 8px rgba(74, 144, 226, 0.35),
-              inset 0 1px 0 rgba(255,255,255,0.3);
-}
-
-.temperature-controls-section .temp-btn:active:not(:disabled) {
-  transform: translateY(0);
-  background: linear-gradient(135deg, #3d7bc2 0%, #2d6ba3 100%);
-  box-shadow: 0 1px 2px rgba(74, 144, 226, 0.2),
-              inset 0 2px 4px rgba(0,0,0,0.2);
-}
-
-/* Off Button Variant */
-.temperature-controls-section .temp-btn[id*="off"] {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  box-shadow: 0 2px 4px rgba(231, 76, 60, 0.25),
-              inset 0 1px 0 rgba(255,255,255,0.2);
-}
-
-.temperature-controls-section .temp-btn[id*="off"]:hover:not(:disabled) {
-  background: linear-gradient(135deg, #f55c4c 0%, #d0493b 100%);
-  box-shadow: 0 4px 8px rgba(231, 76, 60, 0.35),
-              inset 0 1px 0 rgba(255,255,255,0.3);
-}
-
-.temperature-controls-section .temp-btn[id*="off"]:active:not(:disabled) {
-  background: linear-gradient(135deg, #c73c2c 0%, #a0291b 100%);
-  box-shadow: 0 1px 2px rgba(231, 76, 60, 0.2),
-              inset 0 2px 4px rgba(0,0,0,0.2);
-}
-
-/* Disabled Button States */
-.temperature-controls-section .temp-btn:disabled,
-.temperature-controls-section .temp-btn.disabled {
-  background: linear-gradient(135deg, #555555 0%, #444444 100%);
-  color: #999999;
-  cursor: not-allowed;
-  opacity: 0.6;
-  transform: none;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
-  border: 1px solid #333333;
-}
-
-.temperature-controls-section .temp-btn:disabled:hover,
-.temperature-controls-section .temp-btn.disabled:hover {
-  background: linear-gradient(135deg, #555555 0%, #444444 100%);
-  transform: none;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
-}
-
-/* Fan Status Section */
-.temperature-controls-section .status-item {
-  padding: 10px 14px;
-  background: linear-gradient(135deg, #2d2d2d 0%, #363636 100%);
-  border-radius: 5px;
-  border: 1px solid #404040;
-  font-size: 13px;
-  color: #cccccc;
-  text-align: center;
+.temperature-controls__content {
+  position: relative;
+  z-index: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow-y: auto;
+  padding-right: 2px;
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.temperature-controls__content::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
+.temperature-controls__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  padding-top: 4px;
+}
+
+.temp-card {
+  position: relative;
+  background: var(--card-bg, #2f313a);
+  border-radius: 10px;
+  border: 1px solid rgba(90, 96, 120, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 14px rgba(0, 0, 0, 0.22);
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.temp-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(110, 138, 210, 0.45);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05), 0 16px 28px rgba(0, 0, 0, 0.32);
+}
+
+.temp-card__meta {
+  display: flex;
+  align-items: baseline;
   justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.temp-card__label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: rgba(216, 224, 255, 0.85);
+  text-transform: uppercase;
+  letter-spacing: 0.18rem;
+}
+
+.temp-card__reading {
+  font-size: clamp(1.15rem, 2.2vw, 1.8rem);
+  font-weight: 700;
+  color: #f2f6ff;
+  font-family: 'Segoe UI', 'Roboto Mono', monospace;
+  letter-spacing: 0.04em;
+  transition: color 0.2s ease, text-shadow 0.2s ease;
+}
+
+.temp-card__actions {
+  display: flex;
   align-items: center;
-  transition: all 0.2s ease;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03);
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.temperature-controls-section .status-item:hover {
-  border-color: #4a4a4a;
-  background: linear-gradient(135deg, #353535 0%, #3e3e3e 100%);
+.temp-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12rem;
+  border: none;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  min-width: 96px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 8px 18px rgba(0, 0, 0, 0.35);
 }
 
-.temperature-controls-section #cooling-fan-speed,
-.temperature-controls-section #chamber-fan-speed {
+.temp-btn--primary {
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  color: #f5f8ff;
+}
+
+.temp-btn--critical {
+  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  color: #fff5f5;
+}
+
+.temp-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), 0 12px 24px rgba(0, 0, 0, 0.4);
+  filter: brightness(1.05);
+}
+
+.temp-btn:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.25);
+}
+
+.temp-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.25);
+  filter: grayscale(0.3);
+}
+
+.temperature-controls__status {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.fan-card {
+  position: relative;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(90, 96, 120, 0.35);
+  background: var(--dark-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 72px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 10px 20px rgba(0, 0, 0, 0.28);
+  transition: border-color 0.25s ease, transform 0.25s ease;
+}
+
+.fan-card:hover {
+  transform: translateY(-1px);
+  border-color: rgba(110, 138, 210, 0.45);
+}
+
+.fan-card__label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.22rem;
+  color: rgba(210, 220, 255, 0.7);
+}
+
+.fan-card__value {
+  font-size: clamp(1rem, 2vw, 1.4rem);
   font-weight: 700;
   color: #ffffff;
-  font-family: 'Segoe UI', monospace;
-  font-size: 14px;
-  background: linear-gradient(135deg, #444444 0%, #555555 100%);
-  padding: 4px 8px;
-  border-radius: 3px;
-  border: 1px solid #666666;
-  min-width: 30px;
+  font-family: 'Segoe UI', 'Roboto Mono', monospace;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: rgba(64, 82, 230, 0.12);
+  border: 1px solid rgba(110, 138, 210, 0.35);
+  min-width: 64px;
   text-align: center;
 }
 
-/* Temperature State Indicators */
-.temperature-controls-section .temp-heating {
-  color: #ff9500;
-  text-shadow: 0 0 4px rgba(255, 149, 0, 0.4);
-  animation: tempPulse 2s ease-in-out infinite alternate;
+.temp-heating {
+  color: #ffca80;
+  text-shadow: 0 0 14px rgba(255, 193, 94, 0.55);
 }
 
-.temperature-controls-section .temp-at-target {
-  color: #00e676;
-  text-shadow: 0 0 4px rgba(0, 230, 118, 0.4);
+.temp-at-target {
+  color: #6fffd4;
+  text-shadow: 0 0 12px rgba(111, 255, 212, 0.45);
 }
 
-/* Heating Animation */
-@keyframes tempPulse {
-  0% { 
-    opacity: 0.8; 
-    text-shadow: 0 0 4px rgba(255, 149, 0, 0.4);
-  }
-  100% { 
-    opacity: 1; 
-    text-shadow: 0 0 8px rgba(255, 149, 0, 0.6);
+@media (max-width: 900px) {
+  .temperature-controls__subtitle {
+    letter-spacing: 0.2rem;
   }
 }
 
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-  .temperature-controls-section {
-    padding: 12px 8px;
+@media (max-width: 720px) {
+  .temperature-controls__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .temperature-controls__status {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .temp-card {
+    padding: 16px;
+  }
+}
+
+@media (max-height: 640px) {
+  .temperature-controls__content {
+    gap: 14px;
+  }
+
+  .temp-card__actions {
     gap: 8px;
-    min-width: 180px;
-  }
-  
-  .temperature-controls-section .temp-row {
-    padding: 10px 12px;
-  }
-  
-  .temperature-controls-section .temp-btn {
-    padding: 6px 10px;
-    font-size: 11px;
   }
 }

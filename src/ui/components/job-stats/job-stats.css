@@ -6,10 +6,10 @@
  * progress, ETA, timing, and material usage data.
  *
  * Key features:
- * - Fixed height design (180px) to accommodate all info rows
- * - No scrollbars - content fits within allocated space
+ * - Flexible height that fills available widget space
+ * - Responsive typography with wrapping rows on narrow layouts
  * - Consistent panel header styling
- * - Proper flex layout for info rows
+ * - Smooth scrolling when content exceeds available room
  * - Dual UI mode support via CSS variables
  */
 
@@ -17,8 +17,9 @@
   border-top: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  height: 180px; /* Fixed height to accommodate all info rows */
-  flex-shrink: 0; /* Prevent shrinking below content size */
+  height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
   overflow: hidden;
 }
 
@@ -30,13 +31,51 @@
 }
 
 .component-job-stats .panel-content {
-  padding: 8px;
-  flex: 1;
-  overflow: hidden; /* No scrolling needed with fixed height */
+  padding: 12px 12px 16px;
+  flex: 1 1 auto;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
 }
 
 .component-job-stats .info-row {
   display: flex;
   justify-content: space-between;
-  margin-bottom: 6px;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+
+.component-job-stats .info-label {
+  font-size: clamp(0.8rem, 1.4vw, 0.95rem);
+  font-weight: 600;
+  color: var(--text-muted, #9ea3af);
+  letter-spacing: 0.3px;
+}
+
+.component-job-stats .info-value {
+  font-size: clamp(0.9rem, 1.6vw, 1.1rem);
+  font-weight: 700;
+  color: var(--text-primary, #f5f5f5);
+  word-break: break-word;
+}
+
+@media (max-width: 900px) {
+  .component-job-stats .info-row {
+    align-items: flex-start;
+  }
+
+  .component-job-stats .info-value {
+    width: 100%;
+  }
+}
+
+@media (max-height: 600px) {
+  .component-job-stats .panel-content {
+    padding: 8px 10px 12px;
+    gap: 8px;
+  }
 }

@@ -170,10 +170,10 @@ const validSendChannels = [
   'open-component-palette',
   'close-component-palette',
   'palette:remove-component',
+  'palette:add-component',
   'palette:update-status',
   'palette:opened',
-  'palette:toggle-edit-mode',
-  'grid:component-drag-state'
+  'palette:toggle-edit-mode'
 ];
 
 const validReceiveChannels = [
@@ -205,6 +205,7 @@ const validReceiveChannels = [
   'printer-context-removed',
   'printer-context-updated',
   'grid:remove-component',
+  'grid:add-component',
   'grid:component-added',
   'palette:opened',
   'edit-mode:toggle'

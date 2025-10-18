@@ -357,6 +357,28 @@ function createGridWidget(componentId: string): HTMLElement {
   content.id = `${componentId}-container`;
 
   item.appendChild(content);
+  const removeButton = document.createElement('button');
+  removeButton.type = 'button';
+  removeButton.className = 'grid-stack-item-remove';
+  removeButton.setAttribute('aria-label', `Remove ${componentId}`);
+  removeButton.title = 'Remove component';
+  removeButton.innerHTML = '&times;';
+  removeButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!editModeController.isEnabled()) {
+      logMessage('Enable edit mode (CTRL+E) to remove components.');
+      return;
+    }
+
+    if (window.api?.send) {
+      window.api.send('palette:remove-component', componentId);
+    } else {
+      console.warn('[GridStack] Removal API unavailable');
+    }
+  });
+  item.appendChild(removeButton);
   return item;
 }
 
@@ -452,8 +474,6 @@ async function initializeGridStack(): Promise<void> {
  */
 function setupPaletteIntegration(): void {
   console.log('[GridStack] Setting up palette integration...');
-
-  const paletteDropHighlightClass = 'palette-drop-active';
 
   // Helper function to update palette with current grid state
   function updatePaletteStatus(): void {
@@ -555,240 +575,31 @@ function setupPaletteIntegration(): void {
     }
   }
 
-  /**
-   * Forward grid drag state changes to palette window for trash drop support
-   */
-  function registerGridDragStateForwarding(): void {
-    const grid = gridStackManager.getGrid();
-    if (!grid || !window.api?.send) {
+  function removeComponentFromGrid(componentId: string): void {
+    const widgetElement = document.querySelector(`[data-component-id="${componentId}"]`) as HTMLElement | null;
+    if (!widgetElement) {
+      console.warn('[GridStack] Widget element not found:', componentId);
       return;
     }
 
-    const extractPointerCoordinates = (event: unknown):
-      | { screenX: number; screenY: number }
-      | undefined => {
-      if (!event || typeof event !== 'object') {
-        return undefined;
-      }
+    const removed = componentManager.removeComponent(componentId);
+    if (!removed) {
+      console.warn('[GridStack] Component not found in ComponentManager:', componentId);
+    }
 
-      const candidate = event as MouseEvent;
-      if (typeof candidate.screenX === 'number' && typeof candidate.screenY === 'number') {
-        return { screenX: candidate.screenX, screenY: candidate.screenY };
-      }
+    gridStackManager.removeWidget(widgetElement);
 
-      if (typeof candidate.clientX === 'number' && typeof candidate.clientY === 'number') {
-        return {
-          screenX: window.screenX + candidate.clientX,
-          screenY: window.screenY + candidate.clientY
-        };
-      }
-
-      return undefined;
-    };
-
-    const sendDragState = (
-      componentId: string | null,
-      dragging: boolean,
-      mouseEvent?: unknown
-    ): void => {
-      if (!componentId) {
-        return;
-      }
-
-      const pointer = extractPointerCoordinates(mouseEvent);
-
-      window.api!.send('grid:component-drag-state', {
-        componentId,
-        dragging,
-        pointer
-      });
-    };
-
-    grid.on('dragstart', (event, element) => {
-      const componentId = element?.getAttribute('data-component-id');
-      sendDragState(componentId, true, event);
+    const currentLayout = layoutPersistence.load();
+    const updatedWidgets = gridStackManager.serialize();
+    layoutPersistence.save({
+      ...currentLayout,
+      widgets: updatedWidgets,
     });
 
-    grid.on('drag', (event, element) => {
-      const componentId = element?.getAttribute('data-component-id');
-      sendDragState(componentId, true, event);
-    });
+    updatePaletteStatus();
 
-    grid.on('dragstop', (event, element) => {
-      const componentId = element?.getAttribute('data-component-id');
-      sendDragState(componentId, false, event);
-      updatePaletteStatus();
-    });
-  }
-
-  /**
-   * Determine whether the current drag event originates from the palette window
-   */
-  function isPaletteDragEvent(event: DragEvent): boolean {
-    const dataTransfer = event.dataTransfer;
-    if (!dataTransfer) {
-      return false;
-    }
-
-    const types = Array.from(dataTransfer.types ?? []);
-    if (types.includes('text/flashforge-component')) {
-      return true;
-    }
-
-    if (types.includes('application/json')) {
-      try {
-        const payload = dataTransfer.getData('application/json');
-        if (payload) {
-          const parsed = JSON.parse(payload);
-          if (parsed?.type === 'palette-component') {
-            return true;
-          }
-        }
-      } catch {
-        // Ignore JSON parse errors during drag detection
-      }
-    }
-
-    if (types.includes('text/plain')) {
-      const textPayload = dataTransfer.getData('text/plain');
-      if (textPayload && textPayload.startsWith('palette-component:')) {
-        return true;
-      }
-    }
-
-    return false;
-  }
-
-  /**
-   * Extract component ID from DataTransfer payload
-   */
-  function extractComponentIdFromData(dataTransfer: DataTransfer | null): string | null {
-    if (!dataTransfer) {
-      return null;
-    }
-
-    const customType = dataTransfer.getData('text/flashforge-component');
-    if (customType) {
-      return customType;
-    }
-
-    const jsonPayload = dataTransfer.getData('application/json');
-    if (jsonPayload && jsonPayload.trim().length > 0) {
-      try {
-        const parsed = JSON.parse(jsonPayload);
-        if (parsed?.type === 'palette-component' && typeof parsed.componentId === 'string') {
-          return parsed.componentId;
-        }
-      } catch {
-        // Ignore JSON parse errors - fallback to other data formats
-      }
-    }
-
-    const textPayload = dataTransfer.getData('text/plain');
-    if (textPayload && textPayload.startsWith('palette-component:')) {
-      return textPayload.replace('palette-component:', '');
-    }
-
-    return null;
-  }
-
-  /**
-   * Convert drop coordinates to grid cell position
-   */
-  function calculateDropPosition(event: DragEvent, container: HTMLElement): { x: number; y: number } | null {
-    const grid = gridStackManager.getGrid();
-    if (!grid) {
-      return null;
-    }
-
-    const containerRect = container.getBoundingClientRect();
-    const localX = event.clientX - containerRect.left + container.scrollLeft;
-    const localY = event.clientY - containerRect.top + container.scrollTop;
-
-    const cell = grid.getCellFromPixel({ left: localX, top: localY });
-    if (typeof cell?.x !== 'number' || typeof cell?.y !== 'number') {
-      return null;
-    }
-
-    return {
-      x: Math.max(0, cell.x),
-      y: Math.max(0, cell.y)
-    };
-  }
-
-  /**
-   * Configure HTML5 drop handlers so palette components can be dropped onto the grid
-   */
-  function setupPaletteDropHandlers(): void {
-    const gridContainer = document.querySelector('.grid-stack') as HTMLElement | null;
-    if (!gridContainer) {
-      console.warn('[GridStack] Grid container not found for drop handlers');
-      return;
-    }
-
-    let dragDepth = 0;
-
-    const resetHighlight = (): void => {
-      dragDepth = 0;
-      gridContainer.classList.remove(paletteDropHighlightClass);
-    };
-
-    gridContainer.addEventListener('dragenter', (event: DragEvent) => {
-      if (!isPaletteDragEvent(event)) {
-        return;
-      }
-
-      dragDepth += 1;
-      gridContainer.classList.add(paletteDropHighlightClass);
-      event.preventDefault();
-    });
-
-    gridContainer.addEventListener('dragover', (event: DragEvent) => {
-      if (!isPaletteDragEvent(event)) {
-        return;
-      }
-
-      if (event.dataTransfer) {
-        event.dataTransfer.dropEffect = 'copy';
-      }
-
-      event.preventDefault();
-    });
-
-    gridContainer.addEventListener('dragleave', (event: DragEvent) => {
-      if (!isPaletteDragEvent(event)) {
-        return;
-      }
-
-      dragDepth = Math.max(0, dragDepth - 1);
-      if (dragDepth === 0) {
-        gridContainer.classList.remove(paletteDropHighlightClass);
-      }
-    });
-
-    gridContainer.addEventListener('drop', async (event: DragEvent) => {
-      if (!isPaletteDragEvent(event)) {
-        return;
-      }
-
-      event.preventDefault();
-      resetHighlight();
-
-      const componentId = extractComponentIdFromData(event.dataTransfer);
-      if (!componentId) {
-        console.warn('[GridStack] Drop ignored - missing component ID');
-        return;
-      }
-
-      if (!editModeController.isEnabled()) {
-        console.warn('[GridStack] Cannot add component while edit mode is disabled');
-        logMessage('Enable edit mode (CTRL+E) to add components.');
-        return;
-      }
-
-      const dropPosition = calculateDropPosition(event, gridContainer);
-      await addComponentFromPalette(componentId, dropPosition ?? undefined);
-    });
+    console.log('[GridStack] Component removed successfully:', componentId);
+    logMessage(`Component ${componentId} removed from grid`);
   }
 
   // Listen for palette opened event
@@ -804,65 +615,28 @@ function setupPaletteIntegration(): void {
       editModeController.toggle();
     });
 
-    // Listen for component remove from palette (trash zone)
-    window.api.receive('grid:remove-component', (componentId: unknown) => {
-      const id = componentId as string;
-      console.log('[GridStack] Removing component from palette request:', id);
-
-      // Find the widget element
-      const widgetElement = document.querySelector(`[data-component-id="${id}"]`) as HTMLElement;
-      if (!widgetElement) {
-        console.warn('[GridStack] Widget element not found:', id);
+    window.api.receive('grid:add-component', async (componentId: unknown) => {
+      const id = typeof componentId === 'string' ? componentId : null;
+      if (!id) {
+        console.warn('[GridStack] Add request ignored - invalid component ID', componentId);
         return;
       }
 
-      // Remove component from ComponentManager
-      const removed = componentManager.removeComponent(id);
-      if (!removed) {
-        console.warn('[GridStack] Component not found in ComponentManager:', id);
+      if (!editModeController.isEnabled()) {
+        console.warn('[GridStack] Cannot add component while edit mode is disabled');
+        logMessage('Enable edit mode (CTRL+E) to add components.');
+        return;
       }
 
-      // Remove widget from grid
-      gridStackManager.removeWidget(widgetElement);
+      await addComponentFromPalette(id);
+    });
 
-      // Save layout
-      const currentLayout = layoutPersistence.load();
-      const updatedWidgets = gridStackManager.serialize();
-      layoutPersistence.save({
-        ...currentLayout,
-        widgets: updatedWidgets,
-      });
-
-      // Notify palette to update status
-      updatePaletteStatus();
-
-      console.log('[GridStack] Component removed successfully:', id);
-      logMessage(`Component ${id} removed from grid`);
+    // Listen for component remove requests
+    window.api.receive('grid:remove-component', (componentId: unknown) => {
+      const id = componentId as string;
+      removeComponentFromGrid(id);
     });
   }
-
-  // Setup external drop handler for palette items
-  gridStackManager.onExternalDrop(async (event, ui) => {
-    const componentId = ui.helper.getAttribute('data-component-id');
-    if (!componentId) {
-      console.warn('[GridStack] Dropped element missing component ID');
-      return;
-    }
-
-    console.log('[GridStack] Component dropped from palette via GridStack:', componentId);
-
-    // Get the drop position from GridStack (ui.helper should have gridstackNode)
-    const dropWidget = (ui.helper as any).gridstackNode;
-    const dropPosition =
-      dropWidget && typeof dropWidget.x === 'number' && typeof dropWidget.y === 'number'
-        ? { x: dropWidget.x, y: dropWidget.y }
-        : undefined;
-
-    await addComponentFromPalette(componentId, dropPosition);
-  });
-
-  registerGridDragStateForwarding();
-  setupPaletteDropHandlers();
 
   console.log('[GridStack] Palette integration setup complete');
 }

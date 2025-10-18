@@ -12,7 +12,8 @@
  * - palette:get-components: Query available component definitions from registry
  * - palette:opened: Palette window opened notification to main window
  * - palette:update-status: Broadcast grid status to palette (receive & forward)
- * - palette:remove-component: Remove component from grid via trash zone
+ * - palette:remove-component: Remove component from grid via grid controls
+ * - palette:add-component: Add component to grid via palette button
  *
  * Key exports:
  * - registerPaletteHandlers(): Register all palette IPC handlers on app startup
@@ -27,15 +28,15 @@
  * - Main window broadcasts component additions/removals
  * - Palette updates UI to reflect component availability
  * - Prevents duplicate singleton component additions
- * - Enables trash zone component removal
+ * - Supports button-driven add/remove workflow
  *
  * Communication Flow:
  * 1. Palette requests components via palette:get-components
  * 2. Main process queries ComponentRegistry and returns definitions
  * 3. Main window broadcasts status updates via palette:update-status
  * 4. Palette receives updates and re-renders component list
- * 5. Palette sends removal requests via palette:remove-component
- * 6. Main window removes component and broadcasts new status
+ * 5. Palette sends add/remove requests via palette:add-component / palette:remove-component
+ * 6. Main window updates grid and broadcasts new status
  *
  * Usage:
  * ```typescript
@@ -133,6 +134,21 @@ export function registerPaletteHandlers(): void {
     }
   });
 
+  // Handle add requests from palette buttons
+  ipcMain.on('palette:add-component', (_event, componentId: string) => {
+    console.log('[Palette Handlers] Component add requested:', componentId);
+
+    const windowManager = getWindowManager();
+    const mainWindow = windowManager.getMainWindow();
+
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      console.log('[Palette Handlers] Broadcasting component add to main window');
+      mainWindow.webContents.send('grid:add-component', componentId);
+    } else {
+      console.warn('[Palette Handlers] Main window not available for component add');
+    }
+  });
+
   // Broadcast component status update to palette window
   ipcMain.on('palette:update-status', (_event, componentsInUse: string[]) => {
     const windowManager = getWindowManager();
@@ -169,46 +185,7 @@ export function registerPaletteHandlers(): void {
     }
   });
 
-  // Forward grid drag state (including cursor position) to palette for trash drop support
-  ipcMain.on(
-    'grid:component-drag-state',
-    (
-      _event,
-      payload: {
-        componentId?: unknown;
-        dragging?: unknown;
-        pointer?: { screenX?: unknown; screenY?: unknown };
-      }
-    ) => {
-      const windowManager = getWindowManager();
-      const paletteWindow = windowManager.getPaletteWindow();
-
-      if (!paletteWindow || paletteWindow.isDestroyed()) {
-        return;
-      }
-
-      const componentId =
-        typeof payload?.componentId === 'string' ? payload.componentId : null;
-      const dragging = Boolean(payload?.dragging);
-      const pointerPayload = payload?.pointer;
-
-      const pointer =
-        pointerPayload &&
-        typeof pointerPayload.screenX === 'number' &&
-        typeof pointerPayload.screenY === 'number'
-          ? {
-              screenX: pointerPayload.screenX,
-              screenY: pointerPayload.screenY
-            }
-          : undefined;
-
-      paletteWindow.webContents.send('palette:grid-drag-state', {
-        componentId,
-        dragging,
-        pointer
-      });
-    }
-  );
+  // Drag forwarding no longer required with button-based workflow
 
   console.log('[Palette Handlers] Palette IPC handlers registered successfully');
 }

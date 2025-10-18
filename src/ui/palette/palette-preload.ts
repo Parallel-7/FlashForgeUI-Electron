@@ -11,6 +11,7 @@
  * - notifyOpened(): Signal palette window opened to main process
  * - onUpdateStatus(callback): Listen for grid status updates from main window
  * - notifyComponentRemove(componentId): Request component removal from grid
+ * - notifyComponentAdd(componentId): Request component addition to grid
  *
  * Component Status Updates:
  * The main window broadcasts status updates to the palette when components are
@@ -30,6 +31,7 @@
  * - palette:opened (send): Palette window opened notification
  * - palette:update-status (receive): Component status updates
  * - palette:remove-component (send): Component removal request
+ * - palette:add-component (send): Component addition request
  *
  * @module ui/palette/palette-preload
  */
@@ -47,71 +49,19 @@ interface ComponentDefinition {
   readonly category?: string;
 }
 
-interface GridDragPointer {
-  readonly screenX: number;
-  readonly screenY: number;
-}
-
-interface GridDragState {
-  readonly componentId: string | null;
-  readonly dragging: boolean;
-  readonly pointer?: GridDragPointer;
-}
-
 // Type definition for the palette API
 interface PaletteAPI {
   close: () => void;
   onUpdateStatus: (callback: (componentsInUse: string[]) => void) => void;
   notifyComponentRemove: (componentId: string) => void;
+  notifyComponentAdd: (componentId: string) => void;
   getAvailableComponents: () => Promise<ComponentDefinition[]>;
   notifyOpened: () => void;
   toggleEditMode: () => void;
-  onGridDragStateChange: (
-    callback: (state: GridDragState) => void
-  ) => (() => void) | void;
-  getCurrentDragComponent: () => string | null;
 }
 
 // Store the status update callback
 let statusUpdateCallback: ((componentsInUse: string[]) => void) | null = null;
-let currentGridDragState: GridDragState = { componentId: null, dragging: false };
-const gridDragCallbacks = new Set<(state: GridDragState) => void>();
-
-// Listen for grid drag state updates from main process
-ipcRenderer.on('palette:grid-drag-state', (_event, payload: unknown) => {
-  const rawState = payload as {
-    componentId?: unknown;
-    dragging?: unknown;
-    pointer?: { screenX?: unknown; screenY?: unknown };
-  };
-
-  const pointerPayload = rawState?.pointer;
-  const pointer =
-    pointerPayload &&
-    typeof pointerPayload.screenX === 'number' &&
-    typeof pointerPayload.screenY === 'number'
-      ? {
-          screenX: pointerPayload.screenX,
-          screenY: pointerPayload.screenY
-        }
-      : undefined;
-
-  const nextState: GridDragState = {
-    componentId: typeof rawState?.componentId === 'string' ? rawState.componentId : null,
-    dragging: Boolean(rawState?.dragging),
-    pointer
-  };
-
-  currentGridDragState = nextState;
-
-  gridDragCallbacks.forEach((callback) => {
-    try {
-      callback({ ...nextState });
-    } catch (error) {
-      console.error('[Palette Preload] Grid drag callback error:', error);
-    }
-  });
-});
 
 // Expose palette API to renderer process
 contextBridge.exposeInMainWorld('paletteAPI', {
@@ -144,6 +94,15 @@ contextBridge.exposeInMainWorld('paletteAPI', {
   notifyComponentRemove: (componentId: string): void => {
     console.log('[Palette Preload] Notifying component removal:', componentId);
     ipcRenderer.send('palette:remove-component', componentId);
+  },
+
+  /**
+   * Notify main window that user wants to add a component
+   * @param componentId - ID of component to add to the grid
+   */
+  notifyComponentAdd: (componentId: string): void => {
+    console.log('[Palette Preload] Notifying component add:', componentId);
+    ipcRenderer.send('palette:add-component', componentId);
   },
 
   /**
@@ -182,41 +141,6 @@ contextBridge.exposeInMainWorld('paletteAPI', {
   toggleEditMode: (): void => {
     console.log('[Palette Preload] Toggling edit mode from palette');
     ipcRenderer.send('palette:toggle-edit-mode');
-  },
-
-  /**
-   * Listen for grid drag state changes from the main window
-   * @param callback - function invoked with current drag state updates
-   * @returns Optional unsubscribe function to remove the listener
-   */
-  onGridDragStateChange: (
-    callback: (state: GridDragState) => void
-  ): (() => void) | void => {
-    if (typeof callback !== 'function') {
-      console.warn('[Palette Preload] Ignoring non-function grid drag callback');
-      return;
-    }
-
-    gridDragCallbacks.add(callback);
-
-    // Emit current state immediately so listeners have initial value
-    try {
-      callback({ ...currentGridDragState });
-    } catch (error) {
-      console.error('[Palette Preload] Grid drag callback error:', error);
-    }
-
-    return () => {
-      gridDragCallbacks.delete(callback);
-    };
-  },
-
-  /**
-   * Get the component ID currently being dragged from the grid, if any
-   * @returns Component ID or null when no drag is active
-   */
-  getCurrentDragComponent: (): string | null => {
-    return currentGridDragState.componentId;
   }
 } as PaletteAPI);
 

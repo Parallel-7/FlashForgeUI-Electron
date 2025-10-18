@@ -109,7 +109,6 @@ export const DEFAULT_WIDGETS: readonly GridStackWidgetConfig[] = [
     h: 1,
     minW: 2,
     minH: 1,
-    maxW: 6,
     id: 'widget-printer-status',
   },
 
@@ -122,7 +121,6 @@ export const DEFAULT_WIDGETS: readonly GridStackWidgetConfig[] = [
     h: 1,
     minW: 2,
     minH: 1,
-    maxW: 6,
     id: 'widget-temperature-controls',
   },
 
@@ -135,7 +133,6 @@ export const DEFAULT_WIDGETS: readonly GridStackWidgetConfig[] = [
     h: 1,
     minW: 2,
     minH: 1,
-    maxW: 6,
     id: 'widget-filtration-controls',
   },
 
@@ -148,7 +145,6 @@ export const DEFAULT_WIDGETS: readonly GridStackWidgetConfig[] = [
     h: 1,
     minW: 2,
     minH: 1,
-    maxW: 6,
     id: 'widget-additional-info',
   },
 ];

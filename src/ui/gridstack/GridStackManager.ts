@@ -176,9 +176,11 @@ export class GridStackManager {
       element.setAttribute('gs-w', config.w.toString());
       element.setAttribute('gs-h', config.h.toString());
       if (config.minW) element.setAttribute('gs-min-w', config.minW.toString());
+      else element.removeAttribute('gs-min-w');
       if (config.minH) element.setAttribute('gs-min-h', config.minH.toString());
-      if (config.maxW) element.setAttribute('gs-max-w', config.maxW.toString());
-      if (config.maxH) element.setAttribute('gs-max-h', config.maxH.toString());
+      else element.removeAttribute('gs-min-h');
+      element.removeAttribute('gs-max-w');
+      element.removeAttribute('gs-max-h');
       if (config.id) element.setAttribute('gs-id', config.id);
 
       // Convert existing element to grid widget (v12 API)
@@ -190,8 +192,6 @@ export class GridStackManager {
         h: config.h,
         minW: config.minW,
         minH: config.minH,
-        maxW: config.maxW,
-        maxH: config.maxH,
         id: config.id,
         autoPosition: config.autoPosition,
         noMove: config.noMove,
@@ -334,8 +334,6 @@ export class GridStackManager {
           h: widget.h ?? 1,
           minW: widget.minW,
           minH: widget.minH,
-          maxW: widget.maxW,
-          maxH: widget.maxH,
           noMove: widget.noMove,
           noResize: widget.noResize,
           locked: widget.locked,

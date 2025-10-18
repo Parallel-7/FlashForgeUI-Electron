@@ -27,23 +27,44 @@ import './temperature-controls.css';
 export class TemperatureControlsComponent extends BaseComponent {
   public readonly componentId = 'temperature-controls';
   public readonly templateHTML = `
-    <div class="temperature-controls-section">
-      <div class="temp-row">
-        <span>Bed: <span id="bed-temp-display">0°C/0°C</span></span>
-        <div class="temp-buttons">
-          <button id="btn-bed-set" class="temp-btn">Set</button>
-          <button id="btn-bed-off" class="temp-btn">Off</button>
+    <div class="temperature-controls" role="group" aria-label="Temperature controls">
+      <header class="temperature-controls__header">
+        <h3 class="temperature-controls__title">Temperature</h3>
+      </header>
+      <div class="temperature-controls__content">
+        <div class="temperature-controls__grid">
+          <section class="temp-card temp-card--bed" aria-label="Bed temperature controls">
+            <div class="temp-card__meta">
+              <span class="temp-card__label">Bed</span>
+              <span class="temp-card__reading" id="bed-temp-display">0°C/0°C</span>
+            </div>
+            <div class="temp-card__actions">
+              <button id="btn-bed-set" class="temp-btn temp-btn--primary">Set</button>
+              <button id="btn-bed-off" class="temp-btn temp-btn--critical">Off</button>
+            </div>
+          </section>
+          <section class="temp-card temp-card--extruder" aria-label="Extruder temperature controls">
+            <div class="temp-card__meta">
+              <span class="temp-card__label">Extruder</span>
+              <span class="temp-card__reading" id="extruder-temp-display">0°C/0°C</span>
+            </div>
+            <div class="temp-card__actions">
+              <button id="btn-extruder-set" class="temp-btn temp-btn--primary">Set</button>
+              <button id="btn-extruder-off" class="temp-btn temp-btn--critical">Off</button>
+            </div>
+          </section>
+        </div>
+        <div class="temperature-controls__status" aria-label="Fan status">
+          <div class="fan-card" id="cooling-fan-display">
+            <span class="fan-card__label">Cooling Fan</span>
+            <span class="fan-card__value" id="cooling-fan-speed">0</span>
+          </div>
+          <div class="fan-card" id="chamber-fan-display">
+            <span class="fan-card__label">Chamber Fan</span>
+            <span class="fan-card__value" id="chamber-fan-speed">0</span>
+          </div>
         </div>
       </div>
-      <div class="temp-row">
-        <span>Extruder: <span id="extruder-temp-display">0°C/0°C</span></span>
-        <div class="temp-buttons">
-          <button id="btn-extruder-set" class="temp-btn">Set</button>
-          <button id="btn-extruder-off" class="temp-btn">Off</button>
-        </div>
-      </div>
-      <div class="status-item" id="cooling-fan-display">Cooling Fan: <span id="cooling-fan-speed">0</span></div>
-      <div class="status-item" id="chamber-fan-display">Chamber Fan: <span id="chamber-fan-speed">0</span></div>
     </div>
   `;
 
