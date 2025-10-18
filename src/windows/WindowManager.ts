@@ -93,7 +93,8 @@ export enum WindowType {
   MATERIAL_MATCHING_DIALOG = 'materialMatchingDialog',
   SINGLE_COLOR_CONFIRMATION_DIALOG = 'singleColorConfirmationDialog',
   AUTO_CONNECT_CHOICE_DIALOG = 'autoConnectChoiceDialog',
-  CONNECT_CHOICE_DIALOG = 'connectChoiceDialog'
+  CONNECT_CHOICE_DIALOG = 'connectChoiceDialog',
+  PALETTE = 'palette'
 }
 
 class WindowManager {
@@ -343,6 +344,19 @@ class WindowManager {
 
   public hasConnectChoiceDialogWindow(): boolean {
     return this.hasWindow(WindowType.CONNECT_CHOICE_DIALOG);
+  }
+
+  // Convenience methods for palette window access
+  public getPaletteWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.PALETTE);
+  }
+
+  public setPaletteWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.PALETTE, window);
+  }
+
+  public hasPaletteWindow(): boolean {
+    return this.hasWindow(WindowType.PALETTE);
   }
 
   /**

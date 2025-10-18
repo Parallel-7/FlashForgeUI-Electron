@@ -40,6 +40,13 @@ import {
   type ComponentUpdateData
 } from './ui/components';
 
+// GridStack system imports
+import { gridStackManager } from './ui/gridstack/GridStackManager';
+import { layoutPersistence } from './ui/gridstack/LayoutPersistence';
+import { editModeController } from './ui/gridstack/EditModeController';
+import { getComponentDefinition } from './ui/gridstack/ComponentRegistry';
+import type { GridStackWidgetConfig } from './ui/gridstack/types';
+
 // Existing service imports
 import { getGlobalStateTracker, STATE_EVENTS, type StateChangeEvent } from './services/printer-state';
 import { initializeUIAnimations, resetUI, handleUIError } from './services/ui-updater';
@@ -59,6 +66,9 @@ let printerTabsComponent: PrinterTabsComponent | null = null;
 
 /** Whether components have been initialized */
 let componentsInitialized = false;
+
+/** Track last polling data for new components */
+let lastPollingData: PollingData | null = null;
 
 // ============================================================================
 // EXISTING STATE TRACKING (preserved for compatibility)
@@ -293,6 +303,568 @@ async function initializeComponents(): Promise<void> {
     logMessage(`ERROR: Component system initialization failed: ${error}`);
     // Don't throw - allow fallback to continue
   }
+}
+
+// ============================================================================
+// GRIDSTACK SYSTEM INTEGRATION
+// ============================================================================
+
+/**
+ * Create a component instance for GridStack integration
+ * Maps component IDs to their class instantiations
+ * @param componentId - The component ID to create
+ * @param container - The container element for the component
+ * @returns Component instance or null if unknown component
+ */
+function createComponentForGrid(componentId: string, container: HTMLElement): any {
+  switch (componentId) {
+    case 'camera-preview':
+      return new CameraPreviewComponent(container);
+    case 'controls-grid':
+      return new ControlsGridComponent(container);
+    case 'model-preview':
+      return new ModelPreviewComponent(container);
+    case 'job-stats':
+      return new JobStatsComponent(container);
+    case 'printer-status':
+      return new PrinterStatusComponent(container);
+    case 'temperature-controls':
+      return new TemperatureControlsComponent(container);
+    case 'filtration-controls':
+      return new FiltrationControlsComponent(container);
+    case 'additional-info':
+      return new AdditionalInfoComponent(container);
+    case 'log-panel':
+      return new LogPanelComponent(container);
+    default:
+      console.error(`Unknown component ID: ${componentId}`);
+      return null;
+  }
+}
+
+/**
+ * Create a grid widget element for a component
+ * @param componentId - The component ID
+ * @returns Grid widget element
+ */
+function createGridWidget(componentId: string): HTMLElement {
+  const item = document.createElement('div');
+  item.className = 'grid-stack-item';
+  item.setAttribute('data-component-id', componentId);
+
+  const content = document.createElement('div');
+  content.className = 'grid-stack-item-content';
+  content.id = `${componentId}-container`;
+
+  item.appendChild(content);
+  return item;
+}
+
+/**
+ * Initialize GridStack layout system
+ * Sets up grid, loads layout, creates widgets, and initializes edit mode
+ */
+async function initializeGridStack(): Promise<void> {
+  console.log('Initializing GridStack layout system...');
+
+  try {
+    // 1. Initialize layout persistence
+    layoutPersistence.initialize();
+
+    // 2. Load layout configuration (from localStorage or default)
+    const layout = layoutPersistence.load();
+    console.log('Loaded layout configuration:', layout);
+
+    // 3. Initialize GridStack with grid options
+    gridStackManager.initialize(layout.gridOptions);
+
+    // 4. Create widgets from layout
+    let widgetCount = 0;
+    for (const widgetConfig of layout.widgets) {
+      try {
+        // Create the grid widget element
+        const widgetElement = createGridWidget(widgetConfig.componentId);
+
+        // Add widget to grid (this positions it)
+        const addedWidget = gridStackManager.addWidget(widgetConfig, widgetElement);
+
+        if (addedWidget) {
+          // Get the content container
+          const contentContainer = addedWidget.querySelector('.grid-stack-item-content') as HTMLElement;
+
+          if (contentContainer) {
+            // Create and register the component
+            const component = createComponentForGrid(widgetConfig.componentId, contentContainer);
+
+            if (component) {
+              componentManager.registerComponent(component);
+              await component.initialize();
+              widgetCount++;
+              console.log(`GridStack: Added widget '${widgetConfig.componentId}'`);
+
+              // Store reference to log panel if this is the log panel component
+              if (widgetConfig.componentId === 'log-panel') {
+                logPanelComponent = component;
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error(`GridStack: Failed to create widget '${widgetConfig.componentId}':`, error);
+        logMessage(`ERROR: Failed to create widget '${widgetConfig.componentId}'`);
+      }
+    }
+
+    console.log(`GridStack: Created ${widgetCount}/${layout.widgets.length} widgets`);
+
+    // 5. Setup GridStack event handlers for auto-save
+    gridStackManager.onChange((widgets) => {
+      console.log('GridStack: Layout changed, auto-saving...');
+      const currentLayout = layoutPersistence.load();
+      const updatedWidgets = gridStackManager.serialize();
+      layoutPersistence.save({
+        ...currentLayout,
+        widgets: updatedWidgets,
+      });
+    });
+
+    // 6. Initialize edit mode controller (but keep editing disabled by default)
+    editModeController.initialize(gridStackManager, layoutPersistence);
+
+    // 7. Disable editing by default (grid should be static for normal use)
+    gridStackManager.disable();
+
+    // 8. Setup palette integration (drag-drop and communication)
+    setupPaletteIntegration();
+
+    console.log('GridStack initialization complete');
+    logMessage(`GridStack layout system initialized: ${widgetCount} widgets loaded`);
+
+  } catch (error) {
+    console.error('GridStack initialization failed:', error);
+    logMessage(`ERROR: GridStack initialization failed: ${error}`);
+    throw error;
+  }
+}
+
+/**
+ * Setup palette integration for component drag-drop and status synchronization
+ */
+function setupPaletteIntegration(): void {
+  console.log('[GridStack] Setting up palette integration...');
+
+  const paletteDropHighlightClass = 'palette-drop-active';
+
+  // Helper function to update palette with current grid state
+  function updatePaletteStatus(): void {
+    const componentsInUse = gridStackManager.serialize().map(w => w.componentId || w.id || '');
+    if (window.api?.send) {
+      window.api.send('palette:update-status', componentsInUse);
+      console.log(`[GridStack] Sent status update to palette: ${componentsInUse.length} components in use`);
+    }
+  }
+
+  /**
+   * Add a component from the palette into the grid and component system
+   */
+  async function addComponentFromPalette(
+    componentId: string,
+    dropPosition?: { x: number; y: number }
+  ): Promise<void> {
+    console.log('[GridStack] Attempting to add component from palette:', componentId);
+
+    const definition = getComponentDefinition(componentId);
+    if (!definition) {
+      console.error('[GridStack] Unknown component:', componentId);
+      logMessage(`ERROR: Unknown component: ${componentId}`);
+      return;
+    }
+
+    if (componentManager.getComponent(componentId)) {
+      console.warn('[GridStack] Component already exists on grid:', componentId);
+      logMessage(`Component ${definition.name} is already on the grid`);
+      updatePaletteStatus();
+      return;
+    }
+
+    if (document.querySelector(`[data-component-id="${componentId}"]`)) {
+      console.warn('[GridStack] DOM already contains widget for component:', componentId);
+      updatePaletteStatus();
+      return;
+    }
+
+    const config: GridStackWidgetConfig = {
+      componentId,
+      x: dropPosition?.x,
+      y: dropPosition?.y,
+      w: definition.defaultSize.w,
+      h: definition.defaultSize.h,
+      minW: definition.minSize?.w,
+      minH: definition.minSize?.h,
+      maxW: definition.maxSize?.w,
+      maxH: definition.maxSize?.h,
+      id: `widget-${componentId}`,
+      autoPosition: dropPosition ? false : true
+    };
+
+    try {
+      const widgetElement = createGridWidget(componentId);
+      const addedWidget = gridStackManager.addWidget(config, widgetElement);
+
+      if (!addedWidget) {
+        throw new Error('GridStackManager.addWidget returned null');
+      }
+
+      const contentContainer = addedWidget.querySelector('.grid-stack-item-content') as HTMLElement | null;
+      if (!contentContainer) {
+        throw new Error('Grid widget missing content container');
+      }
+
+      const component = createComponentForGrid(componentId, contentContainer);
+      if (!component) {
+        throw new Error(`Unable to create component instance for ${componentId}`);
+      }
+
+      componentManager.registerComponent(component);
+      await component.initialize();
+
+      if (lastPollingData) {
+        const updateData: ComponentUpdateData = {
+          pollingData: lastPollingData,
+          timestamp: new Date().toISOString(),
+          printerState: lastPollingData.printerStatus?.state,
+          connectionState: lastPollingData.isConnected
+        };
+        component.update(updateData);
+      }
+
+      const currentLayout = layoutPersistence.load();
+      const updatedWidgets = gridStackManager.serialize();
+      layoutPersistence.save({
+        ...currentLayout,
+        widgets: updatedWidgets,
+      });
+
+      updatePaletteStatus();
+
+      console.log('[GridStack] Component added from palette:', componentId);
+      logMessage(`Component ${definition.name} added to grid`);
+    } catch (error) {
+      console.error('[GridStack] Failed to add component from palette:', error);
+      logMessage(`ERROR: Failed to add component ${componentId}: ${error}`);
+    }
+  }
+
+  /**
+   * Forward grid drag state changes to palette window for trash drop support
+   */
+  function registerGridDragStateForwarding(): void {
+    const grid = gridStackManager.getGrid();
+    if (!grid || !window.api?.send) {
+      return;
+    }
+
+    const extractPointerCoordinates = (event: unknown):
+      | { screenX: number; screenY: number }
+      | undefined => {
+      if (!event || typeof event !== 'object') {
+        return undefined;
+      }
+
+      const candidate = event as MouseEvent;
+      if (typeof candidate.screenX === 'number' && typeof candidate.screenY === 'number') {
+        return { screenX: candidate.screenX, screenY: candidate.screenY };
+      }
+
+      if (typeof candidate.clientX === 'number' && typeof candidate.clientY === 'number') {
+        return {
+          screenX: window.screenX + candidate.clientX,
+          screenY: window.screenY + candidate.clientY
+        };
+      }
+
+      return undefined;
+    };
+
+    const sendDragState = (
+      componentId: string | null,
+      dragging: boolean,
+      mouseEvent?: unknown
+    ): void => {
+      if (!componentId) {
+        return;
+      }
+
+      const pointer = extractPointerCoordinates(mouseEvent);
+
+      window.api!.send('grid:component-drag-state', {
+        componentId,
+        dragging,
+        pointer
+      });
+    };
+
+    grid.on('dragstart', (event, element) => {
+      const componentId = element?.getAttribute('data-component-id');
+      sendDragState(componentId, true, event);
+    });
+
+    grid.on('drag', (event, element) => {
+      const componentId = element?.getAttribute('data-component-id');
+      sendDragState(componentId, true, event);
+    });
+
+    grid.on('dragstop', (event, element) => {
+      const componentId = element?.getAttribute('data-component-id');
+      sendDragState(componentId, false, event);
+      updatePaletteStatus();
+    });
+  }
+
+  /**
+   * Determine whether the current drag event originates from the palette window
+   */
+  function isPaletteDragEvent(event: DragEvent): boolean {
+    const dataTransfer = event.dataTransfer;
+    if (!dataTransfer) {
+      return false;
+    }
+
+    const types = Array.from(dataTransfer.types ?? []);
+    if (types.includes('text/flashforge-component')) {
+      return true;
+    }
+
+    if (types.includes('application/json')) {
+      try {
+        const payload = dataTransfer.getData('application/json');
+        if (payload) {
+          const parsed = JSON.parse(payload);
+          if (parsed?.type === 'palette-component') {
+            return true;
+          }
+        }
+      } catch {
+        // Ignore JSON parse errors during drag detection
+      }
+    }
+
+    if (types.includes('text/plain')) {
+      const textPayload = dataTransfer.getData('text/plain');
+      if (textPayload && textPayload.startsWith('palette-component:')) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  /**
+   * Extract component ID from DataTransfer payload
+   */
+  function extractComponentIdFromData(dataTransfer: DataTransfer | null): string | null {
+    if (!dataTransfer) {
+      return null;
+    }
+
+    const customType = dataTransfer.getData('text/flashforge-component');
+    if (customType) {
+      return customType;
+    }
+
+    const jsonPayload = dataTransfer.getData('application/json');
+    if (jsonPayload && jsonPayload.trim().length > 0) {
+      try {
+        const parsed = JSON.parse(jsonPayload);
+        if (parsed?.type === 'palette-component' && typeof parsed.componentId === 'string') {
+          return parsed.componentId;
+        }
+      } catch {
+        // Ignore JSON parse errors - fallback to other data formats
+      }
+    }
+
+    const textPayload = dataTransfer.getData('text/plain');
+    if (textPayload && textPayload.startsWith('palette-component:')) {
+      return textPayload.replace('palette-component:', '');
+    }
+
+    return null;
+  }
+
+  /**
+   * Convert drop coordinates to grid cell position
+   */
+  function calculateDropPosition(event: DragEvent, container: HTMLElement): { x: number; y: number } | null {
+    const grid = gridStackManager.getGrid();
+    if (!grid) {
+      return null;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const localX = event.clientX - containerRect.left + container.scrollLeft;
+    const localY = event.clientY - containerRect.top + container.scrollTop;
+
+    const cell = grid.getCellFromPixel({ left: localX, top: localY });
+    if (typeof cell?.x !== 'number' || typeof cell?.y !== 'number') {
+      return null;
+    }
+
+    return {
+      x: Math.max(0, cell.x),
+      y: Math.max(0, cell.y)
+    };
+  }
+
+  /**
+   * Configure HTML5 drop handlers so palette components can be dropped onto the grid
+   */
+  function setupPaletteDropHandlers(): void {
+    const gridContainer = document.querySelector('.grid-stack') as HTMLElement | null;
+    if (!gridContainer) {
+      console.warn('[GridStack] Grid container not found for drop handlers');
+      return;
+    }
+
+    let dragDepth = 0;
+
+    const resetHighlight = (): void => {
+      dragDepth = 0;
+      gridContainer.classList.remove(paletteDropHighlightClass);
+    };
+
+    gridContainer.addEventListener('dragenter', (event: DragEvent) => {
+      if (!isPaletteDragEvent(event)) {
+        return;
+      }
+
+      dragDepth += 1;
+      gridContainer.classList.add(paletteDropHighlightClass);
+      event.preventDefault();
+    });
+
+    gridContainer.addEventListener('dragover', (event: DragEvent) => {
+      if (!isPaletteDragEvent(event)) {
+        return;
+      }
+
+      if (event.dataTransfer) {
+        event.dataTransfer.dropEffect = 'copy';
+      }
+
+      event.preventDefault();
+    });
+
+    gridContainer.addEventListener('dragleave', (event: DragEvent) => {
+      if (!isPaletteDragEvent(event)) {
+        return;
+      }
+
+      dragDepth = Math.max(0, dragDepth - 1);
+      if (dragDepth === 0) {
+        gridContainer.classList.remove(paletteDropHighlightClass);
+      }
+    });
+
+    gridContainer.addEventListener('drop', async (event: DragEvent) => {
+      if (!isPaletteDragEvent(event)) {
+        return;
+      }
+
+      event.preventDefault();
+      resetHighlight();
+
+      const componentId = extractComponentIdFromData(event.dataTransfer);
+      if (!componentId) {
+        console.warn('[GridStack] Drop ignored - missing component ID');
+        return;
+      }
+
+      if (!editModeController.isEnabled()) {
+        console.warn('[GridStack] Cannot add component while edit mode is disabled');
+        logMessage('Enable edit mode (CTRL+E) to add components.');
+        return;
+      }
+
+      const dropPosition = calculateDropPosition(event, gridContainer);
+      await addComponentFromPalette(componentId, dropPosition ?? undefined);
+    });
+  }
+
+  // Listen for palette opened event
+  if (window.api) {
+    window.api.receive('palette:opened', () => {
+      console.log('[GridStack] Palette opened, sending current status');
+      updatePaletteStatus();
+    });
+
+    // Listen for edit mode toggle from palette window (CTRL+E)
+    window.api.receive('edit-mode:toggle', () => {
+      console.log('[GridStack] Edit mode toggle triggered from palette window');
+      editModeController.toggle();
+    });
+
+    // Listen for component remove from palette (trash zone)
+    window.api.receive('grid:remove-component', (componentId: unknown) => {
+      const id = componentId as string;
+      console.log('[GridStack] Removing component from palette request:', id);
+
+      // Find the widget element
+      const widgetElement = document.querySelector(`[data-component-id="${id}"]`) as HTMLElement;
+      if (!widgetElement) {
+        console.warn('[GridStack] Widget element not found:', id);
+        return;
+      }
+
+      // Remove component from ComponentManager
+      const removed = componentManager.removeComponent(id);
+      if (!removed) {
+        console.warn('[GridStack] Component not found in ComponentManager:', id);
+      }
+
+      // Remove widget from grid
+      gridStackManager.removeWidget(widgetElement);
+
+      // Save layout
+      const currentLayout = layoutPersistence.load();
+      const updatedWidgets = gridStackManager.serialize();
+      layoutPersistence.save({
+        ...currentLayout,
+        widgets: updatedWidgets,
+      });
+
+      // Notify palette to update status
+      updatePaletteStatus();
+
+      console.log('[GridStack] Component removed successfully:', id);
+      logMessage(`Component ${id} removed from grid`);
+    });
+  }
+
+  // Setup external drop handler for palette items
+  gridStackManager.onExternalDrop(async (event, ui) => {
+    const componentId = ui.helper.getAttribute('data-component-id');
+    if (!componentId) {
+      console.warn('[GridStack] Dropped element missing component ID');
+      return;
+    }
+
+    console.log('[GridStack] Component dropped from palette via GridStack:', componentId);
+
+    // Get the drop position from GridStack (ui.helper should have gridstackNode)
+    const dropWidget = (ui.helper as any).gridstackNode;
+    const dropPosition =
+      dropWidget && typeof dropWidget.x === 'number' && typeof dropWidget.y === 'number'
+        ? { x: dropWidget.x, y: dropWidget.y }
+        : undefined;
+
+    await addComponentFromPalette(componentId, dropPosition);
+  });
+
+  registerGridDragStateForwarding();
+  setupPaletteDropHandlers();
+
+  console.log('[GridStack] Palette integration setup complete');
 }
 
 /**
@@ -1035,7 +1607,10 @@ function initializePollingListeners(): void {
   // Listen for polling updates from main process
   window.api.receive('polling-update', (data: unknown) => {
     const pollingData = data as PollingData;
-    
+
+    // Store for new components
+    lastPollingData = pollingData;
+
     try {
       // Update filtration availability from backend data (preserve existing logic)
       if (pollingData.printerStatus && pollingData.printerStatus.filtration) {
@@ -1229,15 +1804,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupLoadingEventListeners();
   initializeUI();
 
-  // Component system initialization
+  // GridStack + Component system initialization
   try {
-    await initializeComponents();
-    console.log('Component system ready');
-    logMessage('Component system initialized: ' + componentManager.getComponentCount() + ' components');
+    await initializeGridStack();
+    componentsInitialized = true;
+    console.log('GridStack and component system ready');
+    logMessage('GridStack layout system initialized: ' + componentManager.getComponentCount() + ' components');
   } catch (error) {
-    console.error('Component system initialization failed:', error);
-    logMessage(`ERROR: Component system failed to initialize: ${error}`);
+    console.error('GridStack initialization failed:', error);
+    logMessage(`ERROR: GridStack initialization failed: ${error}`);
   }
+
+  // Initialize enhanced polling update listeners AFTER components are ready
+  // This prevents "Components not initialized yet" warnings during startup
+  initializePollingListeners();
 
   // Initialize printer tabs for multi-printer support
   try {
@@ -1250,9 +1830,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize state tracking and event listeners
   initializeStateAndEventListeners();
-
-  // Initialize enhanced polling update listeners
-  initializePollingListeners();
 
   // Signal to main process that renderer is ready
   try {
@@ -1276,8 +1853,19 @@ document.addEventListener('DOMContentLoaded', async () => {
  * Ensures proper cleanup of both legacy resources and components
  */
 window.addEventListener('beforeunload', () => {
-  console.log('Cleaning up resources in enhanced renderer with component system');
-  
+  console.log('Cleaning up resources in enhanced renderer with GridStack and component system');
+
+  // Clean up GridStack system
+  try {
+    console.log('Destroying GridStack system...');
+    editModeController.dispose();
+    gridStackManager.destroy();
+    layoutPersistence.dispose();
+    console.log('GridStack system cleanup complete');
+  } catch (error) {
+    console.error('Error during GridStack cleanup:', error);
+  }
+
   // Clean up component system
   if (componentsInitialized) {
     try {
@@ -1290,7 +1878,7 @@ window.addEventListener('beforeunload', () => {
       console.error('Error during component cleanup:', error);
     }
   }
-  
+
   // Clean up state tracker (preserve existing functionality)
   try {
     const stateTracker = getGlobalStateTracker();
@@ -1299,7 +1887,7 @@ window.addEventListener('beforeunload', () => {
   } catch (error) {
     console.error('Error during state tracker cleanup:', error);
   }
-  
+
   // Clean up IPC listeners (preserve existing functionality)
   if (window.api) {
     try {
@@ -1309,6 +1897,6 @@ window.addEventListener('beforeunload', () => {
       console.error('Error during IPC cleanup:', error);
     }
   }
-  
+
   console.log('Enhanced renderer cleanup complete - all resources disposed');
 });

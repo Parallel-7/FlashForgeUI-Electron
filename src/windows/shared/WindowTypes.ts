@@ -283,5 +283,11 @@ export const WINDOW_SIZES = {
     height: createWindowHeight(380),
     minWidth: createWindowMinWidth(400),
     minHeight: createWindowMinHeight(350)
+  },
+  COMPONENT_PALETTE: {
+    width: createWindowWidth(280),
+    height: createWindowHeight(600),
+    minWidth: createWindowMinWidth(280),
+    minHeight: createWindowMinHeight(600)
   }
 } as const;

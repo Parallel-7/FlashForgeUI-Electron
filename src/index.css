@@ -1,4 +1,8 @@
 /* src/index.css */
+
+/* Import GridStack CSS first */
+@import './ui/gridstack/gridstack.css';
+
 * {
   margin: 0;
   padding: 0;

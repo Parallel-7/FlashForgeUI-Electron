@@ -166,7 +166,14 @@ const validSendChannels = [
   'loading-set-progress',
   'loading-update-message',
   'add-log-message',
-  'open-log-dialog'
+  'open-log-dialog',
+  'open-component-palette',
+  'close-component-palette',
+  'palette:remove-component',
+  'palette:update-status',
+  'palette:opened',
+  'palette:toggle-edit-mode',
+  'grid:component-drag-state'
 ];
 
 const validReceiveChannels = [
@@ -196,7 +203,11 @@ const validReceiveChannels = [
   'printer-context-created',
   'printer-context-switched',
   'printer-context-removed',
-  'printer-context-updated'
+  'printer-context-updated',
+  'grid:remove-component',
+  'grid:component-added',
+  'palette:opened',
+  'edit-mode:toggle'
 ];
 
 // Expose camera URL for renderer
@@ -311,7 +322,8 @@ contextBridge.exposeInMainWorld('api', {
       'camera:get-rtsp-relay-info',
       'printer-settings:get',
       'printer-settings:update',
-      'printer-settings:get-printer-name'
+      'printer-settings:get-printer-name',
+      'palette:get-components'
     ];
     
     if (validInvokeChannels.includes(channel)) {

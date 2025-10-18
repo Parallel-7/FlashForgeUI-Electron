@@ -78,7 +78,8 @@
       "Bash(powershell:*)",
       "Bash(rm:*)",
       "Bash(Select-String -Pattern \"src\\index.ts\" -Context 0,5)",
-      "Bash(Select-String \"Total console\\.log statements found:\")"
+      "Bash(Select-String \"Total console\\.log statements found:\")",
+      "WebFetch(domain:gridstackjs.com)"
     ],
     "deny": [],
     "additionalDirectories": [
