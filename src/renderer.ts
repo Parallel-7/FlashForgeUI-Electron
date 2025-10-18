@@ -459,6 +459,12 @@ async function initializeGridStack(): Promise<void> {
     // 8. Setup palette integration (drag-drop and communication)
     setupPaletteIntegration();
 
+    // Ensure the component manager transitions into initialized state
+    if (!componentManager.isInitialized()) {
+      console.log('GridStack: Finalizing component manager initialization...');
+      await componentManager.initializeAll();
+    }
+
     console.log('GridStack initialization complete');
     logMessage(`GridStack layout system initialized: ${widgetCount} widgets loaded`);
 
