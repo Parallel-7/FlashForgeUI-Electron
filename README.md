@@ -4,7 +4,7 @@
 
 A complete rewrite of FlashForgeUI (C#) bringing enhanced features and better compatibility to all platforms!
 
-Download the latest release for your OS [here](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/tag/v1.0.1)!
+Download the latest release for your OS [here](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/tag/v1.0.2)!
 
 ## Setup 
 > FlashForgeUI requires LAN-only mode to function properly, you can find the 'pairing code' in this settings screen on the printer
