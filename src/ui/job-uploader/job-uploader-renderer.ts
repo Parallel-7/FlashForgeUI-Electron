@@ -1,3 +1,22 @@
+/**
+ * @fileoverview Renderer process for job uploader dialog with 3MF multi-color workflow.
+ *
+ * Implements comprehensive file upload interface with slicer metadata display, AD5X 3MF validation,
+ * and intelligent multi-color material matching integration. Handles file browsing, metadata
+ * visualization (thumbnails, print settings, filament info), and upload progress tracking.
+ * Routes AD5X 3MF files through material matching dialogs while supporting legacy upload for
+ * other printer models.
+ *
+ * Key features:
+ * - Slicer metadata parsing and display (3MF, G-code)
+ * - AD5X 3MF-only validation with user-friendly error messages
+ * - Multi-color filament detection and material matching dialog routing
+ * - Single-color AD5X workflow with confirmation dialog
+ * - Upload progress overlay with percentage and status updates
+ * - Auto-close on successful upload with 2-second delay
+ * - Comprehensive error handling and user feedback
+ */
+
 // job-uploader-renderer.ts
 // TypeScript renderer logic for the Job Uploader Dialog
 // Handles file selection, metadata parsing, and job uploading with full slicer-meta integration

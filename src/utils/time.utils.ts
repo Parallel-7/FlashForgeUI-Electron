@@ -1,3 +1,46 @@
+/**
+ * @fileoverview Time conversion, formatting, and calculation utilities for human-readable
+ * duration display, print time estimation, and ETA calculations. Provides consistent time
+ * formatting across the application with support for elapsed time tracking, remaining time
+ * calculations, and smart date/time formatting based on relative dates.
+ *
+ * Key Features:
+ * - Time unit conversion (seconds/minutes) with rounding
+ * - Human-readable duration formatting (e.g., "2h 15m", "45m", "30s")
+ * - Date and time formatting (ISO dates, 24-hour time, localized strings)
+ * - Elapsed time calculation from start timestamps
+ * - Remaining time and ETA calculations based on progress
+ * - Duration string parsing (e.g., "2h 15m" to seconds)
+ * - Relative date formatting (today, tomorrow, specific date/time)
+ * - Time range checking and next occurrence calculations
+ *
+ * Conversion Functions:
+ * - secondsToMinutes(seconds): Seconds to minutes (rounded)
+ * - minutesToSeconds(minutes): Minutes to seconds
+ * - formatDuration(seconds): Seconds to "Xh Ym" or "Xm" or "Xs"
+ * - formatMinutes(minutes): Minutes to "Xh Ym" or "Xm"
+ * - parseDuration(string): "Xh Ym Zs" to seconds
+ *
+ * Date/Time Formatting:
+ * - formatTime(date): "HH:MM:SS" 24-hour format
+ * - formatDate(date): "YYYY-MM-DD" ISO date
+ * - formatDateTime(date): Combined date and time
+ * - formatETA(seconds): Smart relative ETA ("HH:MM", "Tomorrow HH:MM", or full date/time)
+ *
+ * Calculation Functions:
+ * - calculateElapsed(start, end?): Elapsed seconds between timestamps
+ * - calculateRemaining(elapsed, total): Remaining time (clamped to 0)
+ * - calculateETA(progress, elapsed): Total estimated time from progress percentage
+ *
+ * Utility Functions:
+ * - isWithinRange(date, start, end): Date range checking
+ * - getTimeUntil(hour, minute): Seconds until next occurrence of time
+ *
+ * Usage Context:
+ * Used throughout the UI for print job time displays, progress tracking, ETA calculations,
+ * uptime displays, and any scenario requiring human-friendly time representation.
+ */
+
 // src/utils/time.utils.ts
 // Time conversion and formatting utilities
 

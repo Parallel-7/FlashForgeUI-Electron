@@ -1,14 +1,38 @@
-// src/types/notification.ts
-
 /**
- * Comprehensive notification type definitions for the desktop notification system.
- * Integrates with existing printer state types and configuration system.
- * 
- * Core Responsibilities:
- * - Define notification types and data structures
- * - Provide type-safe interfaces for notification coordination
- * - Support integration with printer polling and configuration systems
- * - Enable discriminated unions for type safety
+ * @fileoverview Comprehensive type system for desktop notification management
+ *
+ * Provides complete type definitions for the desktop notification system including
+ * notification types, state management, configuration integration, and printer state
+ * coordination. Uses discriminated unions and branded types for maximum type safety.
+ *
+ * Key Type Categories:
+ * - Branded Types: NotificationId, NotificationTemperature for type safety
+ * - Notification Types: PrintComplete, PrinterCooled, Upload, Connection notifications
+ * - State Management: NotificationState, NotificationStateTransition for duplicate prevention
+ * - Configuration: NotificationSettings extracted from AppConfig
+ * - Printer Integration: State transitions, temperature thresholds, trigger conditions
+ * - Events: NotificationEvent enum with typed event payloads
+ *
+ * Factory Functions:
+ * - createPrintCompleteNotification: Print job completion alerts
+ * - createPrinterCooledNotification: Bed temperature cooled alerts
+ * - createUploadCompleteNotification: File upload success
+ * - createUploadFailedNotification: File upload errors
+ * - createConnectionLostNotification: Printer disconnection
+ * - createConnectionErrorNotification: Connection failures
+ *
+ * Type Guards:
+ * - isPrintCompleteNotification, isPrinterCooledNotification, etc.
+ * - shouldSendNotification: Settings-based notification filtering
+ * - shouldCheckForNotifications, shouldResetNotificationFlags: State-based logic
+ *
+ * Integration Points:
+ * - PrinterNotificationCoordinator: Business logic and state tracking
+ * - NotificationService: OS notification delivery
+ * - PrinterPollingService: Real-time state monitoring
+ * - ConfigManager: User notification preferences
+ *
+ * @module types/notification
  */
 
 import type { PrinterState } from './polling';

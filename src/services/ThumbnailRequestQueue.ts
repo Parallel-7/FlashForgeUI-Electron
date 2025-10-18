@@ -1,19 +1,35 @@
 /**
- * ThumbnailRequestQueue - Sequential/limited concurrent thumbnail request processing
- * 
- * Manages thumbnail requests with backend-aware concurrency limits to prevent TCP socket
- * overload on legacy printers while allowing higher throughput on modern printers.
- * 
- * Features:
- * - Backend-specific concurrency limits
- * - Request deduplication
- * - Cancellation support
- * - Priority queue processing
+ * @fileoverview Backend-aware thumbnail request queue with controlled concurrency
+ *
+ * Manages thumbnail requests with printer model-specific concurrency limits to prevent
+ * TCP socket exhaustion on legacy printers while maximizing throughput on modern models.
+ * Implements request deduplication, priority ordering, automatic retry logic, and
+ * graceful cancellation support.
+ *
+ * Key Features:
+ * - Backend-specific concurrency (legacy: 1, modern: 3 concurrent requests)
+ * - Request deduplication to avoid redundant network calls
+ * - Priority-based queue ordering with FIFO within priority levels
+ * - Automatic retry with exponential backoff (up to 2 retries)
+ * - Multi-context support via PrinterContextManager integration
+ * - Comprehensive statistics tracking and event emission
+ * - Graceful cancellation and queue reset capabilities
+ *
+ * Backend Concurrency Configuration:
+ * - generic-legacy: 1 concurrent, 100ms delay (prevents TCP overload)
+ * - adventurer-5m/pro: 3 concurrent, 50ms delay (optimized throughput)
+ * - ad5x: 3 concurrent, 50ms delay (optimized throughput)
+ *
+ * Singleton Pattern:
+ * Access via getThumbnailRequestQueue() factory function.
+ *
+ * @module services/ThumbnailRequestQueue
  */
 
 import { EventEmitter } from 'events';
 import type { PrinterBackendManager } from '../managers/PrinterBackendManager';
 import type { PrinterModelType } from '../types/printer-backend';
+import { getPrinterContextManager } from '../managers/PrinterContextManager';
 
 /**
  * Request item in the queue
@@ -288,14 +304,22 @@ export class ThumbnailRequestQueue extends EventEmitter {
     
     try {
       console.log(`[ThumbnailQueue] Processing ${item.fileName}`);
-      
+
+      // Get active context ID
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        throw new Error('No active printer context');
+      }
+
       // Check if backend is ready
-      if (!this.backendManager || !this.backendManager.isBackendReady()) {
+      if (!this.backendManager || !this.backendManager.isBackendReady(contextId)) {
         throw new Error('Backend not ready');
       }
-      
+
       // Request thumbnail from backend
-      const thumbnail = await this.backendManager.getJobThumbnail(item.fileName);
+      const thumbnail = await this.backendManager.getJobThumbnail(contextId, item.fileName);
       
       if (thumbnail) {
         const result: ThumbnailResult = {
@@ -367,15 +391,23 @@ export class ThumbnailRequestQueue extends EventEmitter {
     if (!this.backendManager) {
       return { modelType: 'generic-legacy', maxConcurrent: 1, requestDelay: 100 };
     }
-    
-    const backend = this.backendManager.getBackend();
+
+    // Get active context ID
+    const contextManager = getPrinterContextManager();
+    const contextId = contextManager.getActiveContextId();
+
+    if (!contextId) {
+      return { modelType: 'generic-legacy', maxConcurrent: 1, requestDelay: 100 };
+    }
+
+    const backend = this.backendManager.getBackendForContext(contextId);
     if (!backend) {
       return { modelType: 'generic-legacy', maxConcurrent: 1, requestDelay: 100 };
     }
-    
+
     const modelType = backend.getBackendStatus().capabilities.modelType;
     const config = this.backendConcurrency.find(c => c.modelType === modelType);
-    
+
     return config || { modelType: 'generic-legacy', maxConcurrent: 1, requestDelay: 100 };
   }
   

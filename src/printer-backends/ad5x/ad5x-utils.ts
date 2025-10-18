@@ -1,8 +1,22 @@
 /**
- * AD5X Utility Functions
- * 
- * Type guards, validators, and helper functions for AD5X printer operations.
- * Centralizes logic previously scattered across multiple dialog files.
+ * @fileoverview AD5X utility functions for type guards, validation, and material station operations.
+ *
+ * Provides centralized utility functions for AD5X printer operations:
+ * - Type guards for AD5X-specific data structures
+ * - Material compatibility validation
+ * - Material station status extraction and transformation
+ * - Multi-color job detection
+ * - Job validation and analysis
+ *
+ * Key exports:
+ * - isAD5XJobInfo(): Type guard for AD5X job detection
+ * - isMultiColorJob(): Detect if job requires material station
+ * - validateMaterialCompatibility(): Check tool-slot material matching
+ * - extractMaterialStationStatus(): Extract and transform material station from machine info
+ *
+ * This module centralizes logic previously scattered across multiple dialog files,
+ * providing a single source of truth for AD5X-specific validation and extraction logic.
+ * Used by AD5XBackend and material-related dialogs for consistent material management.
  */
 
 import { 

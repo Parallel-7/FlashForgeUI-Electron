@@ -1,62 +1,137 @@
 /**
- * Camera Proxy Service
- * 
- * Manages HTTP proxy server for camera streaming using Express. Maintains a single 
- * connection to the camera source (printer or custom URL) and distributes the stream 
- * to multiple clients. Uses direct pipe approach for optimal performance.
- * 
- * Architecture:
- * - Express HTTP server on configurable port (default 8181)
- * - Single upstream connection to camera source
- * - Multiple downstream connections to clients
+ * @fileoverview Camera Proxy Service for multi-context camera streaming.
+ *
+ * Manages HTTP proxy servers for camera streaming using Express. In multi-context mode,
+ * each printer context gets its own camera proxy server on a unique port, allowing
+ * simultaneous viewing of multiple printer cameras.
+ *
+ * Key Responsibilities:
+ * - Allocate unique ports for each context's camera stream (8181-8191 range)
+ * - Manage multiple camera proxy servers, one per context
+ * - Maintain upstream connection to camera sources
+ * - Distribute streams to multiple downstream clients
  * - Automatic reconnection with exponential backoff
- * - No MJPEG parsing for better performance
+ * - Clean up resources when contexts are removed
+ *
+ * Architecture:
+ * - Multiple Express HTTP servers, one per context
+ * - Port allocation using PortAllocator utility
+ * - Map-based storage of stream info indexed by context ID
+ * - Integration with PrinterContextManager for lifecycle management
+ *
+ * Usage:
+ * ```typescript
+ * const service = CameraProxyService.getInstance();
+ *
+ * // Set stream URL for a context, returns local proxy URL
+ * const localUrl = await service.setStreamUrl(contextId, 'http://printer-ip/camera');
+ *
+ * // Get stream URL for active context
+ * const activeUrl = service.getCurrentStreamUrl();
+ *
+ * // Remove context stream when disconnecting
+ * await service.removeContext(contextId);
+ * ```
+ *
+ * Events:
+ * - 'proxy-started': { contextId: string, port: number }
+ * - 'proxy-stopped': { contextId: string }
+ * - 'stream-connected': { contextId: string }
+ * - 'stream-error': { contextId: string, error: string }
+ *
+ * Related:
+ * - PortAllocator: Manages port allocation for camera streams
+ * - PrinterContextManager: Context lifecycle management
  */
 
 import express from 'express';
 import * as http from 'http';
 import { EventEmitter } from 'events';
-import { 
-  CameraProxyConfig, 
-  CameraProxyStatus, 
+import {
+  CameraProxyConfig,
+  CameraProxyStatus,
   CameraProxyClient,
-  CameraProxyEventType,
-  ICameraProxyService 
+  CameraProxyEventType
 } from '../types/camera';
+import { PortAllocator } from '../utils/PortAllocator';
+import { getPrinterContextManager } from '../managers/PrinterContextManager';
+
+// ============================================================================
+// TYPES
+// ============================================================================
 
 /**
- * Camera proxy service implementation
+ * Information about a single context's camera stream
  */
-export class CameraProxyService extends EventEmitter implements ICameraProxyService {
-  private config: CameraProxyConfig;
-  private currentPort: number; // Mutable port for fallback handling
-  private app: express.Application | null = null;
-  private server: http.Server | null = null;
-  private streamUrl: string | null = null;
-  private isStreaming = false;
-  private readonly activeClients = new Map<string, { client: CameraProxyClient; response: express.Response }>();
-  private currentRequest: http.ClientRequest | null = null;
-  private currentResponse: http.IncomingMessage | null = null;
-  private retryCount = 0;
-  private retryTimer: NodeJS.Timeout | null = null;
-  
-  // Statistics
-  private readonly stats = {
-    bytesReceived: 0,
-    bytesSent: 0,
-    successfulConnections: 0,
-    failedConnections: 0,
-    currentRetryCount: 0
+interface ContextStreamInfo {
+  /** Allocated port for this context */
+  port: number;
+  /** Express app instance */
+  app: express.Application;
+  /** HTTP server instance */
+  server: http.Server;
+  /** Source camera URL */
+  streamUrl: string;
+  /** Local proxy URL for clients */
+  localUrl: string;
+  /** Whether currently streaming */
+  isStreaming: boolean;
+  /** Active client connections */
+  activeClients: Map<string, { client: CameraProxyClient; response: express.Response }>;
+  /** Current HTTP request to camera */
+  currentRequest: http.ClientRequest | null;
+  /** Current HTTP response from camera */
+  currentResponse: http.IncomingMessage | null;
+  /** Retry count for reconnection */
+  retryCount: number;
+  /** Retry timer handle */
+  retryTimer: NodeJS.Timeout | null;
+  /** Last error message */
+  lastError: string | null;
+  /** Statistics for this stream */
+  stats: {
+    bytesReceived: number;
+    bytesSent: number;
+    successfulConnections: number;
+    failedConnections: number;
   };
-  
-  private lastError: string | null = null;
-  
-  constructor() {
+}
+
+/**
+ * Branded type for CameraProxyService to ensure singleton pattern
+ */
+type CameraProxyServiceBrand = { readonly __brand: 'CameraProxyService' };
+type CameraProxyServiceInstance = CameraProxyService & CameraProxyServiceBrand;
+
+// ============================================================================
+// CAMERA PROXY SERVICE
+// ============================================================================
+
+/**
+ * Multi-context camera proxy service
+ * Manages separate camera streams for multiple printer contexts
+ */
+export class CameraProxyService extends EventEmitter {
+  private static instance: CameraProxyServiceInstance | null = null;
+
+  /** Default configuration for camera proxies */
+  private readonly config: CameraProxyConfig;
+
+  /** Port allocator for camera proxy servers (8181-8191 range) */
+  private readonly portAllocator = new PortAllocator(8181, 8191);
+
+  /** Map of context streams indexed by context ID */
+  private readonly contextStreams = new Map<string, ContextStreamInfo>();
+
+  /** Reference to context manager */
+  private readonly contextManager = getPrinterContextManager();
+
+  private constructor() {
     super();
-    
+
     // Default configuration
     this.config = {
-      port: 8181,
+      port: 8181, // Not used in multi-context mode, kept for interface compatibility
       fallbackPort: 8182,
       autoStart: true,
       reconnection: {
@@ -66,133 +141,203 @@ export class CameraProxyService extends EventEmitter implements ICameraProxyServ
         exponentialBackoff: true
       }
     };
-    this.currentPort = this.config.port;
+
+    console.log('[CameraProxyService] Multi-context camera proxy service initialized');
+  }
+
+  /**
+   * Get singleton instance of CameraProxyService
+   */
+  public static getInstance(): CameraProxyServiceInstance {
+    if (!CameraProxyService.instance) {
+      CameraProxyService.instance = new CameraProxyService() as CameraProxyServiceInstance;
+    }
+    return CameraProxyService.instance;
   }
   
+  // ============================================================================
+  // MULTI-CONTEXT STREAM MANAGEMENT
+  // ============================================================================
+
   /**
-   * Initialize the camera proxy service
+   * Set camera stream URL for a specific context
+   * Creates a new camera proxy server for the context if needed
+   *
+   * @param contextId - Context ID to set stream for
+   * @param url - Camera stream URL
+   * @returns Local proxy URL for accessing the stream
    */
-  public async initialize(config: CameraProxyConfig): Promise<void> {
-    this.config = { ...this.config, ...config };
-    this.currentPort = this.config.port;
-    
-    if (this.config.autoStart) {
-      await this.start();
+  public async setStreamUrl(contextId: string, url: string): Promise<string> {
+    console.log(`[CameraProxyService] Setting stream URL for context ${contextId}: ${url}`);
+
+    // If stream already exists, clean it up first
+    if (this.contextStreams.has(contextId)) {
+      await this.removeContext(contextId);
     }
-  }
-  
-  /**
-   * Start the proxy server
-   */
-  public async start(): Promise<void> {
-    if (this.server) {
-      console.log('Camera proxy server already running');
-      return;
-    }
-    
-    // Create Express app
-    this.app = express();
-    
-    // Set up camera endpoint
-    this.app.get('/camera', (req, res) => {
-      this.handleCameraRequest(req, res);
+
+    // Allocate port for this context
+    const port = this.portAllocator.allocatePort();
+    const localUrl = `http://localhost:${port}/stream`;
+
+    // Create Express app and server for this context
+    const app = express();
+    const server = http.createServer(app);
+
+    // Set up stream endpoint
+    app.get('/stream', (req, res) => {
+      this.handleCameraRequest(contextId, req, res);
     });
-    
-    // Health check endpoint
-    this.app.get('/health', (req, res) => {
-      res.json(this.getStatus());
-    });
-    
-    // Create HTTP server
-    this.server = http.createServer(this.app);
-    
-    return new Promise((resolve, reject) => {
-      this.server!.on('error', (err: NodeJS.ErrnoException) => {
-        if (err.code === 'EADDRINUSE') {
-          console.log(`Port ${this.currentPort} in use, trying fallback port ${this.config.fallbackPort}`);
-          const oldPort = this.currentPort;
-          this.currentPort = this.config.fallbackPort;
-          
-          // Retry with fallback port
-          this.server!.listen(this.currentPort, () => {
-            console.log(`Camera proxy server running on http://localhost:${this.currentPort}`);
-            this.emitEvent('proxy-started', { port: this.currentPort });
-            this.emitEvent('port-changed', { oldPort, newPort: this.currentPort });
-            resolve();
-          });
-        } else {
-          console.error('Camera proxy server error:', err);
-          this.lastError = err.message;
-          reject(err);
-        }
+
+    // Set up health check endpoint
+    app.get('/health', (req, res) => {
+      const streamInfo = this.contextStreams.get(contextId);
+      res.json({
+        contextId,
+        port,
+        isStreaming: streamInfo?.isStreaming || false,
+        sourceUrl: streamInfo?.streamUrl || null,
+        clientCount: streamInfo?.activeClients.size || 0,
+        lastError: streamInfo?.lastError || null
       });
-      
-      this.server!.listen(this.currentPort, () => {
-        console.log(`Camera proxy server running on http://localhost:${this.currentPort}`);
-        this.emitEvent('proxy-started', { port: this.currentPort });
+    });
+
+    // Create stream info object
+    const streamInfo: ContextStreamInfo = {
+      port,
+      app,
+      server,
+      streamUrl: url,
+      localUrl,
+      isStreaming: false,
+      activeClients: new Map(),
+      currentRequest: null,
+      currentResponse: null,
+      retryCount: 0,
+      retryTimer: null,
+      lastError: null,
+      stats: {
+        bytesReceived: 0,
+        bytesSent: 0,
+        successfulConnections: 0,
+        failedConnections: 0
+      }
+    };
+
+    // Start the server
+    await new Promise<void>((resolve, reject) => {
+      server.on('error', (err: Error) => {
+        console.error(`[CameraProxyService] Server error for context ${contextId}:`, err);
+        streamInfo.lastError = err.message;
+        this.emitContextEvent(contextId, 'stream-error', null, err.message);
+        reject(err);
+      });
+
+      server.listen(port, () => {
+        console.log(`[CameraProxyService] Camera proxy running for context ${contextId} on port ${port}`);
+        this.emitContextEvent(contextId, 'proxy-started', { port });
         resolve();
       });
     });
+
+    // Store stream info
+    this.contextStreams.set(contextId, streamInfo);
+
+    // Update context manager with camera port
+    this.contextManager.updateCameraPort(contextId, port);
+
+    return localUrl;
   }
-  
+
   /**
-   * Stop the proxy server
+   * Get stream URL for the active context
+   *
+   * @returns Local proxy URL for active context or null if none
    */
-  public async stop(): Promise<void> {
+  public getCurrentStreamUrl(): string | null {
+    const activeContextId = this.contextManager.getActiveContextId();
+    if (!activeContextId) {
+      return null;
+    }
+
+    const streamInfo = this.contextStreams.get(activeContextId);
+    return streamInfo ? streamInfo.localUrl : null;
+  }
+
+  /**
+   * Get stream URL for a specific context
+   *
+   * @param contextId - Context ID to get URL for
+   * @returns Local proxy URL or null if not found
+   */
+  public getStreamUrlForContext(contextId: string): string | null {
+    const streamInfo = this.contextStreams.get(contextId);
+    return streamInfo ? streamInfo.localUrl : null;
+  }
+
+  /**
+   * Remove camera stream for a context and clean up resources
+   *
+   * @param contextId - Context ID to remove stream for
+   */
+  public async removeContext(contextId: string): Promise<void> {
+    const streamInfo = this.contextStreams.get(contextId);
+    if (!streamInfo) {
+      console.log(`[CameraProxyService] No stream for context ${contextId}`);
+      return;
+    }
+
+    console.log(`[CameraProxyService] Removing stream for context ${contextId}`);
+
     // Stop streaming
-    this.stopStreaming();
-    
+    this.stopStreamingForContext(contextId, streamInfo);
+
     // Close all client connections
-    this.activeClients.forEach(({ response }) => {
+    streamInfo.activeClients.forEach(({ response }) => {
       try {
         response.end();
       } catch {
         // Ignore errors during cleanup
       }
     });
-    this.activeClients.clear();
-    
+    streamInfo.activeClients.clear();
+
     // Close server
-    if (this.server) {
-      return new Promise((resolve) => {
-        this.server!.close(() => {
-          this.server = null;
-          this.app = null;
-          console.log('Camera proxy server stopped');
-          this.emitEvent('proxy-stopped');
-          resolve();
-        });
+    await new Promise<void>((resolve) => {
+      streamInfo.server.close(() => {
+        console.log(`[CameraProxyService] Server closed for context ${contextId}`);
+        this.emitContextEvent(contextId, 'proxy-stopped');
+        resolve();
       });
-    }
+    });
+
+    // Release port
+    this.portAllocator.releasePort(streamInfo.port);
+
+    // Update context manager
+    this.contextManager.updateCameraPort(contextId, null);
+
+    // Remove from map
+    this.contextStreams.delete(contextId);
   }
   
+  // ============================================================================
+  // CAMERA REQUEST HANDLING
+  // ============================================================================
+
   /**
-   * Set the camera stream URL
+   * Handle incoming camera request for a specific context
+   *
+   * @param contextId - Context ID this request is for
+   * @param req - Express request object
+   * @param res - Express response object
    */
-  public setStreamUrl(url: string | null): void {
-    if (url === this.streamUrl) return;
-    
-    console.log(`Setting camera stream URL: ${url || 'null'}`);
-    this.streamUrl = url;
-    
-    // If streaming, restart with new URL
-    if (this.isStreaming) {
-      this.stopStreaming();
-      if (this.activeClients.size > 0 && url) {
-        this.startStreaming();
-      }
-    }
-  }
-  
-  /**
-   * Handle incoming camera request
-   */
-  private handleCameraRequest(req: express.Request, res: express.Response): void {
-    if (!this.streamUrl) {
+  private handleCameraRequest(contextId: string, req: express.Request, res: express.Response): void {
+    const streamInfo = this.contextStreams.get(contextId);
+    if (!streamInfo) {
       res.status(503).send('Camera stream not available');
       return;
     }
-    
+
     const clientId = this.generateClientId();
     const client: CameraProxyClient = {
       id: clientId,
@@ -200,67 +345,72 @@ export class CameraProxyService extends EventEmitter implements ICameraProxyServ
       remoteAddress: req.socket.remoteAddress || 'unknown',
       isConnected: true
     };
-    
-    console.log(`New camera client connected: ${client.remoteAddress}`);
-    this.activeClients.set(clientId, { client, response: res });
-    
+
+    console.log(`[CameraProxyService] New camera client connected for context ${contextId}: ${client.remoteAddress}`);
+    streamInfo.activeClients.set(clientId, { client, response: res });
+
     // Handle client disconnect
     res.on('close', () => {
-      console.log(`Camera client disconnected: ${client.remoteAddress}`);
-      this.activeClients.delete(clientId);
-      this.emitEvent('client-disconnected', { clientId });
-      
+      console.log(`[CameraProxyService] Camera client disconnected for context ${contextId}: ${client.remoteAddress}`);
+      streamInfo.activeClients.delete(clientId);
+      this.emitContextEvent(contextId, 'client-disconnected', { clientId });
+
       // Stop streaming if no more clients
-      if (this.activeClients.size === 0) {
-        console.log('No more clients, stopping camera stream');
-        this.stopStreaming();
+      if (streamInfo.activeClients.size === 0) {
+        console.log(`[CameraProxyService] No more clients for context ${contextId}, stopping stream`);
+        this.stopStreamingForContext(contextId, streamInfo);
       }
     });
-    
+
     // Handle errors
     res.on('error', (err) => {
-      console.error('Client error:', err.message);
-      this.activeClients.delete(clientId);
+      console.error(`[CameraProxyService] Client error for context ${contextId}:`, err.message);
+      streamInfo.activeClients.delete(clientId);
     });
-    
-    this.emitEvent('client-connected', { clientId, remoteAddress: client.remoteAddress });
-    
+
+    this.emitContextEvent(contextId, 'client-connected', { clientId, remoteAddress: client.remoteAddress });
+
     // Start streaming if not already active
-    if (!this.isStreaming) {
-      this.startStreaming();
-    } else if (this.currentResponse) {
+    if (!streamInfo.isStreaming) {
+      this.startStreamingForContext(contextId, streamInfo);
+    } else if (streamInfo.currentResponse) {
       // If already streaming, copy headers from upstream
-      this.copyHeadersToClient(res);
+      this.copyHeadersToClient(streamInfo, res);
     }
   }
-  
+
+  // ============================================================================
+  // STREAMING LOGIC
+  // ============================================================================
+
   /**
-   * Start streaming from camera source
+   * Start streaming from camera source for a context
+   *
+   * @param contextId - Context ID to start streaming for
+   * @param streamInfo - Stream info object
    */
-  private startStreaming(): void {
-    if (!this.streamUrl) {
-      console.log('Cannot start camera stream: No URL provided');
+  private startStreamingForContext(contextId: string, streamInfo: ContextStreamInfo): void {
+    if (streamInfo.isStreaming) {
+      console.log(`[CameraProxyService] Camera stream already running for context ${contextId}`);
       return;
     }
-    
-    if (this.isStreaming) {
-      console.log('Camera stream already running');
-      return;
-    }
-    
-    console.log(`Starting camera stream from ${this.streamUrl}`);
-    this.isStreaming = true;
-    this.retryCount = 0;
-    this.connectToStream();
+
+    console.log(`[CameraProxyService] Starting camera stream for context ${contextId} from ${streamInfo.streamUrl}`);
+    streamInfo.isStreaming = true;
+    streamInfo.retryCount = 0;
+    this.connectToStreamForContext(contextId, streamInfo);
   }
-  
+
   /**
-   * Connect to camera stream
+   * Connect to camera stream for a context
+   *
+   * @param contextId - Context ID
+   * @param streamInfo - Stream info object
    */
-  private connectToStream(): void {
+  private connectToStreamForContext(contextId: string, streamInfo: ContextStreamInfo): void {
     try {
-      const url = new URL(this.streamUrl!);
-      
+      const url = new URL(streamInfo.streamUrl);
+
       const options: http.RequestOptions = {
         method: 'GET',
         hostname: url.hostname,
@@ -272,212 +422,335 @@ export class CameraProxyService extends EventEmitter implements ICameraProxyServ
           'User-Agent': 'FlashForge-Camera-Proxy'
         }
       };
-      
-      this.currentRequest = http.get(options, (response) => {
-        this.currentResponse = response;
+
+      streamInfo.currentRequest = http.get(options, (response) => {
+        streamInfo.currentResponse = response;
         
         if (response.statusCode !== 200) {
           const error = `Camera returned status code: ${response.statusCode}`;
-          console.error(error);
-          this.lastError = error;
-          this.stats.failedConnections++;
-          this.emitEvent('stream-error', null, error);
-          this.handleStreamError();
+          console.error(`[CameraProxyService] Error for context ${contextId}:`, error);
+          streamInfo.lastError = error;
+          streamInfo.stats.failedConnections++;
+          this.emitContextEvent(contextId, 'stream-error', null, error);
+          this.handleStreamErrorForContext(contextId, streamInfo);
           return;
         }
-        
-        console.log('Connected to camera stream');
-        this.lastError = null;
-        this.stats.successfulConnections++;
-        this.stats.currentRetryCount = 0;
-        this.emitEvent('stream-connected');
-        
+
+        console.log(`[CameraProxyService] Connected to camera stream for context ${contextId}`);
+        streamInfo.lastError = null;
+        streamInfo.stats.successfulConnections++;
+        streamInfo.retryCount = 0;
+        this.emitContextEvent(contextId, 'stream-connected');
+
         // Copy headers to all connected clients
-        this.activeClients.forEach(({ response }) => {
-          if (!response.headersSent) {
-            this.copyHeadersToClient(response);
+        streamInfo.activeClients.forEach(({ response: clientRes }) => {
+          if (!clientRes.headersSent) {
+            this.copyHeadersToClient(streamInfo, clientRes);
           }
         });
-        
+
         // Pipe data to all clients
         response.on('data', (chunk: Buffer) => {
-          this.stats.bytesReceived += chunk.length;
-          this.distributeToClients(chunk);
+          streamInfo.stats.bytesReceived += chunk.length;
+          this.distributeToClientsForContext(streamInfo, chunk);
         });
-        
+
         response.on('end', () => {
-          console.log('Camera stream ended');
-          this.emitEvent('stream-disconnected');
-          this.handleStreamError();
+          console.log(`[CameraProxyService] Camera stream ended for context ${contextId}`);
+          this.emitContextEvent(contextId, 'stream-disconnected');
+          this.handleStreamErrorForContext(contextId, streamInfo);
         });
-        
+
         response.on('error', (err) => {
-          console.error('Error receiving camera stream:', err);
-          this.lastError = err.message;
-          this.emitEvent('stream-error', null, err.message);
-          this.handleStreamError();
+          console.error(`[CameraProxyService] Error receiving camera stream for context ${contextId}:`, err);
+          streamInfo.lastError = err.message;
+          this.emitContextEvent(contextId, 'stream-error', null, err.message);
+          this.handleStreamErrorForContext(contextId, streamInfo);
         });
       });
-      
-      this.currentRequest.on('error', (err) => {
-        console.error('Error connecting to camera stream:', err);
-        this.lastError = err.message;
-        this.stats.failedConnections++;
-        this.emitEvent('stream-error', null, err.message);
-        this.handleStreamError();
+
+      streamInfo.currentRequest.on('error', (err) => {
+        console.error(`[CameraProxyService] Error connecting to camera stream for context ${contextId}:`, err);
+        streamInfo.lastError = err.message;
+        streamInfo.stats.failedConnections++;
+        this.emitContextEvent(contextId, 'stream-error', null, err.message);
+        this.handleStreamErrorForContext(contextId, streamInfo);
       });
-      
+
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
-      console.error('Error starting camera stream:', error);
-      this.lastError = error;
-      this.stats.failedConnections++;
-      this.emitEvent('stream-error', null, error);
-      this.isStreaming = false;
-      this.handleStreamError();
+      console.error(`[CameraProxyService] Error starting camera stream for context ${contextId}:`, error);
+      streamInfo.lastError = error;
+      streamInfo.stats.failedConnections++;
+      this.emitContextEvent(contextId, 'stream-error', null, error);
+      streamInfo.isStreaming = false;
+      this.handleStreamErrorForContext(contextId, streamInfo);
     }
   }
   
+  // ============================================================================
+  // HELPER METHODS
+  // ============================================================================
+
   /**
    * Copy headers from upstream to client
+   *
+   * @param streamInfo - Stream info object
+   * @param res - Client response object
    */
-  private copyHeadersToClient(res: express.Response): void {
-    if (!this.currentResponse || res.headersSent) return;
-    
-    const headers = this.currentResponse.headers;
+  private copyHeadersToClient(streamInfo: ContextStreamInfo, res: express.Response): void {
+    if (!streamInfo.currentResponse || res.headersSent) return;
+
+    const headers = streamInfo.currentResponse.headers;
     Object.keys(headers).forEach(key => {
       if (key.toLowerCase() !== 'connection') {
         res.setHeader(key, headers[key]!);
       }
     });
-    
+
     // Set connection close to prevent keep-alive issues
     res.setHeader('Connection', 'close');
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    
+
     // Don't use res.status() as it will trigger Express to send headers
     // Just set the status code directly
     res.statusCode = 200;
   }
-  
+
   /**
-   * Distribute data chunk to all clients
+   * Distribute data chunk to all clients for a context
+   *
+   * @param streamInfo - Stream info object
+   * @param chunk - Data chunk to distribute
    */
-  private distributeToClients(chunk: Buffer): void {
+  private distributeToClientsForContext(streamInfo: ContextStreamInfo, chunk: Buffer): void {
     const failedClients: string[] = [];
-    
-    this.activeClients.forEach(({ response }, clientId) => {
+
+    streamInfo.activeClients.forEach(({ response }, clientId) => {
       try {
         if (!response.destroyed && response.writable) {
           response.write(chunk);
-          this.stats.bytesSent += chunk.length;
+          streamInfo.stats.bytesSent += chunk.length;
         } else {
           failedClients.push(clientId);
         }
       } catch (err) {
-        console.error('Error sending data to client:', err);
+        console.error('[CameraProxyService] Error sending data to client:', err);
         failedClients.push(clientId);
       }
     });
-    
+
     // Clean up failed clients
     failedClients.forEach(clientId => {
-      this.activeClients.delete(clientId);
+      streamInfo.activeClients.delete(clientId);
     });
   }
-  
+
   /**
-   * Handle stream errors and reconnection
+   * Handle stream errors and reconnection for a context
+   *
+   * @param contextId - Context ID
+   * @param streamInfo - Stream info object
    */
-  private handleStreamError(): void {
-    this.stopStreaming();
-    
-    if (this.config.reconnection.enabled && 
-        this.activeClients.size > 0 && 
-        this.retryCount < this.config.reconnection.maxRetries) {
-      
+  private handleStreamErrorForContext(contextId: string, streamInfo: ContextStreamInfo): void {
+    this.stopStreamingForContext(contextId, streamInfo);
+
+    if (this.config.reconnection.enabled &&
+        streamInfo.activeClients.size > 0 &&
+        streamInfo.retryCount < this.config.reconnection.maxRetries) {
+
       const delay = this.config.reconnection.exponentialBackoff
-        ? this.config.reconnection.retryDelay * Math.pow(2, this.retryCount)
+        ? this.config.reconnection.retryDelay * Math.pow(2, streamInfo.retryCount)
         : this.config.reconnection.retryDelay;
-      
-      this.retryCount++;
-      this.stats.currentRetryCount = this.retryCount;
-      
-      console.log(`Retrying camera connection in ${delay}ms (attempt ${this.retryCount}/${this.config.reconnection.maxRetries})`);
-      this.emitEvent('retry-attempt', { attempt: this.retryCount, maxRetries: this.config.reconnection.maxRetries });
-      
-      this.retryTimer = setTimeout(() => {
-        if (this.activeClients.size > 0) {
-          this.isStreaming = true;
-          this.connectToStream();
+
+      streamInfo.retryCount++;
+
+      console.log(`[CameraProxyService] Retrying camera connection for context ${contextId} in ${delay}ms (attempt ${streamInfo.retryCount}/${this.config.reconnection.maxRetries})`);
+      this.emitContextEvent(contextId, 'retry-attempt', { attempt: streamInfo.retryCount, maxRetries: this.config.reconnection.maxRetries });
+
+      streamInfo.retryTimer = setTimeout(() => {
+        if (streamInfo.activeClients.size > 0) {
+          streamInfo.isStreaming = true;
+          this.connectToStreamForContext(contextId, streamInfo);
         }
       }, delay);
     }
   }
-  
+
   /**
-   * Stop streaming from camera
+   * Stop streaming from camera for a context
+   *
+   * @param contextId - Context ID
+   * @param streamInfo - Stream info object
    */
-  private stopStreaming(): void {
-    if (!this.isStreaming) return;
-    
-    console.log('Stopping camera stream');
-    this.isStreaming = false;
-    
+  private stopStreamingForContext(contextId: string, streamInfo: ContextStreamInfo): void {
+    if (!streamInfo.isStreaming) return;
+
+    console.log(`[CameraProxyService] Stopping camera stream for context ${contextId}`);
+    streamInfo.isStreaming = false;
+
     // Clear retry timer
-    if (this.retryTimer) {
-      clearTimeout(this.retryTimer);
-      this.retryTimer = null;
+    if (streamInfo.retryTimer) {
+      clearTimeout(streamInfo.retryTimer);
+      streamInfo.retryTimer = null;
     }
-    
+
     // Clean up request
-    if (this.currentRequest) {
-      this.currentRequest.destroy();
-      this.currentRequest = null;
+    if (streamInfo.currentRequest) {
+      streamInfo.currentRequest.destroy();
+      streamInfo.currentRequest = null;
     }
-    
-    this.currentResponse = null;
+
+    streamInfo.currentResponse = null;
   }
   
+  // ============================================================================
+  // PUBLIC API
+  // ============================================================================
+
   /**
-   * Get current proxy status
+   * @deprecated Use getStatusForContext(contextId) instead
+   * Get current proxy status (legacy compatibility)
    */
   public getStatus(): CameraProxyStatus {
+    console.warn('[CameraProxyService] getStatus() is deprecated in multi-context mode');
+
+    // Return status for active context if available
+    const activeContextId = this.contextManager.getActiveContextId();
+    if (activeContextId) {
+      const streamInfo = this.contextStreams.get(activeContextId);
+      if (streamInfo) {
+        return {
+          isRunning: true,
+          port: streamInfo.port,
+          proxyUrl: streamInfo.localUrl,
+          isStreaming: streamInfo.isStreaming,
+          sourceUrl: streamInfo.streamUrl,
+          clientCount: streamInfo.activeClients.size,
+          clients: Array.from(streamInfo.activeClients.values()).map(({ client }) => client),
+          lastError: streamInfo.lastError,
+          stats: {
+            bytesReceived: streamInfo.stats.bytesReceived,
+            bytesSent: streamInfo.stats.bytesSent,
+            successfulConnections: streamInfo.stats.successfulConnections,
+            failedConnections: streamInfo.stats.failedConnections,
+            currentRetryCount: streamInfo.retryCount
+          }
+        };
+      }
+    }
+
+    // No active context
     return {
-      isRunning: this.server !== null,
-      port: this.currentPort,
-      proxyUrl: `http://localhost:${this.currentPort}/camera`,
-      isStreaming: this.isStreaming,
-      sourceUrl: this.streamUrl,
-      clientCount: this.activeClients.size,
-      clients: Array.from(this.activeClients.values()).map(({ client }) => client),
-      lastError: this.lastError,
-      stats: { ...this.stats }
+      isRunning: false,
+      port: 0,
+      proxyUrl: '',
+      isStreaming: false,
+      sourceUrl: null,
+      clientCount: 0,
+      clients: [],
+      lastError: null,
+      stats: {
+        bytesReceived: 0,
+        bytesSent: 0,
+        successfulConnections: 0,
+        failedConnections: 0,
+        currentRetryCount: 0
+      }
     };
   }
-  
+
   /**
-   * Shutdown the service and cleanup
+   * Get status for a specific context
+   *
+   * @param contextId - Context ID to get status for
+   * @returns Camera proxy status or null if not found
+   */
+  public getStatusForContext(contextId: string): CameraProxyStatus | null {
+    const streamInfo = this.contextStreams.get(contextId);
+    if (!streamInfo) {
+      return null;
+    }
+
+    return {
+      isRunning: true,
+      port: streamInfo.port,
+      proxyUrl: streamInfo.localUrl,
+      isStreaming: streamInfo.isStreaming,
+      sourceUrl: streamInfo.streamUrl,
+      clientCount: streamInfo.activeClients.size,
+      clients: Array.from(streamInfo.activeClients.values()).map(({ client }) => client),
+      lastError: streamInfo.lastError,
+      stats: {
+        ...streamInfo.stats,
+        currentRetryCount: streamInfo.retryCount
+      }
+    };
+  }
+
+  /**
+   * Get all active context IDs with camera streams
+   *
+   * @returns Array of context IDs with camera streams
+   */
+  public getActiveContexts(): string[] {
+    return Array.from(this.contextStreams.keys());
+  }
+
+  /**
+   * Get total number of active camera streams
+   *
+   * @returns Count of active camera streams
+   */
+  public getActiveStreamCount(): number {
+    return this.contextStreams.size;
+  }
+
+  /**
+   * Shutdown the service and cleanup all streams
    */
   public async shutdown(): Promise<void> {
-    await this.stop();
+    console.log(`[CameraProxyService] Shutting down all camera streams (${this.contextStreams.size} active)`);
+
+    // Remove all contexts
+    const contextIds = Array.from(this.contextStreams.keys());
+    for (const contextId of contextIds) {
+      await this.removeContext(contextId);
+    }
+
+    // Reset port allocator
+    this.portAllocator.reset();
+
     this.removeAllListeners();
+    console.log('[CameraProxyService] Shutdown complete');
   }
-  
+
+  // ============================================================================
+  // UTILITY METHODS
+  // ============================================================================
+
   /**
    * Generate unique client ID
+   *
+   * @returns Unique client identifier
    */
   private generateClientId(): string {
     return `client-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   }
-  
+
   /**
-   * Emit camera proxy event
+   * Emit camera proxy event with context identification
+   *
+   * @param contextId - Context ID for the event
+   * @param type - Event type
+   * @param data - Event data
+   * @param error - Error message if applicable
    */
-  private emitEvent(type: CameraProxyEventType, data?: unknown, error?: string): void {
+  private emitContextEvent(contextId: string, type: CameraProxyEventType, data?: unknown, error?: string): void {
     this.emit(type, {
+      contextId,
       type,
       timestamp: new Date(),
       data,
@@ -486,5 +759,14 @@ export class CameraProxyService extends EventEmitter implements ICameraProxyServ
   }
 }
 
-// Export singleton instance
-export const cameraProxyService = new CameraProxyService();
+// ============================================================================
+// FACTORY FUNCTIONS
+// ============================================================================
+
+/**
+ * Get singleton instance of CameraProxyService
+ * Convenience function for imports
+ */
+export function getCameraProxyService(): CameraProxyServiceInstance {
+  return CameraProxyService.getInstance();
+}

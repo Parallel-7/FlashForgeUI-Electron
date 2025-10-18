@@ -25,7 +25,11 @@ import { BaseComponent } from '../base/component';
 import type { ComponentUpdateData } from '../base/types';
 import type { ResolvedCameraConfig } from '../../../types/camera/camera.types';
 import type { PollingData, PrinterState, CurrentJobInfo } from '../../../types/polling';
+import type { JSMpegPlayerInstance, JSMpegStatic } from '../../../types/jsmpeg';
 import './camera-preview.css';
+
+// Import JSMpeg library (no official types available)
+const JSMpeg: JSMpegStatic = require('@cycjimmy/jsmpeg-player') as JSMpegStatic;
 
 /**
  * Camera preview states for visual feedback
@@ -66,8 +70,11 @@ export class CameraPreviewComponent extends BaseComponent {
   /** Current preview enabled state */
   private previewEnabled = false;
 
-  /** Current camera stream element */
-  private cameraStreamElement: HTMLImageElement | null = null;
+  /** Current camera stream element (img for MJPEG, canvas for RTSP) */
+  private cameraStreamElement: HTMLImageElement | HTMLCanvasElement | null = null;
+
+  /** JSMpeg player instance for RTSP streams */
+  private jsmpegPlayer: JSMpegPlayerInstance | null = null;
 
   /** Current camera state for visual feedback */
   private currentState: CameraState = 'disabled';
@@ -88,15 +95,45 @@ export class CameraPreviewComponent extends BaseComponent {
 
   /**
    * Set up event listeners for the integrated component
-   * Includes camera preview toggle button
+   * Includes camera preview toggle button and context switching
    */
   protected async setupEventListeners(): Promise<void> {
     const previewButton = this.findElementById<HTMLButtonElement>('btn-preview');
-    
+
     if (previewButton) {
       this.addEventListener(previewButton, 'click', this.handleCameraPreviewToggle.bind(this));
     } else {
       console.warn('Camera Preview: Preview button not found during setup');
+    }
+
+    // Listen for context switches to reload camera for new printer
+    window.api.receive('printer-context-switched', (...args: unknown[]) => {
+      const event = args[0] as { contextId: string };
+      void this.handleContextSwitch(event.contextId);
+    });
+  }
+
+  /**
+   * Handle context switch - reload camera stream for new printer
+   */
+  private async handleContextSwitch(contextId: string): Promise<void> {
+    console.log(`[CameraPreview] Context switched to ${contextId}`);
+
+    const button = this.findElementById<HTMLButtonElement>('btn-preview');
+    const cameraView = this.findElement('.camera-view');
+    if (!button || !cameraView) return;
+
+    // If preview is enabled, reload it for the new context
+    if (this.previewEnabled) {
+      // Disable current preview
+      await this.disableCameraPreview(button, cameraView);
+
+      // Re-enable for new context
+      await this.enableCameraPreview(button, cameraView);
+    } else {
+      // If preview is disabled, clear any stale image and show "Preview Disabled" state
+      this.cleanupCameraStream();
+      cameraView.innerHTML = '<div class="no-camera">Preview Disabled</div>';
     }
   }
 
@@ -187,8 +224,12 @@ export class CameraPreviewComponent extends BaseComponent {
   private async enableCameraPreview(button: HTMLElement, cameraView: HTMLElement): Promise<void> {
     this.updateComponentState('loading');
 
+    console.log('[CameraPreview] Enabling camera preview...');
+
     // Check camera availability
+    console.log('[CameraPreview] Calling window.api.camera.getConfig()...');
     const cameraConfigRaw = await window.api.camera.getConfig();
+    console.log('[CameraPreview] Got camera config:', cameraConfigRaw);
     const cameraConfig = cameraConfigRaw as ResolvedCameraConfig | null;
 
     if (!cameraConfig) {
@@ -209,15 +250,33 @@ export class CameraPreviewComponent extends BaseComponent {
       return;
     }
 
-    // Camera is available - get proxy URL and show stream
-    const proxyUrl = await window.api.camera.getProxyUrl();
-    const streamUrl = `${proxyUrl}`; // The proxy URL already includes /camera
+    console.log(`Enabling camera preview from: ${cameraConfig.sourceType} camera (${cameraConfig.streamType})`);
 
-    console.log(`Enabling camera preview from: ${cameraConfig.sourceType} camera`);
+    // Handle based on stream type
+    if (cameraConfig.streamType === 'rtsp') {
+      // RTSP: Use node-rtsp-stream WebSocket + JSMpeg player
+      console.log('[CameraPreview] Setting up RTSP stream (node-rtsp-stream + JSMpeg)');
 
-    // Create and setup stream
-    this.createCameraStream(streamUrl, cameraView);
-    
+      // Get the RTSP stream WebSocket URL from backend
+      const rtspStreamInfo = await window.api.invoke('camera:get-rtsp-relay-info') as { wsUrl: string } | null;
+
+      if (!rtspStreamInfo || !rtspStreamInfo.wsUrl) {
+        this.handleCameraError(button, cameraView, 'RTSP stream not available');
+        return;
+      }
+
+      console.log('[CameraPreview] RTSP stream WebSocket URL:', rtspStreamInfo.wsUrl);
+      this.createRtspStream(rtspStreamInfo.wsUrl, cameraView);
+    } else {
+      // MJPEG: Use proxy URL
+      console.log('[CameraPreview] Calling window.api.camera.getProxyUrl()...');
+      const proxyUrl = await window.api.camera.getProxyUrl();
+      console.log('[CameraPreview] Got proxy URL:', proxyUrl);
+      const streamUrl = `${proxyUrl}`; // The proxy URL already includes /camera
+      console.log('[CameraPreview] Final stream URL:', streamUrl);
+      this.createMjpegStream(streamUrl, cameraView);
+    }
+
     // Update button state
     button.textContent = 'Preview Off';
     this.updateComponentState('streaming');
@@ -244,52 +303,97 @@ export class CameraPreviewComponent extends BaseComponent {
   }
 
   /**
-   * Create and setup camera stream image element
+   * Create and setup MJPEG camera stream using img element
    */
-  private createCameraStream(streamUrl: string, cameraView: HTMLElement): void {
+  private createMjpegStream(streamUrl: string, cameraView: HTMLElement): void {
     // Clear existing content
     cameraView.innerHTML = '';
 
     // Create image element for MJPEG stream
-    this.cameraStreamElement = document.createElement('img');
-    this.cameraStreamElement.src = streamUrl;
-    this.cameraStreamElement.style.width = '100%';
-    this.cameraStreamElement.style.height = '100%';
-    this.cameraStreamElement.style.objectFit = 'cover';
-    this.cameraStreamElement.alt = 'Camera Stream';
+    const imgElement = document.createElement('img');
+    imgElement.src = streamUrl;
+    imgElement.style.width = '100%';
+    imgElement.style.height = '100%';
+    imgElement.style.objectFit = 'cover';
+    imgElement.alt = 'Camera Stream';
 
     // Handle stream errors
-    this.cameraStreamElement.onerror = () => {
-      console.log('Camera stream error - attempting to restore...');
-      // Try to restore the stream
-      void window.api.camera.restoreStream().then(restored => {
-        if (!restored && cameraView) {
-          cameraView.innerHTML = '<div class="no-camera">Camera stream error</div>';
-          this.updateComponentState('error');
-        }
-      });
+    imgElement.onerror = () => {
+      console.error('MJPEG stream failed to load');
+      this.updateComponentState('error');
     };
 
-    // Handle successful load
-    this.cameraStreamElement.onload = () => {
-      console.log('Camera stream connected successfully');
-      this.updateComponentState('streaming');
-    };
-
-    cameraView.appendChild(this.cameraStreamElement);
+    // Add to view
+    cameraView.appendChild(imgElement);
+    this.cameraStreamElement = imgElement;
   }
 
   /**
-   * Clean up camera stream element
+   * Create and setup RTSP camera stream using JSMpeg + node-rtsp-stream
+   */
+  private createRtspStream(wsUrl: string, cameraView: HTMLElement): void {
+    // Clear existing content
+    cameraView.innerHTML = '';
+
+    // Create canvas element for JSMpeg player
+    const canvasElement = document.createElement('canvas');
+    canvasElement.id = 'rtsp-canvas';
+    canvasElement.style.width = '100%';
+    canvasElement.style.height = '100%';
+    canvasElement.style.objectFit = 'cover';
+
+    // Add to view first so JSMpeg can access it
+    cameraView.appendChild(canvasElement);
+    this.cameraStreamElement = canvasElement;
+
+    try {
+      // Initialize JSMpeg player with WebSocket URL from node-rtsp-stream
+      this.jsmpegPlayer = new JSMpeg.Player(wsUrl, {
+        canvas: canvasElement,
+        autoplay: true,
+        audio: false,
+        // Optional callbacks
+        onSourceCompleted: () => {
+          console.log('[CameraPreview] RTSP stream completed');
+        },
+        onSourceEstablished: () => {
+          console.log('[CameraPreview] RTSP stream established');
+          this.updateComponentState('streaming');
+        },
+      });
+
+      console.log('[CameraPreview] JSMpeg player initialized for RTSP stream');
+    } catch (error) {
+      console.error('[CameraPreview] Failed to initialize JSMpeg player:', error);
+      this.updateComponentState('error');
+    }
+  }
+
+  /**
+   * Clean up camera stream element (handles img, canvas, and JSMpeg player)
    */
   private cleanupCameraStream(): void {
+    // Clean up JSMpeg player if it exists
+    if (this.jsmpegPlayer) {
+      try {
+        // The player is already typed as JSMpegPlayerInstance | null
+        this.jsmpegPlayer.destroy();
+        console.log('[CameraPreview] JSMpeg player destroyed');
+      } catch (error) {
+        console.warn('[CameraPreview] Error destroying JSMpeg player:', error);
+      }
+      this.jsmpegPlayer = null;
+    }
+
     if (this.cameraStreamElement) {
       // Remove event handlers to prevent false error events
-      this.cameraStreamElement.onerror = null;
-      this.cameraStreamElement.onload = null;
+      if (this.cameraStreamElement instanceof HTMLImageElement) {
+        this.cameraStreamElement.onerror = null;
+        this.cameraStreamElement.onload = null;
+        this.cameraStreamElement.src = '';
+      }
+      // Canvas elements don't need special cleanup beyond JSMpeg player
 
-      // Clear the source to stop the stream
-      this.cameraStreamElement.src = '';
       this.cameraStreamElement = null;
     }
   }

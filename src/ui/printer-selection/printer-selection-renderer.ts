@@ -1,6 +1,30 @@
-// printer-selection-renderer.ts
-// TypeScript renderer logic for the Printer Selection Dialog
-// Extended to handle both discovered and saved printer selection modes
+/**
+ * @fileoverview Printer Selection Dialog renderer process implementation supporting dual-mode operation
+ * for both network-discovered printers and saved printer connections. Manages UI state, printer discovery
+ * events, table rendering, and user interaction for printer selection workflows. Implements auto-discovery
+ * timeout handling, connection status feedback, and supports printer reconnection from saved configurations.
+ *
+ * Key Features:
+ * - Dual-mode selection: discovered printers (network scan) or saved printers (from history)
+ * - Real-time printer discovery with 15-second timeout and retry capability
+ * - Auto-selection of last-used printer when viewing saved printers
+ * - IP address change detection for saved printers with visual indicators
+ * - Connection status feedback (connecting, success, failure)
+ * - Double-click selection with visual row highlighting
+ * - Comprehensive error handling for discovery failures
+ *
+ * Dialog Modes:
+ * - Discovered Mode: Shows printers found via network discovery scan
+ * - Saved Mode: Shows previously connected printers with online status filtering
+ *
+ * IPC Events:
+ * - receiveMode: Sets dialog mode (discovered/saved)
+ * - receivePrinters: Updates discovered printer list
+ * - receiveSavedPrinters: Updates saved printer list with last-used info
+ * - onDiscoveryStarted: Triggers discovery timeout timer
+ * - onDiscoveryError: Handles discovery failures with user feedback
+ * - onConnecting/onConnectionFailed: Connection status updates
+ */
 
 // Ensure this file is treated as a module
 export {};

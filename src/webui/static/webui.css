@@ -133,7 +133,8 @@ body {
   padding: 12px 20px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
   border-bottom: 1px solid #555;
 }
 
@@ -141,6 +142,40 @@ body {
   font-size: 24px;
   color: #5c6bc0;
   font-weight: 500;
+  flex-shrink: 0;
+}
+
+.printer-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.printer-selector label {
+  color: #b0b0b0;
+}
+
+.printer-select {
+  background-color: #404040;
+  color: #e0e0e0;
+  border: 1px solid #555;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  cursor: pointer;
+  outline: none;
+  min-width: 200px;
+}
+
+.printer-select:hover {
+  border-color: #5c6bc0;
+}
+
+.printer-select:focus {
+  border-color: #5c6bc0;
+  box-shadow: 0 0 0 2px rgba(92, 107, 192, 0.2);
 }
 
 .connection-status {
@@ -148,6 +183,8 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 16px;
+  margin-left: auto;
+  flex-shrink: 0;
 }
 
 .connection-indicator {
@@ -171,6 +208,7 @@ body {
   font-size: 16px;
   cursor: pointer;
   transition: background-color 0.2s;
+  flex-shrink: 0;
 }
 
 .logout-button:hover {

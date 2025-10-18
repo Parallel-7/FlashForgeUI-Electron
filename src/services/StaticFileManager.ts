@@ -1,10 +1,56 @@
 /**
- * StaticFileManager provides centralized management of static file path resolution
- * and asset validation for the Electron application. This service builds on the
- * EnvironmentDetectionService to provide environment-aware path generation for HTML,
- * CSS, and JS files, along with comprehensive validation methods to ensure assets
- * are available before loading. Essential for reliable web UI serving across
- * development and production environments.
+ * @fileoverview StaticFileManager provides centralized management of static file path resolution
+ * and asset validation for the Electron application.
+ *
+ * This service builds on the EnvironmentDetectionService to provide environment-aware path generation
+ * for HTML, CSS, JavaScript, and other static assets. It ensures reliable asset loading across
+ * development and production environments by validating file existence and accessibility before
+ * attempting to load them into BrowserWindows. The service maintains a manifest of critical assets
+ * and provides comprehensive validation capabilities with detailed error reporting.
+ *
+ * Key Features:
+ * - Environment-aware path resolution leveraging EnvironmentDetectionService
+ * - Asset type categorization (html, css, js, icon, image, font, other)
+ * - Comprehensive asset validation including existence and accessibility checks
+ * - Batch validation with parallel processing for multiple assets
+ * - Asset manifest generation for all configured static files
+ * - Validation summary with detailed error reporting for missing/inaccessible assets
+ * - Critical asset validation for application startup requirements
+ * - Diagnostic information export for debugging and troubleshooting
+ * - Singleton pattern ensuring consistent configuration across the application
+ *
+ * Core Responsibilities:
+ * - Resolve static file paths based on environment (development vs. production)
+ * - Validate asset existence and file system accessibility before loading
+ * - Maintain configuration of all static assets including HTML, CSS, JS, icons, and preload scripts
+ * - Provide type-safe asset path generation with branded types for security
+ * - Generate asset manifests for runtime introspection and validation
+ * - Track critical assets required for application startup (main HTML, renderer bundle, preload script)
+ * - Provide diagnostic information for debugging asset loading issues
+ *
+ * Asset Types:
+ * - html: HTML template files for windows (main window, dialogs, etc.)
+ * - css: Stylesheet files for UI styling
+ * - js: JavaScript bundles (renderer bundles, preload scripts)
+ * - icon: Application icons for different platforms (.png, .ico, .icns)
+ * - image: Image assets used in the UI
+ * - font: Font files for text rendering
+ * - other: Miscellaneous static assets
+ *
+ * Validation Results:
+ * - exists: Whether the file exists on the file system
+ * - isAccessible: Whether the file is readable by the application
+ * - size: File size in bytes (if accessible)
+ * - lastModified: Last modification timestamp (if accessible)
+ * - error: Detailed error message if validation failed
+ *
+ * @exports StaticFileManager - Main service class for static file management
+ * @exports getStaticFileManager - Singleton instance accessor
+ * @exports AssetType - Type union for asset categorization
+ * @exports AssetValidationResult - Type for asset validation results
+ * @exports StaticFileConfig - Type for static file configuration
+ * @exports AssetManifest - Type for asset manifest data
+ * @exports ValidationSummary - Type for validation summary reports
  */
 
 import * as path from 'path';

@@ -1,7 +1,20 @@
 /**
- * Zod validation schemas for WebUI API.
- * Ensures all incoming data from web clients is properly validated.
- * Provides runtime type safety for web API endpoints.
+ * @fileoverview Zod validation schemas for WebUI API requests and WebSocket communication.
+ *
+ * Provides comprehensive runtime validation for all data received from web clients including
+ * authentication requests, WebSocket commands, printer control operations, and API endpoint
+ * payloads. These schemas ensure type safety and security by validating all incoming data
+ * before processing, protecting against malformed requests, injection attacks, and type-related
+ * runtime errors. Includes specialized validators for temperature controls, job operations,
+ * and command-specific data with helpful error messages for client-side feedback.
+ *
+ * Key exports:
+ * - Authentication schemas: WebUILoginRequestSchema, AuthTokenSchema
+ * - WebSocket schemas: WebSocketCommandSchema, WebSocketCommandTypeSchema
+ * - Command validation: PrinterCommandSchema, CommandDataValidators
+ * - Temperature/Job schemas: TemperatureSetRequestSchema, JobStartRequestSchema, GCodeCommandRequestSchema
+ * - Helper functions: validateWebSocketCommand, extractBearerToken, createValidationError
+ * - Type exports: ValidatedLoginRequest, ValidatedWebSocketCommand, ValidatedPrinterCommand
  */
 
 import { z } from 'zod';

@@ -1,6 +1,22 @@
 /**
- * Shared type definitions for IPC communication between main and renderer processes.
- * These types ensure consistency across different IPC handlers and preload scripts.
+ * @fileoverview Shared IPC type definitions for main/renderer process communication
+ *
+ * Provides type-safe interfaces for IPC communication payloads ensuring consistency
+ * between IPC handlers in the main process and preload script type definitions. Covers
+ * job upload parameters, material mappings, and slicer metadata parsing.
+ *
+ * Key Types:
+ * - UploadJobPayload: Standard printer job upload with leveling and auto-start options
+ * - AD5XUploadParams: Enhanced upload for AD5X printers with material station mappings
+ * - SlicerMetadata: Parsed gcode/x3g metadata with error handling via slicer-meta library
+ *
+ * Integration Points:
+ * - job-handlers.ts: Upload IPC handler implementation
+ * - material-handlers.ts: Material mapping validation
+ * - BasePrinterBackend: Upload method parameter validation
+ * - Preload script: Type-safe API method signatures
+ *
+ * @module types/ipc
  */
 
 import type { AD5XMaterialMapping } from 'ff-api';

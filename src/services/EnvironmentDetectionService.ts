@@ -1,9 +1,22 @@
 /**
- * EnvironmentDetectionService provides reliable environment detection and path resolution
- * for Electron applications. This service handles the complexities of determining whether
- * the app is running in development or production mode, packaged or unpackaged, and
- * provides appropriate resource paths for each context. Essential for proper static
- * file serving and asset loading across different deployment scenarios.
+ * @fileoverview Environment detection service for reliable Electron app environment and path resolution.
+ *
+ * Provides comprehensive environment detection and resource path management:
+ * - Development vs production mode detection
+ * - Packaged vs unpackaged execution context
+ * - Appropriate resource path resolution for each environment
+ * - WebUI static file path configuration
+ * - Asset and preload script path management
+ * - Environment-specific configuration
+ *
+ * Key exports:
+ * - EnvironmentDetectionService class: Environment detection and path resolver
+ * - getEnvironmentDetectionService(): Singleton accessor
+ * - Environment/ExecutionContext types
+ *
+ * Essential for proper static file serving and asset loading across different deployment
+ * scenarios. Handles the complexity of Electron's packaged vs development paths, ensuring
+ * correct resource loading regardless of how the application is executed.
  */
 
 import { app } from 'electron';

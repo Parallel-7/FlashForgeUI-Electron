@@ -1,6 +1,20 @@
 /**
- * Tests for StaticFileManager service
- * Validates static file path resolution, asset validation, and environment-aware behavior
+ * @fileoverview Unit tests for StaticFileManager service
+ *
+ * Validates static file path resolution, asset validation, and environment-aware resource
+ * management. Tests ensure correct behavior across development and production builds,
+ * proper handling of missing or inaccessible assets, and accurate manifest generation.
+ *
+ * Key Features Tested:
+ * - Singleton pattern implementation and instance management
+ * - Environment-aware path resolution (main HTML, renderer bundle, preload script)
+ * - Asset type-specific path generation (HTML, CSS, JS, icons, images)
+ * - File validation including existence, accessibility, and metadata checks
+ * - Critical asset validation with comprehensive error reporting
+ * - Asset manifest generation for deployment verification
+ * - Graceful handling of file system errors and permission issues
+ *
+ * @module services/__tests__/StaticFileManager.test
  */
 
 import { StaticFileManager, getStaticFileManager } from '../StaticFileManager';

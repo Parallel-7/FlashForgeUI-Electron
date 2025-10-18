@@ -1,3 +1,54 @@
+/**
+ * @fileoverview Printer family detection, model identification, and connection utilities
+ * for FlashForge printer compatibility management. Provides comprehensive printer classification
+ * (5M family vs. legacy), feature detection (camera, LED, filtration, material station), and
+ * validation helpers for IP addresses, serial numbers, and check codes.
+ *
+ * Key Features:
+ * - Printer model type detection from typeName strings (5M, 5M Pro, AD5X, legacy)
+ * - Enhanced printer family information with feature capability flags
+ * - Client type determination (new API vs. legacy API)
+ * - Connection parameter validation (IP, serial number, check code)
+ * - Feature availability checking and override capability detection
+ * - Error message generation for connection failures
+ * - Timeout calculation based on printer family
+ * - Display name formatting and sanitization
+ *
+ * Printer Classification:
+ * - 5M Family: Adventurer 5M, 5M Pro, AD5X (new API, check code required)
+ * - Legacy: All other models (legacy API, direct connection)
+ *
+ * Model-Specific Features:
+ * - Adventurer 5M Pro: Built-in camera, LED, filtration
+ * - Adventurer 5M: No built-in peripherals
+ * - AD5X: Material station support, no built-in camera/LED/filtration
+ * - Generic Legacy: No built-in peripherals, no material station
+ *
+ * Key Functions:
+ * - detectPrinterModelType(typeName): Returns PrinterModelType enum
+ * - getPrinterModelInfo(typeName): Returns comprehensive feature info
+ * - detectPrinterFamily(typeName): Returns family classification with check code requirement
+ * - determineClientType(is5MFamily): Returns 'new' or 'legacy' client type
+ * - supportsDualAPI(modelType): Checks if printer can use both APIs
+ *
+ * Validation Functions:
+ * - isValidIPAddress(ip): IPv4 format validation
+ * - isValidSerialNumber(serial): Serial number format validation
+ * - isValidCheckCode(code): Check code format validation
+ * - shouldPromptForCheckCode(): Determines if check code prompt is needed
+ *
+ * Utilities:
+ * - formatPrinterName/sanitizePrinterName: Display and filesystem-safe naming
+ * - getConnectionErrorMessage(error): User-friendly error messages
+ * - getConnectionTimeout(is5MFamily): Dynamic timeout based on printer type
+ * - formatConnectionStatus(isConnected, name): Status string generation
+ *
+ * Context:
+ * Central to printer backend selection, connection workflow, and feature availability
+ * throughout the application. Used by ConnectionFlowManager, PrinterBackendManager,
+ * and UI components for printer-specific behavior.
+ */
+
 // src/utils/PrinterUtils.ts
 // Utility functions for printer connection and family detection
 

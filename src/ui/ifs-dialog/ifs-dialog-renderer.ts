@@ -1,3 +1,19 @@
+/**
+ * @fileoverview Renderer process for IFS material station status display dialog.
+ *
+ * Implements visual material station display for AD5X printers showing real-time slot status,
+ * filament types, colors, and active slot information. Handles dynamic UI updates for material
+ * presence detection, connection status, and visual spool representations with color coding.
+ * Manages slot indexing conversion between backend (0-based) and UI (1-based) displays.
+ *
+ * Key features:
+ * - Real-time material slot status visualization
+ * - Color-coded spool displays matching actual filament colors
+ * - Connection status indicator with error messaging
+ * - Active slot highlighting and empty slot detection
+ * - Event-driven updates from main process via IPC
+ */
+
 // ifs-dialog-renderer.ts
 // IFS Dialog renderer process logic for material station display
 

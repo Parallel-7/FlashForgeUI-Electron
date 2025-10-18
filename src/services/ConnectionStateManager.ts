@@ -1,12 +1,27 @@
 /**
- * ConnectionStateManager.ts
- * Manages printer connection state and client instances
- * Tracks current connection status, printer details, and API client references
+ * @fileoverview Manager for tracking printer connection state across multiple printer contexts.
+ *
+ * Provides centralized connection state management for multi-printer support:
+ * - Per-context connection state tracking
+ * - Client instance storage (primary and secondary clients)
+ * - Printer details management
+ * - Connection status monitoring (connected/disconnected, timestamps)
+ * - Event emission for connection state changes
+ * - Activity tracking for connection health monitoring
+ *
+ * Key exports:
+ * - ConnectionStateManager class: Multi-context connection state tracker
+ * - getConnectionStateManager(): Singleton accessor
+ *
+ * The manager maintains a separate connection state for each printer context, enabling
+ * independent tracking of multiple simultaneous printer connections. State includes client
+ * instances, printer details, connection status, and activity timestamps.
  */
 
 import { EventEmitter } from 'events';
 import { FiveMClient, FlashForgeClient } from 'ff-api';
 import { PrinterDetails, PrinterConnectionState } from '../types/printer';
+import { getPrinterContextManager } from '../managers/PrinterContextManager';
 
 /**
  * Internal connection state structure
@@ -21,19 +36,15 @@ interface ConnectionState {
 }
 
 /**
- * Service responsible for managing printer connection state
- * Tracks client instances, connection status, and printer details
+ * Service responsible for managing printer connection state per context
+ * Tracks client instances, connection status, and printer details for multiple printers
  */
 export class ConnectionStateManager extends EventEmitter {
   private static instance: ConnectionStateManager | null = null;
-  private connectionState: ConnectionState = {
-    primaryClient: null,
-    secondaryClient: null,
-    details: null,
-    isConnected: false,
-    connectionStartTime: null,
-    lastActivityTime: null
-  };
+  private readonly contextManager = getPrinterContextManager();
+
+  // Multi-context state storage
+  private readonly contextStates = new Map<string, ConnectionState>();
 
   private constructor() {
     super();
@@ -50,61 +61,101 @@ export class ConnectionStateManager extends EventEmitter {
   }
 
   /**
-   * Set state to connecting
+   * Set state to connecting for a specific context
+   *
+   * @param contextId - Context ID for this connection
+   * @param printer - Printer info
    */
-  public setConnecting(printer: { name: string; ipAddress: string }): void {
-    this.connectionState = {
-      ...this.connectionState,
-      isConnected: false,
-      connectionStartTime: new Date(),
-      lastActivityTime: new Date()
-    };
-    this.emit('state-changed', { state: 'connecting', printer });
-  }
-
-  /**
-   * Set state to connected with client instances and printer details
-   */
-  public setConnected(
-    details: PrinterDetails,
-    primaryClient: FiveMClient | FlashForgeClient,
-    secondaryClient?: FlashForgeClient
-  ): void {
-    this.connectionState = {
-      primaryClient,
-      secondaryClient: secondaryClient || null,
-      details,
-      isConnected: true,
-      connectionStartTime: this.connectionState.connectionStartTime || new Date(),
-      lastActivityTime: new Date()
-    };
-    this.emit('state-changed', { state: 'connected', details });
-  }
-
-  /**
-   * Set state to disconnected and clear client references
-   */
-  public setDisconnected(): void {
-    const previousDetails = this.connectionState.details;
-    
-    this.connectionState = {
+  public setConnecting(contextId: string, printer: { name: string; ipAddress: string }): void {
+    const now = new Date();
+    const state: ConnectionState = {
       primaryClient: null,
       secondaryClient: null,
       details: null,
       isConnected: false,
-      connectionStartTime: null,
-      lastActivityTime: null
+      connectionStartTime: now,
+      lastActivityTime: now
     };
-    
-    this.emit('state-changed', { state: 'disconnected', previousDetails });
+
+    this.contextStates.set(contextId, state);
+
+    // Update context manager
+    this.contextManager.updateConnectionState(contextId, 'connecting');
+
+    this.emit('state-changed', { contextId, state: 'connecting', printer });
   }
 
   /**
-   * Get current connection state
+   * Set state to connected with client instances and printer details
+   *
+   * @param contextId - Context ID for this connection
+   * @param details - Printer details
+   * @param primaryClient - Primary API client
+   * @param secondaryClient - Optional secondary API client
    */
-  public getState(): PrinterConnectionState {
-    const { details, isConnected, connectionStartTime } = this.connectionState;
-    
+  public setConnected(
+    contextId: string,
+    details: PrinterDetails,
+    primaryClient: FiveMClient | FlashForgeClient,
+    secondaryClient?: FlashForgeClient
+  ): void {
+    const existingState = this.contextStates.get(contextId);
+    const state: ConnectionState = {
+      primaryClient,
+      secondaryClient: secondaryClient || null,
+      details,
+      isConnected: true,
+      connectionStartTime: existingState?.connectionStartTime || new Date(),
+      lastActivityTime: new Date()
+    };
+
+    this.contextStates.set(contextId, state);
+
+    // Update context manager
+    this.contextManager.updateConnectionState(contextId, 'connected');
+
+    this.emit('state-changed', { contextId, state: 'connected', details });
+  }
+
+  /**
+   * Set state to disconnected and clear client references
+   *
+   * @param contextId - Context ID for this disconnection
+   */
+  public setDisconnected(contextId: string): void {
+    const existingState = this.contextStates.get(contextId);
+    const previousDetails = existingState?.details;
+
+    // Update context manager
+    this.contextManager.updateConnectionState(contextId, 'disconnected');
+
+    // Remove from map
+    this.contextStates.delete(contextId);
+
+    this.emit('state-changed', { contextId, state: 'disconnected', previousDetails });
+  }
+
+  /**
+   * Get connection state for a specific context
+   *
+   * @param contextId - Context ID (required)
+   * @returns Connection state
+   */
+  public getState(contextId: string): PrinterConnectionState {
+    const state = this.contextStates.get(contextId);
+    if (!state) {
+      return {
+        isConnected: false,
+        printerName: undefined,
+        ipAddress: undefined,
+        clientType: undefined,
+        isPrinting: false,
+        lastConnected: new Date()
+      };
+    }
+
+    const { details, isConnected, connectionStartTime } = state;
+
     return {
       isConnected,
       printerName: details?.Name,
@@ -116,70 +167,121 @@ export class ConnectionStateManager extends EventEmitter {
   }
 
   /**
-   * Check if currently connected
+   * Check if currently connected for a specific context
+   *
+   * @param contextId - Context ID (required)
+   * @returns True if connected
    */
-  public isConnected(): boolean {
-    return this.connectionState.isConnected && this.connectionState.primaryClient !== null;
+  public isConnected(contextId: string): boolean {
+    const state = this.contextStates.get(contextId);
+    if (!state) {
+      return false;
+    }
+
+    return state.isConnected && state.primaryClient !== null;
   }
 
   /**
-   * Get primary client instance
+   * Get primary client instance for a specific context
+   *
+   * @param contextId - Context ID (required)
+   * @returns Primary client or null
    */
-  public getPrimaryClient(): FiveMClient | FlashForgeClient | null {
-    return this.connectionState.primaryClient;
+  public getPrimaryClient(contextId: string): FiveMClient | FlashForgeClient | null {
+    const state = this.contextStates.get(contextId);
+    if (!state) {
+      return null;
+    }
+
+    return state.primaryClient;
   }
 
   /**
    * Get secondary client instance (for dual API connections)
+   *
+   * @param contextId - Context ID (required)
+   * @returns Secondary client or null
    */
-  public getSecondaryClient(): FlashForgeClient | null {
-    return this.connectionState.secondaryClient;
+  public getSecondaryClient(contextId: string): FlashForgeClient | null {
+    const state = this.contextStates.get(contextId);
+    if (!state) {
+      return null;
+    }
+
+    return state.secondaryClient;
   }
 
   /**
-   * Get current printer details
+   * Get current printer details for a specific context
+   *
+   * @param contextId - Context ID (required)
+   * @returns Printer details or null
    */
-  public getCurrentDetails(): PrinterDetails | null {
-    return this.connectionState.details;
+  public getCurrentDetails(contextId: string): PrinterDetails | null {
+    const state = this.contextStates.get(contextId);
+    if (!state) {
+      return null;
+    }
+
+    return state.details;
   }
 
   /**
-   * Update last activity time
+   * Update last activity time for a specific context
+   *
+   * @param contextId - Context ID (required)
    */
-  public updateLastActivity(): void {
-    if (this.connectionState.isConnected) {
-      this.connectionState.lastActivityTime = new Date();
+  public updateLastActivity(contextId: string): void {
+    const state = this.contextStates.get(contextId);
+    if (state && state.isConnected) {
+      state.lastActivityTime = new Date();
     }
   }
 
   /**
-   * Get connection duration in seconds
+   * Get connection duration in seconds for a specific context
+   *
+   * @param contextId - Context ID (required)
+   * @returns Duration in seconds
    */
-  public getConnectionDuration(): number {
-    if (!this.connectionState.isConnected || !this.connectionState.connectionStartTime) {
+  public getConnectionDuration(contextId: string): number {
+    const state = this.contextStates.get(contextId);
+    if (!state || !state.isConnected || !state.connectionStartTime) {
       return 0;
     }
-    
+
     const now = new Date();
-    return Math.floor((now.getTime() - this.connectionState.connectionStartTime.getTime()) / 1000);
+    return Math.floor((now.getTime() - state.connectionStartTime.getTime()) / 1000);
   }
 
   /**
-   * Check if connection is using dual API
+   * Check if connection is using dual API for a specific context
+   *
+   * @param contextId - Context ID (required)
+   * @returns True if using dual API
    */
-  public isDualAPI(): boolean {
-    return this.connectionState.secondaryClient !== null;
+  public isDualAPI(contextId: string): boolean {
+    const state = this.contextStates.get(contextId);
+    if (!state) {
+      return false;
+    }
+
+    return state.secondaryClient !== null;
   }
 
   /**
-   * Get formatted connection status string
+   * Get formatted connection status string for a specific context
+   *
+   * @param contextId - Context ID (required)
+   * @returns Status string
    */
-  public getConnectionStatus(): string {
-    if (!this.connectionState.isConnected) {
+  public getConnectionStatus(contextId: string): string {
+    const state = this.contextStates.get(contextId);
+    if (!state || !state.isConnected) {
       return 'Disconnected';
     }
 
-    const details = this.connectionState.details;
+    const details = state.details;
     if (!details) {
       return 'Connected (Unknown Printer)';
     }
@@ -188,16 +290,23 @@ export class ConnectionStateManager extends EventEmitter {
   }
 
   /**
-   * Dispose all client connections
+   * Dispose client connections for a specific context
+   *
+   * @param contextId - Context ID to dispose clients for
    */
-  public async disposeClients(): Promise<void> {
-    const { primaryClient, secondaryClient } = this.connectionState;
+  public async disposeClientsForContext(contextId: string): Promise<void> {
+    const state = this.contextStates.get(contextId);
+    if (!state) {
+      return;
+    }
+
+    const { primaryClient, secondaryClient } = state;
 
     if (primaryClient) {
       try {
         void primaryClient.dispose();
       } catch (error) {
-        console.error('Error disposing primary client:', error);
+        console.error(`Error disposing primary client for context ${contextId}:`, error);
       }
     }
 
@@ -205,19 +314,36 @@ export class ConnectionStateManager extends EventEmitter {
       try {
         void secondaryClient.dispose();
       } catch (error) {
-        console.error('Error disposing secondary client:', error);
+        console.error(`Error disposing secondary client for context ${contextId}:`, error);
       }
     }
 
-    this.emit('clients-disposed');
+    this.emit('clients-disposed', { contextId });
   }
 
+
   /**
-   * Clear all state and dispose resources
+   * Clear state and dispose resources for a specific context
+   *
+   * @param contextId - Context ID to clear
    */
-  public async clear(): Promise<void> {
-    await this.disposeClients();
-    this.setDisconnected();
+  public async clearContext(contextId: string): Promise<void> {
+    await this.disposeClientsForContext(contextId);
+    this.setDisconnected(contextId);
+  }
+
+
+  /**
+   * Clear all contexts and dispose all resources
+   */
+  public async clearAll(): Promise<void> {
+    const contextIds = Array.from(this.contextStates.keys());
+
+    for (const contextId of contextIds) {
+      await this.clearContext(contextId);
+    }
+
+    this.contextStates.clear();
   }
 }
 

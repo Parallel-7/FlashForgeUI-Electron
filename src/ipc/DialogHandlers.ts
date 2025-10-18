@@ -1,6 +1,21 @@
 /**
- * Dialog handlers for loading overlay and printer selection window enhancements.
- * Most handlers have been moved to domain-specific modules in src/ipc/handlers/.
+ * @fileoverview Legacy dialog handlers for loading overlay and printer connection flow.
+ *
+ * Provides IPC handlers for application-level dialogs and loading states:
+ * - Enhanced printer connection flow with network scan vs manual IP entry choice
+ * - Loading overlay state management (show/hide/progress/success/error)
+ * - Connection confirmation dialogs when switching printers
+ * - Integration with LoadingManager for centralized loading state
+ *
+ * Key functionality:
+ * - setupDialogHandlers(): Initializes all dialog-related IPC handlers
+ * - Connect choice dialog for network scan or manual IP input
+ * - Loading manager event forwarding to renderer process
+ * - Printer connected warning dialog for connection switching
+ *
+ * Note: Most domain-specific dialog handlers have been moved to modular handlers in
+ * src/ipc/handlers/ (job-handlers, material-handlers, etc.). This file primarily handles
+ * connection flow and loading overlay operations.
  */
 
 import { ipcMain } from 'electron';

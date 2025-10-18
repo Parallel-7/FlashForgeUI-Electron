@@ -1,18 +1,39 @@
-// src/services/notifications/NotificationService.ts
-
 /**
- * Core notification service that wraps Electron's Notification API with proper error handling,
+ * @fileoverview Core notification service that wraps Electron's Notification API with proper error handling,
  * OS support checking, and TypeScript type safety.
- * 
+ *
+ * This service provides a robust abstraction layer over Electron's native notification system,
+ * managing the entire notification lifecycle from creation to cleanup. It handles platform-specific
+ * compatibility checks, tracks notification state, and provides event-based notification management
+ * with comprehensive error handling.
+ *
+ * Key Features:
+ * - Platform compatibility detection using Electron's isSupported() API
+ * - Type-safe wrapper around Electron Notification API with custom notification types
+ * - Event emitter pattern for notification lifecycle events (sent, failed, clicked, closed)
+ * - Automatic notification tracking with metadata (sent time, active status, notification data)
+ * - Priority-based notification timeout configuration (default vs. never timeout)
+ * - Automatic cleanup of old notification tracking data (24-hour retention)
+ * - Support for silent notifications and custom icons
+ * - Singleton pattern with global instance management and test-friendly reset functionality
+ *
  * Core Responsibilities:
- * - Wrap Electron Notification API with type safety
- * - Handle OS compatibility and feature detection
- * - Provide error handling and fallback behavior
- * - Support notification options and customization
- * - Track sent notifications for management
+ * - Wrap Electron Notification API with type safety and consistent error handling
+ * - Handle OS compatibility and feature detection before attempting notification display
+ * - Provide comprehensive error handling and fallback behavior for unsupported platforms
+ * - Support notification options including silent mode, icons, and timeout configuration
+ * - Track sent notifications with metadata for management and debugging purposes
+ * - Emit events for notification lifecycle stages (sent, failed, clicked, closed)
+ * - Manage notification cleanup and disposal with automatic resource release
+ *
+ * @exports NotificationService - Main service class for notification management
+ * @exports getNotificationService - Singleton instance accessor
+ * @exports resetNotificationService - Test helper for instance reset
+ * @exports NotificationTrackingInfo - Type for notification tracking data
  */
 
-import { Notification as ElectronNotification } from 'electron';
+import { Notification as ElectronNotification, app } from 'electron';
+import path from 'path';
 import { EventEmitter } from '../../utils/EventEmitter';
 import type {
   Notification,
@@ -74,7 +95,7 @@ export class NotificationService extends EventEmitter<NotificationServiceEventMa
   private checkNotificationSupport(): void {
     try {
       this.isSupported = ElectronNotification.isSupported();
-      
+
       if (!this.isSupported) {
         console.warn('Desktop notifications are not supported on this platform');
       }
@@ -191,12 +212,41 @@ export class NotificationService extends EventEmitter<NotificationServiceEventMa
       timeoutType: this.getTimeoutType(notification.priority)
     };
 
-    // Add icon if specified
+    // Add icon - use custom icon if specified, otherwise use app icon
     if (notification.options?.icon) {
       baseOptions.icon = notification.options.icon;
+    } else {
+      // Automatically add app icon based on platform
+      baseOptions.icon = this.getAppIconPath();
     }
 
     return baseOptions;
+  }
+
+  /**
+   * Get platform-specific app icon path for notifications
+   *
+   * Note: macOS automatically uses the app bundle icon and ignores this property,
+   * but we return a path anyway for consistency.
+   */
+  private getAppIconPath(): string {
+    // Get the app root directory
+    const appPath = app.getAppPath();
+
+    // Determine icon file based on platform
+    let iconFile: string;
+    if (process.platform === 'win32') {
+      iconFile = 'icon.ico';
+    } else if (process.platform === 'darwin') {
+      // macOS ignores the notification icon property and uses the app bundle icon (.icns) automatically
+      // We return .png here for development/fallback, but it won't actually be used by macOS notifications
+      iconFile = 'icon.png';
+    } else {
+      iconFile = 'icon.png'; // Linux uses PNG
+    }
+
+    // Icon is located in src/icons directory
+    return path.join(appPath, 'src', 'icons', iconFile);
   }
 
   /**

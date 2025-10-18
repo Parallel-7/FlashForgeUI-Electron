@@ -1,3 +1,19 @@
+/**
+ * @fileoverview Preload script for job picker dialog with printer feature integration.
+ *
+ * Establishes secure IPC communication for browsing and starting print jobs from printer storage.
+ * Supports both local and recent job lists with thumbnail retrieval, material information display
+ * for multi-color prints, and material matching dialog integration for AD5X printers. Provides
+ * printer capability queries and job start operations with leveling and auto-start options.
+ *
+ * Key exports:
+ * - jobPickerAPI: Comprehensive API for job listing, selection, and starting
+ * - Material matching integration for multi-color AD5X prints
+ * - Thumbnail request/response system with async loading
+ * - Printer feature and capability queries
+ * - Single-color confirmation dialog support
+ */
+
 // Job Picker Dialog Preload Script
 // Provides secure IPC bridge between renderer and main process
 

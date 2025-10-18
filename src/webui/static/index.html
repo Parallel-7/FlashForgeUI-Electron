@@ -32,6 +32,13 @@
       <!-- Header Bar -->
       <div class="header">
         <div class="header-title">FlashForge Web UI</div>
+        <!-- Printer Selector (hidden when only one printer) -->
+        <div class="printer-selector hidden" id="printer-selector">
+          <label for="printer-select">Printer:</label>
+          <select id="printer-select" class="printer-select">
+            <option value="">Loading...</option>
+          </select>
+        </div>
         <!-- Connection Status -->
         <div class="connection-status">
           <span class="connection-indicator" id="connection-indicator"></span>
@@ -47,6 +54,7 @@
           <div class="camera-view">
             <div id="camera-placeholder" class="no-camera">Camera Unavailable</div>
             <img id="camera-stream" class="camera-stream hidden" alt="Printer camera stream">
+            <canvas id="camera-canvas" class="camera-stream hidden"></canvas>
           </div>
         </div>
 
@@ -227,6 +235,9 @@
       <div id="toast" class="toast hidden"></div>
     </div>
   </div>
+
+  <!-- JSMpeg library for RTSP streaming (vendored locally) -->
+  <script src="jsmpeg.min.js"></script>
 
   <!-- TypeScript compiled to JavaScript -->
   <script src="app.js"></script>

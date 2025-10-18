@@ -1,14 +1,61 @@
 /**
- * src/services/ui-updater.ts
- * Simple UI update functions that directly modify DOM elements with printer data.
- * 
+ * @fileoverview UI updater service providing direct DOM manipulation functions for updating
+ * printer status, job information, and preview displays in the renderer process.
+ *
+ * This service provides a collection of utility functions that safely update DOM elements
+ * with printer data from polling responses. It handles data formatting, element validation,
+ * and visual state management to ensure smooth UI updates without flickering or errors.
+ * The module implements defensive programming practices with null checks for all DOM elements
+ * and graceful degradation when elements are missing.
+ *
+ * Key Features:
+ * - Safe DOM element access with null checking and error handling
+ * - Specialized update functions for status panel, job panel, and model preview
+ * - Data formatting utilities for temperatures, time, weight, and length
+ * - Visual state management with CSS class manipulation for connection status
+ * - Progress bar styling based on printer state (printing, paused, completed, error)
+ * - Thumbnail preview with fallback placeholders for active jobs without thumbnails
+ * - Material station display for AD5X printers with multi-slot support
+ * - Label preservation when updating label+span elements to prevent text loss
+ * - ETA formatting as completion time in 12-hour format (e.g., "12:34PM")
+ *
  * Core Responsibilities:
- * - Update status panel with temperatures, fans, filtration, settings
- * - Update job information panel with progress, layer info, timing
- * - Update model preview with thumbnails based on print state
- * - Handle missing elements gracefully
- * - Format data appropriately for display
- * - Smooth updates without flickering
+ * - Update status panel with temperatures, fans, filtration mode, TVOC levels, and printer settings
+ * - Update job information panel with progress percentage, layer info, timing, and material usage
+ * - Update model preview area with job thumbnails or appropriate placeholders
+ * - Handle missing DOM elements gracefully without throwing errors
+ * - Format data appropriately for display (temperatures, times, weights, lengths)
+ * - Provide smooth updates without flickering using CSS transitions
+ * - Maintain visual consistency with connection status indicators
+ * - Update material station UI for AD5X printers with multi-slot displays
+ *
+ * Panel Update Functions:
+ * - updateStatusPanel: Updates printer state, temperatures, fans, filtration, and settings
+ * - updateJobPanel: Updates job name, progress, layers, timing, and material usage
+ * - updateModelPreview: Updates thumbnail preview or shows appropriate placeholder
+ * - updateMaterialStation: Shows/hides material station UI for AD5X printers
+ * - updateGeneralStatus: Updates cumulative stats (runtime, total filament used)
+ * - updateAllPanels: Master update function that calls all panel update functions
+ *
+ * Utility Functions:
+ * - getElement: Safe DOM element retrieval by ID with null handling
+ * - setElementText: Safe text content setting with element validation
+ * - setElementAttribute: Safe attribute setting with element validation
+ * - setElementClass: Safe CSS class addition/removal
+ * - updateLabelSpanElement: Update label+span elements while preserving structure
+ * - updateSpanInLabelElement: Update only the span within a label element (preferred for data updates)
+ * - formatPrinterState: Convert printer state enum to display-friendly text
+ * - formatETA: Format time remaining as completion time in 12-hour format
+ *
+ * @exports updateStatusPanel - Update printer status panel
+ * @exports updateJobPanel - Update job information panel
+ * @exports updateModelPreview - Update model preview area
+ * @exports updateMaterialStation - Update material station display
+ * @exports updateGeneralStatus - Update general status information
+ * @exports updateAllPanels - Update all UI panels with polling data
+ * @exports initializeUIAnimations - Initialize smooth CSS transitions
+ * @exports handleUIError - Handle UI update errors gracefully
+ * @exports resetUI - Reset UI to default disconnected state
  */
 
 import type { 
@@ -464,12 +511,6 @@ export function updateGeneralStatus(data: PollingData): void {
     updateLabelSpanElement('filament-used', 'Filament used:', '0m');
   }
 
-  // Update connection status in title if needed
-  const titleElement = document.querySelector('.title');
-  if (titleElement) {
-    const connectionStatus = data.isConnected ? 'Connected' : 'Disconnected';
-    titleElement.textContent = `FlashForge UI 1.0 - ${connectionStatus}`;
-  }
 }
 
 // ============================================================================

@@ -1,6 +1,24 @@
-// src/printer-backends/DualAPIBackend.ts
-// Abstract base class for printer backends that use both FiveMClient and FlashForgeClient
-// Extracts common dual-API functionality to reduce code duplication
+/**
+ * @fileoverview Abstract base class for dual-API printer backends using both FiveMClient and FlashForgeClient.
+ *
+ * Provides common implementation for modern printers that support both HTTP and TCP APIs:
+ * - Dual client management (FiveMClient for HTTP, FlashForgeClient for G-code)
+ * - Product information fetching and caching
+ * - Automatic LED and filtration detection from product endpoint
+ * - Enhanced job management (local/recent jobs, upload, start with leveling)
+ * - Real-time status monitoring via new API
+ * - Reduced code duplication across Adventurer 5M/Pro and AD5X backends
+ *
+ * Key exports:
+ * - DualAPIBackend abstract class: Foundation for dual-API printers
+ *
+ * Child classes must implement:
+ * - getChildBaseFeatures(): Define model-specific base features
+ * - getMaterialStationStatus(): Material station support (or return empty status)
+ *
+ * This abstraction extracts common functionality from Adventurer5MBackend, Adventurer5MProBackend,
+ * and AD5XBackend, reducing code duplication while maintaining model-specific feature differentiation.
+ */
 
 import { FiveMClient, FlashForgeClient, Product } from 'ff-api';
 import { BasePrinterBackend } from './BasePrinterBackend';

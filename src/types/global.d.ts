@@ -1,8 +1,27 @@
 /**
- * Global type definitions for the FlashForge UI TypeScript application.
- * 
- * This file extends the Window interface with Electron API methods
- * exposed by the preload script via contextBridge.
+ * @fileoverview Global type augmentations for renderer process Window interface
+ *
+ * Extends the Window interface with Electron API methods exposed by the preload script
+ * via contextBridge, providing complete type safety for IPC communication between
+ * renderer and main processes. Defines interfaces for all exposed APIs including
+ * printer control, camera management, loading states, and window controls.
+ *
+ * Key Interface Groups:
+ * - ElectronAPI: Core IPC communication (send, receive, invoke)
+ * - LoadingAPI: Loading state management and progress indication
+ * - CameraAPI: Camera proxy control and stream configuration
+ * - PrinterContextsAPI: Multi-printer context management
+ * - ConnectionStateAPI: Connection status and state queries
+ * - PrinterSettingsAPI: Per-printer settings management
+ * - WindowControls: Sub-window control methods (minimize, close)
+ *
+ * Window Extensions:
+ * - window.api: Main ElectronAPI interface
+ * - window.CAMERA_URL: Camera stream URL constant
+ * - window.windowControls: Window management (sub-windows only)
+ * - window.logMessage: Debug logging helper
+ *
+ * @module types/global
  */
 
 // IPC event listener function type
@@ -44,6 +63,29 @@ interface CameraAPI {
   getConfig(): Promise<unknown>;
   getProxyUrl(): Promise<string>;
   restoreStream(): Promise<boolean>;
+  getStreamUrl(contextId?: string): Promise<string | null>;
+}
+
+// Printer Context API interface
+interface PrinterContextsAPI {
+  getAll(): Promise<unknown>;
+  getActive(): Promise<unknown>;
+  switch(contextId: string): Promise<void>;
+  remove(contextId: string): Promise<void>;
+  create(printerDetails: unknown): Promise<string>;
+}
+
+// Connection State API interface
+interface ConnectionStateAPI {
+  isConnected(contextId?: string): Promise<boolean>;
+  getState(contextId?: string): Promise<unknown>;
+}
+
+// Printer Settings API interface
+interface PrinterSettingsAPI {
+  get(): Promise<unknown>;
+  update(settings: unknown): Promise<boolean>;
+  getPrinterName(): Promise<string | null>;
 }
 
 // API interface for type safety
@@ -61,6 +103,9 @@ interface ElectronAPI {
   onPlatformInfo: (callback: (platform: string) => void) => void;
   loading: LoadingAPI;
   camera: CameraAPI;
+  printerContexts: PrinterContextsAPI;
+  connectionState: ConnectionStateAPI;
+  printerSettings: PrinterSettingsAPI;
 }
 
 // Window controls interface for sub-windows
@@ -75,6 +120,7 @@ declare global {
   interface Window {
     api: ElectronAPI;
     CAMERA_URL: string;
+    PLATFORM: string;
     windowControls?: WindowControls;
     logMessage?: (message: string) => void;
   }

@@ -1,7 +1,21 @@
 /**
- * ConnectionEstablishmentService.ts
- * Handles the technical aspects of establishing printer connections
- * Manages temporary connections, type detection, and final connection setup
+ * @fileoverview Service for establishing and validating printer connections with type detection.
+ *
+ * Handles the technical aspects of creating and validating printer connections:
+ * - Temporary connection establishment for printer detection
+ * - Printer type and family detection (5M, 5M Pro, AD5X, legacy)
+ * - Client instance creation (FiveMClient and/or FlashForgeClient)
+ * - Connection validation and error handling
+ * - Dual-API support determination
+ * - Check code validation and firmware version retrieval
+ *
+ * Key exports:
+ * - ConnectionEstablishmentService class: Low-level connection establishment
+ * - getConnectionEstablishmentService(): Singleton accessor
+ *
+ * This service provides the foundation for printer connections, handling the complexity
+ * of determining which API(s) to use and creating appropriate client instances. Works in
+ * conjunction with ConnectionFlowManager for complete connection workflows.
  */
 
 import { EventEmitter } from 'events';

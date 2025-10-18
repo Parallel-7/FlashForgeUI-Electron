@@ -1,8 +1,20 @@
 /**
- * AD5X Type Definitions and Re-exports
- * 
- * This module centralizes all AD5X-related types by re-exporting from ff-api
- * and maintaining our UI-specific types for consistent presentation layer.
+ * @fileoverview AD5X type definitions and re-exports for material station and job management.
+ *
+ * Centralizes all AD5X-related types with two-layer type system:
+ * - ff-api types: Raw API response structures from printer
+ * - UI-specific types: Transformed structures for consistent UI presentation
+ *
+ * Key exports:
+ * - Material station types (MatlStationInfo, SlotInfo from ff-api)
+ * - Job types (FFGcodeToolData, AD5XMaterialMapping, job params)
+ * - UI types (MaterialStationStatus, MaterialSlotInfo for consistent rendering)
+ * - Type guards (isAD5XMachineInfo, hasValidMaterialStationInfo)
+ *
+ * The two-layer approach separates API concerns from UI concerns:
+ * - ff-api types match the printer's raw responses exactly
+ * - UI types provide 0-based indexing, isEmpty flags, and friendly field names
+ * This separation enables API evolution without breaking UI components.
  */
 
 // Re-export types from ff-api

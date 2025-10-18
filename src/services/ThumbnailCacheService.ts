@@ -1,12 +1,28 @@
 /**
- * ThumbnailCacheService - Persistent cache for printer job thumbnails
- * 
- * Provides a file-based caching system for thumbnails to prevent repeated network requests.
- * Cache is organized by printer serial number and file name with configurable expiration.
- * 
- * Cache structure:
+ * @fileoverview Persistent file-based cache service for printer job thumbnails
+ *
+ * Provides a robust file-based caching system for printer job thumbnails to minimize
+ * network requests and improve UI responsiveness. Organizes cache by printer serial
+ * number with MD5-hashed filenames for collision avoidance. Includes metadata tracking,
+ * validation, and comprehensive cache management operations.
+ *
+ * Key Features:
+ * - File-based persistence in Electron userData directory
+ * - Per-printer cache organization with metadata tracking
+ * - MD5 hashing of filenames to prevent collisions
+ * - Base64 image storage with automatic data URL handling
+ * - Cache validation and automatic cleanup of orphaned metadata
+ * - Statistics reporting for cache monitoring
+ * - Graceful error handling with detailed result types
+ *
+ * Cache Structure:
  * - Thumbnails/{printerSerial}/{fileNameHash}.png - Thumbnail images
- * - Thumbnails/{printerSerial}/metadata.json - Cache metadata and expiration info
+ * - Thumbnails/{printerSerial}/metadata.json - Cache metadata and timestamps
+ *
+ * Singleton Pattern:
+ * Access via getThumbnailCacheService() factory function.
+ *
+ * @module services/ThumbnailCacheService
  */
 
 import * as fs from 'fs/promises';

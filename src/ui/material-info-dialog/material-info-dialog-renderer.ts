@@ -1,3 +1,20 @@
+/**
+ * @fileoverview Renderer process for material information visualization dialog.
+ *
+ * Implements visual display of multi-color print material requirements with spool-styled
+ * color representations. Shows per-tool material information including type, color, weight,
+ * and material station slot assignments. Displays total filament weight and material station
+ * usage indicators. Provides read-only visualization of print material requirements.
+ *
+ * Key features:
+ * - Color-coded spool visualizations matching actual filament colors
+ * - Per-tool material breakdown (type, color, weight)
+ * - Material station slot ID display (1-based UI, 0 indicates direct feed)
+ * - Total filament weight calculation and display
+ * - Material station usage indicator
+ * - Clean, visual representation for user verification
+ */
+
 // Material Info Dialog Renderer
 // Handles material information display with spool styling
 

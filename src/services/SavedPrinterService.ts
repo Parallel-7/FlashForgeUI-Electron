@@ -1,7 +1,23 @@
 /**
- * SavedPrinterService.ts
- * Manages saved printer persistence and matching logic
- * Provides methods to save, retrieve, and match printers with discovered devices
+ * @fileoverview Service for managing saved printer configurations and discovery matching
+ *
+ * Manages persistent storage and retrieval of printer configurations, providing matching
+ * logic to correlate saved printers with network-discovered devices. Handles printer
+ * persistence, IP address change detection, last-used tracking, and UI data preparation.
+ *
+ * Key Features:
+ * - Persistent printer configuration storage via PrinterDetailsManager integration
+ * - Serial number-based matching between saved and discovered printers
+ * - IP address change detection and automatic update support
+ * - Last connected timestamp tracking for connection priority
+ * - Event emission for configuration changes and updates
+ * - UI-ready data transformation for saved printer display
+ *
+ * Singleton Pattern:
+ * Uses singleton pattern to ensure consistent printer data access across the application.
+ * Access via getSavedPrinterService() factory function.
+ *
+ * @module services/SavedPrinterService
  */
 
 import { EventEmitter } from 'events';

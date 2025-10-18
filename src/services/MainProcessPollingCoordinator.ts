@@ -1,12 +1,27 @@
 /**
- * MainProcessPollingCoordinator - Centralized polling management in the main process.
- * Polls the printer backend directly and distributes updates to all consumers (renderer, WebUI).
- * This eliminates the need for complex IPC polling chains.
+ * @fileoverview Centralized polling coordinator running in main process for single-printer mode.
+ *
+ * Manages centralized printer status polling and distribution to all consumers:
+ * - Direct backend polling without IPC chains
+ * - Update distribution to renderer process via IPC
+ * - Update distribution to WebUI clients via WebSocket
+ * - Polling pause/resume control
+ * - Polling data caching for immediate access
+ * - Notification coordination for status changes
+ *
+ * Key exports:
+ * - MainProcessPollingCoordinator class: Centralized polling manager
+ * - getMainProcessPollingCoordinator(): Singleton accessor
+ *
+ * Note: This coordinator is used for single-printer mode. For multi-printer support,
+ * see MultiContextPollingCoordinator which handles polling across multiple printer
+ * contexts with dynamic frequency adjustment based on active context.
  */
 
 import { EventEmitter } from 'events';
 import { BrowserWindow } from 'electron';
 import { getPrinterBackendManager } from '../managers/PrinterBackendManager';
+import { getPrinterContextManager } from '../managers/PrinterContextManager';
 import { getWebUIManager } from '../webui/server/WebUIManager';
 import { getPrinterNotificationCoordinator } from './notifications';
 import { printerDataTransformer } from './PrinterDataTransformer';
@@ -25,6 +40,7 @@ export class MainProcessPollingCoordinator extends EventEmitter {
   private readonly POLLING_INTERVAL = 2500; // 2.5 seconds
   
   private readonly backendManager = getPrinterBackendManager();
+  private readonly contextManager = getPrinterContextManager();
   private readonly webUIManager = getWebUIManager();
   private readonly notificationCoordinator = getPrinterNotificationCoordinator();
   
@@ -59,18 +75,25 @@ export class MainProcessPollingCoordinator extends EventEmitter {
       console.log('[MainPolling] Already polling, skipping start');
       return;
     }
-    
-    if (!this.backendManager.isBackendReady()) {
+
+    // Get active context ID
+    const contextId = this.contextManager.getActiveContextId();
+    if (!contextId) {
+      console.log('[MainPolling] No active context, cannot start polling');
+      return;
+    }
+
+    if (!this.backendManager.isBackendReady(contextId)) {
       console.log('[MainPolling] Backend not ready, cannot start polling');
       return;
     }
-    
+
     console.log('[MainPolling] Starting polling service');
     this.isPolling = true;
-    
+
     // Start immediate poll
     void this.performPoll();
-    
+
     // Set up interval
     this.pollingInterval = setInterval(() => {
       void this.performPoll();
@@ -146,18 +169,26 @@ export class MainProcessPollingCoordinator extends EventEmitter {
    * Perform a single poll
    */
   private async performPoll(): Promise<void> {
-    if (!this.isPolling || this.isPaused || !this.backendManager.isBackendReady()) {
+    // Get active context ID
+    const contextId = this.contextManager.getActiveContextId();
+
+    // Skip polling if no active context
+    if (!contextId) {
       return;
     }
-    
+
+    if (!this.isPolling || this.isPaused || !this.backendManager.isBackendReady(contextId)) {
+      return;
+    }
+
     try {
       // Get printer status from backend
-      const statusResult = await this.backendManager.getPrinterStatus();
-      
+      const statusResult = await this.backendManager.getPrinterStatus(contextId);
+
       // Get material station status
-      const materialStationRaw = this.backendManager.getMaterialStationStatus();
+      const materialStationRaw = this.backendManager.getMaterialStationStatus(contextId);
       let materialStation: MaterialStationStatus | null = null;
-      
+
       if (materialStationRaw) {
         // Transform to polling type format
         materialStation = {
@@ -174,11 +205,11 @@ export class MainProcessPollingCoordinator extends EventEmitter {
           lastUpdate: new Date()
         };
       }
-      
+
       // Get model preview if available
       let thumbnailData: string | null = null;
       try {
-        thumbnailData = await this.backendManager.getModelPreview();
+        thumbnailData = await this.backendManager.getModelPreview(contextId);
       } catch {
         // Ignore thumbnail errors
       }

@@ -1,3 +1,17 @@
+/**
+ * @fileoverview Preload script for generic input dialog with secure IPC communication.
+ *
+ * Provides secure bridge for modal input dialogs supporting text, password, and hidden input modes.
+ * Each dialog instance receives unique response channel for isolated communication. Handles
+ * initialization options including title, message, placeholder, and default values. Supports
+ * submit/cancel actions with promise-based result handling.
+ *
+ * Key exports:
+ * - dialogAPI: Secure API for dialog initialization and result submission
+ * - DialogInitOptions: Configuration interface for dialog customization
+ * - Unique response channels per dialog instance for multi-dialog support
+ */
+
 // input-dialog-preload.ts
 // IPC bridge for Input Dialog communication between main and renderer processes
 

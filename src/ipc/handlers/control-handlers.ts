@@ -1,12 +1,28 @@
 /**
- * Printer control IPC handlers for temperature, LED, print control, and other operations.
- * Handles all direct printer control commands including G-code operations.
+ * @fileoverview Printer control IPC handlers for temperature, LED, print control, and operational commands.
+ *
+ * Provides IPC handlers for direct printer control operations with dual-API support:
+ * - Temperature control (bed/extruder set/cancel) via legacy G-code client
+ * - LED control (on/off) with support for built-in and custom LED configurations
+ * - Print job control (pause/resume/cancel) via backend manager
+ * - Axis homing operations via legacy G-code client
+ * - Filtration control (off/internal/external) for 5M Pro printers
+ * - Platform clearing operations for new API printers
+ *
+ * Key exports:
+ * - registerControlHandlers(): Registers all printer control IPC handlers
+ * - getLegacyClient(): Helper to extract legacy FlashForgeClient from backend
+ *
+ * The handlers intelligently route operations to the appropriate client (FiveMClient for new API,
+ * FlashForgeClient for legacy/G-code operations) based on printer capabilities and operation type.
+ * All operations are context-aware and operate on the active printer context.
  */
 
 import { ipcMain } from 'electron';
 import { FiveMClient, FlashForgeClient } from 'ff-api';
 import type { PrinterBackendManager } from '../../managers/PrinterBackendManager';
 import type { BasePrinterBackend } from '../../printer-backends/BasePrinterBackend';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager';
 
 /**
  * Helper to get the legacy client (for G-code operations)
@@ -31,11 +47,18 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
   // Temperature control handlers - always use legacy client for G-code
   ipcMain.handle('set-bed-temp', async (event, temperature: number) => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         return { success: false, error: 'Printer not connected' };
       }
 
-      const backend = backendManager.getBackend();
+      const backend = backendManager.getBackendForContext(contextId);
       if (!backend) {
         return { success: false, error: 'Backend not available' };
       }
@@ -56,11 +79,18 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
 
   ipcMain.handle('set-extruder-temp', async (event, temperature: number) => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         return { success: false, error: 'Printer not connected' };
       }
 
-      const backend = backendManager.getBackend();
+      const backend = backendManager.getBackendForContext(contextId);
       if (!backend) {
         return { success: false, error: 'Backend not available' };
       }
@@ -81,11 +111,18 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
 
   ipcMain.handle('turn-off-bed-temp', async () => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         return { success: false, error: 'Printer not connected' };
       }
 
-      const backend = backendManager.getBackend();
+      const backend = backendManager.getBackendForContext(contextId);
       if (!backend) {
         return { success: false, error: 'Backend not available' };
       }
@@ -106,11 +143,18 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
 
   ipcMain.handle('turn-off-extruder-temp', async () => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         return { success: false, error: 'Printer not connected' };
       }
 
-      const backend = backendManager.getBackend();
+      const backend = backendManager.getBackendForContext(contextId);
       if (!backend) {
         return { success: false, error: 'Backend not available' };
       }
@@ -132,11 +176,18 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
   // Clear status handler (new API only - not available on legacy)
   ipcMain.handle('clear-status', async () => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         return { success: false, error: 'Printer not connected' };
       }
 
-      const backend = backendManager.getBackend();
+      const backend = backendManager.getBackendForContext(contextId);
       if (!backend) {
         return { success: false, error: 'Backend not available' };
       }
@@ -165,11 +216,18 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
   // LED control handlers
   ipcMain.handle('led-on', async () => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         return { success: false, error: 'Printer not connected' };
       }
 
-      const backend = backendManager.getBackend();
+      const backend = backendManager.getBackendForContext(contextId);
       if (!backend) {
         return { success: false, error: 'Backend not available' };
       }
@@ -210,11 +268,18 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
 
   ipcMain.handle('led-off', async () => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         return { success: false, error: 'Printer not connected' };
       }
 
-      const backend = backendManager.getBackend();
+      const backend = backendManager.getBackendForContext(contextId);
       if (!backend) {
         return { success: false, error: 'Backend not available' };
       }
@@ -256,11 +321,18 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
   // Print control handlers - use backend manager methods which handle the routing
   ipcMain.handle('pause-print', async () => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         return { success: false, error: 'Printer not connected' };
       }
 
-      const result = await backendManager.pauseJob();
+      const result = await backendManager.pauseJob(contextId);
       console.log('Paused print job', result);
       return result;
     } catch (error) {
@@ -271,11 +343,18 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
 
   ipcMain.handle('resume-print', async () => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         return { success: false, error: 'Printer not connected' };
       }
 
-      const result = await backendManager.resumeJob();
+      const result = await backendManager.resumeJob(contextId);
       console.log('Resumed print job', result);
       return result;
     } catch (error) {
@@ -286,11 +365,18 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
 
   ipcMain.handle('cancel-print', async () => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         return { success: false, error: 'Printer not connected' };
       }
 
-      const result = await backendManager.cancelJob();
+      const result = await backendManager.cancelJob(contextId);
       console.log('Cancelled print job', result);
       return result;
     } catch (error) {
@@ -302,11 +388,18 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
   // Home axes handler - use legacy client for G-code
   ipcMain.handle('home-axes', async () => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         return { success: false, error: 'Printer not connected' };
       }
 
-      const backend = backendManager.getBackend();
+      const backend = backendManager.getBackendForContext(contextId);
       if (!backend) {
         return { success: false, error: 'Backend not available' };
       }
@@ -328,11 +421,18 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
   // Filtration control handler (5M Pro only)
   ipcMain.handle('set-filtration', async (_event, mode: 'off' | 'internal' | 'external') => {
     try {
-      if (!backendManager.isBackendReady()) {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+
+      if (!backendManager.isBackendReady(contextId)) {
         return { success: false, error: 'Printer not connected' };
       }
 
-      const backend = backendManager.getBackend();
+      const backend = backendManager.getBackendForContext(contextId);
       if (!backend) {
         return { success: false, error: 'Backend not available' };
       }

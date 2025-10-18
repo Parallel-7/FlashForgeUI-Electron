@@ -1,13 +1,22 @@
 /**
- * src/services/printer-state.ts
- * Simple printer state tracker without complex state machine abstractions.
- * 
- * Core Responsibilities:
- * - Track current printer state (Ready, Printing, Paused, etc.)
- * - Provide simple state checking methods
+ * @fileoverview Simple printer state tracker for monitoring printer operational states.
+ *
+ * Provides straightforward printer state tracking without complex abstractions:
+ * - Current state tracking (Ready, Printing, Paused, Completed, etc.)
+ * - Simple state checking methods (isPrinting, isReady, etc.)
  * - Basic state transition validation
- * - Simple event emission for UI updates
- * - No history tracking or complex transitions
+ * - Event emission for state changes
+ * - Connection state monitoring
+ * - No history tracking or complex state machines
+ *
+ * Key exports:
+ * - PrinterStateTracker class: Simple state tracker
+ * - STATE_EVENTS: Event name constants
+ * - StateChangeEvent interface
+ *
+ * This service intentionally avoids complex state machine patterns, providing a simple
+ * and predictable state tracking mechanism for UI updates. Focuses on current state only
+ * without maintaining transition history or complex validation rules.
  */
 
 import { EventEmitter } from '../utils/EventEmitter';

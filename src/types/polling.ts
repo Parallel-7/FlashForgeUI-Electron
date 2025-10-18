@@ -1,12 +1,33 @@
 /**
- * src/types/polling.ts
- * Simple TypeScript interfaces for real-time printer data polling.
- * 
- * Design Goals:
- * - Simple interfaces matching backend API responses
- * - Direct mapping to UI display needs
- * - No complex abstractions or over-engineering
- * - Easy to understand and maintain
+ * @fileoverview Type definitions for real-time printer data polling system
+ *
+ * Provides simple, direct-to-UI type definitions for printer status polling data.
+ * Designed for clarity and ease of maintenance with straightforward interfaces that
+ * map directly to backend API responses and UI display requirements.
+ *
+ * Key Type Groups:
+ * - Printer State: PrinterState enum for operating status (Ready, Printing, Paused, etc.)
+ * - Temperature Data: TemperatureData, PrinterTemperatures for thermal monitoring
+ * - Job Progress: JobProgress, CurrentJobInfo for print job tracking
+ * - Printer Status: PrinterStatus master interface combining all status data
+ * - Material Station: MaterialSlot, MaterialStationStatus for AD5X multi-material
+ * - Polling Container: PollingData aggregates all polling information for UI updates
+ *
+ * Utility Functions:
+ * - State Checking: isActiveState, isReadyForJob, canControlPrint
+ * - Formatting: formatTemperature, formatTime, formatPercentage, formatWeight, formatLength
+ * - Factory: createEmptyPollingData for initialization
+ *
+ * Configuration:
+ * - DEFAULT_POLLING_CONFIG: 2.5s interval, 3 retries, 1s retry delay
+ *
+ * Integration Points:
+ * - PrinterPollingService: Data collection and transformation
+ * - BasePrinterBackend: Raw status data source
+ * - ui-updater.ts: Direct UI element updates
+ * - PrinterNotificationCoordinator: State change monitoring
+ *
+ * @module types/polling
  */
 
 // ============================================================================

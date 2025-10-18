@@ -1,4 +1,22 @@
-// src/managers/ConfigManager.ts
+/**
+ * @fileoverview Centralized configuration manager for application settings with automatic persistence.
+ *
+ * Provides type-safe configuration management with event-driven updates and file persistence:
+ * - Live in-memory configuration access with atomic updates
+ * - Automatic file persistence on changes with debounced saves
+ * - Event emission for configuration updates across the application
+ * - Thread-safe access through getters/setters
+ * - Type safety with branded types and validation
+ * - Lock file handling to prevent concurrent modifications
+ *
+ * Key exports:
+ * - ConfigManager class: Singleton configuration manager
+ * - getConfigManager(): Singleton accessor function
+ *
+ * The configuration is stored in the user data directory (config.json) and includes
+ * application-wide settings like WebUI, camera, LED, polling, and auto-connect preferences.
+ * All configuration changes are validated and sanitized before persistence.
+ */
 
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
@@ -9,7 +27,7 @@ import { AppConfig, MutableAppConfig, DEFAULT_CONFIG, ConfigUpdateEvent, sanitiz
 /**
  * Centralized configuration manager with live access and automatic file syncing.
  * Provides type-safe configuration management with event-driven updates.
- * 
+ *
  * Features:
  * - Live in-memory configuration access
  * - Automatic file persistence on changes

@@ -1,3 +1,19 @@
+/**
+ * @fileoverview Preload script for material matching dialog with IFS slot assignment.
+ *
+ * Establishes secure IPC communication for mapping print job material requirements to physical
+ * material station slots. Handles bi-directional communication for slot status queries, material
+ * compatibility validation, and user-confirmed mappings. Supports material type matching with
+ * color difference warnings and validation errors.
+ *
+ * Key exports:
+ * - materialMatchingAPI: Secure API for material matching workflow
+ * - Material station status queries with slot availability
+ * - Mapping confirmation with toolId-to-slotId assignments
+ * - Material color and type information for validation
+ * - Dialog lifecycle management with result callbacks
+ */
+
 // Material Matching Dialog Preload Script
 // Provides secure IPC bridge for material matching operations
 

@@ -16,7 +16,6 @@ import { Router, Request, Response } from 'express';
 import { createFilamentTrackerAuth } from './filament-tracker-auth';
 import { getWebSocketManager } from './WebSocketManager';
 import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager';
-import type { PollingData } from '../../types/polling';
 
 /**
  * Standard API response for successful requests
@@ -96,9 +95,13 @@ export function createFilamentTrackerRoutes(): Router {
   /**
    * GET /api/filament-tracker/status
    * Returns comprehensive status including connection, printer state, and current job info
+   *
+   * Note: Returns data for the currently active printer context.
+   * In multi-printer setups, this reflects whichever printer tab is currently selected.
    */
-  router.get('/filament-tracker/status', (req: Request, res: Response) => {
+  router.get('/status', (req: Request, res: Response) => {
     try {
+      // Use active context - isConnected() and getCurrentDetails() already handle this internally
       const isConnected = connectionManager.isConnected();
       const pollingData = wsManager.getLatestPollingData();
       const printerDetails = connectionManager.getCurrentDetails();
@@ -148,9 +151,12 @@ export function createFilamentTrackerRoutes(): Router {
   /**
    * GET /api/filament-tracker/current
    * Returns current job filament usage only
+   *
+   * Note: Returns data for the currently active printer context.
    */
-  router.get('/filament-tracker/current', (req: Request, res: Response) => {
+  router.get('/current', (req: Request, res: Response) => {
     try {
+      // Use active context
       const isConnected = connectionManager.isConnected();
       const pollingData = wsManager.getLatestPollingData();
 
@@ -190,9 +196,12 @@ export function createFilamentTrackerRoutes(): Router {
   /**
    * GET /api/filament-tracker/lifetime
    * Returns lifetime statistics
+   *
+   * Note: Returns data for the currently active printer context.
    */
-  router.get('/filament-tracker/lifetime', (req: Request, res: Response) => {
+  router.get('/lifetime', (req: Request, res: Response) => {
     try {
+      // Use active context
       const isConnected = connectionManager.isConnected();
       const pollingData = wsManager.getLatestPollingData();
 

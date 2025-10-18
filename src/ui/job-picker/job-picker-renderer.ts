@@ -1,3 +1,21 @@
+/**
+ * @fileoverview Renderer process for job picker dialog with material info and selection.
+ *
+ * Implements interactive job selection interface with grid-based file display, thumbnail loading,
+ * and material information visualization for multi-color prints. Handles printer capability
+ * detection, job listing (local/recent), and intelligent routing to material matching dialogs
+ * for AD5X multi-color jobs. Includes staggered thumbnail requests, job metadata display,
+ * and auto-leveling/start-now configuration options.
+ *
+ * Key features:
+ * - Grid-based file display with lazy-loaded thumbnails
+ * - Material info (i) icon for multi-color jobs with toolData
+ * - Automatic material matching dialog for AD5X multi-color prints
+ * - Single-color confirmation workflow for AD5X printers
+ * - Printer capability-aware UI (hides unsupported features)
+ * - Job start with leveling and immediate start options
+ */
+
 // Job Picker Dialog Renderer
 // Handles file grid display, selection, and thumbnail loading
 

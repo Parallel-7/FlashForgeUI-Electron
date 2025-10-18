@@ -1,8 +1,73 @@
 /**
- * WindowTypes contains shared TypeScript interfaces and types used across all
- * window factory modules. This module provides consistent type definitions for
- * window configuration, dialog options, and security settings, ensuring type
- * safety and maintainability across the window creation system.
+ * @fileoverview WindowTypes contains shared TypeScript interfaces and types used across all
+ * window factory modules.
+ *
+ * This type definition module provides the foundational type system for the window creation
+ * infrastructure, ensuring type safety and consistency across all factory modules. It defines
+ * branded types for dimensional and security primitives, interfaces for window configuration
+ * and dialog data, and constants for standardized window dimensions. The module uses TypeScript's
+ * advanced type features including branded types, readonly properties, and discriminated unions
+ * to prevent logical errors and enforce immutability where appropriate.
+ *
+ * Key Features:
+ * - Branded types for dimensions and security settings to prevent accidental value mixing
+ * - Immutable interface definitions using readonly properties for configuration data
+ * - Discriminated union types for type-safe window creation
+ * - Centralized window size constants with min/max dimension specifications
+ * - Helper functions for creating branded type instances with type safety
+ * - Comprehensive dialog data interfaces for all dialog types in the application
+ * - Type-safe window configuration combining dimensions, behavior, and security
+ *
+ * Core Responsibilities:
+ * - Define branded types for window dimensions to prevent width/height confusion
+ * - Define branded types for security settings to ensure proper preload path handling
+ * - Provide immutable interfaces for window configuration data structures
+ * - Define dialog option interfaces for all interactive dialog types
+ * - Provide window size constants for consistent dimensions across the application
+ * - Define discriminated union types for type-safe window creation patterns
+ * - Provide helper functions for creating branded type instances
+ *
+ * Branded Types:
+ * Branded types use TypeScript's intersection types to create nominal types from primitives,
+ * preventing accidental mixing of logically different values that share the same runtime type.
+ * For example, WindowWidth and WindowHeight are both numbers at runtime, but the branded types
+ * prevent accidentally passing a width where a height is expected.
+ *
+ * Type Categories:
+ * - Dimensional Types: WindowWidth, WindowHeight, WindowMinWidth, WindowMinHeight
+ * - Security Types: PreloadPath, ResponseChannel, DialogId
+ * - Configuration Interfaces: WindowDimensions, WindowBehavior, WindowSecurity, WindowConfiguration
+ * - Dialog Data Interfaces: InputDialogOptions, MaterialMatchingDialogData, SingleColorConfirmationDialogData, etc.
+ * - Discriminated Unions: WindowType for type-safe window creation
+ *
+ * Window Sizes:
+ * All window sizes are defined in WINDOW_SIZES constant with standardized dimensions including
+ * width, height, minWidth, and minHeight for each window type. This ensures consistent sizing
+ * across the application and provides a single source of truth for dimension specifications.
+ *
+ * Dialog Data Interfaces:
+ * Each interactive dialog type has a corresponding data interface that defines the initialization
+ * data structure passed to the dialog renderer. These interfaces ensure type safety when passing
+ * data from main process to renderer process via IPC.
+ *
+ * @exports WindowWidth, WindowHeight, WindowMinWidth, WindowMinHeight - Branded dimensional types
+ * @exports PreloadPath, ResponseChannel, DialogId - Branded security types
+ * @exports createWindowWidth, createWindowHeight, createWindowMinWidth, createWindowMinHeight - Dimensional helpers
+ * @exports createPreloadPath, createResponseChannel, createDialogId - Security helpers
+ * @exports InputDialogOptions - Input dialog configuration interface
+ * @exports WindowDimensions - Window dimension configuration interface
+ * @exports WindowBehavior - Window behavior configuration interface
+ * @exports WindowSecurity - Window security configuration interface
+ * @exports WindowConfiguration - Complete window configuration interface
+ * @exports DialogResponse - Dialog response handling interface
+ * @exports MaterialMatchingDialogData - Material matching dialog data interface
+ * @exports SingleColorConfirmationDialogData - Single color confirmation dialog data interface
+ * @exports AutoConnectChoiceDialogData - Auto-connect choice dialog data interface
+ * @exports ConnectChoiceDialogData - Connect choice dialog data interface
+ * @exports PrinterConnectedWarningData - Printer connected warning dialog data interface
+ * @exports JobPickerInitData - Job picker initialization data interface
+ * @exports WindowType - Discriminated union for type-safe window creation
+ * @exports WINDOW_SIZES - Standardized window dimension constants
  */
 
 // Branded types for window dimensions to prevent logical errors
@@ -130,20 +195,20 @@ export type WindowType =
 // Common window size constants
 export const WINDOW_SIZES = {
   SETTINGS: {
-    width: createWindowWidth(600),
-    height: createWindowHeight(500),
-    minWidth: createWindowMinWidth(500),
-    minHeight: createWindowMinHeight(400)
+    width: createWindowWidth(760),
+    height: createWindowHeight(780),
+    minWidth: createWindowMinWidth(760),
+    minHeight: createWindowMinHeight(780)
   },
   STATUS: {
-    width: createWindowWidth(650),
-    height: createWindowHeight(600),
-    minWidth: createWindowMinWidth(500),
-    minHeight: createWindowMinHeight(500)
+    width: createWindowWidth(750),
+    height: createWindowHeight(900),
+    minWidth: createWindowMinWidth(750),
+    minHeight: createWindowMinHeight(800)
   },
   LOG_DIALOG: {
     width: createWindowWidth(800),
-    height: createWindowHeight(600),
+    height: createWindowHeight(700),
     minWidth: createWindowMinWidth(600),
     minHeight: createWindowMinHeight(400)
   },
@@ -166,10 +231,10 @@ export const WINDOW_SIZES = {
     minHeight: createWindowMinHeight(350)
   },
   JOB_PICKER: {
-    width: createWindowWidth(600),
-    height: createWindowHeight(500),
-    minWidth: createWindowMinWidth(500),
-    minHeight: createWindowMinHeight(400)
+    width: createWindowWidth(700),
+    height: createWindowHeight(700),
+    minWidth: createWindowMinWidth(700),
+    minHeight: createWindowMinHeight(700)
   },
   SEND_COMMANDS: {
     width: createWindowWidth(600),

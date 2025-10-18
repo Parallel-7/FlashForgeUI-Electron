@@ -1,14 +1,25 @@
-// src/services/notifications/index.ts
-
 /**
- * Notifications module entry point providing centralized access to the desktop
- * notification system for printer events, upload status, and connection changes.
- * 
- * Core Responsibilities:
- * - Export all notification services and types
- * - Provide easy access to global instances
- * - Centralize notification system initialization
- * - Support both singleton and custom instances
+ * @fileoverview Notifications module entry point for desktop notification system
+ *
+ * Provides centralized access to the complete desktop notification system for printer
+ * events, upload status, and connection state changes. Manages initialization and disposal
+ * of notification services, exports factory functions for creating typed notifications,
+ * and provides convenient wrapper functions for common notification scenarios.
+ *
+ * Key Exports:
+ * - NotificationService: Core Electron notification wrapper with OS support detection
+ * - PrinterNotificationCoordinator: Business logic for printer state-based notifications
+ * - Factory functions: Type-safe notification creation with proper data validation
+ * - Utility functions: Settings extraction, state checking, and temperature monitoring
+ * - Initialization: Complete system setup with error handling and headless mode support
+ *
+ * Integration Points:
+ * - ConfigManager: Notification preferences and alert settings
+ * - PrinterPollingService: Real-time printer state monitoring
+ * - BasePrinterBackend: Upload completion and error notifications
+ * - ConnectionEstablishmentService: Connection state change notifications
+ *
+ * @module services/notifications
  */
 
 // Core services
@@ -43,6 +54,9 @@ export type {
 // Import types for internal use
 import type { NotificationState, NotificationSettings } from '../../types/notification';
 
+// Import headless detection
+import { isHeadlessMode } from '../../utils/HeadlessDetection';
+
 // Re-export factory functions for creating notifications
 export {
   createNotificationId,
@@ -74,21 +88,27 @@ export {
  * Note: Polling integration should be set up separately via coordinator.setPollingService()
  */
 export function initializeNotificationSystem(): void {
+  // Skip notification system in headless mode
+  if (isHeadlessMode()) {
+    console.log('[Headless] Skipping notification system initialization');
+    return;
+  }
+
   console.log('Initializing notification system...');
-  
+
   // Get global instances
   const notificationService = getNotificationService();
   const coordinator = getPrinterNotificationCoordinator();
-  
+
   // Setup error handling
   notificationService.on('notification-failed', (event: { type: string; error: string }) => {
     console.error('Notification failed:', event);
   });
-  
+
   coordinator.on('state-changed', (event: { transition: string }) => {
     console.log('Notification state changed:', event.transition);
   });
-  
+
   console.log('Notification system initialized successfully');
   console.log('Note: Use getPrinterNotificationCoordinator().setPollingService() to connect polling');
 }

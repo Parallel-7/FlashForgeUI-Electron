@@ -1,6 +1,22 @@
-// src/printer-backends/Adventurer5MBackend.ts
-// Backend implementation for Adventurer 5M standard using dual API
-// REFACTORED: Now extends DualAPIBackend to reduce code duplication
+/**
+ * @fileoverview Backend implementation for Adventurer 5M standard printer with dual API support.
+ *
+ * Provides backend functionality specific to the Adventurer 5M standard model:
+ * - Dual API support (FiveMClient + FlashForgeClient)
+ * - No built-in camera (custom camera URL supported)
+ * - LED control via G-code (auto-detected from product endpoint)
+ * - No filtration control (5M standard lacks this feature)
+ * - Full job management capabilities (local/recent jobs, upload, start/pause/resume/cancel)
+ * - Real-time status monitoring
+ * - Custom LED and camera configuration via per-printer settings
+ *
+ * Key exports:
+ * - Adventurer5MBackend class: Backend for Adventurer 5M standard printers
+ *
+ * This backend extends DualAPIBackend to leverage common dual-API functionality while
+ * defining model-specific features. The main difference from the Pro model is the lack
+ * of built-in camera and filtration control features.
+ */
 
 import { DualAPIBackend } from './DualAPIBackend';
 import {

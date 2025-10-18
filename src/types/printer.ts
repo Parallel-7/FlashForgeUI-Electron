@@ -1,3 +1,19 @@
+/**
+ * @fileoverview Core printer connection and configuration type definitions.
+ *
+ * Defines comprehensive TypeScript interfaces for printer discovery, connection management,
+ * and multi-printer configuration storage. Supports both legacy and modern API clients with
+ * per-printer settings including custom camera URLs, LED control, and material station features.
+ * Includes types for auto-connect workflows, printer family detection, and saved printer matching.
+ *
+ * Key exports:
+ * - PrinterDetails: Complete printer configuration with per-printer overrides
+ * - MultiPrinterConfig: Top-level configuration structure for multiple saved printers
+ * - DiscoveredPrinter: Network discovery results
+ * - ConnectionResult: Connection flow outcomes
+ * - AutoConnectDecision: Auto-connect strategy determination
+ */
+
 // src/types/printer.ts
 // TypeScript type definitions for printer connection system
 
@@ -20,6 +36,17 @@ export interface PrinterDetails {
   readonly ClientType: PrinterClientType;
   readonly printerModel: string; // typeName from API for future auto-connect logic
   readonly modelType?: PrinterModelType; // Specific model type for backend selection
+
+  // Per-printer settings (overrides global config if set)
+  // These are mutable so they can be updated via settings UI
+  customCameraEnabled?: boolean;
+  customCameraUrl?: string; // Supports http://, https://, and rtsp:// URLs
+  customLedsEnabled?: boolean;
+  forceLegacyMode?: boolean;
+
+  // RTSP streaming settings (per-printer)
+  rtspFrameRate?: number;    // 1-60 fps, default: 30
+  rtspQuality?: number;       // 1-5 (1=best, 5=worst), default: 3
 }
 
 /**

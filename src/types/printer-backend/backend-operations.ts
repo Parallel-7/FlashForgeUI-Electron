@@ -1,3 +1,19 @@
+/**
+ * @fileoverview Printer backend operation type definitions and command interfaces.
+ *
+ * Provides comprehensive TypeScript types for printer backend operations including job management,
+ * G-code execution, status monitoring, and feature capabilities. Defines initialization options,
+ * command results, and backend events for all supported printer models (AD5X, 5M, 5M Pro, generic legacy).
+ * Includes model-specific job information types with rich metadata for AD5X and basic info for other models.
+ *
+ * Key exports:
+ * - BackendInitOptions: Backend initialization configuration
+ * - JobStartParams/JobStartResult: Job control operations using fileName (not jobId)
+ * - AD5XJobInfo/BasicJobInfo: Model-specific job metadata structures
+ * - BackendCapabilities: Feature and API client availability
+ * - BackendEvent: Event system for backend state changes
+ */
+
 // src/types/printer-backend/backend-operations.ts
 // Type definitions for backend operations, commands, and results
 // MAJOR REWRITE: Fixed to match actual API behavior - no more fake jobId concept
@@ -26,6 +42,10 @@ export interface BackendInitOptions {
     readonly ipAddress: string;
     readonly serialNumber: string;
     readonly typeName: string;
+    readonly customCameraEnabled?: boolean;
+    readonly customCameraUrl?: string;
+    readonly customLedsEnabled?: boolean;
+    readonly forceLegacyMode?: boolean;
   };
 }
 

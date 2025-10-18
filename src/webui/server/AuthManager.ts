@@ -1,7 +1,20 @@
 /**
- * AuthManager - Handles authentication for the web UI.
- * Manages password validation, token generation, and session management.
- * Integrates with ConfigManager for password storage and validation.
+ * @fileoverview Authentication manager for WebUI providing password validation and session token management.
+ *
+ * Manages all aspects of WebUI authentication including password validation against configured
+ * credentials, secure JWT-style token generation with HMAC signatures, session lifecycle tracking,
+ * and automatic session cleanup. Supports both persistent (24-hour) and temporary (1-hour) sessions
+ * based on "remember me" preferences. Tokens are cryptographically signed using SHA-256 HMAC with
+ * a secret derived from the WebUI password, preventing tampering and ensuring secure authentication.
+ * Integrates with ConfigManager for password storage and provides session management including
+ * token revocation, activity tracking, and automatic expiration cleanup.
+ *
+ * Key exports:
+ * - AuthManager class: Main authentication service with singleton pattern
+ * - getAuthManager(): Singleton accessor function
+ * - Session management: validateLogin, validateToken, revokeToken, getActiveSessionCount
+ * - Token utilities: extractTokenFromHeader, getAuthStatus
+ * - Cleanup: Automatic session expiration every 5 minutes, manual clearAllSessions
  */
 
 import * as crypto from 'crypto';

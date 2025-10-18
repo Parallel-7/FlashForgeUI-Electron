@@ -1,0 +1,321 @@
+/**
+ * Printer Tabs Component Styles
+ * Modern tabbed interface matching Orca-FlashForge design language
+ * Supports multiple printer connections with clear visual status indicators
+ */
+
+/* Tabs Bar Container */
+.printer-tabs-bar {
+  display: flex;
+  align-items: center;
+  background-color: #222222;
+  border-bottom: 1px solid #444444;
+  height: 40px;
+  padding: 0 8px;
+  gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-shrink: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Tabs List Container */
+.tabs-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #444444 transparent;
+}
+
+.tabs-list::-webkit-scrollbar {
+  height: 4px;
+}
+
+.tabs-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.tabs-list::-webkit-scrollbar-thumb {
+  background: #444444;
+  border-radius: 2px;
+}
+
+.tabs-list::-webkit-scrollbar-thumb:hover {
+  background: #555555;
+}
+
+/* Individual Tab Styling */
+.printer-tab {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(180deg, #2d2d2d 0%, #272727 100%);
+  border: 1px solid #3a3a3a;
+  border-radius: 6px 6px 0 0;
+  padding: 6px 12px;
+  min-width: 200px;
+  max-width: 280px;
+  height: 34px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.printer-tab:hover {
+  background: linear-gradient(180deg, #353535 0%, #2f2f2f 100%);
+  border-color: #4a4a4a;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+/* Active Tab State */
+.printer-tab.active {
+  background: linear-gradient(180deg, #4285f4 0%, #357abd 100%);
+  border-color: #5a95f5;
+  box-shadow: 0 2px 6px rgba(66, 133, 244, 0.4);
+}
+
+.printer-tab.active:hover {
+  background: linear-gradient(180deg, #5a95f5 0%, #4285f4 100%);
+}
+
+/* Tab Content Layout */
+.tab-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  overflow: hidden;
+}
+
+/* Connection Status Indicator */
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 4px currentColor;
+  transition: all 0.3s ease;
+}
+
+/* Status Colors */
+.status-indicator.status-connected {
+  background-color: #00e676;
+  box-shadow: 0 0 6px #00e676;
+}
+
+.status-indicator.status-connecting {
+  background-color: #ffd54f;
+  box-shadow: 0 0 6px #ffd54f;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.status-indicator.status-disconnected {
+  background-color: #9e9e9e;
+  box-shadow: 0 0 4px #9e9e9e;
+}
+
+.status-indicator.status-error {
+  background-color: #f44336;
+  box-shadow: 0 0 6px #f44336;
+}
+
+/* Pulse animation for connecting state */
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scale(0.9);
+  }
+}
+
+/* Tab Information Container */
+.tab-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* Tab Name */
+.tab-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e0e0e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: 0.2px;
+}
+
+.printer-tab.active .tab-name {
+  color: #ffffff;
+}
+
+/* Tab Details (IP and Model) */
+.tab-details {
+  font-size: 11px;
+  color: #a0a0a0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.printer-tab.active .tab-details {
+  color: rgba(255, 255, 255, 0.8);
+}
+
+/* Close Button */
+.tab-close-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  background-color: transparent;
+  color: #a0a0a0;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 3px;
+  padding: 0;
+  margin: 0;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  opacity: 0;
+}
+
+.printer-tab:hover .tab-close-button {
+  opacity: 1;
+}
+
+.tab-close-button:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.printer-tab.active .tab-close-button {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.printer-tab.active .tab-close-button:hover {
+  background-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+/* Add Printer Button */
+.add-tab-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(180deg, #4285f4 0%, #357abd 100%);
+  border: 1px solid #5a95f5;
+  border-radius: 6px;
+  padding: 6px 12px;
+  height: 34px;
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  letter-spacing: 0.3px;
+}
+
+.add-tab-button:hover {
+  background: linear-gradient(180deg, #5a95f5 0%, #4285f4 100%);
+  box-shadow: 0 2px 4px rgba(66, 133, 244, 0.4);
+  transform: translateY(-1px);
+}
+
+.add-tab-button:active {
+  transform: translateY(0);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+.add-tab-icon {
+  font-size: 16px;
+  font-weight: bold;
+  line-height: 1;
+}
+
+.add-tab-text {
+  white-space: nowrap;
+}
+
+/* Hide button text on smaller screens */
+@media (max-width: 768px) {
+  .add-tab-text {
+    display: none;
+  }
+
+  .add-tab-button {
+    padding: 6px 10px;
+    min-width: auto;
+  }
+
+  .printer-tab {
+    min-width: 150px;
+    max-width: 200px;
+  }
+
+  .tab-name {
+    font-size: 12px;
+  }
+
+  .tab-details {
+    font-size: 10px;
+  }
+}
+
+/* Status-specific tab border highlights */
+.printer-tab.status-error {
+  border-color: #f44336;
+}
+
+.printer-tab.status-connected {
+  border-color: #00e676;
+}
+
+/* Keep highlights subtle for active tab to avoid visual conflict */
+.printer-tab.active.status-error {
+  border-color: rgba(244, 67, 54, 0.5);
+}
+
+.printer-tab.active.status-connected {
+  border-color: rgba(0, 230, 118, 0.3);
+}
+
+/* Smooth scrolling for tabs */
+.tabs-list {
+  scroll-behavior: smooth;
+}
+
+/* Focus styles for accessibility */
+.printer-tab:focus-visible {
+  outline: 2px solid #4285f4;
+  outline-offset: 2px;
+}
+
+.add-tab-button:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.tab-close-button:focus-visible {
+  outline: 2px solid #ffffff;
+  outline-offset: 1px;
+}

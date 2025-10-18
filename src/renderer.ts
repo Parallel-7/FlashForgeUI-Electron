@@ -36,6 +36,7 @@ import {
   TemperatureControlsComponent,
   FiltrationControlsComponent,
   AdditionalInfoComponent,
+  PrinterTabsComponent,
   type ComponentUpdateData
 } from './ui/components';
 
@@ -52,6 +53,9 @@ import type { ResolvedCameraConfig } from './types/camera';
 
 /** Global reference to LogPanelComponent for backward compatibility */
 let logPanelComponent: LogPanelComponent | null = null;
+
+/** Global reference to PrinterTabsComponent for multi-printer support */
+let printerTabsComponent: PrinterTabsComponent | null = null;
 
 /** Whether components have been initialized */
 let componentsInitialized = false;
@@ -288,6 +292,109 @@ async function initializeComponents(): Promise<void> {
     console.error('Component system initialization failed:', error);
     logMessage(`ERROR: Component system initialization failed: ${error}`);
     // Don't throw - allow fallback to continue
+  }
+}
+
+/**
+ * Initialize the PrinterTabsComponent for multi-printer support
+ * Sets up the tabs UI and connects it to context events from main process
+ */
+async function initializePrinterTabs(): Promise<void> {
+  console.log('Initializing printer tabs component...');
+
+  try {
+    const tabsContainer = document.getElementById('printer-tabs-container');
+    if (!tabsContainer) {
+      console.warn('Printer tabs container not found in DOM');
+      return;
+    }
+
+    // Create and initialize tabs component
+    printerTabsComponent = new PrinterTabsComponent();
+    await printerTabsComponent.initialize(tabsContainer);
+
+    // Listen for tab interaction events
+    printerTabsComponent.on('tab-clicked', (...args: unknown[]) => {
+      const contextId = args[0] as string;
+      console.log(`Tab clicked: ${contextId}`);
+      void window.api.printerContexts.switch(contextId);
+    });
+
+    printerTabsComponent.on('tab-closed', (...args: unknown[]) => {
+      const contextId = args[0] as string;
+      console.log(`Tab close requested: ${contextId}`);
+      void window.api.printerContexts.remove(contextId);
+    });
+
+    printerTabsComponent.on('add-printer-clicked', () => {
+      console.log('Add printer button clicked');
+      window.api.send('open-printer-selection');
+    });
+
+    // Listen for context events from main process
+    window.api.receive('printer-context-created', (...args: unknown[]) => {
+      const event = args[0] as import('./types/PrinterContext').ContextCreatedEvent;
+      console.log('Renderer received context-created event:', event);
+      console.log('Event contextId:', event?.contextId);
+      console.log('Event contextInfo:', event?.contextInfo);
+      if (printerTabsComponent && event?.contextInfo) {
+        printerTabsComponent.addTab(event.contextInfo);
+      } else {
+        console.error('Cannot add tab: event or contextInfo is missing', { event, hasComponent: !!printerTabsComponent });
+      }
+    });
+
+    window.api.receive('printer-context-switched', (...args: unknown[]) => {
+      const event = args[0] as { contextId: string };
+      console.log('Renderer received context-switched event:', event);
+
+      // Update active tab
+      if (printerTabsComponent) {
+        printerTabsComponent.setActiveTab(event.contextId);
+      }
+
+      // Clear printer-specific state from previous context
+      // Note: filtrationAvailable will be updated by polling data
+      filtrationAvailable = false;
+      ifsButtonVisible = false;
+      isLegacyPrinter = false;
+
+      // Update button states to reflect cleared state
+      // Note: Filtration buttons are managed by FiltrationControlsComponent
+      updateIFSButtonVisibility();
+      updateLegacyPrinterButtonStates();
+
+      //       // Request fresh printer data for the new context
+      //       // The polling-update event will automatically update the UI when data arrives
+      //       void window.api.requestPrinterStatus().then(() => {
+      //         console.log('Requested printer status for new context');
+      //       }).catch((error: unknown) => {
+      //         console.error('Failed to request printer status for new context:', error);
+      //       });
+    });
+
+    window.api.receive('printer-context-removed', (...args: unknown[]) => {
+      const event = args[0] as { contextId: string };
+      console.log('Renderer received context-removed event:', event);
+      if (printerTabsComponent) {
+        printerTabsComponent.removeTab(event.contextId);
+      }
+    });
+
+    window.api.receive('printer-context-updated', (...args: unknown[]) => {
+      const event = args[0] as { contextId: string; updates: Partial<import('./types/PrinterContext').PrinterContextInfo> };
+      console.log('Renderer received context-updated event:', event);
+      if (printerTabsComponent) {
+        printerTabsComponent.updateTab(event.contextId, event.updates);
+      }
+    });
+
+    console.log('Printer tabs component initialized successfully');
+    logMessage('Multi-printer tabs UI initialized');
+
+  } catch (error) {
+    console.error('Failed to initialize printer tabs component:', error);
+    logMessage(`ERROR: Printer tabs initialization failed: ${error}`);
   }
 }
 
@@ -590,13 +697,13 @@ function setupBasicButtons(): void {
     if (button) {
       button.addEventListener('click', async () => {
 
-        
+
         // Special handling for preview button
         if (buttonId === 'btn-preview') {
           void handleCameraToggle(button);
           return;
         }
-        
+
         // Special handling for temperature setting buttons
         if (buttonId === 'btn-bed-set' || buttonId === 'btn-extruder-set') {
           void handleTemperatureDialog(buttonId);
@@ -1107,12 +1214,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Set up platform detection listener for platform-specific styling
-  window.api.onPlatformInfo((platform: string) => {
-    console.log(`Received platform info: ${platform}`);
-    document.body.classList.add(`platform-${platform}`);
-    logMessage(`Platform-specific styling applied: platform-${platform}`);
-  });
+  // Apply platform-specific styling IMMEDIATELY (no IPC needed)
+  if (window.PLATFORM) {
+    document.body.classList.add(`platform-${window.PLATFORM}`);
+    console.log(`Platform-specific styling applied: platform-${window.PLATFORM}`);
+    logMessage(`Platform detected: ${window.PLATFORM}`);
+  }
 
   console.log('IPC listeners configured for component system integration');
 
@@ -1130,6 +1237,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   } catch (error) {
     console.error('Component system initialization failed:', error);
     logMessage(`ERROR: Component system failed to initialize: ${error}`);
+  }
+
+  // Initialize printer tabs for multi-printer support
+  try {
+    await initializePrinterTabs();
+    console.log('Printer tabs ready');
+  } catch (error) {
+    console.error('Printer tabs initialization failed:', error);
+    logMessage(`ERROR: Printer tabs failed to initialize: ${error}`);
   }
 
   // Initialize state tracking and event listeners

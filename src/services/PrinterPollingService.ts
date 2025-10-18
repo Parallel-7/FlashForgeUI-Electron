@@ -1,6 +1,25 @@
-// src/services/PrinterPollingService.ts
-// Focused polling service that manages the polling loop and delegates data transformation
-// Simplified from the original printer-polling.ts to focus on single responsibility
+/**
+ * @fileoverview Focused polling service for managing printer status polling loops.
+ *
+ * Manages the polling loop with single responsibility principle:
+ * - Periodic printer status polling
+ * - Material station status polling
+ * - Thumbnail data retrieval
+ * - Error handling and retry logic
+ * - Event emission for status updates
+ * - Configurable polling intervals
+ * - Polling start/stop/pause/resume control
+ *
+ * Key exports:
+ * - PrinterPollingService class: Main polling loop manager
+ * - createPollingService(): Factory for creating polling service instances
+ * - getGlobalPollingService(): Global polling service accessor
+ * - POLLING_EVENTS: Event name constants
+ *
+ * This service focuses solely on the polling loop mechanics, delegating data transformation
+ * to PrinterDataTransformer. Simplified from the original monolithic printer-polling.ts
+ * to adhere to single responsibility principle.
+ */
 
 import { EventEmitter } from '../utils/EventEmitter';
 import { printerDataTransformer } from './PrinterDataTransformer';

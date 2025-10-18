@@ -1,6 +1,22 @@
-// src/printer-backends/Adventurer5MProBackend.ts
-// Backend implementation for Adventurer 5M Pro using dual API
-// REFACTORED: Now extends DualAPIBackend to reduce code duplication
+/**
+ * @fileoverview Backend implementation for Adventurer 5M Pro printer with enhanced features.
+ *
+ * Provides backend functionality specific to the Adventurer 5M Pro model:
+ * - Dual API support (FiveMClient + FlashForgeClient)
+ * - Built-in RTSP camera support (rtsp://printer-ip:8554/stream)
+ * - Built-in LED control via new API
+ * - Filtration control (off/internal/external modes)
+ * - Full job management capabilities (local/recent jobs, upload, start/pause/resume/cancel)
+ * - Real-time status monitoring
+ * - Enhanced features over standard 5M model
+ *
+ * Key exports:
+ * - Adventurer5MProBackend class: Backend for Adventurer 5M Pro printers
+ *
+ * This backend extends DualAPIBackend to leverage common dual-API functionality while
+ * defining Pro-specific features. Key differences from standard 5M include built-in
+ * RTSP camera and filtration control capabilities.
+ */
 
 import { DualAPIBackend } from './DualAPIBackend';
 import {

@@ -1,7 +1,35 @@
 /**
- * Status dialog preload script that exposes secure APIs for status information
- * and window controls to the renderer process. Handles printer status stats
- * and provides callback mechanisms for real-time updates.
+ * @fileoverview Status Dialog preload script exposing secure IPC bridge for comprehensive
+ * system and printer status information retrieval. Provides real-time monitoring data for
+ * printer details, WebUI server status, camera proxy status, and application health metrics.
+ *
+ * Key Features:
+ * - Secure contextBridge API for status data retrieval
+ * - Promise-based status request handling
+ * - Comprehensive status data structure with printer, server, and system info
+ * - Window lifecycle management (close, listeners)
+ * - Type-safe IPC communication with validation
+ *
+ * Exposed API (window.statusAPI):
+ * - requestStats(): Fetches complete system status snapshot
+ * - receiveStats(callback): Registers callback for status updates
+ * - closeWindow(): Closes the status dialog
+ * - removeListeners(): Cleanup function for registered callbacks
+ *
+ * Status Data Includes:
+ * - Printer Information: model, firmware, serial number, connection state, IP address
+ * - WebUI Status: enabled/disabled, active clients, access URL
+ * - Camera Status: proxy state, streaming status, active clients, proxy port
+ * - System Health: application uptime, memory usage
+ *
+ * Security:
+ * - Uses contextBridge for sandboxed renderer communication
+ * - Validates response structures before passing to renderer
+ * - Error handling with graceful null returns
+ *
+ * Context:
+ * Provides diagnostic and monitoring information for troubleshooting connectivity,
+ * server status, and resource usage. Primarily used for technical support and debugging.
  */
 
 import { contextBridge, ipcRenderer } from 'electron';

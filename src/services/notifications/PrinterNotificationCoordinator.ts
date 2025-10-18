@@ -1,16 +1,44 @@
-// src/services/notifications/PrinterNotificationCoordinator.ts
-
 /**
- * Printer notification coordinator that manages notification business logic,
+ * @fileoverview Printer notification coordinator that manages notification business logic,
  * state tracking, and integration with printer polling and configuration systems.
- * 
+ *
+ * This coordinator acts as the bridge between printer state monitoring (PrinterPollingService),
+ * user notification preferences (ConfigManager), and notification delivery (NotificationService).
+ * It implements intelligent notification logic including duplicate prevention, temperature
+ * monitoring for cooled notifications, and state-based notification triggers tied to the
+ * printer's operational lifecycle.
+ *
+ * Key Features:
+ * - Integration with PrinterPollingService for real-time printer state monitoring
+ * - Configuration-driven notification behavior based on user preferences from ConfigManager
+ * - Stateful notification tracking to prevent duplicate notifications during a print job
+ * - Temperature monitoring system with configurable intervals and thresholds for cooled notifications
+ * - Automatic state reset on print start/cancel/error to ensure clean notification cycles
+ * - Support for multiple notification types: print complete, printer cooled, upload complete/failed, connection events
+ * - Event emitter pattern for notification triggers, state changes, and temperature checks
+ * - Singleton pattern with global instance management and test-friendly dependency injection
+ *
  * Core Responsibilities:
- * - Monitor printer state changes from PrinterPollingService
- * - Check notification settings from ConfigManager
- * - Manage notification state to prevent duplicates
- * - Coordinate notification sending through NotificationService
- * - Handle temperature monitoring for cooled notifications
- * - Reset state appropriately during print cycles
+ * - Monitor printer state changes from PrinterPollingService and handle state transitions
+ * - Check notification settings from ConfigManager to respect user preferences
+ * - Manage notification state to prevent duplicate notifications within a print cycle
+ * - Coordinate notification sending through NotificationService based on state and settings
+ * - Handle temperature monitoring for cooled notifications with configurable intervals and thresholds
+ * - Reset state appropriately during print cycles (start, complete, cancel, error transitions)
+ * - Handle connection changes and cleanup resources on disconnect
+ *
+ * Temperature Monitoring:
+ * - Starts automatically after print completion if cooled notifications are enabled
+ * - Checks bed temperature at configurable intervals (default: 30 seconds)
+ * - Waits minimum cool time (2 minutes) before checking to avoid premature notifications
+ * - Sends notification when bed temperature falls below threshold (default: 35°C)
+ * - Automatically stops monitoring after sending cooled notification
+ *
+ * @exports PrinterNotificationCoordinator - Main coordinator class for printer notifications
+ * @exports getPrinterNotificationCoordinator - Singleton instance accessor
+ * @exports resetPrinterNotificationCoordinator - Test helper for instance reset
+ * @exports TemperatureMonitorConfig - Type for temperature monitoring configuration
+ * @exports CoordinatorEventMap - Type for coordinator event emissions
  */
 
 import { EventEmitter } from '../../utils/EventEmitter';
@@ -400,11 +428,13 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     });
 
     if (shouldNotify && shouldSendNotification(NotificationType.PrinterCooled, this.currentSettings)) {
-      await this.sendPrinterCooledNotification(status);
+      // Update state BEFORE sending to prevent race condition from polling updates
       this.updateNotificationState({
         hasSentPrinterCooledNotification: true
       }, NotificationStateTransition.PrinterCooled);
-      
+
+      await this.sendPrinterCooledNotification(status);
+
       // Stop temperature monitoring
       this.stopTemperatureMonitoring();
     }

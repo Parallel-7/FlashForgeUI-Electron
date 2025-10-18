@@ -1,6 +1,26 @@
 /**
- * Job-related IPC handlers for job management and file operations.
- * Handles job listing, starting, uploading, and thumbnail requests.
+ * @fileoverview Job-related IPC handlers for print job management and file operations.
+ *
+ * Provides comprehensive job management IPC handlers with support for different printer types:
+ * - Local job listing and retrieval from printer storage
+ * - Recent job listing from printer history
+ * - Job starting with leveling and material mapping support
+ * - File upload with progress tracking (standard and AD5X workflows)
+ * - Thumbnail retrieval with caching and queue management
+ * - Slicer file metadata parsing and validation
+ *
+ * Key exports:
+ * - registerJobHandlers(): Registers all job-related IPC handlers
+ *
+ * Special features:
+ * - AD5X upload workflow with material station integration
+ * - Progress simulation for user feedback during uploads
+ * - Thumbnail caching with printer serial number keying
+ * - Request queue management for efficient thumbnail fetching
+ * - Integration with ThumbnailCacheService and ThumbnailRequestQueue
+ *
+ * All handlers are context-aware and operate on the active printer context, with feature
+ * detection to ensure operations are only available on supported printer models.
  */
 
 import { ipcMain, dialog } from 'electron';
@@ -10,6 +30,7 @@ import type { getWindowManager } from '../../windows/WindowManager';
 import { getThumbnailCacheService } from '../../services/ThumbnailCacheService';
 import { getThumbnailRequestQueue } from '../../services/ThumbnailRequestQueue';
 import type { AD5XUploadParams, UploadJobPayload, SlicerMetadata } from '../../types/ipc';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager';
 
 type WindowManager = ReturnType<typeof getWindowManager>;
 
@@ -23,13 +44,20 @@ export function registerJobHandlers(
   // Get local jobs handler
   ipcMain.handle('job-picker:get-local-jobs', async (): Promise<{ success: boolean; jobs: readonly unknown[]; error?: string }> => {
     try {
-      const features = backendManager.getFeatures();
-      
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, jobs: [], error: 'No active printer context' };
+      }
+
+      const features = backendManager.getFeatures(contextId);
+
       if (!features || !features.jobManagement.localJobs) {
         return { success: false, jobs: [], error: 'Local job management not supported on this printer' };
       }
-      
-      const result = await backendManager.getLocalJobs();
+
+      const result = await backendManager.getLocalJobs(contextId);
       return { success: result.success, jobs: result.jobs, error: result.error };
     } catch (error) {
       return { success: false, jobs: [], error: error instanceof Error ? error.message : 'Unknown error' };
@@ -39,13 +67,20 @@ export function registerJobHandlers(
   // Get recent jobs handler
   ipcMain.handle('job-picker:get-recent-jobs', async (): Promise<{ success: boolean; jobs: readonly unknown[]; error?: string }> => {
     try {
-      const features = backendManager.getFeatures();
-      
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, jobs: [], error: 'No active printer context' };
+      }
+
+      const features = backendManager.getFeatures(contextId);
+
       if (!features || !features.jobManagement.recentJobs) {
         return { success: false, jobs: [], error: 'Recent job management not supported on this printer' };
       }
-      
-      const result = await backendManager.getRecentJobs();
+
+      const result = await backendManager.getRecentJobs(contextId);
       return { success: result.success, jobs: result.jobs, error: result.error };
     } catch (error) {
       return { success: false, jobs: [], error: error instanceof Error ? error.message : 'Unknown error' };
@@ -55,20 +90,27 @@ export function registerJobHandlers(
   // Start job handler
   ipcMain.handle('job-picker:start-job', async (_event, fileName: string, options: { leveling: boolean; startNow: boolean; materialMappings?: unknown[] }): Promise<{ success: boolean; error?: string }> => {
     try {
-      const features = backendManager.getFeatures();
-      
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+
+      const features = backendManager.getFeatures(contextId);
+
       if (!features || !features.jobManagement.startJobs) {
         return { success: false, error: 'Job starting not supported on this printer' };
       }
-      
-      const result = await backendManager.startJob({
+
+      const result = await backendManager.startJob(contextId, {
         operation: 'start',
         fileName,
         leveling: options.leveling,
         startNow: options.startNow,
         additionalParams: options.materialMappings ? { materialMappings: options.materialMappings } : undefined
       });
-      
+
       return { success: result.success, error: result.error };
     } catch (error) {
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -117,32 +159,39 @@ export function registerJobHandlers(
   ipcMain.handle('upload-file-ad5x', async (event, params: AD5XUploadParams) => {
     try {
       const { filePath, startPrint, levelingBeforePrint, materialMappings } = params;
-      
+
       // Validate required parameters
       if (!filePath || typeof filePath !== 'string') {
         throw new Error('filePath is required and must be a string');
       }
-      
+
       if (typeof startPrint !== 'boolean') {
         throw new Error('startPrint must be a boolean');
       }
-      
+
       if (typeof levelingBeforePrint !== 'boolean') {
         throw new Error('levelingBeforePrint must be a boolean');
       }
-      
+
       // Validate material mappings if provided
       if (materialMappings !== undefined && !Array.isArray(materialMappings)) {
         throw new Error('materialMappings must be an array if provided');
       }
-      
+
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        throw new Error('No active printer context');
+      }
+
       // Check if backend is ready
-      if (!backendManager.isBackendReady()) {
+      if (!backendManager.isBackendReady(contextId)) {
         throw new Error('Printer backend is not ready');
       }
-      
+
       // Check if the current printer supports AD5X features
-      const features = backendManager.getFeatures();
+      const features = backendManager.getFeatures(contextId);
       if (!features || !features.materialStation?.available) {
         throw new Error('Current printer does not support AD5X upload functionality');
       }
@@ -174,6 +223,7 @@ export function registerJobHandlers(
       
       // Call the PrinterBackendManager method which delegates to the AD5X backend
       const result = await backendManager.uploadFileAD5X(
+        contextId,
         filePath,
         startPrint,
         levelingBeforePrint,
@@ -234,15 +284,27 @@ export function registerJobHandlers(
   ipcMain.on('uploader:upload-job', async (event, payload: UploadJobPayload) => {
     const { filePath, startNow, autoLevel } = payload;
     console.log('Upload job requested:', payload);
-    
+
     const jobUploaderWindow = windowManager.getJobUploaderWindow();
     if (!jobUploaderWindow) {
       return;
     }
-    
+
     try {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        event.sender.send('uploader:upload-complete', {
+          success: false,
+          fileName: '',
+          error: 'No active printer context'
+        });
+        return;
+      }
+
       // Check if backend is ready
-      if (!backendManager.isBackendReady()) {
+      if (!backendManager.isBackendReady(contextId)) {
         event.sender.send('uploader:upload-complete', {
           success: false,
           fileName: '',
@@ -260,7 +322,7 @@ export function registerJobHandlers(
       
       // Use startJob with filePath for regular printers
       const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
-      const result = await backendManager.startJob({
+      const result = await backendManager.startJob(contextId, {
         operation: 'start',
         filePath,
         fileName,
@@ -321,7 +383,7 @@ export function registerJobHandlers(
     const jobPickerWindow = windowManager.getJobPickerWindow();
     const thumbnailCache = getThumbnailCacheService();
     const thumbnailQueue = getThumbnailRequestQueue();
-    
+
     // Helper to send result to renderer
     const sendResult = (thumbnail: string | null): void => {
       if (jobPickerWindow && !jobPickerWindow.isDestroyed()) {
@@ -331,17 +393,26 @@ export function registerJobHandlers(
         });
       }
     };
-    
+
     try {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        console.log(`[ThumbnailHandler] No active context for ${filename}`);
+        sendResult(null);
+        return;
+      }
+
       // Check if backend is ready
-      if (!backendManager.isBackendReady()) {
+      if (!backendManager.isBackendReady(contextId)) {
         console.log(`[ThumbnailHandler] Backend not ready for ${filename}`);
         sendResult(null);
         return;
       }
-      
+
       // Get printer serial number for cache key
-      const printerDetails = backendManager.getCurrentPrinterDetails();
+      const printerDetails = backendManager.getPrinterDetailsForContext(contextId);
       if (!printerDetails?.SerialNumber) {
         console.warn('[ThumbnailHandler] No printer serial number available');
         sendResult(null);

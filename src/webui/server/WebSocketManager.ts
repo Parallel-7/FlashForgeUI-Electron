@@ -1,7 +1,22 @@
 /**
- * WebSocketManager - Handles real-time bidirectional communication for the web UI.
- * Manages WebSocket connections, authentication, and message broadcasting.
- * Integrates with WebUIManager to receive printer status updates and forward them to clients.
+ * @fileoverview WebSocket server manager for real-time bidirectional WebUI communication.
+ *
+ * Manages all WebSocket connections for the WebUI providing real-time printer status updates,
+ * command execution, and bidirectional communication between browser clients and the main process.
+ * Implements connection authentication via token validation, automatic reconnection handling,
+ * keep-alive ping/pong mechanisms, and efficient message broadcasting to all connected clients.
+ * Integrates with WebUIManager to receive polling updates from the main process and forwards
+ * formatted status data to clients. Supports multi-tab sessions per authentication token with
+ * proper client tracking and cleanup. All messages follow a type-safe protocol with discriminated
+ * union types for robust error handling.
+ *
+ * Key exports:
+ * - WebSocketManager class: Main WebSocket server with singleton pattern
+ * - getWebSocketManager(): Singleton accessor function
+ * - Connection management: initialize, shutdown, getClientCount, disconnectToken
+ * - Broadcasting: broadcastPrinterStatus, broadcastToToken
+ * - Status access: getLatestPollingData (for API access without WebSocket clients)
+ * - Message types: AUTH_SUCCESS, STATUS_UPDATE, ERROR, COMMAND_RESULT, PONG
  */
 
 import { WebSocketServer, WebSocket, RawData } from 'ws';
@@ -10,6 +25,7 @@ import { EventEmitter } from 'events';
 import { getAuthManager } from './AuthManager';
 import { getWebUIManager } from './WebUIManager';
 import { getPrinterBackendManager } from '../../managers/PrinterBackendManager';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager';
 import { AppError, toAppError, ErrorCode } from '../../utils/error.utils';
 import { 
   WebSocketCommandSchema,
@@ -170,17 +186,17 @@ export class WebSocketManager extends EventEmitter {
     
     // Store client
     this.clients.set(ws, clientInfo);
-    
+
     // Add to token-based map for multi-tab support
     if (!this.clientsByToken.has(token)) {
       this.clientsByToken.set(token, new Set());
     }
     this.clientsByToken.get(token)!.add(ws);
-    
+
     // Update client count
     this.updateClientCount();
-    
-    console.log(`WebSocket client connected: ${clientId}`);
+
+    console.log(`WebSocket client connected: ${clientId} - Total clients: ${this.clients.size}`);
     
     // Send authentication success
     const authMessage: WebSocketMessage = {
@@ -275,8 +291,16 @@ export class WebSocketManager extends EventEmitter {
           if (!command.gcode) {
             throw new AppError('G-code command required', ErrorCode.VALIDATION);
           }
-          const result = await this.backendManager.executeGCodeCommand(command.gcode);
-          
+
+          const contextManager = getPrinterContextManager();
+          const contextId = contextManager.getActiveContextId();
+
+          if (!contextId) {
+            throw new AppError('No active printer context', ErrorCode.PRINTER_NOT_CONNECTED);
+          }
+
+          const result = await this.backendManager.executeGCodeCommand(contextId, command.gcode);
+
           const response: WebSocketMessage = {
             type: 'COMMAND_RESULT',
             timestamp: new Date().toISOString(),
@@ -480,16 +504,24 @@ export class WebSocketManager extends EventEmitter {
    * Accepts PollingData from the polling service
    */
   public async broadcastPrinterStatus(data: PollingData): Promise<void> {
+    console.log(`[WebSocketManager] broadcastPrinterStatus called - running: ${this.isRunning}, clients: ${this.clients.size}, hasData: ${!!data.printerStatus}`);
+
     // Always store latest data, even if no clients connected (for API access)
     this.latestPollingData = data;
 
     // Only broadcast to WebSocket clients if server is running and clients are connected
-    if (!this.isRunning || this.clients.size === 0) return;
+    if (!this.isRunning || this.clients.size === 0) {
+      console.log(`[WebSocketManager] Skipping broadcast - running: ${this.isRunning}, clients: ${this.clients.size}`);
+      return;
+    }
 
     const formattedStatus = this.formatPollingData(data);
     if (!formattedStatus) {
+      console.log('[WebSocketManager] No formatted status to broadcast');
       return;
     }
+
+    console.log('[WebSocketManager] Broadcasting status update to', this.clients.size, 'client(s)');
 
     const statusMessage: WebSocketMessage = {
       type: 'STATUS_UPDATE',

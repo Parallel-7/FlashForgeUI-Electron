@@ -1,3 +1,26 @@
+/**
+ * @fileoverview Send Commands Dialog preload script providing secure IPC bridge for sending raw printer
+ * commands from the renderer process to the main process. Exposes a sandboxed API that allows the dialog
+ * to communicate with the connected printer via IPC channels while maintaining security boundaries.
+ *
+ * Key Features:
+ * - Secure contextBridge API exposure for command transmission
+ * - Type-safe command result handling with success/error responses
+ * - Input validation to prevent invalid command types
+ * - Error handling and response format validation
+ * - Window lifecycle management (close, cleanup)
+ *
+ * Exposed API (window.sendCmdsApi):
+ * - sendCommand(command: string): Sends raw command to printer, returns CommandResult
+ * - close(): Closes the send commands dialog window
+ * - removeListeners(): Cleanup function for IPC event listeners
+ *
+ * Security:
+ * - Uses contextBridge for safe main-to-renderer communication
+ * - Validates command input types before transmission
+ * - Sanitizes and validates IPC response structures
+ */
+
 // src/ui/send-cmds/send-cmds-preload.ts
 
 import { contextBridge, ipcRenderer } from 'electron';

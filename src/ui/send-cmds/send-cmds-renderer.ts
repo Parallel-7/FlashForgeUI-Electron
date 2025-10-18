@@ -1,3 +1,29 @@
+/**
+ * @fileoverview Send Commands Dialog renderer process for manual printer command transmission.
+ * Provides a developer-focused UI for sending raw FlashForge printer protocol commands with
+ * live response logging, auto-scrolling output, and command history. Automatically prefixes
+ * commands with the FlashForge protocol tilde (~) marker if not already present.
+ *
+ * Key Features:
+ * - Real-time command transmission to connected printer
+ * - Timestamped log output with color-coded entry types (info/command/response/error)
+ * - Automatic tilde (~) prefix for FlashForge commands
+ * - Enter-key submission for rapid command testing
+ * - Auto-scroll log view to most recent entries
+ * - Input field auto-clear and focus after submission
+ * - Async command handling with loading state management
+ *
+ * UI Components:
+ * - Command input field with keyboard shortcuts
+ * - Scrollable log output with categorized message styling
+ * - Send button with disabled state during transmission
+ * - Close button for dialog dismissal
+ *
+ * Usage Context:
+ * Primarily used for debugging, testing printer responses, and advanced printer
+ * control. Not intended for end-user operations.
+ */
+
 // src/ui/send-cmds/send-cmds-renderer.ts
 
 export {}; // Ensure this file is treated as a module
