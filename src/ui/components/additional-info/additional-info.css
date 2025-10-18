@@ -5,29 +5,51 @@
  */
 
 .additional-info-container {
-  padding: 18px 14px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.additional-info-container .panel-header {
+  background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(25, 25, 25, 0.95) 100%);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color-light);
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  color: var(--text-color);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.additional-info-container .panel-content {
+  padding: 10px 8px;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 10px;
+  gap: 6px;
   min-width: 200px;
-  height: 100%;
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: auto;
 }
 
-/* Info Display Row Layout - Refined and Modern */
+/* Info Display Row Layout - Compact and efficient */
 .additional-info-container .info-display-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 14px 16px;
+  padding: 8px 10px;
   background: linear-gradient(135deg, rgba(45, 45, 45, 0.8) 0%, rgba(35, 35, 35, 0.9) 100%);
-  border-radius: 8px;
+  border-radius: 6px;
   border: 1px solid var(--border-color);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), var(--shadow-sm);
   transition: all var(--transition-normal);
-  min-height: 50px;
+  min-height: 36px;
   width: 100%;
   backdrop-filter: blur(8px);
 }
@@ -39,27 +61,27 @@
   transform: translateY(-1px);
 }
 
-/* Info Labels - Refined typography */
+/* Info Labels - Readable typography */
 .additional-info-container .info-label {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-color-secondary);
-  letter-spacing: 0.8px;
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  min-width: 90px;
+  min-width: 70px;
   flex-shrink: 0;
 }
 
-/* Info Values - Enhanced readability */
+/* Info Values - Readable and clear */
 .additional-info-container .info-value {
-  font-size: 16px;
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-color);
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
-  letter-spacing: 0.3px;
-  text-align: center;
+  letter-spacing: 0.2px;
+  text-align: right;
   flex-grow: 1;
-  margin-left: 14px;
+  margin-left: 8px;
   transition: color var(--transition-normal), text-shadow var(--transition-normal);
 }
 

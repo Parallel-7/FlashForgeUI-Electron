@@ -5,18 +5,39 @@
  */
 
 .controls-grid-container {
-  padding: 14px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  flex-shrink: 0; /* Prevent controls from shrinking */
   height: 100%;
-  width: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.controls-grid-container .panel-header {
+  background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(25, 25, 25, 0.95) 100%);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color-light);
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  color: var(--text-color);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.controls-grid-container .panel-content {
+  padding: 10px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+  overflow: auto;
 }
 
 .controls-grid-container .btn-row {
   display: flex;
-  gap: 10px;
+  gap: 6px;
 }
 
 .controls-grid-container .btn-row button {
@@ -24,15 +45,16 @@
   background: linear-gradient(135deg, var(--button-bg) 0%, var(--button-active) 100%);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 12px 14px;
-  border-radius: 8px;
+  padding: 7px 10px;
+  border-radius: 5px;
   cursor: pointer;
-  font-size: 13px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.3px;
   transition: all var(--transition-fast);
   box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(8px);
+  white-space: nowrap;
 }
 
 .controls-grid-container .btn-row button:hover:not(:disabled) {

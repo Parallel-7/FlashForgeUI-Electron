@@ -27,21 +27,24 @@ export class AdditionalInfoComponent extends BaseComponent {
   public readonly componentId = 'additional-info';
   public readonly templateHTML = `
     <div class="additional-info-container" id="printer-info-section">
-      <div class="info-display-row">
-        <span class="info-label">Nozzle Size:</span>
-        <span id="nozzle-size-display" class="info-value">0.4mm</span>
-      </div>
-      <div class="info-display-row">
-        <span class="info-label">Filament:</span>
-        <span id="filament-type-display" class="info-value">PLA</span>
-      </div>
-      <div class="info-display-row">
-        <span class="info-label">Speed Offset:</span>
-        <span id="speed-offset-display" class="info-value">100%</span>
-      </div>
-      <div class="info-display-row">
-        <span class="info-label">Z-Axis Offset:</span>
-        <span id="z-offset-display" class="info-value">0.000</span>
+      <div class="panel-header">Additional Info</div>
+      <div class="panel-content">
+        <div class="info-display-row">
+          <span class="info-label">Nozzle Size:</span>
+          <span id="nozzle-size-display" class="info-value">0.4mm</span>
+        </div>
+        <div class="info-display-row">
+          <span class="info-label">Filament:</span>
+          <span id="filament-type-display" class="info-value">PLA</span>
+        </div>
+        <div class="info-display-row">
+          <span class="info-label">Speed Offset:</span>
+          <span id="speed-offset-display" class="info-value">100%</span>
+        </div>
+        <div class="info-display-row">
+          <span class="info-label">Z-Axis Offset:</span>
+          <span id="z-offset-display" class="info-value">0.000</span>
+        </div>
       </div>
     </div>
   `;

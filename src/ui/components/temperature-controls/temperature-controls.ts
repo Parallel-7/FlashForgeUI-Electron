@@ -28,9 +28,7 @@ export class TemperatureControlsComponent extends BaseComponent {
   public readonly componentId = 'temperature-controls';
   public readonly templateHTML = `
     <div class="temperature-controls" role="group" aria-label="Temperature controls">
-      <header class="temperature-controls__header">
-        <h3 class="temperature-controls__title">Temperature</h3>
-      </header>
+      <div class="panel-header">Temperature</div>
       <div class="temperature-controls__content">
         <div class="temperature-controls__grid">
           <section class="temp-card temp-card--bed" aria-label="Bed temperature controls">

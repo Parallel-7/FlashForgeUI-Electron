@@ -28,18 +28,21 @@ export class FiltrationControlsComponent extends BaseComponent {
   public readonly componentId = 'filtration-controls';
   public readonly templateHTML = `
     <div class="filtration-controls-container" id="filtration-section">
-      <div class="filtration-status-row">
-        <span class="filtration-label">Filtration:</span>
-        <span id="filtration-status-display" class="filtration-value">None</span>
-      </div>
-      <div class="filtration-status-row">
-        <span class="filtration-label">TVOC Level:</span>
-        <span id="tvoc-level-display" class="filtration-value">0</span>
-      </div>
-      <div class="filtration-controls-buttons">
-        <button id="btn-external-filtration" class="filtration-control-btn">External</button>
-        <button id="btn-internal-filtration" class="filtration-control-btn">Internal</button>
-        <button id="btn-no-filtration" class="filtration-control-btn">None</button>
+      <div class="panel-header">Filtration</div>
+      <div class="panel-content">
+        <div class="filtration-status-row">
+          <span class="filtration-label">Mode:</span>
+          <span id="filtration-status-display" class="filtration-value">None</span>
+        </div>
+        <div class="filtration-status-row">
+          <span class="filtration-label">TVOC Level:</span>
+          <span id="tvoc-level-display" class="filtration-value">0</span>
+        </div>
+        <div class="filtration-controls-buttons">
+          <button id="btn-external-filtration" class="filtration-control-btn">External</button>
+          <button id="btn-internal-filtration" class="filtration-control-btn">Internal</button>
+          <button id="btn-no-filtration" class="filtration-control-btn">None</button>
+        </div>
       </div>
     </div>
   `;
