@@ -94,7 +94,9 @@ export enum WindowType {
   SINGLE_COLOR_CONFIRMATION_DIALOG = 'singleColorConfirmationDialog',
   AUTO_CONNECT_CHOICE_DIALOG = 'autoConnectChoiceDialog',
   CONNECT_CHOICE_DIALOG = 'connectChoiceDialog',
-  PALETTE = 'palette'
+  PALETTE = 'palette',
+  SHORTCUT_CONFIG_DIALOG = 'shortcutConfigDialog',
+  COMPONENT_DIALOG = 'componentDialog'
 }
 
 class WindowManager {
@@ -357,6 +359,32 @@ class WindowManager {
 
   public hasPaletteWindow(): boolean {
     return this.hasWindow(WindowType.PALETTE);
+  }
+
+  // Convenience methods for shortcut config dialog access
+  public getShortcutConfigDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.SHORTCUT_CONFIG_DIALOG);
+  }
+
+  public setShortcutConfigDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.SHORTCUT_CONFIG_DIALOG, window);
+  }
+
+  public hasShortcutConfigDialogWindow(): boolean {
+    return this.hasWindow(WindowType.SHORTCUT_CONFIG_DIALOG);
+  }
+
+  // Convenience methods for component dialog access
+  public getComponentDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.COMPONENT_DIALOG);
+  }
+
+  public setComponentDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.COMPONENT_DIALOG, window);
+  }
+
+  public hasComponentDialogWindow(): boolean {
+    return this.hasWindow(WindowType.COMPONENT_DIALOG);
   }
 
   /**

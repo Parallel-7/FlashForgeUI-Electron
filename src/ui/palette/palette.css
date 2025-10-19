@@ -12,28 +12,34 @@
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
 }
 
+/* Ensure Electron window background remains solid for square layout */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  background: #2a2a2a;
+}
+
 /* Body styling with transparency support */
 body {
-  background: transparent;
   color: #e0e0e0;
   overflow: hidden;
-  width: 100vw;
-  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 0;
 }
 
 /* Main palette window container */
 .palette-window {
   width: 280px;
   height: 600px;
-  background: rgba(42, 42, 42, 0.98);
+  background: #2a2a2a;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border-radius: 12px;
+  border-radius: 0;
   border: 1px solid rgba(85, 85, 85, 0.6);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -61,8 +67,8 @@ body {
   align-items: center;
   justify-content: space-between;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  border-top-left-radius: 12px;
-  border-top-right-radius: 12px;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
   flex-shrink: 0;
   -webkit-app-region: drag;
 }

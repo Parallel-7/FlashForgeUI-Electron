@@ -44,8 +44,12 @@ import {
 import { gridStackManager } from './ui/gridstack/GridStackManager';
 import { layoutPersistence } from './ui/gridstack/LayoutPersistence';
 import { editModeController } from './ui/gridstack/EditModeController';
-import { getComponentDefinition } from './ui/gridstack/ComponentRegistry';
+import { getComponentDefinition, getAllComponents } from './ui/gridstack/ComponentRegistry';
 import type { GridStackWidgetConfig } from './ui/gridstack/types';
+
+// Shortcut system imports
+import { shortcutConfigManager } from './ui/shortcuts/ShortcutConfigManager';
+import type { ShortcutButtonConfig } from './ui/shortcuts/types';
 
 // Existing service imports
 import { getGlobalStateTracker, STATE_EVENTS, type StateChangeEvent } from './services/printer-state';
@@ -334,8 +338,11 @@ function createComponentForGrid(componentId: string, container: HTMLElement): an
       return new FiltrationControlsComponent(container);
     case 'additional-info':
       return new AdditionalInfoComponent(container);
-    case 'log-panel':
-      return new LogPanelComponent(container);
+    case 'log-panel': {
+      const logPanel = new LogPanelComponent(container);
+      logPanelComponent = logPanel;
+      return logPanel;
+    }
     default:
       console.error(`Unknown component ID: ${componentId}`);
       return null;
@@ -397,12 +404,20 @@ async function initializeGridStack(): Promise<void> {
     const layout = layoutPersistence.load();
     console.log('Loaded layout configuration:', layout);
 
+    // 2.5. Filter out pinned components from layout
+    const shortcutConfig = shortcutConfigManager.load();
+    const pinnedIds = Object.values(shortcutConfig.slots).filter((id): id is string => id !== null);
+    const filteredWidgets = layout.widgets.filter(widget => !pinnedIds.includes(widget.componentId));
+
+    console.log('Pinned components excluded from grid:', pinnedIds);
+    console.log('Filtered widgets for grid:', filteredWidgets.length, 'of', layout.widgets.length);
+
     // 3. Initialize GridStack with grid options
     gridStackManager.initialize(layout.gridOptions);
 
-    // 4. Create widgets from layout
+    // 4. Create widgets from filtered layout
     let widgetCount = 0;
-    for (const widgetConfig of layout.widgets) {
+    for (const widgetConfig of filteredWidgets) {
       try {
         // Create the grid widget element
         const widgetElement = createGridWidget(widgetConfig.componentId);
@@ -484,9 +499,14 @@ function setupPaletteIntegration(): void {
   // Helper function to update palette with current grid state
   function updatePaletteStatus(): void {
     const componentsInUse = gridStackManager.serialize().map(w => w.componentId || w.id || '');
+    const pinnedComponentIds = shortcutConfigManager.getPinnedComponentIds();
+
     if (window.api?.send) {
-      window.api.send('palette:update-status', componentsInUse);
-      console.log(`[GridStack] Sent status update to palette: ${componentsInUse.length} components in use`);
+      window.api.send('palette:update-status', {
+        componentsInUse,
+        pinnedComponents: pinnedComponentIds
+      });
+      console.log(`[GridStack] Sent status update to palette: ${componentsInUse.length} in use, ${pinnedComponentIds.length} pinned`);
     }
   }
 
@@ -1032,10 +1052,389 @@ async function handleCameraToggle(button: HTMLElement): Promise<void> {
   }
 }
 
+// ============================================================================
+// SHORTCUT BUTTON SYSTEM
+// ============================================================================
+
+/**
+ * Initialize shortcut buttons in topbar
+ * Sets up pin config button, shortcut slots, and IPC listeners for config updates
+ */
+function initializeShortcutButtons(): void {
+  console.log('[ShortcutButtons] Initializing topbar shortcuts');
+
+  // Load and apply current configuration
+  const config = shortcutConfigManager.load();
+  updateShortcutButtons(config);
+
+  // Setup pin config button click handler
+  const pinConfigBtn = document.getElementById('btn-pin-config');
+  if (pinConfigBtn) {
+    pinConfigBtn.addEventListener('click', () => {
+      console.log('[ShortcutButtons] Opening shortcut config dialog');
+      if (window.api?.send) {
+        window.api.send('shortcut-config:open');
+      } else {
+        console.error('[ShortcutButtons] window.api.send not available');
+      }
+    });
+  } else {
+    console.warn('[ShortcutButtons] Pin config button not found in DOM');
+  }
+
+  // Setup shortcut button click handlers
+  for (let i = 1; i <= 3; i++) {
+    const btn = document.getElementById(`btn-shortcut-${i}`);
+    if (btn) {
+      btn.addEventListener('click', () => {
+        const componentId = btn.getAttribute('data-component-id');
+        console.log(`[ShortcutButtons] Slot ${i} clicked, component: ${componentId}`);
+        if (componentId && window.api?.send) {
+          window.api.send('component-dialog:open', componentId);
+        }
+      });
+    }
+  }
+
+  // Listen for configuration updates from shortcut config dialog
+  if (window.api) {
+    window.api.receive('shortcut-config:updated', (data: unknown) => {
+      console.log('[ShortcutButtons] Configuration updated:', data);
+      const config = data as ShortcutButtonConfig;
+      updateShortcutButtons(config);
+
+      // Reload grid to reflect pinned/unpinned components
+      void reloadGridLayout();
+    });
+  }
+
+  // Setup IPC request handlers for shortcut config dialog
+  setupShortcutConfigRequestHandlers();
+
+  console.log('[ShortcutButtons] Initialization complete');
+}
+
+/**
+ * Setup IPC request handlers for shortcut configuration
+ * These handlers respond to requests from the shortcut config dialog
+ */
+function setupShortcutConfigRequestHandlers(): void {
+  if (!window.api) {
+    return;
+  }
+
+  // Handle get-current-request
+  window.api.receive('shortcut-config:get-current-request', (data: unknown) => {
+    const responseChannel = data as string;
+    const config = shortcutConfigManager.load();
+
+    if (window.api?.send) {
+      window.api.send(responseChannel, config);
+    }
+  });
+
+  // Handle save-request
+  window.api.receive('shortcut-config:save-request', (data: unknown) => {
+    const { config, responseChannel } = data as {
+      config: ShortcutButtonConfig;
+      responseChannel: string;
+    };
+
+    try {
+      shortcutConfigManager.save(config);
+      if (window.api?.send) {
+        window.api.send(responseChannel, { success: true });
+      }
+    } catch (error) {
+      if (window.api?.send) {
+        window.api.send(responseChannel, {
+          success: false,
+          error: String(error),
+        });
+      }
+    }
+  });
+
+  // Handle get-components-request
+  window.api.receive('shortcut-config:get-components-request', (data: unknown) => {
+    const responseChannel = data as string;
+
+    const componentsWithStatus = getAvailableComponentsForShortcutConfig();
+    if (window.api?.send) {
+      window.api.send(responseChannel, componentsWithStatus);
+    }
+  });
+}
+
+/**
+ * Get all components eligible for shortcut assignment.
+ * Only return components that are not currently present in the grid layout,
+ * while always including components that are already pinned to a shortcut slot.
+ */
+function getAvailableComponentsForShortcutConfig(): Array<{
+  id: string;
+  name: string;
+  icon: string;
+  category: string;
+  isPinned: boolean;
+}> {
+  const config = shortcutConfigManager.load();
+  const pinnedIds = new Set(
+    Object.values(config.slots).filter((id): id is string => id !== null)
+  );
+
+  const activeGridComponents = getActiveGridComponentIds();
+
+  const selectableComponents = getAllComponents()
+    .filter((component) => {
+      if (pinnedIds.has(component.id)) {
+        return true;
+      }
+
+      return !activeGridComponents.has(component.id);
+    })
+    .map((component) => ({
+      id: component.id,
+      name: component.name,
+      icon: component.icon ?? '📦',
+      category: component.category,
+      isPinned: pinnedIds.has(component.id),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return selectableComponents;
+}
+
+/**
+ * Collect component IDs currently rendered within the GridStack layout.
+ */
+function getActiveGridComponentIds(): Set<string> {
+  const ids = new Set<string>();
+  const grid = gridStackManager.getGrid();
+  if (!grid) {
+    return ids;
+  }
+
+  const gridItems = grid.getGridItems?.() ?? [];
+  gridItems.forEach((item) => {
+    const componentId = item.getAttribute('data-component-id');
+    if (componentId) {
+      ids.add(componentId);
+    }
+  });
+
+  return ids;
+}
+
+/**
+ * Update topbar shortcut buttons based on configuration
+ * Shows/hides buttons and updates their labels and icons
+ */
+function updateShortcutButtons(config: ShortcutButtonConfig): void {
+  console.log('[ShortcutButtons] Updating button visibility and content');
+
+  for (let i = 1; i <= 3; i++) {
+    const slotKey = `slot${i}` as keyof typeof config.slots;
+    const componentId = config.slots[slotKey];
+    const btn = document.getElementById(`btn-shortcut-${i}`);
+
+    if (!btn) {
+      console.warn(`[ShortcutButtons] Shortcut button ${i} not found in DOM`);
+      continue;
+    }
+
+    if (componentId) {
+      const componentDef = getComponentDefinition(componentId);
+      if (componentDef) {
+        btn.setAttribute('data-component-id', componentId);
+        btn.setAttribute('data-icon', componentDef.icon || '📦');
+        btn.textContent = componentDef.name;
+        btn.classList.remove('hidden');
+        console.log(`[ShortcutButtons] Slot ${i} configured: ${componentDef.name}`);
+      } else {
+        console.warn(`[ShortcutButtons] Component definition not found for: ${componentId}`);
+        btn.setAttribute('data-component-id', '');
+        btn.classList.add('hidden');
+      }
+    } else {
+      btn.setAttribute('data-component-id', '');
+      btn.classList.add('hidden');
+    }
+  }
+}
+
+/**
+ * Reload grid layout excluding pinned components
+ * Called when shortcut configuration changes to update grid contents
+ */
+async function reloadGridLayout(): Promise<void> {
+  console.log('[ShortcutButtons] Reloading grid layout');
+
+  try {
+    const config = shortcutConfigManager.load();
+    const pinnedIds = Object.values(config.slots).filter((id): id is string => id !== null);
+
+    console.log('[ShortcutButtons] Pinned component IDs:', pinnedIds);
+
+    // Get current grid state
+    const grid = gridStackManager.getGrid();
+    if (!grid) {
+      console.warn('[ShortcutButtons] Grid not initialized yet');
+      return;
+    }
+
+    // Get all grid items
+    const gridItems = Array.from(grid.getGridItems() || []);
+
+    // Remove pinned components from grid
+    for (const item of gridItems) {
+      const componentId = item.getAttribute('data-component-id');
+      if (componentId && pinnedIds.includes(componentId)) {
+        console.log(`[ShortcutButtons] Removing pinned component from grid: ${componentId}`);
+
+        // Destroy component instance before removing widget
+        const component = componentManager.getComponent(componentId);
+        if (component) {
+          componentManager.removeComponent(componentId);
+          component.destroy();
+        }
+
+        // Remove widget from grid
+        gridStackManager.removeWidget(item as HTMLElement);
+
+        if (componentId === 'log-panel') {
+          logPanelComponent = null;
+        }
+      }
+    }
+
+    // Check if any unpinned components should be added back to grid
+    // (This handles the case where a component was unpinned)
+    const layout = layoutPersistence.load();
+    const currentGridComponentIds = gridItems
+      .map(item => item.getAttribute('data-component-id'))
+      .filter((id): id is string => id !== null);
+
+    for (const widgetConfig of layout.widgets) {
+      const componentId = widgetConfig.componentId;
+
+      // Skip if pinned or already in grid
+      if (pinnedIds.includes(componentId) || currentGridComponentIds.includes(componentId)) {
+        continue;
+      }
+
+      // Add back to grid
+      console.log(`[ShortcutButtons] Adding unpinned component back to grid: ${componentId}`);
+      await addComponentToGrid(componentId, widgetConfig);
+    }
+
+    // Save updated layout
+    const currentLayout = layoutPersistence.load();
+    const updatedLayout = gridStackManager.serialize();
+    layoutPersistence.save({
+      ...currentLayout,
+      widgets: updatedLayout
+    });
+
+    console.log('[ShortcutButtons] Grid reload complete');
+  } catch (error) {
+    console.error('[ShortcutButtons] Error reloading grid:', error);
+  }
+}
+
+/**
+ * Helper function to add a component to the grid
+ */
+async function addComponentToGrid(componentId: string, widgetConfig?: GridStackWidgetConfig): Promise<void> {
+  const componentDef = getComponentDefinition(componentId);
+  if (!componentDef) {
+    console.error(`[ShortcutButtons] Component definition not found: ${componentId}`);
+    return;
+  }
+
+  // Create widget element
+  const widgetElement = document.createElement('div');
+  widgetElement.className = 'grid-stack-item';
+  widgetElement.setAttribute('data-component-id', componentId);
+  widgetElement.setAttribute('gs-id', `widget-${componentId}`);
+
+  // Add content container
+  const contentContainer = document.createElement('div');
+  contentContainer.className = 'grid-stack-item-content';
+  widgetElement.appendChild(contentContainer);
+
+  // Use provided config or create default
+  const config: GridStackWidgetConfig = widgetConfig || {
+    componentId,
+    w: componentDef.defaultSize?.w || 4,
+    h: componentDef.defaultSize?.h || 3,
+    minW: componentDef.minSize?.w,
+    minH: componentDef.minSize?.h,
+    id: `widget-${componentId}`,
+    autoPosition: true
+  };
+
+  // Add to grid
+  const addedWidget = gridStackManager.addWidget(config, widgetElement);
+
+  if (addedWidget) {
+    // Create component instance
+    const component = createComponentInstance(componentId, contentContainer);
+
+    if (component) {
+      componentManager.registerComponent(component);
+      await component.initialize();
+
+      // Update with last polling data if available
+      if (lastPollingData) {
+        const updateData: ComponentUpdateData = {
+          pollingData: lastPollingData,
+          timestamp: new Date().toISOString(),
+          printerState: lastPollingData.printerStatus?.state,
+          connectionState: lastPollingData.isConnected
+        };
+        component.update(updateData);
+      }
+    }
+  }
+}
+
+/**
+ * Helper function to create component instance by ID
+ */
+function createComponentInstance(componentId: string, container: HTMLElement) {
+  switch (componentId) {
+    case 'camera-preview':
+      return new CameraPreviewComponent(container);
+    case 'temperature-controls':
+      return new TemperatureControlsComponent(container);
+    case 'job-stats':
+      return new JobStatsComponent(container);
+    case 'printer-status':
+      return new PrinterStatusComponent(container);
+    case 'model-preview':
+      return new ModelPreviewComponent(container);
+    case 'additional-info':
+      return new AdditionalInfoComponent(container);
+    case 'log-panel': {
+      const logPanel = new LogPanelComponent(container);
+      logPanelComponent = logPanel;
+      return logPanel;
+    }
+    case 'controls-grid':
+      return new ControlsGridComponent(container);
+    case 'filtration-controls':
+      return new FiltrationControlsComponent(container);
+    default:
+      console.error(`[ShortcutButtons] Unknown component ID: ${componentId}`);
+      return null;
+  }
+}
+
 function setupBasicButtons(): void {
   // Add click listeners to all buttons for visual feedback
   const buttons = [
-    'btn-connect', 'btn-settings', 'btn-status', 'btn-ifs', 'btn-logs',
+    'btn-connect', 'btn-settings', 'btn-status', 'btn-ifs',
     'btn-led-on', 'btn-led-off', 'btn-clear-status', 'btn-home-axes',
     'btn-pause', 'btn-resume', 'btn-stop', 'btn-upload-job',
     'btn-start-recent', 'btn-start-local', 'btn-swap-filament', 'btn-send-cmds',
@@ -1070,7 +1469,6 @@ function setupBasicButtons(): void {
             'btn-settings': 'open-settings-window',
             'btn-status': 'open-status-dialog',
             'btn-ifs': 'open-ifs-dialog',
-            'btn-logs': 'open-log-dialog',
             'btn-upload-job': 'open-job-uploader',
             'btn-start-recent': 'show-recent-files',
             'btn-start-local': 'show-local-files',
@@ -1583,6 +1981,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupBasicButtons();
   setupLoadingEventListeners();
   initializeUI();
+
+  // Initialize shortcut button system
+  initializeShortcutButtons();
 
   // GridStack + Component system initialization
   try {

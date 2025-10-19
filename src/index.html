@@ -21,7 +21,18 @@
       <button id="btn-settings">Settings</button>
       <button id="btn-status">Status</button>
       <button id="btn-ifs" class="hidden">IFS</button>
-      <button id="btn-logs">Logs</button>
+
+      <!-- Pin Configuration Button -->
+      <button id="btn-pin-config" class="pin-config-button" title="Configure Shortcuts" aria-label="Configure shortcut buttons">
+        <svg class="pin-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 2L12 10M9 6L15 6M12 10L12 22M8 18L16 18" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+
+      <!-- Shortcut Button Slots (hidden by default) -->
+      <button id="btn-shortcut-1" class="shortcut-button hidden" data-slot="1" data-component-id="" aria-label="Shortcut 1"></button>
+      <button id="btn-shortcut-2" class="shortcut-button hidden" data-slot="2" data-component-id="" aria-label="Shortcut 2"></button>
+      <button id="btn-shortcut-3" class="shortcut-button hidden" data-slot="3" data-component-id="" aria-label="Shortcut 3"></button>
     </div>
     <div class="title">FlashForgeUI</div>
     <div class="window-controls">

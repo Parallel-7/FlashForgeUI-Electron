@@ -266,8 +266,9 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
 .grid-stack-item[data-component-id="printer-status"] .grid-stack-item-content,
 .grid-stack-item[data-component-id="temperature-controls"] .grid-stack-item-content,
 .grid-stack-item[data-component-id="filtration-controls"] .grid-stack-item-content,
-.grid-stack-item[data-component-id="additional-info"] .grid-stack-item-content {
-  padding: 8px;
+.grid-stack-item[data-component-id="additional-info"] .grid-stack-item-content,
+.grid-stack-item[data-component-id="job-stats"] .grid-stack-item-content {
+  padding: 0;
 }
 
 /* ============================================================================

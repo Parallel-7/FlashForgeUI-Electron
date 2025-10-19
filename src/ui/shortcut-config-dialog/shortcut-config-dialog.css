@@ -1,0 +1,360 @@
+/**
+ * Shortcut Configuration Dialog Styles
+ */
+
+:root {
+  --dialog-bg: #1e1e1e;
+  --dialog-header-bg: #2a2a2a;
+  --dialog-border: #3a3a3a;
+  --text-primary: #ffffff;
+  --text-secondary: #b0b0b0;
+  --text-muted: #808080;
+  --button-primary-bg: #0e639c;
+  --button-primary-hover: #1177bb;
+  --button-secondary-bg: #3a3a3a;
+  --button-secondary-hover: #4a4a4a;
+  --input-bg: #2a2a2a;
+  --input-border: #3a3a3a;
+  --input-focus: #0e639c;
+  --status-success: #4caf50;
+  --status-error: #f44336;
+  --status-info: #2196f3;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  background: transparent;
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.dialog-container {
+  width: 100vw;
+  height: 100vh;
+  background: var(--dialog-bg);
+  border: 1px solid var(--dialog-border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--dialog-header-bg);
+  border-bottom: 1px solid var(--dialog-border);
+  -webkit-app-region: drag;
+  flex-shrink: 0;
+}
+
+.dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.dialog-icon {
+  flex-shrink: 0;
+}
+
+.dialog-close {
+  -webkit-app-region: no-drag;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font-size: 24px;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+  line-height: 1;
+}
+
+.dialog-close:hover {
+  background-color: var(--button-secondary-hover);
+}
+
+/* Content */
+.dialog-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dialog-instructions {
+  background: var(--dialog-header-bg);
+  padding: 12px 16px;
+  border-radius: 6px;
+  border: 1px solid var(--dialog-border);
+}
+
+.dialog-instructions p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.dialog-instructions p + p {
+  margin-top: 8px;
+}
+
+.instructions-note {
+  font-size: 13px;
+  color: var(--text-muted);
+}
+
+/* Slot Configuration */
+.slots-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.slot-config {
+  background: var(--dialog-header-bg);
+  padding: 16px;
+  border-radius: 6px;
+  border: 1px solid var(--dialog-border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.slot-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.slot-icon {
+  flex-shrink: 0;
+}
+
+.slot-select {
+  width: 100%;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  border-radius: 4px;
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.slot-select:hover {
+  border-color: var(--input-focus);
+}
+
+.slot-select:focus {
+  outline: none;
+  border-color: var(--input-focus);
+}
+
+.slot-select option {
+  background: var(--input-bg);
+  color: var(--text-primary);
+}
+
+.btn-clear-slot {
+  padding: 6px 12px;
+  background: var(--button-secondary-bg);
+  border: 1px solid var(--dialog-border);
+  border-radius: 4px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s;
+  align-self: flex-start;
+}
+
+.btn-clear-slot:hover:not(:disabled) {
+  background: var(--button-secondary-hover);
+  color: var(--text-primary);
+}
+
+.btn-clear-slot:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Available Components */
+.components-info {
+  background: var(--dialog-header-bg);
+  padding: 16px;
+  border-radius: 6px;
+  border: 1px solid var(--dialog-border);
+}
+
+.components-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+}
+
+.components-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.component-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--input-bg);
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.component-name {
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.component-icon-display {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.component-status {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  font-weight: 500;
+}
+
+.component-status.pinned {
+  background: var(--button-primary-bg);
+  color: var(--text-primary);
+}
+
+.component-status.available {
+  background: var(--button-secondary-bg);
+  color: var(--text-muted);
+}
+
+/* Status Message */
+.status-message {
+  padding: 10px 14px;
+  border-radius: 4px;
+  font-size: 13px;
+  text-align: center;
+}
+
+.status-message.hidden {
+  display: none;
+}
+
+.status-message.success {
+  background: var(--status-success);
+  color: white;
+}
+
+.status-message.error {
+  background: var(--status-error);
+  color: white;
+}
+
+.status-message.info {
+  background: var(--status-info);
+  color: white;
+}
+
+/* Actions */
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  background: var(--dialog-header-bg);
+  border-top: 1px solid var(--dialog-border);
+  flex-shrink: 0;
+}
+
+.btn-primary,
+.btn-secondary {
+  padding: 8px 20px;
+  border: none;
+  border-radius: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-primary {
+  background: var(--button-primary-bg);
+  color: var(--text-primary);
+}
+
+.btn-primary:hover {
+  background: var(--button-primary-hover);
+}
+
+.btn-secondary {
+  background: var(--button-secondary-bg);
+  color: var(--text-secondary);
+}
+
+.btn-secondary:hover {
+  background: var(--button-secondary-hover);
+  color: var(--text-primary);
+}
+
+.btn-primary:disabled,
+.btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Scrollbar */
+.dialog-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dialog-content::-webkit-scrollbar-track {
+  background: var(--dialog-bg);
+}
+
+.dialog-content::-webkit-scrollbar-thumb {
+  background: var(--button-secondary-bg);
+  border-radius: 4px;
+}
+
+.dialog-content::-webkit-scrollbar-thumb:hover {
+  background: var(--button-secondary-hover);
+}

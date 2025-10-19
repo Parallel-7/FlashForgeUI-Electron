@@ -22,7 +22,7 @@ import { EventEmitter } from 'events';
 import * as http from 'http';
 import express from 'express';
 import * as os from 'os';
-import { app, dialog } from 'electron';
+import { app, dialog, BrowserWindow } from 'electron';
 import { getConfigManager } from '../../managers/ConfigManager';
 import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager';
 import { getPrinterBackendManager } from '../../managers/PrinterBackendManager';
@@ -614,15 +614,11 @@ export class WebUIManager extends EventEmitter {
     }
 
     // Use proper import instead of require to avoid TypeScript warnings
-    import('../../windows/WindowManager').then(({ getWindowManager }) => {
-      const windowManager = getWindowManager();
-      const mainWindow = windowManager.getMainWindow();
-
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('log-message', message);
+    const windows = BrowserWindow.getAllWindows();
+    windows.forEach((window) => {
+      if (!window.isDestroyed()) {
+        window.webContents.send('log-message', message);
       }
-    }).catch((error) => {
-      console.error('Failed to send UI log message:', error);
     });
 
     // Also log to console for development

@@ -61,7 +61,7 @@ interface PaletteAPI {
 }
 
 // Store the status update callback
-let statusUpdateCallback: ((componentsInUse: string[]) => void) | null = null;
+let statusUpdateCallback: ((componentsInUse: string[], pinnedComponents?: string[]) => void) | null = null;
 
 // Expose palette API to renderer process
 contextBridge.exposeInMainWorld('paletteAPI', {
@@ -76,13 +76,13 @@ contextBridge.exposeInMainWorld('paletteAPI', {
    * Register callback for component status updates from main window
    * @param callback - Function to call when component status changes
    */
-  onUpdateStatus: (callback: (componentsInUse: string[]) => void): void => {
+  onUpdateStatus: (callback: (componentsInUse: string[], pinnedComponents?: string[]) => void): void => {
     statusUpdateCallback = callback;
 
     // Listen for status updates from main process
-    ipcRenderer.on('palette:update-status', (_event, componentsInUse: string[]) => {
+    ipcRenderer.on('palette:update-status', (_event, componentsInUse: string[], pinnedComponents?: string[]) => {
       if (statusUpdateCallback) {
-        statusUpdateCallback(componentsInUse);
+        statusUpdateCallback(componentsInUse, pinnedComponents);
       }
     });
   },

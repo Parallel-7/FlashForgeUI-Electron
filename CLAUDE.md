@@ -167,3 +167,4 @@ External References:
 
 @ai_reference\AGENTS.md
 @ai_reference\ARCHITECTURE.md
+- Don't add @author to @fileoverview headers when creating docs

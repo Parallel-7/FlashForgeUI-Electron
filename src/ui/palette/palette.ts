@@ -9,7 +9,7 @@
 
 interface PaletteAPI {
   close: () => void;
-  onUpdateStatus: (callback: (componentsInUse: string[]) => void) => void;
+  onUpdateStatus: (callback: (componentsInUse: string[], pinnedComponents?: string[]) => void) => void;
   notifyComponentRemove: (componentId: string) => void;
   notifyComponentAdd: (componentId: string) => void;
   getAvailableComponents: () => Promise<ComponentDefinition[]>;
@@ -33,12 +33,14 @@ const paletteWindow = window as unknown as PaletteWindow;
 
 interface PaletteState {
   componentsInUse: Set<string>;
+  pinnedComponents: Set<string>;
   availableComponents: ComponentDefinition[];
 }
 
 class PaletteManager {
   private state: PaletteState = {
     componentsInUse: new Set(),
+    pinnedComponents: new Set(),
     availableComponents: []
   };
 
@@ -111,8 +113,13 @@ class PaletteManager {
     item.setAttribute('data-component-id', component.id);
 
     const isInUse = this.state.componentsInUse.has(component.id);
+    const isPinned = this.state.pinnedComponents.has(component.id);
+
     if (isInUse) {
       item.classList.add('in-use');
+    }
+    if (isPinned) {
+      item.classList.add('pinned');
     }
 
     const icon = document.createElement('div');
@@ -123,13 +130,27 @@ class PaletteManager {
     label.className = 'palette-item-label';
     label.textContent = component.name;
 
+    // Status badge
+    const statusBadge = document.createElement('div');
+    statusBadge.className = 'palette-item-status';
+    if (isPinned) {
+      statusBadge.textContent = '📌 Pinned';
+    } else if (isInUse) {
+      statusBadge.textContent = '✓ In Grid';
+    } else {
+      statusBadge.textContent = 'Available';
+    }
+
     const actionButton = document.createElement('button');
     actionButton.type = 'button';
     actionButton.className = 'palette-item-action';
-    actionButton.textContent = isInUse ? 'Added' : 'Add';
-    actionButton.disabled = isInUse;
 
-    if (isInUse) {
+    // Disable button if component is in use or pinned
+    const isUnavailable = isInUse || isPinned;
+    actionButton.textContent = isPinned ? 'Pinned' : (isInUse ? 'Added' : 'Add');
+    actionButton.disabled = isUnavailable;
+
+    if (isUnavailable) {
       actionButton.setAttribute('aria-disabled', 'true');
     } else {
       actionButton.addEventListener('click', () => {
@@ -141,6 +162,7 @@ class PaletteManager {
 
     item.appendChild(icon);
     item.appendChild(label);
+    item.appendChild(statusBadge);
     item.appendChild(actionButton);
 
     return item;
@@ -173,14 +195,15 @@ class PaletteManager {
   }
 
   private setupStatusListener(): void {
-    paletteWindow.paletteAPI.onUpdateStatus((componentsInUse: string[]) => {
-      console.log('[Palette] Status update received:', componentsInUse);
-      this.updateComponentStatus(componentsInUse);
+    paletteWindow.paletteAPI.onUpdateStatus((componentsInUse: string[], pinnedComponents?: string[]) => {
+      console.log('[Palette] Status update received:', componentsInUse, pinnedComponents);
+      this.updateComponentStatus(componentsInUse, pinnedComponents);
     });
   }
 
-  updateComponentStatus(componentsInUse: string[]): void {
+  updateComponentStatus(componentsInUse: string[], pinnedComponents?: string[]): void {
     this.state.componentsInUse = new Set(componentsInUse);
+    this.state.pinnedComponents = new Set(pinnedComponents || []);
     this.renderComponentList();
   }
 

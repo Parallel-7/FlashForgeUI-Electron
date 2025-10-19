@@ -87,7 +87,7 @@ export const createComponentPaletteWindow = (): void => {
   const dimensions = WINDOW_SIZES.COMPONENT_PALETTE;
   const preloadPath = createUIPreloadPath('palette');
 
-  // Create frameless, transparent, always-on-top window
+  // Create frameless, always-on-top window with solid background
   // Note: parent is set but modal is false to allow interaction with both windows
   const paletteWindow = new BrowserWindow({
     width: dimensions.width,
@@ -97,7 +97,8 @@ export const createComponentPaletteWindow = (): void => {
     parent: mainWindow,
     modal: false,
     frame: false,
-    transparent: true,
+    transparent: false,
+    backgroundColor: '#2a2a2a',
     alwaysOnTop: true,
     skipTaskbar: true,
     resizable: false,

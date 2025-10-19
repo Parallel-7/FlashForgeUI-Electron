@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Shortcut Button Configuration</title>
+  <link rel="stylesheet" href="shortcut-config-dialog.css">
+</head>
+<body>
+  <div class="dialog-container">
+    <!-- Dialog Header -->
+    <div class="dialog-header">
+      <div class="dialog-title">
+        <svg class="dialog-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+        <span class="dialog-title-text">Shortcut Button Configuration</span>
+      </div>
+      <button class="dialog-close" id="btn-close" aria-label="Close dialog">×</button>
+    </div>
+
+    <!-- Dialog Content -->
+    <div class="dialog-content">
+      <!-- Instructions -->
+      <div class="dialog-instructions">
+        <p>Configure up to 3 quick-access buttons for the topbar.</p>
+        <p class="instructions-note">Components can be in the grid <strong>OR</strong> pinned as shortcuts, but not both.</p>
+      </div>
+
+      <!-- Slot Configuration -->
+      <div class="slots-container">
+        <!-- Slot 1 -->
+        <div class="slot-config">
+          <label for="slot1-select" class="slot-label">
+            <svg class="slot-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <text x="12" y="16" text-anchor="middle" fill="currentColor" font-size="12" font-weight="bold">1</text>
+            </svg>
+            Slot 1
+          </label>
+          <select id="slot1-select" class="slot-select" data-slot="1">
+            <option value="">None</option>
+          </select>
+          <button class="btn-clear-slot" id="btn-clear-slot1" data-slot="1" aria-label="Clear Slot 1">Clear</button>
+        </div>
+
+        <!-- Slot 2 -->
+        <div class="slot-config">
+          <label for="slot2-select" class="slot-label">
+            <svg class="slot-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <text x="12" y="16" text-anchor="middle" fill="currentColor" font-size="12" font-weight="bold">2</text>
+            </svg>
+            Slot 2
+          </label>
+          <select id="slot2-select" class="slot-select" data-slot="2">
+            <option value="">None</option>
+          </select>
+          <button class="btn-clear-slot" id="btn-clear-slot2" data-slot="2" aria-label="Clear Slot 2">Clear</button>
+        </div>
+
+        <!-- Slot 3 -->
+        <div class="slot-config">
+          <label for="slot3-select" class="slot-label">
+            <svg class="slot-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10"/>
+              <text x="12" y="16" text-anchor="middle" fill="currentColor" font-size="12" font-weight="bold">3</text>
+            </svg>
+            Slot 3
+          </label>
+          <select id="slot3-select" class="slot-select" data-slot="3">
+            <option value="">None</option>
+          </select>
+          <button class="btn-clear-slot" id="btn-clear-slot3" data-slot="3" aria-label="Clear Slot 3">Clear</button>
+        </div>
+      </div>
+
+      <!-- Available Components List -->
+      <div class="components-info">
+        <h3 class="components-title">Available Components</h3>
+        <div id="components-list" class="components-list">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+
+      <!-- Status Message -->
+      <div id="status-message" class="status-message hidden"></div>
+    </div>
+
+    <!-- Dialog Actions -->
+    <div class="dialog-actions">
+      <button class="btn-secondary" id="btn-cancel">Cancel</button>
+      <button class="btn-primary" id="btn-apply">Apply Changes</button>
+    </div>
+  </div>
+
+  <script src="../../../lib/ui/shortcut-config-dialog/shortcut-config-dialog.js"></script>
+</body>
+</html>

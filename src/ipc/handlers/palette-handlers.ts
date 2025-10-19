@@ -150,13 +150,19 @@ export function registerPaletteHandlers(): void {
   });
 
   // Broadcast component status update to palette window
-  ipcMain.on('palette:update-status', (_event, componentsInUse: string[]) => {
+  ipcMain.on('palette:update-status', (_event, statusData: string[] | { componentsInUse: string[]; pinnedComponents: string[] }) => {
     const windowManager = getWindowManager();
     const paletteWindow = windowManager.getPaletteWindow();
 
     if (paletteWindow && !paletteWindow.isDestroyed()) {
-      console.log(`[Palette Handlers] Broadcasting status update: ${componentsInUse.length} components in use`);
-      paletteWindow.webContents.send('palette:update-status', componentsInUse);
+      // Support both old format (array) and new format (object)
+      if (Array.isArray(statusData)) {
+        console.log(`[Palette Handlers] Broadcasting status update: ${statusData.length} components in use`);
+        paletteWindow.webContents.send('palette:update-status', statusData);
+      } else {
+        console.log(`[Palette Handlers] Broadcasting status update: ${statusData.componentsInUse.length} in use, ${statusData.pinnedComponents.length} pinned`);
+        paletteWindow.webContents.send('palette:update-status', statusData.componentsInUse, statusData.pinnedComponents);
+      }
     }
   });
 
