@@ -1,5 +1,3 @@
-/// <reference path="../../types/global.d.ts" />
-
 /**
  * @fileoverview Preload script for component dialog windows
  *
@@ -17,6 +15,7 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
+import type {} from '../../types/global';
 
 // ---------------------------------------------------------------------------
 // Shared type definitions

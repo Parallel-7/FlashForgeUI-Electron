@@ -44,9 +44,6 @@ const dialogComponentManager = new ComponentManager();
 /** Current component info */
 let currentComponentId: string | null = null;
 
-/** Active component instance */
-let activeComponent: BaseComponent | null = null;
-
 /** Cleanup handlers executed on window unload */
 const cleanupCallbacks: Array<() => void> = [];
 
@@ -101,7 +98,6 @@ async function initializeDialog(componentId: string): Promise<void> {
   // Register and initialize
   try {
     dialogComponentManager.registerComponent(component);
-    activeComponent = component;
     await dialogComponentManager.initializeAll();
     await initializeComponentIntegrations(componentId, component);
     console.log(`[ComponentDialog] Component initialized: ${componentId}`);
@@ -164,15 +160,20 @@ function setupEventListeners(): void {
 
   // Listen for polling updates from main process
   if (window.componentDialogAPI) {
-    window.componentDialogAPI.receive('polling-update', (data: unknown) => {
-      const pollingData = data as PollingData;
+    window.componentDialogAPI.receive('polling-update', (payload: unknown) => {
+      if (!isPollingData(payload)) {
+        console.warn('[ComponentDialog] Ignoring invalid polling update payload', payload);
+        return;
+      }
+
+      const pollingData = payload;
 
       if (dialogComponentManager.isInitialized()) {
         const updateData: ComponentUpdateData = {
-          pollingData: pollingData,
+          pollingData,
           timestamp: new Date().toISOString(),
-          printerState: (pollingData as any)?.printerStatus?.state,
-          connectionState: (pollingData as any)?.isConnected,
+          printerState: pollingData.printerStatus?.state,
+          connectionState: pollingData.isConnected,
         };
 
         dialogComponentManager.updateAll(updateData);
@@ -238,7 +239,8 @@ document.addEventListener('DOMContentLoaded', () => {
  * Cleanup on window unload
  */
 window.addEventListener('beforeunload', () => {
-  console.log('[ComponentDialog] Cleaning up component manager');
+  const componentLabel = currentComponentId ?? 'unknown';
+  console.log(`[ComponentDialog] Cleaning up component manager (${componentLabel})`);
   cleanupCallbacks.forEach((fn) => {
     try {
       fn();
@@ -248,7 +250,7 @@ window.addEventListener('beforeunload', () => {
   });
   cleanupCallbacks.length = 0;
   dialogComponentManager.destroyAll();
-  activeComponent = null;
+  currentComponentId = null;
 });
 
 // ============================================================================
@@ -317,6 +319,15 @@ async function setupLogPanelIntegration(logPanel: LogPanelComponent): Promise<vo
 
   cleanupCallbacks.push(() => window.api.removeListener('log-dialog-new-message'));
   cleanupCallbacks.push(() => window.api.removeListener('log-dialog-cleared'));
+}
+
+/**
+ * Minimal type guard for polling data payloads
+ * @param payload - Incoming data from the main process
+ * @returns True when payload matches PollingData shape
+ */
+function isPollingData(payload: unknown): payload is PollingData {
+  return typeof payload === 'object' && payload !== null && 'isConnected' in payload;
 }
 
 /**

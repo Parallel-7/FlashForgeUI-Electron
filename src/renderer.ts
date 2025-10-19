@@ -37,7 +37,8 @@ import {
   FiltrationControlsComponent,
   AdditionalInfoComponent,
   PrinterTabsComponent,
-  type ComponentUpdateData
+  type ComponentUpdateData,
+  type BaseComponent
 } from './ui/components';
 
 // GridStack system imports
@@ -204,112 +205,6 @@ function setupLoadingEventListeners(): void {
 }
 
 // ============================================================================
-// COMPONENT SYSTEM INITIALIZATION
-// ============================================================================
-
-/**
- * Initialize all UI components and register them with ComponentManager
- * Creates instances of all 10 Phase 1 components and sets up their containers
- */
-async function initializeComponents(): Promise<void> {
-  console.log('Initializing component system...');
-  
-  try {
-    // Map component IDs to their container element IDs
-    const componentContainerMap: { [componentId: string]: string } = {
-      'camera-preview': 'camera-preview-container',
-      'controls-grid': 'controls-grid-container',
-      'model-preview': 'model-preview-container',
-      'job-stats': 'job-stats-container',
-      'printer-status': 'printer-status-container',
-      'temperature-controls': 'temperature-controls-container',
-      'filtration-controls': 'filtration-controls-container',
-      'additional-info': 'additional-info-container',
-      'log-panel': 'log-panel-container'
-    };
-
-    // Create and register all components
-    const componentRegistrations = [
-      {
-        id: 'camera-preview',
-        factory: (container: HTMLElement) => new CameraPreviewComponent(container)
-      },
-      {
-        id: 'controls-grid', 
-        factory: (container: HTMLElement) => new ControlsGridComponent(container)
-      },
-      {
-        id: 'model-preview',
-        factory: (container: HTMLElement) => new ModelPreviewComponent(container)
-      },
-      {
-        id: 'job-stats',
-        factory: (container: HTMLElement) => new JobStatsComponent(container)
-      },
-      {
-        id: 'printer-status',
-        factory: (container: HTMLElement) => new PrinterStatusComponent(container)
-      },
-      {
-        id: 'temperature-controls',
-        factory: (container: HTMLElement) => new TemperatureControlsComponent(container)
-      },
-      {
-        id: 'filtration-controls',
-        factory: (container: HTMLElement) => new FiltrationControlsComponent(container)
-      },
-      {
-        id: 'additional-info',
-        factory: (container: HTMLElement) => new AdditionalInfoComponent(container)
-      },
-      {
-        id: 'log-panel',
-        factory: (container: HTMLElement) => {
-          const logPanel = new LogPanelComponent(container);
-          logPanelComponent = logPanel; // Store reference for global logging
-          return logPanel;
-        }
-      }
-    ];
-
-    // Register all components
-    let registeredCount = 0;
-    for (const registration of componentRegistrations) {
-      const containerElement = document.getElementById(componentContainerMap[registration.id]);
-      
-      if (containerElement) {
-        try {
-          const component = registration.factory(containerElement);
-          componentManager.registerComponent(component);
-          registeredCount++;
-          console.log(`Registered component: ${registration.id}`);
-        } catch (error) {
-          console.error(`Failed to create component ${registration.id}:`, error);
-          logMessage(`WARNING: Component ${registration.id} failed to initialize`);
-        }
-      } else {
-        console.warn(`Container element not found for component: ${registration.id}`);
-        logMessage(`WARNING: Container missing for ${registration.id}`);
-      }
-    }
-
-    console.log(`Registered ${registeredCount}/${componentRegistrations.length} components`);
-    
-    // Initialize all registered components
-    await componentManager.initializeAll();
-    
-    componentsInitialized = true;
-    console.log('Component system initialization complete');
-    logMessage(`Component system initialized: ${registeredCount} components`);
-    
-  } catch (error) {
-    console.error('Component system initialization failed:', error);
-    logMessage(`ERROR: Component system initialization failed: ${error}`);
-    // Don't throw - allow fallback to continue
-  }
-}
-
-// ============================================================================
 // GRIDSTACK SYSTEM INTEGRATION
 // ============================================================================
 
@@ -320,7 +215,7 @@ async function initializeComponents(): Promise<void> {
  * @param container - The container element for the component
  * @returns Component instance or null if unknown component
  */
-function createComponentForGrid(componentId: string, container: HTMLElement): any {
+function createComponentForGrid(componentId: string, container: HTMLElement): BaseComponent | null {
   switch (componentId) {
     case 'camera-preview':
       return new CameraPreviewComponent(container);
@@ -439,10 +334,6 @@ async function initializeGridStack(): Promise<void> {
               widgetCount++;
               console.log(`GridStack: Added widget '${widgetConfig.componentId}'`);
 
-              // Store reference to log panel if this is the log panel component
-              if (widgetConfig.componentId === 'log-panel') {
-                logPanelComponent = component;
-              }
             }
           }
         }
@@ -455,7 +346,7 @@ async function initializeGridStack(): Promise<void> {
     console.log(`GridStack: Created ${widgetCount}/${layout.widgets.length} widgets`);
 
     // 5. Setup GridStack event handlers for auto-save
-    gridStackManager.onChange((widgets) => {
+    gridStackManager.onChange(() => {
       console.log('GridStack: Layout changed, auto-saving...');
       const currentLayout = layoutPersistence.load();
       const updatedWidgets = gridStackManager.serialize();
@@ -1553,7 +1444,7 @@ function initializeUI(): void {
   // Initialize legacy printer button states (disabled by default until backend is initialized)
   updateLegacyPrinterButtonStates();
   
-  // Component initialization will be handled separately by initializeComponents()
+  // Component initialization occurs during GridStack setup
   logMessage('UI initialization complete - awaiting component system');
 }
 

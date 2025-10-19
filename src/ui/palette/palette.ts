@@ -38,7 +38,7 @@ interface PaletteState {
 }
 
 class PaletteManager {
-  private state: PaletteState = {
+  private readonly state: PaletteState = {
     componentsInUse: new Set(),
     pinnedComponents: new Set(),
     availableComponents: []

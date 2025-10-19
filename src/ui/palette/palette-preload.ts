@@ -49,6 +49,31 @@ interface ComponentDefinition {
   readonly category?: string;
 }
 
+/**
+ * Validate that a value conforms to the ComponentDefinition[] structure
+ * @param value - Unknown value received from ipcRenderer.invoke
+ * @returns True when the value is an array of ComponentDefinition objects
+ */
+function isComponentDefinitionArray(value: unknown): value is ComponentDefinition[] {
+  if (!Array.isArray(value)) {
+    return false;
+  }
+
+  return value.every((entry) => {
+    if (typeof entry !== 'object' || entry === null) {
+      return false;
+    }
+
+    const candidate = entry as Record<string, unknown>;
+    return (
+      typeof candidate.id === 'string' &&
+      typeof candidate.name === 'string' &&
+      typeof candidate.icon === 'string' &&
+      (candidate.category === undefined || typeof candidate.category === 'string')
+    );
+  });
+}
+
 // Type definition for the palette API
 interface PaletteAPI {
   close: () => void;
@@ -111,15 +136,19 @@ contextBridge.exposeInMainWorld('paletteAPI', {
    */
   getAvailableComponents: async (): Promise<ComponentDefinition[]> => {
     try {
-      const components = await ipcRenderer.invoke('palette:get-components');
+      const result = await ipcRenderer.invoke('palette:get-components') as unknown;
 
-      // Validate response structure
-      if (Array.isArray(components)) {
-        return components as ComponentDefinition[];
-      } else {
-        console.error('[Palette Preload] Invalid component data received');
-        return [];
+      if (isComponentDefinitionArray(result)) {
+        return result.map((component) => ({
+          id: component.id,
+          name: component.name,
+          icon: component.icon,
+          category: component.category,
+        }));
       }
+
+      console.error('[Palette Preload] Invalid component data received');
+      return [];
     } catch (error) {
       console.error('[Palette Preload] Failed to get components:', error);
       return [];

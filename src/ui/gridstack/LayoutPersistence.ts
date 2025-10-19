@@ -158,7 +158,7 @@ export class LayoutPersistence {
             console.log('[LayoutPersistence] Saved after clearing history');
           } catch (retryError) {
             const errorMsg = 'Failed to save layout: localStorage quota exceeded even after clearing history';
-            console.error('[LayoutPersistence]', errorMsg);
+            console.error('[LayoutPersistence]', errorMsg, retryError);
             throw new Error(errorMsg);
           }
         } else {
@@ -293,7 +293,7 @@ export class LayoutPersistence {
       const storedHistory = localStorage.getItem(historyKey);
 
       let history: LayoutConfig[] = storedHistory
-        ? JSON.parse(storedHistory)
+        ? this.parseHistory(storedHistory)
         : [];
 
       // Add new layout to history
@@ -325,7 +325,7 @@ export class LayoutPersistence {
         return [];
       }
 
-      return JSON.parse(storedHistory);
+      return this.parseHistory(storedHistory);
     } catch (error) {
       console.error('[LayoutPersistence] Failed to load layout history:', error);
       return [];
@@ -339,6 +339,44 @@ export class LayoutPersistence {
   clearHistory(contextId?: string): void {
     const historyKey = `${this.getStorageKey(contextId)}-history`;
     localStorage.removeItem(historyKey);
+  }
+
+  /**
+   * Parse and validate layout history payloads stored in localStorage
+   * @param serialized - Raw JSON string from storage
+   * @returns Array of valid, normalized layout configurations
+   */
+  private parseHistory(serialized: string): LayoutConfig[] {
+    try {
+      const parsed = JSON.parse(serialized) as unknown;
+
+      if (!Array.isArray(parsed)) {
+        console.warn('[LayoutPersistence] Ignoring malformed layout history payload');
+        return [];
+      }
+
+      const validLayouts: LayoutConfig[] = [];
+      let invalidCount = 0;
+
+      for (const entry of parsed) {
+        if (isValidLayout(entry)) {
+          validLayouts.push(mergeWithDefaults(entry));
+        } else {
+          invalidCount++;
+        }
+      }
+
+      if (invalidCount > 0) {
+        console.warn(
+          `[LayoutPersistence] Skipped ${invalidCount} invalid layout history entr${invalidCount === 1 ? 'y' : 'ies'}`
+        );
+      }
+
+      return validLayouts;
+    } catch (error) {
+      console.error('[LayoutPersistence] Failed to parse layout history:', error);
+      return [];
+    }
   }
 
   /**

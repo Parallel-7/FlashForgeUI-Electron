@@ -27,7 +27,6 @@ import * as path from 'path';
 import { getWindowManager } from '../WindowManager';
 import {
   createPreloadPath,
-  WINDOW_SIZES,
   createWindowWidth,
   createWindowHeight,
   createWindowMinWidth,

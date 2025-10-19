@@ -29,7 +29,7 @@ You are generating a professional changelog from git commit history.
      - `perf:` → Performance
      - `style:` → UI/Styling
    - For commits without prefixes, categorize by file patterns and content
-   - Identify breaking changes (BREAKING CHANGE in commit body or `!` after type)
+   - Identify breaking changes
 
 3. **Extract meaningful information**:
    - Parse commit messages for context
