@@ -159,6 +159,12 @@ Remember PowerShell scripts (`docs:*`, `linecount`) assume Windows-friendly envi
 
 Consult these resources early in a session to align with established expectations.
 
+## Recent Lessons
+
+- Component dialog preload files must never import `.d.ts` modules at runtime—use `import type {} from '../../types/global';` to keep typings without breaking the window bootstrap.
+- The dialog relies on untouched `polling-update` payloads; avoid “fixing” the shape or you risk swallowing updates and rendering an empty dialog.
+- GridStack initialization already performs component registration/initialization; removing or duplicating that logic leaves global references (e.g., log panel) unset. Preserve the existing flow unless you have a tested replacement.
+
 ## Practical Tips for Codex
 
 - Prefer incremental `rg` searches over full `find`/`grep` when locating files or symbols.

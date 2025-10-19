@@ -243,7 +243,7 @@ export class GridStackManager {
     }
 
     if (this.editMode) {
-      console.warn('GridStackManager: Edit mode already enabled');
+      console.debug('GridStackManager: Edit mode already enabled');
       return;
     }
 
@@ -283,7 +283,7 @@ export class GridStackManager {
     }
 
     if (!this.editMode) {
-      console.warn('GridStackManager: Edit mode already disabled');
+      console.debug('GridStackManager: Edit mode already disabled');
       return;
     }
 

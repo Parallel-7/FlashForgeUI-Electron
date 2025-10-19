@@ -4,16 +4,26 @@
  */
 
 .component-log-panel {
-  height: 150px;
+  height: 100%;
   background-color: var(--darker-bg);
   border-top: 1px solid var(--border-color);
-  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
   flex-shrink: 0;
+}
+
+.component-log-panel .log-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .component-log-panel #log-output {
   padding: 5px;
   font-family: monospace;
   font-size: 0.8em;
-  min-height: calc(150px - 10px);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }

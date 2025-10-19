@@ -44,15 +44,19 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
-    padding: 10px 0;
-    border-bottom: 1px solid var(--border-color);
+    gap: 12px;
 }
 
 .log-count {
     color: var(--text-color);
     font-size: 0.9em;
     opacity: 0.8;
+}
+
+.dialog-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
 }
 
 .dialog-button.secondary {
@@ -65,12 +69,13 @@
 }
 
 .log-container {
-    height: 400px;
+    flex: 1;
     background-color: var(--darker-bg);
     border: 1px solid var(--border-color);
     border-radius: var(--ui-border-radius, 4px);
     overflow: hidden;
     position: relative;
+    min-height: 220px;
 }
 
 .log-output {

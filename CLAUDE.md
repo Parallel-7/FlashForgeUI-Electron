@@ -1,6 +1,6 @@
 # FlashForgeUI-Electron Development Guide
 
-**Last Updated:** 2025-10-03 21:38 ET
+**Last Updated:** 2025-10-19 01:24 ET (America/New_York)
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -80,6 +80,12 @@ For detailed architecture information, see `ARCHITECTURE.md`.
 - Significant structural changes may affect build configuration
 - New dependencies or file organization changes require verification
 - Ready to verify final integration before deployment
+
+## Recent Lessons
+
+- Component dialog preloads must import global augmentations via `import type {} from '../../types/global';`—runtime imports of `.d.ts` files will crash the dialog window and leave pinned components blank.
+- The component dialog relies on the raw `polling-update` payload; don’t coerce or sanitize it before passing to `ComponentManager.updateAll`, or the dialog will stop updating.
+- GridStack initialization already registers and initializes components (including the global log panel reference). Removing that flow causes latent issues; preserve it unless you replace it deliberately.
 
 ## Development Tips
 
