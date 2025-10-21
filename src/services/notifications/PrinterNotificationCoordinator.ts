@@ -692,3 +692,4 @@ export function resetPrinterNotificationCoordinator(): void {
 // ============================================================================
 
 export type { TemperatureMonitorConfig, CoordinatorEventMap };
+

@@ -737,3 +737,4 @@ app.on('before-quit', async () => {
     console.error('Error during app cleanup:', error);
   }
 });
+

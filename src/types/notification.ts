@@ -503,3 +503,4 @@ export function isUploadNotification(notification: Notification): notification i
 export function isConnectionNotification(notification: Notification): notification is ConnectionLostNotification | ConnectionErrorNotification {
   return notification.type === NotificationType.ConnectionLost || notification.type === NotificationType.ConnectionError;
 }
+

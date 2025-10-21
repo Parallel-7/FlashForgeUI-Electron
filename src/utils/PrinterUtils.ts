@@ -429,3 +429,4 @@ export const formatConnectionStatus = (isConnected: boolean, printerName?: strin
     return 'Not connected';
   }
 };
+

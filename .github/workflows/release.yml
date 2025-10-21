@@ -31,62 +31,19 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
-      - name: Set project directory environment variable
-        shell: bash
-        run: echo "PROJECT_DIR=$(pwd)" >> $GITHUB_ENV
-
-      - name: Clone and Build Custom Dependencies
+      - name: Configure GitHub Packages Authentication
         shell: bash
         run: |
-          echo "Current directory: $(pwd)"
-          echo "Project directory is: ${{ env.PROJECT_DIR }}"
-
-          mkdir -p ../dependencies_build
-          
-          echo "Cloning ff-5mp-api-ts..."
-          git clone https://github.com/GhostTypes/ff-5mp-api-ts.git ../dependencies_build/ff-5mp-api-ts
-          cd ../dependencies_build/ff-5mp-api-ts
-          echo "Building ff-5mp-api-ts in $(pwd)"
-          npm install
-          if [ -f package.json ] && grep -q '"build":' package.json; then
-            npm run build
-          else
-            echo "No build script found in ff-5mp-api-ts, skipping build command."
-          fi
-          
-          echo "Cloning slicer-meta..."
-          cd ${{ env.PROJECT_DIR }}
-          git clone https://github.com/Parallel-7/slicer-meta.git ../dependencies_build/slicer-meta
-          cd ../dependencies_build/slicer-meta
-          echo "Building slicer-meta in $(pwd)"
-          npm install
-          if [ -f package.json ] && grep -q '"build":' package.json; then
-            npm run build
-          else
-            echo "No build script found in slicer-meta, skipping build command."
-          fi
-
-          cd ${{ env.PROJECT_DIR }}
-          echo "Returned to main project directory: $(pwd)"
-
-      - name: Adjust custom dependency paths in package.json
-        shell: bash
-        run: |
-          echo "Updating package.json dependency paths..."
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            powershell -Command "(Get-Content package.json -Raw) -replace 'file:../ff-5mp-api-ts', 'file:../dependencies_build/ff-5mp-api-ts' | Set-Content package.json"
-            powershell -Command "(Get-Content package.json -Raw) -replace 'file:../slicer-meta', 'file:../dependencies_build/slicer-meta' | Set-Content package.json"
-          else
-            sed -i -e 's|file:../ff-5mp-api-ts|file:../dependencies_build/ff-5mp-api-ts|g' package.json
-            sed -i -e 's|file:../slicer-meta|file:../dependencies_build/slicer-meta|g' package.json
-          fi
-          echo "package.json after path adjustment:"
-          cat package.json
+          echo "Setting up GitHub Packages authentication"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run npm install
         shell: bash
         run: |
           npm install --verbose
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set Application Version
         shell: bash

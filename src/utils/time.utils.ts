@@ -258,3 +258,4 @@ export function getTimeUntil(targetHour: number, targetMinute = 0): number {
   
   return Math.floor((target.getTime() - now.getTime()) / 1000);
 }
+

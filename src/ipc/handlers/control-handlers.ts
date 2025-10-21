@@ -19,7 +19,7 @@
  */
 
 import { ipcMain } from 'electron';
-import { FiveMClient, FlashForgeClient } from 'ff-api';
+import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
 import type { PrinterBackendManager } from '../../managers/PrinterBackendManager';
 import type { BasePrinterBackend } from '../../printer-backends/BasePrinterBackend';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager';
@@ -474,3 +474,4 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
     }
   });
 }
+

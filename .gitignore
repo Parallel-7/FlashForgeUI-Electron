@@ -64,6 +64,9 @@ lib/
 .env
 .env.test
 
+# npm configuration with tokens
+.npmrc
+
 # parcel-bundler cache (https://parceljs.org/)
 .cache
 .parcel-cache

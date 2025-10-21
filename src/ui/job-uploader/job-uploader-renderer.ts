@@ -22,8 +22,8 @@
 // Handles file selection, metadata parsing, and job uploading with full slicer-meta integration
 // ENHANCED: Now supports 3MF multi-color upload for AD5X printers
 
-import type { ParseResult, FilamentInfo } from 'slicer-meta';
-import type { AD5XMaterialMapping } from 'ff-api';
+import type { ParseResult, FilamentInfo } from '@parallel-7/slicer-meta';
+import type { AD5XMaterialMapping } from '@ghosttypes/ff-api';
 import type { UploadProgress, UploadCompletionResult } from './job-uploader-preload';
 
 // Import types from ff-api for material station functionality

@@ -76,3 +76,4 @@ contextBridge.exposeInMainWorld('materialMatchingAPI', {
     return ipcRenderer.invoke('get-material-station-status');
   }
 });
+

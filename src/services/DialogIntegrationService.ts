@@ -459,3 +459,4 @@ export class DialogIntegrationService extends EventEmitter {
 export const getDialogIntegrationService = (): DialogIntegrationService => {
   return DialogIntegrationService.getInstance();
 };
+

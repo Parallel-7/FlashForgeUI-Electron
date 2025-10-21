@@ -408,3 +408,4 @@ export const getConfigManager = (): ConfigManager => ConfigManager.getInstance()
 
 // Export for type declarations
 export type { ConfigUpdateEvent } from '../types/config';
+

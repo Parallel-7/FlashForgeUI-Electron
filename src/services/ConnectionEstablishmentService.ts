@@ -19,7 +19,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { FiveMClient, FlashForgeClient } from 'ff-api';
+import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
 import {
   DiscoveredPrinter,
   TemporaryConnectionResult,
@@ -343,3 +343,4 @@ export class ConnectionEstablishmentService extends EventEmitter {
 export const getConnectionEstablishmentService = (): ConnectionEstablishmentService => {
   return ConnectionEstablishmentService.getInstance();
 };
+

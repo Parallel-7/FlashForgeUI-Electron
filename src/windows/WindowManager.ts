@@ -389,3 +389,4 @@ class WindowManager {
  * @returns The WindowManager singleton instance
  */
 export const getWindowManager = (): WindowManager => WindowManager.getInstance();
+

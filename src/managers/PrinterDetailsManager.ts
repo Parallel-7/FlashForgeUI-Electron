@@ -577,3 +577,4 @@ export const getPrinterDetailsManager = (): PrinterDetailsManager => {
   }
   return printerDetailsManager;
 };
+

@@ -110,3 +110,4 @@ export class Adventurer5MProBackend extends DualAPIBackend {
     return 0; // 5M Pro doesn't have material station
   }
 }
+

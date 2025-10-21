@@ -1312,3 +1312,4 @@ window.addEventListener('beforeunload', () => {
   
   console.log('Enhanced renderer cleanup complete - all resources disposed');
 });
+

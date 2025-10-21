@@ -397,3 +397,4 @@ export class ThumbnailCacheService {
 export function getThumbnailCacheService(): ThumbnailCacheService {
   return ThumbnailCacheService.getInstance();
 }
+

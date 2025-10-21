@@ -447,3 +447,4 @@ export class PrinterDataTransformer {
 
 // Export singleton instance
 export const printerDataTransformer = new PrinterDataTransformer();
+

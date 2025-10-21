@@ -20,7 +20,7 @@
  * and AD5XBackend, reducing code duplication while maintaining model-specific feature differentiation.
  */
 
-import { FiveMClient, FlashForgeClient, Product } from 'ff-api';
+import { FiveMClient, FlashForgeClient, Product } from '@ghosttypes/ff-api';
 import { BasePrinterBackend } from './BasePrinterBackend';
 import {
   BackendInitOptions,
@@ -636,11 +636,11 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
   
   /**
    * Set LED enabled state
-   * Uses ff-api methods by default, falls back to G-code when CustomLeds is enabled
+   * Uses ff-api methods by default, falls back to G-code when custom LEDs are enabled (per-printer setting)
    */
   public async setLedEnabled(enabled: boolean): Promise<CommandResult> {
     try {
-      const customLeds = this.configManager.get('CustomLeds') || false;
+      const customLeds = this.customLedsEnabled;
       
       if (customLeds) {
         // Use legacy G-code commands when CustomLeds is enabled
@@ -743,3 +743,4 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
     return jobs;
   }
 }
+

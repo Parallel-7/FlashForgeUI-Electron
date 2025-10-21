@@ -24,7 +24,7 @@
  */
 
 import { ipcMain, dialog } from 'electron';
-import { parseSlicerFile } from 'slicer-meta';
+import { parseSlicerFile } from '@parallel-7/slicer-meta';
 import type { PrinterBackendManager } from '../../managers/PrinterBackendManager';
 import type { getWindowManager } from '../../windows/WindowManager';
 import { getThumbnailCacheService } from '../../services/ThumbnailCacheService';
@@ -470,3 +470,4 @@ export function registerJobHandlers(
     }
   });
 }
+

@@ -33,7 +33,7 @@ import {
   isAD5XMachineInfo,
   extractMaterialStationStatus
 } from './ad5x';
-import type { AD5XMaterialMapping, AD5XUploadParams } from 'ff-api';
+import type { AD5XMaterialMapping, AD5XUploadParams } from '@ghosttypes/ff-api';
 import * as path from 'path';
 
 /**
@@ -358,3 +358,4 @@ export class AD5XBackend extends DualAPIBackend {
     return 4; // AD5X has 4 material slots
   }
 }
+

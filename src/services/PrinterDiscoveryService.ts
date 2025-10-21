@@ -22,7 +22,7 @@ import { EventEmitter } from 'events';
 import { 
   FlashForgePrinterDiscovery, 
   FlashForgePrinter
-} from 'ff-api';
+} from '@ghosttypes/ff-api';
 
 import { DiscoveredPrinter } from '../types/printer';
 
@@ -155,3 +155,4 @@ export class PrinterDiscoveryService extends EventEmitter {
 export const getPrinterDiscoveryService = (): PrinterDiscoveryService => {
   return PrinterDiscoveryService.getInstance();
 };
+

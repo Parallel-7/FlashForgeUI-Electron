@@ -28,7 +28,7 @@ import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManage
 import { getWebUIManager } from '../../webui/server/WebUIManager';
 import { getCameraProxyService } from '../../services/CameraProxyService';
 import { getModelDisplayName } from '../../utils/PrinterUtils';
-import { FiveMClient, FlashForgeClient } from 'ff-api';
+import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
 import { getLogService } from '../../services/LogService';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager';
 
@@ -563,3 +563,4 @@ export function registerDialogHandlers(
     }
   });
 }
+

@@ -34,7 +34,7 @@ import {
   CameraStatusResponse
 } from '../types/web-api.types';
 import { toAppError } from '../../utils/error.utils';
-import { FiveMClient } from 'ff-api';
+import { FiveMClient } from '@ghosttypes/ff-api';
 
 /**
  * Extended printer status interface for accessing additional properties
@@ -1326,7 +1326,6 @@ export function createAPIRoutes(): Router {
         // RTSP: Provide WebSocket port for node-rtsp-stream
         const { getRtspStreamService } = await import('../../services/RtspStreamService');
         const rtspStreamService = getRtspStreamService();
-        const streamStatus = rtspStreamService.getStreamStatus(activeContext.id);
         const ffmpegStatus = rtspStreamService.getFfmpegStatus();
 
         if (!ffmpegStatus.available) {
@@ -1337,6 +1336,30 @@ export function createAPIRoutes(): Router {
             ffmpegAvailable: false
           };
           return res.status(503).json(response);
+        }
+
+        let streamStatus = rtspStreamService.getStreamStatus(activeContext.id);
+
+        // Lazily initialize RTSP relay if it has not been started yet for this context
+        if (!streamStatus) {
+          try {
+            const { rtspFrameRate, rtspQuality } = activeContext.printerDetails;
+            await rtspStreamService.setupStream(activeContext.id, cameraConfig.streamUrl, {
+              frameRate: rtspFrameRate,
+              quality: rtspQuality
+            });
+            streamStatus = rtspStreamService.getStreamStatus(activeContext.id);
+          } catch (streamError) {
+            console.error(
+              `[WebUI] Failed to setup RTSP stream for context ${activeContext.id}:`,
+              streamError
+            );
+            const response: StandardAPIResponse = {
+              success: false,
+              error: 'RTSP stream not available'
+            };
+            return res.status(503).json(response);
+          }
         }
 
         if (!streamStatus) {
@@ -1358,7 +1381,25 @@ export function createAPIRoutes(): Router {
         // MJPEG: Use camera proxy service
         const { getCameraProxyService } = await import('../../services/CameraProxyService');
         const cameraProxyService = getCameraProxyService();
-        const status = cameraProxyService.getStatusForContext(activeContext.id);
+        let status = cameraProxyService.getStatusForContext(activeContext.id);
+
+        // Lazily start the proxy if no status is registered for this context yet
+        if (!status) {
+          try {
+            await cameraProxyService.setStreamUrl(activeContext.id, cameraConfig.streamUrl);
+            status = cameraProxyService.getStatusForContext(activeContext.id);
+          } catch (proxyError) {
+            console.error(
+              `[WebUI] Failed to start camera proxy for context ${activeContext.id}:`,
+              proxyError
+            );
+            const response: StandardAPIResponse = {
+              success: false,
+              error: 'Camera proxy could not be started'
+            };
+            return res.status(503).json(response);
+          }
+        }
 
         if (!status) {
           const response: StandardAPIResponse = {
@@ -1368,11 +1409,12 @@ export function createAPIRoutes(): Router {
           return res.status(503).json(response);
         }
 
+        const host = req.hostname || 'localhost';
         const response = {
           success: true,
           streamType: 'mjpeg' as const,
           port: status.port,
-          url: `http://${req.hostname}:${status.port}/stream`
+          url: `http://${host}:${status.port}/stream`
         };
         return res.json(response);
       }
@@ -1471,3 +1513,4 @@ export function createAPIRoutes(): Router {
 
   return router;
 }
+

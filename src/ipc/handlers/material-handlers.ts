@@ -36,3 +36,4 @@ export function registerMaterialHandlers(_backendManager: PrinterBackendManager)
   // - load-material
   // - get-material-info
 }
+

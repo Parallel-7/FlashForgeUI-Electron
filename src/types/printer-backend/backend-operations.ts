@@ -18,7 +18,7 @@
 // Type definitions for backend operations, commands, and results
 // MAJOR REWRITE: Fixed to match actual API behavior - no more fake jobId concept
 
-import { FiveMClient, FlashForgeClient, FFGcodeToolData } from 'ff-api';
+import { FiveMClient, FlashForgeClient, FFGcodeToolData } from '@ghosttypes/ff-api';
 import { PrinterFeatureSet, MaterialStationStatus } from './printer-features';
 
 /**
@@ -262,3 +262,4 @@ export interface BackendFactoryOptions {
     readonly ForceLegacyAPI: boolean;
   };
 }
+

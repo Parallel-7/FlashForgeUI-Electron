@@ -142,3 +142,4 @@ export class AutoConnectService extends EventEmitter {
 export const getAutoConnectService = (): AutoConnectService => {
   return AutoConnectService.getInstance();
 };
+

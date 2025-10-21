@@ -329,3 +329,4 @@ export function createEmptyPollingData(): PollingData {
     lastPolled: new Date()
   };
 }
+

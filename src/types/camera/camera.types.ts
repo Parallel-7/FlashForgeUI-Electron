@@ -259,3 +259,4 @@ export function isCustomCamera(config: ResolvedCameraConfig): boolean {
 export function isBuiltinCamera(config: ResolvedCameraConfig): boolean {
   return config.sourceType === 'builtin';
 }
+

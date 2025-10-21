@@ -205,3 +205,4 @@ export class SavedPrinterService extends EventEmitter {
 export const getSavedPrinterService = (): SavedPrinterService => {
   return SavedPrinterService.getInstance();
 };
+

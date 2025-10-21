@@ -152,3 +152,4 @@ export function unregisterWebUIHandlers(): void {
   
   console.log('WebUI IPC handlers unregistered');
 }
+

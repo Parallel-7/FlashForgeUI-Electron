@@ -458,3 +458,4 @@ export class PrinterContextManager extends EventEmitter {
 export function getPrinterContextManager(): PrinterContextManagerInstance {
   return PrinterContextManager.getInstance();
 }
+

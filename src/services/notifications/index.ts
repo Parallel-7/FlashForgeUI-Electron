@@ -196,3 +196,4 @@ export async function notifyConnectionError(errorMessage: string, errorCode?: st
   const coordinator = getPrinterNotificationCoordinator();
   await coordinator.sendConnectionErrorNotification(errorMessage, errorCode, printerName);
 }
+

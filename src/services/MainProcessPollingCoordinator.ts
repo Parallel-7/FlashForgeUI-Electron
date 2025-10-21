@@ -292,3 +292,4 @@ export class MainProcessPollingCoordinator extends EventEmitter {
 export function getMainProcessPollingCoordinator(): MainProcessPollingCoordinator {
   return MainProcessPollingCoordinator.getInstance();
 }
+

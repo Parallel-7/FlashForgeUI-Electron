@@ -20,8 +20,8 @@
 // ENHANCED: Now supports 3MF multi-color upload for AD5X printers
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type { ParseResult, FilamentInfo } from 'slicer-meta';
-import type { AD5XMaterialMapping } from 'ff-api';
+import type { ParseResult, FilamentInfo } from '@parallel-7/slicer-meta';
+import type { AD5XMaterialMapping } from '@ghosttypes/ff-api';
 
 // Valid IPC channels are defined directly in the event listeners below
 

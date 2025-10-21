@@ -198,3 +198,4 @@ export function sanitizeConfig(config: Partial<AppConfig>): AppConfig {
   
   return sanitized;
 }
+

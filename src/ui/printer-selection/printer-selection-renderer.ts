@@ -664,3 +664,4 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('beforeunload', () => {
     cleanup();
 });
+

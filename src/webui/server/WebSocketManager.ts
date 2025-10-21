@@ -667,3 +667,4 @@ export class WebSocketManager extends EventEmitter {
 export function getWebSocketManager(): WebSocketManagerInstance {
   return WebSocketManager.getInstance();
 }
+

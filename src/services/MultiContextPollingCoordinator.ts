@@ -458,3 +458,4 @@ export class MultiContextPollingCoordinator extends EventEmitter {
 export function getMultiContextPollingCoordinator(): MultiContextPollingCoordinatorInstance {
   return MultiContextPollingCoordinator.getInstance();
 }
+

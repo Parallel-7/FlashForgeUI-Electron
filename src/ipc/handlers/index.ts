@@ -64,3 +64,4 @@ export function registerAllIpcHandlers(managers: AppManagers): void {
   registerCameraHandlers(managers);
   initializePrinterSettingsHandlers();
 }
+

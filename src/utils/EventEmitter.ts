@@ -132,3 +132,4 @@ export class EventEmitter<TEventMap extends Record<string, unknown[]> = DefaultE
 
 // Export a convenience type for simple string-based events
 export type SimpleEventEmitter = EventEmitter<Record<string, unknown[]>>;
+

@@ -57,3 +57,4 @@ export const setupWindowControlHandlers = (): void => {
     app.quit();
   });
 };
+
