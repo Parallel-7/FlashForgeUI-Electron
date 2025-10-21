@@ -427,3 +427,4 @@ export class RtspStreamService extends EventEmitter {
 export function getRtspStreamService(): RtspStreamService {
   return RtspStreamService.getInstance();
 }
+

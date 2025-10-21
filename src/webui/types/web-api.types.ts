@@ -243,3 +243,4 @@ export interface WebUIError {
   readonly message: string;
   readonly details?: unknown;
 }
+

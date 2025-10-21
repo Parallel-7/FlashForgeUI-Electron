@@ -76,3 +76,4 @@ contextBridge.exposeInMainWorld('singleColorConfirmAPI', {
     return ipcRenderer.invoke('get-material-station-status');
   }
 });
+

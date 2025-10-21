@@ -66,3 +66,4 @@ contextBridge.exposeInMainWorld('sendCmdsApi', {
         ipcRenderer.removeAllListeners('send-cmds:command-result');
     }
 });
+

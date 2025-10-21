@@ -79,7 +79,8 @@
       "Bash(rm:*)",
       "Bash(Select-String -Pattern \"src\\index.ts\" -Context 0,5)",
       "Bash(Select-String \"Total console\\.log statements found:\")",
-      "WebFetch(domain:gridstackjs.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(git checkout:*)"
     ],
     "deny": [],
     "additionalDirectories": [

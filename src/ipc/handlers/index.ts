@@ -70,3 +70,4 @@ export function registerAllIpcHandlers(managers: AppManagers): void {
   registerShortcutConfigHandlers();
   registerComponentDialogHandlers();
 }
+

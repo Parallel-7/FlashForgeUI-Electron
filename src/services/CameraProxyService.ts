@@ -770,3 +770,4 @@ export class CameraProxyService extends EventEmitter {
 export function getCameraProxyService(): CameraProxyServiceInstance {
   return CameraProxyService.getInstance();
 }
+

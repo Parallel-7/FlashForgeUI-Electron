@@ -19,7 +19,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { FiveMClient, FlashForgeClient } from 'ff-api';
+import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
 import { PrinterDetails, PrinterConnectionState } from '../types/printer';
 import { getPrinterContextManager } from '../managers/PrinterContextManager';
 
@@ -351,3 +351,4 @@ export class ConnectionStateManager extends EventEmitter {
 export const getConnectionStateManager = (): ConnectionStateManager => {
   return ConnectionStateManager.getInstance();
 };
+

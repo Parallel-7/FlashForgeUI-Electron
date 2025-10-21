@@ -239,3 +239,4 @@ export function getCameraStatusMessage(config: ResolvedCameraConfig): string {
     return config.unavailableReason || 'Camera not available';
   }
 }
+

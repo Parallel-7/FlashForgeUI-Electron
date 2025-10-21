@@ -358,3 +358,4 @@ export class PrinterTabsComponent extends SimpleEventEmitter {
     console.log('PrinterTabsComponent destroyed');
   }
 }
+

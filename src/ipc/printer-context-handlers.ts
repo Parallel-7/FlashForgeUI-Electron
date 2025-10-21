@@ -165,3 +165,4 @@ export function setupCameraContextHandlers(): void {
 
   console.log('Camera context IPC handlers registered successfully');
 }
+

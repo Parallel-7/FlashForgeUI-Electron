@@ -106,3 +106,4 @@ export function createMaterialMappings(
     slotMaterialColor: m.slotMaterialColor
   }));
 }
+

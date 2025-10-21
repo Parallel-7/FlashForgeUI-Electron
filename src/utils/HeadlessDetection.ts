@@ -26,3 +26,4 @@ export function setHeadlessMode(enabled: boolean): void {
 export function isHeadlessMode(): boolean {
   return headlessMode;
 }
+

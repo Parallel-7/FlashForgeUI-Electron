@@ -224,3 +224,4 @@ export function resetMultiContextNotificationCoordinator(): void {
     globalMultiContextNotificationCoordinator = null;
   }
 }
+

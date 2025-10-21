@@ -354,3 +354,4 @@ export function getAuthManager(): AuthManager {
   }
   return authManager;
 }
+

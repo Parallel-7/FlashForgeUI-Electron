@@ -43,11 +43,11 @@
   "license": "MIT",
   "dependencies": {
     "@cycjimmy/jsmpeg-player": "^6.1.2",
+    "@ghosttypes/ff-api": "*",
+    "@parallel-7/slicer-meta": "*",
     "express": "^5.1.0",
-    "ff-api": "file:../ff-5mp-api-ts",
     "gridstack": "^12.3.3",
     "node-rtsp-stream": "^0.0.9",
-    "slicer-meta": "file:../slicer-meta",
     "ws": "^8.18.3",
     "zod": "^4.0.5"
   },

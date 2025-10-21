@@ -401,3 +401,4 @@ export function formatValidationErrors(error: ZodError): string {
 export function getFirstErrorMessage(error: ZodError): string {
   return error.issues[0]?.message || 'Validation failed';
 }
+

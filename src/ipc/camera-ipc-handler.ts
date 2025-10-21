@@ -375,3 +375,4 @@ export class CameraIPCHandler {
 
 // Export singleton instance
 export const cameraIPCHandler = new CameraIPCHandler();
+

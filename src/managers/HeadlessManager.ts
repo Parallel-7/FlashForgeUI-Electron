@@ -263,8 +263,15 @@ export class HeadlessManager extends EventEmitter {
     // Forward polling data to WebUI for real-time updates
     // Note: MultiContextPollingCoordinator emits (contextId, data) - we need both parameters
     this.pollingCoordinator.on('polling-data', (contextId: string, data) => {
-      console.log(`[HeadlessManager] Received polling data for context ${contextId}, forwarding to WebUI`);
-      this.webUIManager.handlePollingUpdate(data);
+      const activeContextId = this.contextManager.getActiveContextId();
+      const isActiveContext = activeContextId === contextId;
+
+      if (isActiveContext) {
+        console.log(`[HeadlessManager] Forwarding polling data for active context ${contextId} to WebUI`);
+        this.webUIManager.handlePollingUpdate(data);
+      } else {
+        console.log(`[HeadlessManager] Skipping polling data for inactive context ${contextId}; active context is ${activeContextId ?? 'none'}`);
+      }
     });
 
     this.logger.logInfo('Event forwarding configured for WebUI');
@@ -375,3 +382,4 @@ export const getHeadlessManager = (): HeadlessManager => {
   }
   return headlessManager;
 };
+

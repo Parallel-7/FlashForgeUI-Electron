@@ -270,3 +270,4 @@ export type ValidatedTemperatureData = z.infer<typeof TemperatureDataSchema>;
 export type ValidatedJobStartData = z.infer<typeof JobStartDataSchema>;
 export type ValidatedPrinterCommand = z.infer<typeof PrinterCommandSchema>;
 export type ValidatedPrinterFeatures = z.infer<typeof PrinterFeaturesSchema>;
+

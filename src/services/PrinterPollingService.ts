@@ -581,3 +581,4 @@ export function resetGlobalPollingService(): void {
     globalPollingService = null;
   }
 }
+

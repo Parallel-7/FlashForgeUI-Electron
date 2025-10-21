@@ -26,7 +26,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { FiveMClient, FlashForgeClient } from 'ff-api';
+import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
 
 import { getConfigManager } from './ConfigManager';
 import { getLoadingManager } from './LoadingManager';
@@ -1171,8 +1171,11 @@ export class ConnectionFlowManager extends EventEmitter {
 
         const modelType = detectPrinterModelType(tempResult.typeName);
 
-        // Use provided check code or default
-        const checkCode = spec.checkCode || getDefaultCheckCode();
+        // Preserve existing saved printer settings if available
+        const existingPrinter = this.savedPrinterService.getSavedPrinter(serialNumber);
+
+        // Use explicit check code, fallback to saved value, then default
+        const checkCode = spec.checkCode || existingPrinter?.CheckCode || getDefaultCheckCode();
 
         // Update discovered printer with real info
         const updatedDiscoveredPrinter: DiscoveredPrinter = {
@@ -1207,11 +1210,11 @@ export class ConnectionFlowManager extends EventEmitter {
           ClientType: spec.type,
           printerModel: tempResult.typeName,
           modelType,
-          // Initialize per-printer settings with defaults for new printers
-          customCameraEnabled: false,
-          customCameraUrl: '',
-          customLedsEnabled: false,
-          forceLegacyMode: false
+          // Preserve previously configured per-printer overrides when present
+          customCameraEnabled: existingPrinter?.customCameraEnabled ?? false,
+          customCameraUrl: existingPrinter?.customCameraUrl ?? '',
+          customLedsEnabled: existingPrinter?.customLedsEnabled ?? false,
+          forceLegacyMode: existingPrinter?.forceLegacyMode ?? false
         };
 
         await this.savedPrinterService.savePrinter(printerDetails);
@@ -1235,6 +1238,10 @@ export class ConnectionFlowManager extends EventEmitter {
           primaryClient: connectionResult.primaryClient,
           secondaryClient: connectionResult.secondaryClient
         });
+
+        // Ensure this context becomes active so WebUI routes operate correctly
+        this.contextManager.switchContext(contextId);
+        console.log(`[Headless] Switched active context to ${contextId}`);
 
         connectedContexts.push({ contextId, ip: spec.ip });
         console.log(`[Headless] Successfully connected to ${printerName} at ${spec.ip}`);
@@ -1269,3 +1276,4 @@ export const getConnectionFlowManager = (): ConnectionFlowManager => {
 };
 
 export const getPrinterConnectionManager = getConnectionFlowManager;
+

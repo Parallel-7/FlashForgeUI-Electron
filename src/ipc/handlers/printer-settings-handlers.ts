@@ -132,3 +132,4 @@ export function disposePrinterSettingsHandlers(): void {
   ipcMain.removeHandler('printer-settings:update');
   ipcMain.removeHandler('printer-settings:get-printer-name');
 }
+

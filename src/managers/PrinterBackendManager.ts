@@ -26,7 +26,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { FiveMClient, FlashForgeClient, AD5XMaterialMapping } from 'ff-api';
+import { FiveMClient, FlashForgeClient, AD5XMaterialMapping } from '@ghosttypes/ff-api';
 import { BasePrinterBackend } from '../printer-backends/BasePrinterBackend';
 import { GenericLegacyBackend } from '../printer-backends/GenericLegacyBackend';
 import { Adventurer5MBackend } from '../printer-backends/Adventurer5MBackend';
@@ -868,3 +868,4 @@ export class PrinterBackendManager extends EventEmitter {
 export function getPrinterBackendManager(): PrinterBackendManagerInstance {
   return PrinterBackendManager.getInstance();
 }
+

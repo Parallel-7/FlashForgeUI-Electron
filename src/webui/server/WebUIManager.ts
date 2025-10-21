@@ -675,3 +675,4 @@ export class WebUIManager extends EventEmitter {
 export function getWebUIManager(): WebUIManagerInstance {
   return WebUIManager.getInstance();
 }
+

@@ -21,7 +21,7 @@
 export { 
   MatlStationInfo,
   SlotInfo
-} from 'ff-api';
+} from '@ghosttypes/ff-api';
 
 // Direct re-exports from ff-api index
 export { 
@@ -30,7 +30,7 @@ export {
   AD5XMaterialMapping,
   AD5XLocalJobParams,
   AD5XSingleColorJobParams
-} from 'ff-api';
+} from '@ghosttypes/ff-api';
 
 // Keep our UI-specific types that transform the data structure
 export { 
@@ -42,7 +42,7 @@ export {
 export { AD5XJobInfo } from '../../types/printer-backend';
 
 // Import MatlStationInfo for type definitions
-import type { MatlStationInfo as MatlStationInfoType } from 'ff-api';
+import type { MatlStationInfo as MatlStationInfoType } from '@ghosttypes/ff-api';
 
 // Type for the raw machine info structure from AD5X API responses
 export interface AD5XMachineInfo {
@@ -68,3 +68,4 @@ export function hasValidMaterialStationInfo(
     Array.isArray(data.MatlStationInfo.slotInfos)
   );
 }
+

@@ -24,7 +24,7 @@
  */
 
 import { EventEmitter } from 'events';
-import { FiveMClient, FlashForgeClient } from 'ff-api';
+import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
 import { getConfigManager } from '../managers/ConfigManager';
 import {
   PrinterModelType,
@@ -73,10 +73,10 @@ export abstract class BasePrinterBackend extends EventEmitter {
   private featureOverrides: Record<string, unknown> = {};
 
   // Per-printer settings
-  private readonly customCameraEnabled: boolean;
-  private readonly customCameraUrl: string;
-  private readonly customLedsEnabled: boolean;
-  private readonly forceLegacyMode: boolean;
+  protected readonly customCameraEnabled: boolean;
+  protected readonly customCameraUrl: string;
+  protected readonly customLedsEnabled: boolean;
+  protected readonly forceLegacyMode: boolean;
 
   constructor(options: BackendInitOptions) {
     super();
@@ -551,3 +551,4 @@ export abstract class BasePrinterBackend extends EventEmitter {
   protected abstract getSupportedGCodeCommands(): readonly string[];
   protected abstract getMaterialStationSlotCount(): number;
 }
+

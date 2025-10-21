@@ -172,3 +172,4 @@ contextBridge.exposeInMainWorld('jobPickerAPI', jobPickerAPI);
 console.log('Job picker preload: API exposed to renderer process');
 
 export {};
+

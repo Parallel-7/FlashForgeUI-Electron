@@ -465,3 +465,4 @@ export class ThumbnailRequestQueue extends EventEmitter {
 export function getThumbnailRequestQueue(): ThumbnailRequestQueue {
   return ThumbnailRequestQueue.getInstance();
 }
+

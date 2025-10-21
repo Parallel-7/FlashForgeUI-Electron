@@ -6,3 +6,4 @@
  */
 
 export { PrinterTabsComponent } from './PrinterTabsComponent';
+

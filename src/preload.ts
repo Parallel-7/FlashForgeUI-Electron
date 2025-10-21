@@ -509,3 +509,4 @@ declare global {
     CAMERA_URL: string;
   }
 }
+

@@ -19,8 +19,8 @@
  * @module types/ipc
  */
 
-import type { AD5XMaterialMapping } from 'ff-api';
-import type { ParseResult } from 'slicer-meta';
+import type { AD5XMaterialMapping } from '@ghosttypes/ff-api';
+import type { ParseResult } from '@parallel-7/slicer-meta';
 
 // Upload job payload for regular printer uploads
 export interface UploadJobPayload {

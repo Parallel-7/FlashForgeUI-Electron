@@ -202,3 +202,4 @@ export interface AutoConnectDecision {
   readonly selectedMatch?: SavedPrinterMatch;
   readonly matches?: SavedPrinterMatch[];
 }
+

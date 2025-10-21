@@ -484,3 +484,4 @@ class SettingsRenderer {
 
 // Initialize the settings renderer
 new SettingsRenderer();
+

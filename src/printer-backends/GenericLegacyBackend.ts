@@ -18,7 +18,7 @@
  * commands and legacy status parsing, ensuring compatibility with all FlashForge printers.
  */
 
-import { FlashForgeClient, TempInfo, TempData, EndstopStatus, MachineStatus, PrintStatus } from 'ff-api';
+import { FlashForgeClient, TempInfo, TempData, EndstopStatus, MachineStatus, PrintStatus } from '@ghosttypes/ff-api';
 import { BasePrinterBackend } from './BasePrinterBackend';
 import {
   PrinterFeatureSet,
@@ -635,7 +635,8 @@ export class GenericLegacyBackend extends BasePrinterBackend {
   }
   
   protected supportsCustomLEDControl(): boolean {
-    return false; // Legacy printers don't support custom LED control
+    // Legacy printers expose LED control through the legacy API when enabled via settings
+    return true;
   }
   
   protected supportsMaterialStation(): boolean {
@@ -673,3 +674,4 @@ export class GenericLegacyBackend extends BasePrinterBackend {
     return 0;
   }
 }
+

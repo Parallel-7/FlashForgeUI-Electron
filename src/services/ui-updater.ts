@@ -616,3 +616,4 @@ export function resetUI(): void {
   
   updateAllPanels(emptyData);
 }
+
