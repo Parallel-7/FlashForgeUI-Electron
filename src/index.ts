@@ -17,6 +17,9 @@
  * - Managing application-level concerns like power-saving and environment detection.
  */
 
+// CRITICAL: Bootstrap must be imported FIRST to set app name before any singletons are created
+import './bootstrap';
+
 import { app, BrowserWindow, dialog, powerSaveBlocker, ipcMain } from 'electron';
 import { getConfigManager } from './managers/ConfigManager';
 import { getPrinterConnectionManager } from './managers/ConnectionFlowManager';
@@ -73,13 +76,8 @@ if (!gotTheLock) {
   });
 }
 
-// Set AppUserModelId to match electron-builder appId for proper notification routing
-// This works across all platforms (Windows uses it for Action Center, macOS for notification attribution)
-app.setAppUserModelId('com.ghosttypes.flashforgeui');
-
-// Ensure app uses the correct name for userData directory
-// This must be set before any services that use app.getPath('userData') are initialized
-app.setName('FlashForgeUI');
+// Note: app.setName() and app.setAppUserModelId() are now called in bootstrap.ts
+// to ensure they execute before any singleton initialization
 
 // Initialize global reference for camera IPC handler
 global.printerBackendManager = undefined;

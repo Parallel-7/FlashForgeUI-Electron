@@ -41,10 +41,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run npm install
+      - name: Run npm ci
         shell: bash
         run: |
-          npm install --verbose
+          npm ci
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -65,21 +65,11 @@ jobs:
         run: |
           # Use platform-specific build commands
           if [[ "$RUNNER_OS" == "Linux" ]]; then
-            npm run build:linux
+            npm run build:ci:linux
           elif [[ "$RUNNER_OS" == "Windows" ]]; then
-            npm run build:win
+            npm run build:ci:win
           elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            npm run build:mac
-          fi
-
-      - name: List Build Artifacts
-        shell: bash
-        run: |
-          echo "Listing contents of dist directory:"
-          if [[ "$RUNNER_OS" == "Windows" ]]; then
-            dir /s dist || echo "dist directory not found or empty."
-          else
-            ls -R dist || echo "dist directory not found or empty."
+            npm run build:ci:mac
           fi
 
       - name: Upload Build Artifacts
