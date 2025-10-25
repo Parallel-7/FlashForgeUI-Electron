@@ -123,7 +123,7 @@ export class ControlsGridComponent extends BaseComponent {
       channel: 'led-on',
       requiresConnection: true,
       disableDuringPrint: false,
-      legacySupported: true
+      legacySupported: false
     },
     {
       id: 'btn-clear-status',
@@ -141,7 +141,7 @@ export class ControlsGridComponent extends BaseComponent {
       channel: 'led-off',
       requiresConnection: true,
       disableDuringPrint: false,
-      legacySupported: true
+      legacySupported: false
     },
     {
       id: 'btn-home-axes',

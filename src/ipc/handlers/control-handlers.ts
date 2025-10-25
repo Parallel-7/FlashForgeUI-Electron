@@ -237,29 +237,42 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
         return { success: false, error: 'Cannot determine printer features' };
       }
 
+      const modelType = backend.getCapabilities().modelType;
+
       if (features.ledControl.builtin) {
-        // Use new API method for built-in LED (5M Pro)
+        // 5M Pro with factory LEDs → Use HTTP API
         const primaryClient = backend.getPrimaryClient();
         if (!(primaryClient instanceof FiveMClient)) {
           return { success: false, error: 'Built-in LED requires new API client' };
         }
 
         const result = await primaryClient.control.setLedOn();
-        console.log('Turned on built-in LED', result);
+        console.log('Turned on built-in LED (HTTP API)', result);
         return { success: result, data: result };
-      } else if (features.ledControl.customControlEnabled || features.ledControl.usesLegacyAPI) {
-        // Use legacy client for custom LED G-code or legacy printer LED control
+      } else if (modelType === 'adventurer-5m' || modelType === 'ad5x') {
+        // 5M and AD5X → Always use TCP API (auto-enabled)
         const legacyClient = getLegacyClient(backend);
         if (!legacyClient) {
           return { success: false, error: 'LED control not available' };
         }
 
         const result = await legacyClient.ledOn();
-        console.log(`Turned on ${features.ledControl.customControlEnabled ? 'custom' : 'legacy'} LED`, result);
+        console.log('Turned on LED (TCP API - auto-enabled)', result);
         return { success: result, data: result };
-      }
+      } else if (features.ledControl.customControlEnabled) {
+        // Generic Legacy with Custom LEDs enabled → Use TCP API
+        const legacyClient = getLegacyClient(backend);
+        if (!legacyClient) {
+          return { success: false, error: 'LED control not available' };
+        }
 
-      return { success: false, error: 'LED control not available' };
+        const result = await legacyClient.ledOn();
+        console.log('Turned on custom LED (TCP API)', result);
+        return { success: result, data: result };
+      } else {
+        // Generic Legacy without Custom LEDs enabled
+        return { success: false, error: 'LED control not available on this printer' };
+      }
     } catch (error) {
       console.error('Error turning on LED:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -289,29 +302,42 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
         return { success: false, error: 'Cannot determine printer features' };
       }
 
+      const modelType = backend.getCapabilities().modelType;
+
       if (features.ledControl.builtin) {
-        // Use new API method for built-in LED (5M Pro)
+        // 5M Pro with factory LEDs → Use HTTP API
         const primaryClient = backend.getPrimaryClient();
         if (!(primaryClient instanceof FiveMClient)) {
           return { success: false, error: 'Built-in LED requires new API client' };
         }
 
         const result = await primaryClient.control.setLedOff();
-        console.log('Turned off built-in LED', result);
+        console.log('Turned off built-in LED (HTTP API)', result);
         return { success: result, data: result };
-      } else if (features.ledControl.customControlEnabled || features.ledControl.usesLegacyAPI) {
-        // Use legacy client for custom LED G-code or legacy printer LED control
+      } else if (modelType === 'adventurer-5m' || modelType === 'ad5x') {
+        // 5M and AD5X → Always use TCP API (auto-enabled)
         const legacyClient = getLegacyClient(backend);
         if (!legacyClient) {
           return { success: false, error: 'LED control not available' };
         }
 
         const result = await legacyClient.ledOff();
-        console.log(`Turned off ${features.ledControl.customControlEnabled ? 'custom' : 'legacy'} LED`, result);
+        console.log('Turned off LED (TCP API - auto-enabled)', result);
         return { success: result, data: result };
-      }
+      } else if (features.ledControl.customControlEnabled) {
+        // Generic Legacy with Custom LEDs enabled → Use TCP API
+        const legacyClient = getLegacyClient(backend);
+        if (!legacyClient) {
+          return { success: false, error: 'LED control not available' };
+        }
 
-      return { success: false, error: 'LED control not available' };
+        const result = await legacyClient.ledOff();
+        console.log('Turned off custom LED (TCP API)', result);
+        return { success: result, data: result };
+      } else {
+        // Generic Legacy without Custom LEDs enabled
+        return { success: false, error: 'LED control not available on this printer' };
+      }
     } catch (error) {
       console.error('Error turning off LED:', error);
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };

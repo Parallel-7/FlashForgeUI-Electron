@@ -635,34 +635,55 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
   }
   
   /**
-   * Set LED enabled state
-   * Uses ff-api methods by default, falls back to G-code when custom LEDs are enabled (per-printer setting)
+   * Set LED enabled state with smart API routing based on printer model
+   * Matches Main UI IPC handler logic for identical behavior across UIs
+   *
+   * Routing logic:
+   * - 5M Pro with builtin LEDs → HTTP API (FiveMClient)
+   * - 5M and AD5X → TCP API (FlashForgeClient, auto-enabled)
+   * - Generic printers not supported by DualAPIBackend
    */
   public async setLedEnabled(enabled: boolean): Promise<CommandResult> {
     try {
-      const customLeds = this.customLedsEnabled;
-      
-      if (customLeds) {
-        // Use legacy G-code commands when CustomLeds is enabled
-        const command = enabled ? '~M146 r255 g255 b255 F0' : '~M146 r0 g0 b0 F0';
-        const result = await this.executeGCodeCommand(command);
-        
+      const features = this.getBackendStatus().features;
+
+      if (!features) {
         return {
-          success: result.success,
-          data: enabled ? 'LED turned on' : 'LED turned off',
-          error: result.error,
+          success: false,
+          error: 'Cannot determine printer features',
+          timestamp: new Date()
+        };
+      }
+
+      if (features.ledControl.builtin) {
+        // 5M Pro with factory LEDs → Use HTTP API
+        const success = enabled
+          ? await this.fiveMClient.control.setLedOn()
+          : await this.fiveMClient.control.setLedOff();
+
+        return {
+          success,
+          data: enabled ? 'LED turned on (HTTP API)' : 'LED turned off (HTTP API)',
+          error: success ? undefined : 'Failed to control LED',
+          timestamp: new Date()
+        };
+      } else if (this.modelType === 'adventurer-5m' || this.modelType === 'ad5x') {
+        // 5M and AD5X → Always use TCP API (auto-enabled)
+        const success = enabled
+          ? await this.legacyClient.ledOn()
+          : await this.legacyClient.ledOff();
+
+        return {
+          success,
+          data: enabled ? 'LED turned on (TCP API - auto-enabled)' : 'LED turned off (TCP API - auto-enabled)',
+          error: success ? undefined : 'Failed to control LED',
           timestamp: new Date()
         };
       } else {
-        // Use native ff-api methods for LED control
-        const success = enabled 
-          ? await this.fiveMClient.control.setLedOn()
-          : await this.fiveMClient.control.setLedOff();
-        
+        // Should not reach here for dual-API backends, but handle gracefully
         return {
-          success,
-          data: enabled ? 'LED turned on' : 'LED turned off',
-          error: success ? undefined : 'Failed to control LED',
+          success: false,
+          error: 'LED control not available for this printer model',
           timestamp: new Date()
         };
       }

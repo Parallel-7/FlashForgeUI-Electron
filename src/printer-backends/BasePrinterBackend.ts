@@ -260,7 +260,10 @@ export abstract class BasePrinterBackend extends EventEmitter {
       },
       ledControl: {
         builtin: baseFeatures.ledControl.builtin,
-        customControlEnabled: Boolean(settingsOverrides.customLEDControl) && this.supportsCustomLEDControl(),
+        // Auto-enable for 5M/AD5X, otherwise check custom setting
+        customControlEnabled: (this.modelType === 'adventurer-5m' || this.modelType === 'ad5x')
+          ? true  // Auto-enable TCP LED control for these models
+          : (Boolean(settingsOverrides.customLEDControl) && this.supportsCustomLEDControl()),
         usesLegacyAPI: baseFeatures.ledControl.usesLegacyAPI
       },
       filtration: {
@@ -322,7 +325,12 @@ export abstract class BasePrinterBackend extends EventEmitter {
       case 'camera':
         return this.features.camera.builtin || this.features.camera.customEnabled;
       case 'led-control':
-        return this.features.ledControl.builtin || this.features.ledControl.customControlEnabled;
+        // 5M Pro has builtin LEDs detected via HTTP API
+        if (this.features.ledControl.builtin) return true;
+
+        // 5M and AD5X auto-enable LED control (customControlEnabled auto-set in buildFeatureSet)
+        // Generic Legacy requires manual Custom LEDs setting
+        return this.features.ledControl.customControlEnabled;
       case 'filtration':
         return this.features.filtration.available;
       case 'gcode-commands':
