@@ -80,7 +80,8 @@
       "Bash(Select-String -Pattern \"src\\index.ts\" -Context 0,5)",
       "Bash(Select-String \"Total console\\.log statements found:\")",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "WebFetch(domain:donkie.github.io)"
     ],
     "deny": [],
     "additionalDirectories": [

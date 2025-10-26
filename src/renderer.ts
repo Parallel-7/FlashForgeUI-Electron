@@ -256,7 +256,7 @@ function createGridWidget(componentId: string): HTMLElement {
 
   const content = document.createElement('div');
   content.className = 'grid-stack-item-content';
-  content.id = `${componentId}-container`;
+  content.id = `grid-${componentId}-content`;
 
   item.appendChild(content);
   const removeButton = document.createElement('button');
@@ -331,6 +331,9 @@ async function initializeGridStack(): Promise<void> {
             if (component) {
               componentManager.registerComponent(component);
               await component.initialize();
+              if (component instanceof LogPanelComponent) {
+                await hydrateLogPanelWithHistory(component);
+              }
               widgetCount++;
               console.log(`GridStack: Added widget '${widgetConfig.componentId}'`);
 
@@ -464,6 +467,9 @@ function setupPaletteIntegration(): void {
 
       componentManager.registerComponent(component);
       await component.initialize();
+      if (component instanceof LogPanelComponent) {
+        await hydrateLogPanelWithHistory(component);
+      }
 
       if (lastPollingData) {
         const updateData: ComponentUpdateData = {
@@ -695,6 +701,40 @@ function logMessage(message: string): void {
   } else {
     // Last resort - console only
     console.log(`[FALLBACK] ${message}`);
+  }
+}
+
+async function hydrateLogPanelWithHistory(logPanel: LogPanelComponent): Promise<void> {
+  if (!window.api?.invoke) {
+    return;
+  }
+
+  try {
+    const result = await window.api.invoke('log-dialog-request-logs');
+    if (!Array.isArray(result)) {
+      return;
+    }
+
+    const entries = result.filter(
+      (entry): entry is { timestamp: string; message: string } =>
+        typeof entry === 'object' &&
+        entry !== null &&
+        typeof (entry as { timestamp?: unknown }).timestamp === 'string' &&
+        typeof (entry as { message?: unknown }).message === 'string'
+    );
+
+    if (entries.length === 0 || logPanel.isDestroyed()) {
+      return;
+    }
+
+    logPanel.loadInitialEntries(
+      entries.map((entry) => ({
+        timestamp: entry.timestamp,
+        message: entry.message,
+      }))
+    );
+  } catch (error) {
+    console.error('Failed to hydrate log panel with history:', error);
   }
 }
 
@@ -1972,4 +2012,3 @@ window.addEventListener('beforeunload', () => {
 
   console.log('Enhanced renderer cleanup complete - all resources disposed');
 });
-

@@ -431,11 +431,6 @@ body.platform-darwin .traffic-lights {
   /* Containers should be transparent and let components manage their own styles */
 }
 
-#log-panel-container {
-  /* Hide log panel from main UI - will be accessible via dialog instead */
-  display: none;
-}
-
 /* Add a media query for better responsiveness on small screens */
 @media (max-width: 800px) {
   .main-layout {
@@ -650,3 +645,7 @@ body.platform-darwin .traffic-lights {
 }
 
 /* Remove the separate container styling since icons are now inside content */
+#log-panel-container {
+  /* Legacy mount point hidden in main layout. The active log panel is provided via the component system. */
+  display: none;
+}

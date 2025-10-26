@@ -38,8 +38,7 @@
   overflow: hidden;
   inset: 0;
   position: absolute;
-  display: flex;
-  flex-direction: column;
+  display: block;
   box-shadow: var(--shadow-sm);
   transition: box-shadow var(--transition-normal), border-color var(--transition-normal), transform var(--transition-fast);
   backdrop-filter: blur(10px);

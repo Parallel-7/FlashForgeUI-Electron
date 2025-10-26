@@ -31,6 +31,7 @@ import {
   ControlsGridComponent,
   FiltrationControlsComponent,
 } from '../components';
+import { parseLogEntry } from '../shared/log-panel';
 import type { ComponentUpdateData } from '../components/base/types';
 import type { PollingData } from '../../types/polling';
 
@@ -330,28 +331,3 @@ function isPollingData(payload: unknown): payload is PollingData {
   return typeof payload === 'object' && payload !== null && 'isConnected' in payload;
 }
 
-/**
- * Parse unknown payload into a log entry structure
- * @param data - Payload from IPC
- * @returns Log entry or null
- */
-function parseLogEntry(data: unknown): { timestamp: string; message: string } | null {
-  if (typeof data === 'string') {
-    const timestamp = new Date().toLocaleTimeString();
-    return { timestamp, message: data };
-  }
-
-  if (
-    typeof data === 'object' &&
-    data !== null &&
-    'timestamp' in data &&
-    'message' in data &&
-    typeof (data as { timestamp: unknown }).timestamp === 'string' &&
-    typeof (data as { message: unknown }).message === 'string'
-  ) {
-    const entry = data as { timestamp: string; message: string };
-    return entry;
-  }
-
-  return null;
-}

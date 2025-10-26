@@ -21,12 +21,8 @@
 
 import { BaseComponent } from '../base/component';
 import type { ComponentUpdateData } from '../base/types';
+import { createLogPanel, type LogEntry, type LogPanelController } from '../../shared/log-panel';
 import './log-panel.css';
-
-interface LogEntry {
-  readonly timestamp: string;
-  readonly message: string;
-}
 
 /**
  * Log Panel Component class that handles display of system log messages
@@ -37,13 +33,11 @@ export class LogPanelComponent extends BaseComponent {
 
   /** HTML template for the log panel component */
   public readonly templateHTML: string = `
-    <div class="log-container">
-      <div class="log-output" id="log-output"></div>
-    </div>
+    <div class="log-panel-component-root" data-log-panel-root></div>
   `;
 
-  /** Reference to the log output container element */
-  private logOutputElement: HTMLElement | null = null;
+  /** Shared log panel controller */
+  private panelController: LogPanelController | null = null;
 
   /**
    * Creates a new LogPanelComponent instance
@@ -57,12 +51,20 @@ export class LogPanelComponent extends BaseComponent {
    * Called after component is initialized to set up the log output element reference
    */
   protected async onInitialized(): Promise<void> {
-    this.logOutputElement = this.findElementById('log-output');
-    
-    if (!this.logOutputElement) {
-      console.error('Log Panel Component: Failed to find log output element');
-      throw new Error('Log output element not found');
+    const mountPoint = this.findElement<HTMLDivElement>('[data-log-panel-root]');
+
+    if (!mountPoint) {
+      console.error('Log Panel Component: Failed to locate mount point');
+      throw new Error('Log panel mount point not found');
     }
+
+    this.panelController = createLogPanel({
+      mountPoint,
+      title: 'Application Logs',
+      showHeader: true,
+      placeholder: 'No log messages yet',
+      autoScroll: true
+    });
 
     console.log('Log Panel Component: Successfully initialized');
   }
@@ -97,8 +99,13 @@ export class LogPanelComponent extends BaseComponent {
    */
   public addLogMessage(message: string): void {
     this.assertInitialized();
-    const timestamp = new Date().toLocaleTimeString();
-    this.appendFormattedMessage(`[${timestamp}] ${message}`);
+
+    if (!this.panelController) {
+      console.warn('Log Panel Component: Panel controller unavailable during addLogMessage');
+      return;
+    }
+
+    this.panelController.appendMessage(message);
   }
 
   /**
@@ -107,7 +114,13 @@ export class LogPanelComponent extends BaseComponent {
    */
   public addLogEntry(entry: LogEntry): void {
     this.assertInitialized();
-    this.appendFormattedMessage(`[${entry.timestamp}] ${entry.message}`);
+
+    if (!this.panelController) {
+      console.warn('Log Panel Component: Panel controller unavailable during addLogEntry');
+      return;
+    }
+
+    this.panelController.appendEntry(entry);
   }
 
   /**
@@ -117,23 +130,13 @@ export class LogPanelComponent extends BaseComponent {
   public loadInitialEntries(entries: LogEntry[]): void {
     this.assertInitialized();
 
-    if (!this.logOutputElement) {
-      console.warn('Log Panel Component: Cannot load entries - log output element not available');
+    if (!this.panelController) {
+      console.warn('Log Panel Component: Cannot load entries - controller unavailable');
       return;
     }
 
     try {
-      const fragment = document.createDocumentFragment();
-
-      entries.forEach((entry) => {
-        const element = document.createElement('div');
-        element.textContent = `[${entry.timestamp}] ${entry.message}`;
-        fragment.appendChild(element);
-      });
-
-      this.logOutputElement.innerHTML = '';
-      this.logOutputElement.appendChild(fragment);
-      this.scrollToBottom();
+      this.panelController.load(entries);
     } catch (error) {
       console.error('Log Panel Component: Failed to load initial entries:', error);
     }
@@ -146,56 +149,16 @@ export class LogPanelComponent extends BaseComponent {
   public clearLogs(): void {
     this.assertInitialized();
 
-    if (!this.logOutputElement) {
-      console.warn('Log Panel Component: Cannot clear logs - log output element not available');
+    if (!this.panelController) {
+      console.warn('Log Panel Component: Cannot clear logs - controller unavailable');
       return;
     }
 
     try {
-      this.logOutputElement.innerHTML = '';
+      this.panelController.clear();
       console.log('Log Panel Component: Logs cleared');
     } catch (error) {
       console.error('Log Panel Component: Failed to clear logs:', error);
-    }
-  }
-
-  /**
-   * Scroll the log output to show the latest messages
-   * Ensures the most recent log message is visible
-   */
-  private scrollToBottom(): void {
-    if (!this.logOutputElement) {
-      return;
-    }
-
-    try {
-      // Scroll the container to the bottom to show latest message
-      const container = this.logOutputElement.parentElement;
-      if (container) {
-        container.scrollTop = container.scrollHeight;
-      }
-    } catch (error) {
-      console.error('Log Panel Component: Failed to scroll to bottom:', error);
-    }
-  }
-
-  /**
-   * Append a formatted log message to the output
-   * @param formattedMessage - Message string that already includes timestamp formatting
-   */
-  private appendFormattedMessage(formattedMessage: string): void {
-    if (!this.logOutputElement) {
-      console.warn('Log Panel Component: Cannot append message - log output element not available');
-      return;
-    }
-
-    try {
-      const messageElement = document.createElement('div');
-      messageElement.textContent = formattedMessage;
-      this.logOutputElement.appendChild(messageElement);
-      this.scrollToBottom();
-    } catch (error) {
-      console.error('Log Panel Component: Failed to append formatted message:', error);
     }
   }
 
@@ -208,11 +171,11 @@ export class LogPanelComponent extends BaseComponent {
   public getMessageCount(): number {
     this.assertInitialized();
 
-    if (!this.logOutputElement) {
+    if (!this.panelController) {
       return 0;
     }
 
-    return this.logOutputElement.children.length;
+    return this.panelController.getEntryCount();
   }
 
   /**
@@ -220,7 +183,10 @@ export class LogPanelComponent extends BaseComponent {
    * Clears the log output element reference
    */
   protected cleanup(): void {
-    this.logOutputElement = null;
+    if (this.panelController) {
+      this.panelController.destroy();
+      this.panelController = null;
+    }
     console.log('Log Panel Component: Cleanup completed');
   }
 }

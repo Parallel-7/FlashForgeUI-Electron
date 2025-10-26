@@ -340,7 +340,8 @@ contextBridge.exposeInMainWorld('api', {
       'palette:get-components',
       'shortcut-config:get-current',
       'shortcut-config:save',
-      'shortcut-config:get-available-components'
+      'shortcut-config:get-available-components',
+      'log-dialog-request-logs'
     ];
     
     if (validInvokeChannels.includes(channel)) {

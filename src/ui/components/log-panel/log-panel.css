@@ -1,29 +1,23 @@
-/**
- * Log Panel Component Styles
- * Real-time log message display with scrolling and monospace formatting
- */
-
 .component-log-panel {
-  height: 100%;
-  background-color: var(--darker-bg);
-  border-top: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
-}
-
-.component-log-panel .log-container {
+  width: 100%;
   height: 100%;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-}
-
-.component-log-panel #log-output {
-  padding: 5px;
-  font-family: monospace;
-  font-size: 0.8em;
-  flex: 1;
   min-height: 0;
-  overflow-y: auto;
+}
+
+.grid-stack-item-content > .component-log-panel {
+  position: absolute;
+  inset: 0;
+}
+
+.component-log-panel .log-panel-component-root {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  width: 100%;
+}
+
+.component-log-panel .ff-log-panel {
+  width: 100%;
 }
