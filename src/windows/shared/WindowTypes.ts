@@ -285,9 +285,9 @@ export const WINDOW_SIZES = {
     minHeight: createWindowMinHeight(350)
   },
   COMPONENT_PALETTE: {
-    width: createWindowWidth(280),
-    height: createWindowHeight(600),
-    minWidth: createWindowMinWidth(280),
-    minHeight: createWindowMinHeight(600)
+    width: createWindowWidth(350),
+    height: createWindowHeight(700),
+    minWidth: createWindowMinWidth(350),
+    minHeight: createWindowMinHeight(700)
   }
 } as const;

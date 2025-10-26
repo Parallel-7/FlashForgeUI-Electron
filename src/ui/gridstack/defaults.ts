@@ -37,7 +37,7 @@ export const DEFAULT_GRID_OPTIONS: GridOptions = {
   margin: 8,                     // 8px margin between widgets
   float: false,                  // Don't float widgets up (maintain explicit positioning)
   animate: true,                 // Smooth animations for movements
-  minRow: 9,                     // Minimum 9 rows to fit all components
+  minRow: 10,                    // Minimum 10 rows to fit all components (increased for taller status bar)
   staticGrid: true,              // Static by default (editable in edit mode)
 };
 
@@ -106,9 +106,9 @@ export const DEFAULT_WIDGETS: readonly GridStackWidgetConfig[] = [
     x: 0,
     y: 8,
     w: 3,
-    h: 1,
+    h: 2,
     minW: 2,
-    minH: 1,
+    minH: 2,
     id: 'widget-printer-status',
   },
 
@@ -118,9 +118,9 @@ export const DEFAULT_WIDGETS: readonly GridStackWidgetConfig[] = [
     x: 3,
     y: 8,
     w: 3,
-    h: 1,
+    h: 2,
     minW: 2,
-    minH: 1,
+    minH: 2,
     id: 'widget-temperature-controls',
   },
 
@@ -130,9 +130,9 @@ export const DEFAULT_WIDGETS: readonly GridStackWidgetConfig[] = [
     x: 6,
     y: 8,
     w: 3,
-    h: 1,
+    h: 2,
     minW: 2,
-    minH: 1,
+    minH: 2,
     id: 'widget-filtration-controls',
   },
 
@@ -142,9 +142,9 @@ export const DEFAULT_WIDGETS: readonly GridStackWidgetConfig[] = [
     x: 9,
     y: 8,
     w: 3,
-    h: 1,
+    h: 2,
     minW: 2,
-    minH: 1,
+    minH: 2,
     id: 'widget-additional-info',
   },
 ];

@@ -270,6 +270,14 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   padding: 0;
 }
 
+/* Ensure status bar components have minimum viable height to prevent squishing */
+.grid-stack-item[data-component-id="printer-status"],
+.grid-stack-item[data-component-id="temperature-controls"],
+.grid-stack-item[data-component-id="filtration-controls"],
+.grid-stack-item[data-component-id="additional-info"] {
+  min-height: 160px !important; /* 2 grid units × 80px cellHeight */
+}
+
 /* ============================================================================
    RESPONSIVE ADJUSTMENTS
    ============================================================================ */
