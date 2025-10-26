@@ -30,9 +30,8 @@ import { getEnvironmentDetectionService } from '../../services/EnvironmentDetect
 
 import { AppError, ErrorCode } from '../../utils/error.utils';
 import { getAuthManager } from './AuthManager';
-import { 
-  createAuthMiddleware, 
-  createCorsMiddleware, 
+import {
+  createAuthMiddleware,
   createErrorMiddleware,
   createRequestLogger,
   createLoginRateLimiter,
@@ -153,13 +152,10 @@ export class WebUIManager extends EventEmitter {
    */
   private setupMiddleware(): void {
     if (!this.expressApp) return;
-    
+
     // Request logging
     this.expressApp.use(createRequestLogger());
-    
-    // CORS for web clients
-    this.expressApp.use(createCorsMiddleware());
-    
+
     // JSON body parsing
     this.expressApp.use(express.json());
     
