@@ -1,8 +1,49 @@
 /**
  * Web UI Stylesheet
  * Dark theme matching the main Electron UI
- * Primary background: #303030, Secondary: #404040, Text: #e0e0e0, Accent: #5c6bc0
  */
+
+:root {
+  /* Core Backgrounds - Professional Dark Theme */
+  --dark-bg: #1e1e1e;
+  --darker-bg: #151515;
+  --header-bg: #1a1a1a;
+
+  /* Border and Dividers - Subtle and refined */
+  --border-color: #2d2d2d;
+  --border-color-light: #3a3a3a;
+  --border-color-focus: #4a4a4a;
+
+  /* Primary Actions - Vibrant blue with accessibility */
+  --button-bg: #4285f4;
+  --button-hover: #5a95f5;
+  --button-active: #357abd;
+
+  /* Text Colors - High contrast for readability */
+  --text-color: #e8e8e8;
+  --text-color-secondary: #b0b0b0;
+  --text-color-muted: #808080;
+
+  /* Accent and Status Colors */
+  --accent-color: #4285f4;
+  --error-color: #f44336;
+  --warning-color: #ff9800;
+  --success-color: #00e676;
+
+  /* Card and Panel Styling */
+  --card-bg: #252525;
+  --card-bg-hover: #2a2a2a;
+
+  /* Shadows for depth */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.4);
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-normal: 0.25s ease;
+  --transition-slow: 0.4s ease;
+}
 
 /* Reset and Base Styles */
 * {
@@ -14,8 +55,8 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   font-size: 16px;
-  color: #e0e0e0;
-  background-color: #303030;
+  color: var(--text-color);
+  background-color: var(--dark-bg);
   overflow: auto; /* Allow scrolling */
   user-select: none;
 }
@@ -35,7 +76,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: #303030;
+  background-color: var(--dark-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -43,19 +84,20 @@ body {
 }
 
 .login-container {
-  background-color: #404040;
+  background-color: var(--card-bg);
   padding: 40px;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
   text-align: center;
   min-width: 320px;
+  border: 1px solid var(--border-color);
 }
 
 .login-container h1 {
-  color: #5c6bc0;
+  color: var(--accent-color);
   margin-bottom: 30px;
   font-size: 32px;
-  font-weight: normal;
+  font-weight: 500;
 }
 
 .login-form {
@@ -65,18 +107,19 @@ body {
 }
 
 .login-form input[type="password"] {
-  background-color: #303030;
-  border: 1px solid #555;
-  color: #e0e0e0;
+  background-color: var(--darker-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
   padding: 12px 16px;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 16px;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .login-form input[type="password"]:focus {
-  border-color: #5c6bc0;
+  border-color: var(--border-color-focus);
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.35);
 }
 
 .remember-me {
@@ -95,22 +138,23 @@ body {
 }
 
 .login-form button {
-  background-color: #5c6bc0;
-  color: white;
+  background-color: var(--button-bg);
+  color: #ffffff;
   border: none;
   padding: 12px 24px;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 16px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .login-form button:hover {
-  background-color: #4c5ab0;
+  background-color: var(--button-hover);
+  transform: translateY(-1px);
 }
 
 .login-error {
-  color: #f44336;
+  color: var(--error-color);
   font-size: 16px;
   margin-top: 12px;
   min-height: 20px;
@@ -129,20 +173,29 @@ body {
 
 /* Header */
 .header {
-  background-color: #404040;
+  background-color: var(--header-bg);
   padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.header-left,
+.header-center,
+.header-right {
   display: flex;
   align-items: center;
   gap: 16px;
   flex-wrap: wrap;
-  border-bottom: 1px solid #555;
 }
 
 .header-title {
   font-size: 24px;
-  color: #5c6bc0;
-  font-weight: 500;
-  flex-shrink: 0;
+  color: var(--accent-color);
+  font-weight: 600;
 }
 
 .printer-selector {
@@ -150,32 +203,32 @@ body {
   align-items: center;
   gap: 10px;
   font-size: 14px;
-  flex-shrink: 0;
 }
 
 .printer-selector label {
-  color: #b0b0b0;
+  color: var(--text-color-secondary);
 }
 
 .printer-select {
-  background-color: #404040;
-  color: #e0e0e0;
-  border: 1px solid #555;
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
   padding: 6px 12px;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 14px;
   cursor: pointer;
   outline: none;
   min-width: 200px;
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .printer-select:hover {
-  border-color: #5c6bc0;
+  border-color: var(--border-color-focus);
 }
 
 .printer-select:focus {
-  border-color: #5c6bc0;
-  box-shadow: 0 0 0 2px rgba(92, 107, 192, 0.2);
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.35);
 }
 
 .connection-status {
@@ -183,209 +236,239 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 16px;
-  margin-left: auto;
-  flex-shrink: 0;
+  color: var(--text-color-secondary);
+}
+
+.edit-mode-toggle,
+.settings-button,
+.logout-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg);
+  color: var(--text-color);
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
+}
+
+.edit-mode-toggle .lock-icon {
+  font-size: 16px;
+}
+
+.edit-mode-toggle[aria-pressed="true"] {
+  background-color: rgba(66, 133, 244, 0.15);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.settings-button {
+  width: 40px;
+  height: 40px;
+  padding: 0;
+}
+
+.settings-button svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.edit-mode-toggle:hover,
+.settings-button:hover,
+.logout-button:hover {
+  background-color: var(--card-bg-hover);
+  transform: translateY(-1px);
+}
+
+.edit-mode-toggle:focus-visible,
+.settings-button:focus-visible,
+.logout-button:focus-visible {
+  outline: none;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.35);
 }
 
 .connection-indicator {
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background-color: #f44336;
-  transition: background-color 0.3s;
+  background-color: var(--error-color);
+  transition: background-color var(--transition-fast);
 }
 
 .connection-indicator.connected {
-  background-color: #4caf50;
+  background-color: var(--success-color);
 }
 
 .logout-button {
-  background-color: #555;
-  color: #e0e0e0;
+  background-color: var(--button-bg);
+  color: #ffffff;
   border: none;
-  padding: 6px 16px;
-  border-radius: 4px;
-  font-size: 16px;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  flex-shrink: 0;
+  padding: 8px 16px;
+  font-size: 14px;
 }
 
 .logout-button:hover {
-  background-color: #666;
+  background-color: var(--button-hover);
+}
 }
 
 /* Main Layout */
 .main-layout {
   flex: 1;
-  display: flex;
-  gap: 16px;
-  padding: 16px;
-  overflow: visible; /* Allow content to be scrollable */
-  height: calc(100vh - 60px); /* Account for header height */
+  padding: 12px;      /* Match Electron (was 20px) */
+  overflow: auto;
+  background: radial-gradient(circle at top left, rgba(66, 133, 244, 0.08), transparent 45%);
 }
 
-/* Left Side */
-.left-side {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  width: 60%; /* Reduced from 65% to give more space to right side */
-}
-
-.camera-view {
-  background-color: #404040;
-  border-radius: 8px;
-  padding: 8px; /* Reduced from 20px to minimize wasted space */
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  position: relative;
-  overflow: hidden;
-  height: 100%;
-  min-height: 400px; /* Set minimum height for camera */
-}
-
-.no-camera {
-  color: #888;
-  font-size: 24px;
-}
-
-.camera-stream {
+.webui-grid {
+  min-height: calc(100vh - 140px);
   width: 100%;
-  height: 100%;
-  object-fit: contain;
-  border-radius: 4px;
-  max-height: 100%;
-  max-width: 100%;
+  /* Removed max-width and margin: 0 auto to use full width */
 }
 
-/* Right Side Grid */
-.right-side-grid {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  grid-template-rows: 1fr 1fr 1fr; /* Three equal rows */
-  gap: 16px; /* Reduced from 20px */
-  width: 40%; /* Increased from 35% to make cards wider */
+.grid-stack {
+  gap: 12px;        /* Match Electron (was 16px) */
+  padding: 12px;    /* Add padding like Electron */
+}
+
+.grid-stack-item {
+  transition: transform var(--transition-fast);
+}
+
+.grid-stack.edit-mode .grid-stack-item {
+  border: 2px dashed rgba(66, 133, 244, 0.35);
+}
+
+.grid-stack.edit-mode .panel-header::before {
+  content: "⋮⋮";
+  margin-right: 8px;
+  opacity: 0.5;
+  font-weight: 400;
+  letter-spacing: 2px;
+}
+
+.grid-item-hidden {
+  display: none !important;
+}
+
+.grid-stack-item-content {
+  height: 100%;
 }
 
 .panel {
-  background-color: #404040;
-  border-radius: 8px;
-  padding: 0;
+  background-color: var(--card-bg);
+  border-radius: 12px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Ensures content respects border radius */
+  gap: 16px;
+  height: 100%;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
 }
 
-#model-preview-panel,
-#job-progress-panel,
-#job-details-panel,
-#control-grid,
-#printer-state-panel {
-  min-height: 180px; /* Reduced from 220px for more compact layout */
-}
-
-/* Grid positioning */
-#control-grid {
-  grid-column: 1;
-  grid-row: 1;
-}
-
-#model-preview-panel {
-  grid-column: 2;
-  grid-row: 1;
-}
-
-#printer-state-panel {
-  grid-column: 1;
-  grid-row: 2;
-}
-
-#job-progress-panel {
-  grid-column: 2;
-  grid-row: 2;
-}
-
-#temp-control-panel {
-  grid-column: 1;
-  grid-row: 3;
-  min-height: 140px; /* Reduced from 160px for more compact layout */
-}
-
-#job-details-panel {
-  grid-column: 2;
-  grid-row: 3;
+.panel:hover {
+  box-shadow: var(--shadow-md);
+  border-color: var(--border-color-focus);
 }
 
 .panel-header {
-  background-color: #555;
-  padding: 10px 16px;
-  font-size: 16px;
-  font-weight: 500;
-  border-bottom: 1px solid #404040;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-color);
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .panel-content {
-  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  color: var(--text-color-secondary);
+}
+
+.camera-panel-content {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 12px;
-  justify-content: space-evenly;
-}
-
-#control-grid .panel-content {
-  justify-content: flex-start; /* Changed from center to allow natural flow for scrolling */
-  max-height: 200px; /* Constrain height to force scrolling */
-  overflow-y: auto; /* Enable vertical scrolling */
-}
-
-#model-preview-panel .panel-content {
   align-items: center;
   justify-content: center;
 }
 
-#model-preview img {
-  max-width: 100%;
-  max-height: 100%;
+.camera-panel-content .camera-stream {
+  width: 100%;
+  height: 100%;
   object-fit: contain;
+  border-radius: 10px;
+  background-color: var(--darker-bg);
 }
 
-.no-preview {
-  color: #888;
-  font-size: 24px;
+.no-camera {
+  color: var(--text-color-muted);
+  font-size: 18px;
+  text-align: center;
 }
 
-#job-info-panel .panel-content {
-  justify-content: space-around;
+.panel .status-title,
+.panel .temp-row span,
+.panel .detail-row span,
+.panel .job-row span,
+.panel .progress-row span {
+  color: var(--text-color);
 }
 
-#temp-control-panel .panel-content {
-  justify-content: center;
+.panel .state-row,
+.panel .detail-row,
+.panel .job-row,
+.panel .progress-row,
+.panel .temp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.filtration-section {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: 0;
+.panel .panel-content progress {
+  width: 100%;
+  height: 10px;
+}
+
+.filtration-section,
+#tvoc-info {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .filtration-buttons {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
-  margin-top: 0;
 }
 
-.filtration-btn.active {
-  background-color: #5c6bc0;
-  color: white;
+.grid-stack>.grid-stack-item>.grid-stack-item-content>.panel:hover {
+  transform: translateY(-1px);
 }
 
-.filtration-btn.active:hover {
-  background-color: #4c5ab0;
+.grid-stack.edit-mode>.grid-stack-item>.grid-stack-item-content>.panel {
+  box-shadow: none;
+}
+
+.grid-stack.edit-mode>.grid-stack-item>.grid-stack-item-content>.panel:hover {
+  transform: none;
+}
+
+.grid-stack-item.ui-draggable-dragging {
+  z-index: 100;
 }
 
 /* Controls Grid */
@@ -397,22 +480,23 @@ body {
 
 .control-btn {
   flex: 1;
-  background-color: #555;
-  color: #e0e0e0;
+  background-color: var(--button-bg);
+  color: #ffffff;
   border: none;
   padding: 12px 16px;
-  border-radius: 4px;
+  border-radius: 10px;
   font-size: 16px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .control-btn:hover:not(:disabled) {
-  background-color: #666;
+  background-color: var(--button-hover);
+  transform: translateY(-1px);
 }
 
 .control-btn:active:not(:disabled) {
-  background-color: #5c6bc0;
+  background-color: var(--button-active);
 }
 
 .control-btn:disabled {
@@ -436,12 +520,6 @@ body {
   margin-bottom: 0;
 }
 
-.job-details {
-  margin-top: 0;
-  padding-top: 0;
-  border-top: 0;
-}
-
 .detail-row {
   display: flex;
   justify-content: space-between;
@@ -460,22 +538,27 @@ body {
 
 #progress-bar {
   width: 100%;
-  height: 20px;
-  border-radius: 4px;
-  background-color: #303030;
+  height: 12px;
+  border-radius: 8px;
+  background-color: var(--darker-bg);
   -webkit-appearance: none;
   appearance: none;
   overflow: hidden;
 }
 
 #progress-bar::-webkit-progress-bar {
-  background-color: #303030;
-  border-radius: 4px;
+  background-color: var(--darker-bg);
+  border-radius: 8px;
 }
 
 #progress-bar::-webkit-progress-value {
-  background-color: #5c6bc0;
-  border-radius: 4px;
+  background-color: var(--accent-color);
+  border-radius: 8px;
+}
+
+#progress-bar::-moz-progress-bar {
+  background-color: var(--accent-color);
+  border-radius: 8px;
 }
 
 /* Temp Controls */
@@ -493,19 +576,31 @@ body {
 
 .temp-btn,
 .filtration-btn {
-  background-color: #555;
-  color: #e0e0e0;
-  border: none;
+  background-color: var(--card-bg-hover);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
   padding: 8px 12px;
-  border-radius: 4px;
-  font-size: 16px;
+  border-radius: 8px;
+  font-size: 14px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .temp-btn:hover,
 .filtration-btn:hover {
-  background-color: #666;
+  background-color: rgba(66, 133, 244, 0.15);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.filtration-btn.active {
+  background-color: var(--accent-color);
+  border-color: transparent;
+  color: #ffffff;
+}
+
+.filtration-btn.active:hover {
+  background-color: var(--button-hover);
 }
 
 /* Modals */
@@ -515,7 +610,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.8);
+  background-color: rgba(0, 0, 0, 0.75);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -523,13 +618,19 @@ body {
 }
 
 .modal-content {
-  background-color: #404040;
-  border-radius: 8px;
+  background-color: var(--card-bg);
+  border-radius: 12px;
   width: 90%;
   max-width: 500px;
   max-height: 80vh;
   display: flex;
   flex-direction: column;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-content.large {
+  max-width: 640px;
 }
 
 .modal-content.small {
@@ -537,35 +638,37 @@ body {
 }
 
 .modal-header {
-  background-color: #555;
+  background-color: var(--header-bg);
   padding: 16px 20px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-radius: 8px 8px 0 0;
+  border-radius: 12px 12px 0 0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .modal-header h2 {
   font-size: 24px;
-  font-weight: 500;
+  font-weight: 600;
+  color: var(--text-color);
 }
 
 .close-btn {
   background: none;
   border: none;
-  color: #e0e0e0;
-  font-size: 32px;
+  color: var(--text-color-secondary);
+  font-size: 28px;
   cursor: pointer;
-  padding: 0;
-  width: 30px;
-  height: 30px;
+  padding: 4px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .close-btn:hover {
-  color: #fff;
+  color: var(--text-color);
 }
 
 .modal-body {
@@ -573,11 +676,48 @@ body {
   overflow-y: auto;
   flex: 1;
   font-size: 16px;
+  color: var(--text-color);
+}
+
+.settings-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.settings-section h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.toggle-edit-mode {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.toggle-edit-mode > span {
+  color: var(--text-color-secondary);
+  line-height: 1.4;
+}
+
+.toggle-edit-mode input {
+  margin-top: 2px;
+}
+
+.help-text {
+  display: block;
+  font-size: 12px;
+  color: var(--text-color-muted);
+  margin-left: 26px;
 }
 
 .modal-footer {
   padding: 16px 20px;
-  border-top: 1px solid #555;
+  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -590,34 +730,39 @@ body {
   gap: 8px;
   cursor: pointer;
   font-size: 16px;
+  color: var(--text-color-secondary);
 }
 
 .primary-btn,
 .secondary-btn {
-  padding: 8px 20px;
-  border-radius: 4px;
+  padding: 10px 20px;
+  border-radius: 10px;
   border: none;
   font-size: 16px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-fast), transform var(--transition-fast), color var(--transition-fast);
 }
 
 .primary-btn {
-  background-color: #5c6bc0;
-  color: white;
+  background-color: var(--button-bg);
+  color: #ffffff;
 }
 
 .primary-btn:hover:not(:disabled) {
-  background-color: #4c5ab0;
+  background-color: var(--button-hover);
+  transform: translateY(-1px);
 }
 
 .secondary-btn {
-  background-color: #555;
-  color: #e0e0e0;
+  background-color: var(--card-bg-hover);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
 }
 
 .secondary-btn:hover {
-  background-color: #666;
+  background-color: rgba(66, 133, 244, 0.15);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
 }
 
 .primary-btn:disabled {
@@ -633,23 +778,27 @@ body {
 }
 
 .file-item {
-  background-color: #303030;
+  background-color: var(--darker-bg);
   padding: 12px;
-  border-radius: 4px;
+  border-radius: 10px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 16px;
+  border: 1px solid var(--border-color);
 }
 
 .file-item:hover {
-  background-color: #555;
+  background-color: var(--card-bg-hover);
+  transform: translateY(-1px);
 }
 
 .file-item.selected {
-  background-color: #5c6bc0;
+  background-color: var(--accent-color);
+  border-color: transparent;
+  color: #ffffff;
 }
 
 .file-name {
@@ -662,18 +811,19 @@ body {
 /* Temperature Input */
 #temp-input {
   width: 100%;
-  background-color: #303030;
-  border: 1px solid #555;
-  color: #e0e0e0;
+  background-color: var(--darker-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
   padding: 8px 12px;
-  border-radius: 4px;
+  border-radius: 8px;
   font-size: 16px;
   outline: none;
   margin-top: 12px;
 }
 
 #temp-input:focus {
-  border-color: #5c6bc0;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.35);
 }
 
 /* Toast Notifications */
@@ -681,17 +831,18 @@ body {
   position: fixed;
   bottom: 20px;
   right: 20px;
-  background-color: #555;
-  color: #e0e0e0;
+  background-color: var(--header-bg);
+  color: var(--text-color);
   padding: 16px 24px;
-  border-radius: 4px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border-radius: 12px;
+  box-shadow: var(--shadow-md);
   max-width: 400px;
   z-index: 200;
   transform: translateY(100px);
   opacity: 0;
   transition: transform 0.3s, opacity 0.3s;
   font-size: 16px;
+  border: 1px solid var(--border-color);
 }
 
 .toast.show {
@@ -700,56 +851,83 @@ body {
 }
 
 .toast.success {
-  background-color: #4caf50;
+  background-color: rgba(0, 230, 118, 0.15);
+  color: var(--success-color);
 }
 
 .toast.error {
-  background-color: #f44336;
+  background-color: rgba(244, 67, 54, 0.15);
+  color: var(--error-color);
+}
+
+/* GridStack resize handle styling */
+.grid-stack > .grid-stack-item > .ui-resizable-se {
+  bottom: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  cursor: nwse-resize;
+}
+
+.grid-stack > .grid-stack-item > .ui-resizable-se::after {
+  content: "";
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  border-right: 2px solid var(--border-color-light);
+  border-bottom: 2px solid var(--border-color-light);
+  opacity: 0.6;
+  transition: opacity var(--transition-fast), border-color var(--transition-fast);
+}
+
+.grid-stack.edit-mode > .grid-stack-item > .ui-resizable-se::after {
+  border-color: var(--accent-color);
+  opacity: 1;
+}
+
+.grid-stack > .grid-stack-item:hover > .ui-resizable-se::after {
+  opacity: 1;
+  border-color: var(--accent-color);
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+  .webui-grid {
+    max-width: 100%;
+  }
+}
+
 @media (max-width: 768px) {
-  body {
-    overflow-y: auto; /* Ensure vertical scrolling on mobile */
-  }
-  
   .main-layout {
+    padding: 12px;
+  }
+
+  .header {
     flex-direction: column;
-    overflow: visible;
+    align-items: flex-start;
+    gap: 12px;
   }
-  
-  .left-side {
+
+  .header-right {
     width: 100%;
-    min-width: unset;
+    justify-content: space-between;
   }
-  
-  .right-side-grid {
-    grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto auto auto auto; /* Stack all 6 panels vertically */
+
+  .edit-mode-toggle,
+  .settings-button,
+  .logout-button {
     width: 100%;
   }
-  
-  /* Reset grid positioning for mobile */
-  #control-grid,
-  #model-preview-panel,
-  #printer-state-panel,
-  #temp-control-panel,
-  #job-progress-panel,
-  #job-details-panel {
-    grid-column: 1;
-    grid-row: auto;
+
+  .webui-grid {
+    min-height: auto;
   }
-  
-  .camera-view {
-    min-height: 300px;
-  }
-  
-  .panel {
-    min-height: 200px;
-  }
-  
-  #temp-control-panel {
-    min-height: 200px; /* Reset smaller height on mobile */
+
+  .grid-stack-item {
+    width: 100% !important;
   }
 }
 
@@ -760,16 +938,16 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #303030;
+  background: var(--darker-bg);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #555;
+  background: var(--border-color-light);
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #666;
+  background: var(--accent-color);
 }
 
 /* Controls panel custom scrollbar - thinner and more subtle */
@@ -778,14 +956,14 @@ body {
 }
 
 #control-grid .panel-content::-webkit-scrollbar-track {
-  background: #404040; /* Matches panel background */
+  background: var(--card-bg);
 }
 
 #control-grid .panel-content::-webkit-scrollbar-thumb {
-  background: #555;
+  background: var(--border-color-light);
   border-radius: 3px;
 }
 
 #control-grid .panel-content::-webkit-scrollbar-thumb:hover {
-  background: #666;
+  background: var(--accent-color);
 }

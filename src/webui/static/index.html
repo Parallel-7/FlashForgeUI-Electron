@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#303030">
+  <meta name="theme-color" content="#1e1e1e">
   <title>FlashForge Web UI</title>
+  <link rel="stylesheet" href="gridstack.min.css">
+  <link rel="stylesheet" href="gridstack-extra.min.css">
   <link rel="stylesheet" href="webui.css">
 </head>
 <body>
@@ -31,160 +33,85 @@
     <div id="main-ui" class="main-ui hidden">
       <!-- Header Bar -->
       <div class="header">
-        <div class="header-title">FlashForge Web UI</div>
-        <!-- Printer Selector (hidden when only one printer) -->
-        <div class="printer-selector hidden" id="printer-selector">
-          <label for="printer-select">Printer:</label>
-          <select id="printer-select" class="printer-select">
-            <option value="">Loading...</option>
-          </select>
+        <div class="header-left">
+          <div class="header-title">FlashForge Web UI</div>
         </div>
-        <!-- Connection Status -->
-        <div class="connection-status">
-          <span class="connection-indicator" id="connection-indicator"></span>
-          <span id="connection-text">Disconnected</span>
+        <div class="header-center">
+          <!-- Printer Selector (hidden when only one printer) -->
+          <div class="printer-selector hidden" id="printer-selector">
+            <label for="printer-select">Printer:</label>
+            <select id="printer-select" class="printer-select">
+              <option value="">Loading...</option>
+            </select>
+          </div>
         </div>
-        <button id="logout-button" class="logout-button">Logout</button>
+        <div class="header-right">
+          <button id="edit-mode-toggle" class="edit-mode-toggle" aria-pressed="false">
+            <span class="lock-icon" aria-hidden="true">🔒</span>
+            <span class="edit-text">Locked</span>
+          </button>
+          <button
+            id="settings-button"
+            class="settings-button"
+            aria-haspopup="dialog"
+            aria-controls="settings-modal"
+            title="WebUI Settings"
+          >
+            <svg viewBox="0 0 24 24" role="img" aria-label="Settings">
+              <path
+                d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.07-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.057 7.057 0 0 0-1.62-.94l-.36-2.54A.5.5 0 0 0 13.9 2h-3.8a.5.5 0 0 0-.5.42l-.36 2.54c-.6.24-1.15.56-1.66.94l-2.39-.96a.5.5 0 0 0-.61.22L2.66 8.48a.5.5 0 0 0 .12.64l2.03 1.58c-.05.31-.07.64-.07.97s.02.63.07.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.14.24.43.34.69.22l2.39-.96c.5.38 1.05.7 1.66.94l.36 2.54c.05.26.26.44.5.44h3.8c.25 0 .46-.18.5-.42l.36-2.54c.6-.24 1.15-.56 1.66-.94l2.39.96c.25.12.55.02.69-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Z"
+              ></path>
+            </svg>
+          </button>
+          <div class="connection-status">
+            <span class="connection-indicator" id="connection-indicator"></span>
+            <span id="connection-text">Disconnected</span>
+          </div>
+          <button id="logout-button" class="logout-button">Logout</button>
+        </div>
       </div>
 
       <!-- Main Layout -->
       <div class="main-layout">
-        <!-- Left Side (Camera only) -->
-        <div class="left-side">
-          <div class="camera-view">
-            <div id="camera-placeholder" class="no-camera">Camera Unavailable</div>
-            <img id="camera-stream" class="camera-stream hidden" alt="Printer camera stream">
-            <canvas id="camera-canvas" class="camera-stream hidden"></canvas>
-          </div>
+        <div class="grid-stack webui-grid" id="webui-grid" aria-live="polite">
+          <!-- Components injected dynamically via WebUIGridManager -->
         </div>
+      </div>
 
-        <!-- Right Side Grid -->
-        <div class="right-side-grid">
-          <!-- Control Grid -->
-          <div class="panel" id="control-grid">
-            <div class="panel-header">Controls</div>
-            <div class="panel-content">
-              <div class="btn-row">
-                <button id="btn-led-on" class="control-btn">LED On</button>
-                <button id="btn-clear-status" class="control-btn">Clear Status</button>
-              </div>
-              <div class="btn-row">
-                <button id="btn-led-off" class="control-btn">LED Off</button>
-                <button id="btn-home-axes" class="control-btn">Home Axes</button>
-              </div>
-              <div class="btn-row">
-                <button id="btn-pause" class="control-btn">Pause</button>
-                <button id="btn-resume" class="control-btn">Resume</button>
-              </div>
-              <div class="btn-row">
-                <button id="btn-cancel" class="control-btn">Cancel Print</button>
-                <button id="btn-start-recent" class="control-btn">Recent Files</button>
-              </div>
-              <div class="btn-row">
-                <button id="btn-start-local" class="control-btn">Local Files</button>
-                <button id="btn-refresh" class="control-btn">Refresh Status</button>
-              </div>
-            </div>
+      <!-- Settings Modal -->
+      <div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="settings-modal-title">
+        <div class="modal-content large">
+          <div class="modal-header">
+            <h2 id="settings-modal-title">WebUI Settings</h2>
+            <button id="close-settings" class="close-btn" aria-label="Close settings">&times;</button>
           </div>
-
-          <!-- Model Preview -->
-          <div class="panel" id="model-preview-panel">
-            <div class="panel-header">Model Preview</div>
-            <div class="panel-content" id="model-preview">
-              <div class="no-preview">No preview available</div>
-            </div>
+          <div class="modal-body">
+            <section class="settings-section">
+              <h3>Panel Visibility</h3>
+              <label><input type="checkbox" id="toggle-camera" data-component-id="camera" checked> Camera View</label>
+              <label><input type="checkbox" id="toggle-controls" data-component-id="controls" checked> Controls</label>
+              <label><input type="checkbox" id="toggle-model-preview" data-component-id="model-preview" checked> Model Preview</label>
+              <label><input type="checkbox" id="toggle-printer-state" data-component-id="printer-state" checked> Printer State</label>
+              <label><input type="checkbox" id="toggle-temp-control" data-component-id="temp-control" checked> Temperature Control</label>
+              <label><input type="checkbox" id="toggle-filtration-tvoc" data-component-id="filtration-tvoc" checked> Filtration &amp; TVOC</label>
+              <label><input type="checkbox" id="toggle-job-progress" data-component-id="job-progress" checked> Job Progress</label>
+              <label><input type="checkbox" id="toggle-job-details" data-component-id="job-details" checked> Job Details</label>
+            </section>
+            <section class="settings-section">
+              <h3>Layout Customization</h3>
+              <label class="toggle-edit-mode">
+                <input type="checkbox" id="toggle-edit-mode">
+                <span>Enable Edit Mode</span>
+                <span class="help-text">Allows dragging and resizing panels</span>
+              </label>
+            </section>
+            <section class="settings-section">
+              <h3>Reset</h3>
+              <button id="reset-layout-btn" class="secondary-btn">Reset Layout to Default</button>
+            </section>
           </div>
-
-          <!-- Printer State -->
-          <div class="panel" id="printer-state-panel">
-            <div class="panel-header">Printer State</div>
-            <div class="panel-content">
-              <div class="state-row">
-                <span>Status:</span>
-                <span id="printer-status">Unknown</span>
-              </div>
-              <div class="state-row">
-                <span>Lifetime Print Time:</span>
-                <span id="lifetime-print-time">--</span>
-              </div>
-              <div class="state-row">
-                <span>Lifetime Filament:</span>
-                <span id="lifetime-filament">--</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Temp Controls -->
-          <div class="panel" id="temp-control-panel">
-            <div class="panel-header">Temperature Control</div>
-            <div class="panel-content">
-              <div class="temp-row">
-                <span>Bed: <span id="bed-temp">--°C / --°C</span></span>
-                <div class="temp-buttons">
-                  <button id="btn-bed-set" class="temp-btn">Set</button>
-                  <button id="btn-bed-off" class="temp-btn">Off</button>
-                </div>
-              </div>
-              <div class="temp-row">
-                <span>Extruder: <span id="extruder-temp">--°C / --°C</span></span>
-                <div class="temp-buttons">
-                  <button id="btn-extruder-set" class="temp-btn">Set</button>
-                  <button id="btn-extruder-off" class="temp-btn">Off</button>
-                </div>
-              </div>
-              <!-- Filtration for AD5M Pro -->
-              <div class="filtration-section hidden" id="filtration-section">
-                 <div class="status-title">Filtration: <span id="filtration-status">Off</span></div>
-                 <div class="filtration-buttons">
-                   <button id="btn-external-filtration" class="filtration-btn">External</button>
-                   <button id="btn-internal-filtration" class="filtration-btn">Internal</button>
-                   <button id="btn-no-filtration" class="filtration-btn">Off</button>
-                 </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Job Progress -->
-          <div class="panel" id="job-progress-panel">
-            <div class="panel-header">Job Progress</div>
-            <div class="panel-content">
-              <div class="job-row">
-                <span>Current Job:</span>
-                <span id="current-job">No active job</span>
-              </div>
-              <div class="progress-row">
-                <span>Progress:</span>
-                <span id="progress-percentage">0%</span>
-              </div>
-              <progress id="progress-bar" value="0" max="100"></progress>
-            </div>
-          </div>
-
-          <!-- Job Details -->
-          <div class="panel" id="job-details-panel">
-            <div class="panel-header">Job Details</div>
-            <div class="panel-content">
-              <div class="detail-row">
-                <span>Weight:</span>
-                <span id="job-weight">--</span>
-              </div>
-              <div class="detail-row">
-                <span>Length:</span>
-                <span id="job-length">--</span>
-              </div>
-              <div class="detail-row">
-                <span>Layer:</span>
-                <span id="layer-info">-- / --</span>
-              </div>
-              <div class="detail-row">
-                <span>Time Remaining:</span>
-                <span id="time-remaining">--:--</span>
-              </div>
-              <div class="detail-row">
-                <span>Elapsed:</span>
-                <span id="elapsed-time">--:--</span>
-              </div>
-            </div>
+          <div class="modal-footer">
+            <button id="save-settings-btn" class="primary-btn">Save</button>
           </div>
         </div>
       </div>
@@ -239,7 +166,10 @@
   <!-- JSMpeg library for RTSP streaming (vendored locally) -->
   <script src="jsmpeg.min.js"></script>
 
+  <!-- GridStack library for drag-and-drop layout management -->
+  <script src="gridstack-all.js"></script>
+
   <!-- TypeScript compiled to JavaScript -->
-  <script src="app.js"></script>
+  <script type="module" src="app.js"></script>
 </body>
 </html>

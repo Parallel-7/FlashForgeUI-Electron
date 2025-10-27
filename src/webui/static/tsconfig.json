@@ -1,8 +1,9 @@
 {
   "compilerOptions": {
-    "target": "ES2015",
-    "module": "none",
-    "lib": ["ES2015", "DOM"],
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "lib": ["ES2020", "DOM"],
     "outDir": "../../../dist/webui/static",
     "rootDir": ".",
     "strict": true,
@@ -19,6 +20,10 @@
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true
   },
-  "files": ["app.ts", "../../../src/types/jsmpeg.d.ts"],
+  "include": [
+    "app.ts",
+    "grid/**/*.ts",
+    "../../../src/types/jsmpeg.d.ts"
+  ],
   "exclude": ["node_modules"]
 }

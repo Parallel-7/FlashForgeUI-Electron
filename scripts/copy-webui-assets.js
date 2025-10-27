@@ -13,13 +13,21 @@ const path = require('path');
 // Configuration
 const srcDir = 'src/webui/static';
 const destDir = 'dist/webui/static';
-const filesToCopy = ['index.html', 'webui.css'];
+const filesToCopy = ['index.html', 'webui.css', 'gridstack-extra.min.css'];
 
 // Vendor library to copy from node_modules
 const vendorLibraries = [
   {
     src: 'node_modules/@cycjimmy/jsmpeg-player/dist/jsmpeg-player.umd.min.js',
     dest: 'jsmpeg.min.js'
+  },
+  {
+    src: 'node_modules/gridstack/dist/gridstack-all.js',
+    dest: 'gridstack-all.js'
+  },
+  {
+    src: 'node_modules/gridstack/dist/gridstack.min.css',
+    dest: 'gridstack.min.css'
   }
 ];
 

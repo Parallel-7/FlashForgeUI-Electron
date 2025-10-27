@@ -19,6 +19,11 @@
  * - UI updates: Real-time temperature, progress, layer info, ETA, lifetime statistics, thumbnails
  */
 
+import { WebUIGridManager } from './grid/WebUIGridManager.js';
+import { WebUILayoutPersistence } from './grid/WebUILayoutPersistence.js';
+import { componentRegistry } from './grid/WebUIComponentRegistry.js';
+import type { WebUIGridLayout } from './grid/types.js';
+
 // ============================================================================
 // TYPES AND INTERFACES
 // ============================================================================
@@ -126,6 +131,11 @@ interface ContextsResponse extends ApiResponse {
   activeContextId?: string;
 }
 
+interface WebUISettings {
+  visibleComponents: string[];
+  editMode: boolean;
+}
+
 // Extended HTMLElement for temperature dialog
 interface TemperatureDialogElement extends HTMLElement {
   temperatureType?: 'bed' | 'extruder';
@@ -149,6 +159,21 @@ class AppState {
 }
 
 const state = new AppState();
+
+const gridManager = new WebUIGridManager('.webui-grid');
+const layoutPersistence = new WebUILayoutPersistence();
+const ALL_COMPONENT_IDS = componentRegistry.getAllIds();
+const DEFAULT_SETTINGS: WebUISettings = {
+  visibleComponents: [...ALL_COMPONENT_IDS],
+  editMode: false,
+};
+
+let currentPrinterSerial: string | null = null;
+const DEMO_SERIAL = 'demo-layout'; // Fallback when no printer connected
+let currentSettings: WebUISettings = { ...DEFAULT_SETTINGS };
+let gridInitialized = false;
+let gridChangeUnsubscribe: (() => void) | null = null;
+const contextById = new Map<string, PrinterContext>();
 
 // ============================================================================
 // DOM HELPERS
@@ -192,6 +217,313 @@ function showToast(message: string, type: 'success' | 'error' | 'info' = 'info')
     toast.classList.remove('show');
     setTimeout(() => hideElement('toast'), 300);
   }, 3000);
+}
+
+// ============================================================================
+// GRID AND SETTINGS MANAGEMENT
+// ============================================================================
+
+function ensureGridInitialized(): void {
+  if (gridInitialized) {
+    return;
+  }
+
+  gridManager.initialize({
+    column: 12,
+    cellHeight: 80,
+    margin: 8,           // Match Electron app (was 16)
+    staticGrid: true,
+    float: false,
+    animate: true,       // Add smooth animations
+    minRow: 10,          // Minimum rows for proper layout
+  });
+  gridManager.disableEdit();
+  gridInitialized = true;
+}
+
+function ensureCompleteLayout(baseLayout: WebUIGridLayout | null): WebUIGridLayout {
+  const layout = baseLayout ?? componentRegistry.getDefaultLayout();
+  const components: Record<string, WebUIGridLayout['components'][string]> = {
+    ...layout.components,
+  };
+
+  for (const componentId of ALL_COMPONENT_IDS) {
+    if (!components[componentId]) {
+      const defaultConfig = componentRegistry.getDefault(componentId);
+      if (defaultConfig) {
+        components[componentId] = { ...defaultConfig };
+      }
+    }
+  }
+
+  return {
+    version: layout.version,
+    components,
+    hiddenComponents: layout.hiddenComponents ? [...layout.hiddenComponents] : [],
+  };
+}
+
+function resolveSerialForContext(context: PrinterContext | undefined): string | null {
+  if (!context) {
+    return null;
+  }
+  if (context.serialNumber && context.serialNumber.trim().length > 0) {
+    return context.serialNumber;
+  }
+  return context.id || null;
+}
+
+function loadSettingsForSerial(serialNumber: string | null): WebUISettings {
+  const stored = layoutPersistence.loadSettings(serialNumber) as Partial<WebUISettings> | null;
+  if (!stored) {
+    return { ...DEFAULT_SETTINGS };
+  }
+
+  const visibleComponents = Array.isArray(stored.visibleComponents)
+    ? stored.visibleComponents.filter((componentId): componentId is string =>
+        typeof componentId === 'string' && ALL_COMPONENT_IDS.includes(componentId),
+      )
+    : [...DEFAULT_SETTINGS.visibleComponents];
+
+  if (visibleComponents.length === 0) {
+    visibleComponents.push(...DEFAULT_SETTINGS.visibleComponents);
+  }
+
+  return {
+    visibleComponents,
+    editMode: stored.editMode === true,
+  };
+}
+
+function persistSettings(): void {
+  if (!currentPrinterSerial) return;
+  layoutPersistence.saveSettings(currentPrinterSerial, currentSettings);
+}
+
+function isComponentSupported(componentId: string, features: PrinterFeatures | null): boolean {
+  if (!features) {
+    return true;
+  }
+
+  if (componentId === 'filtration-tvoc') {
+    return Boolean(features.hasFiltration);
+  }
+
+  return true;
+}
+
+function shouldComponentBeVisible(
+  componentId: string,
+  settings: WebUISettings,
+  features: PrinterFeatures | null,
+): boolean {
+  if (!settings.visibleComponents.includes(componentId)) {
+    return false;
+  }
+  return isComponentSupported(componentId, features);
+}
+
+function updateEditModeToggle(editMode: boolean): void {
+  const toggleButton = $('edit-mode-toggle') as HTMLButtonElement | null;
+  if (toggleButton) {
+    toggleButton.setAttribute('aria-pressed', editMode ? 'true' : 'false');
+    const lockIcon = toggleButton.querySelector('.lock-icon');
+    const text = toggleButton.querySelector('.edit-text');
+    if (lockIcon) {
+      lockIcon.textContent = editMode ? '🔓' : '🔒';
+    }
+    if (text) {
+      text.textContent = editMode ? 'Unlocked' : 'Locked';
+    }
+  }
+
+  const modalToggle = $('toggle-edit-mode') as HTMLInputElement | null;
+  if (modalToggle) {
+    modalToggle.checked = editMode;
+  }
+}
+
+function applySettings(settings: WebUISettings): void {
+  if (!gridInitialized) {
+    return;
+  }
+
+  const features = state.printerFeatures ?? null;
+  for (const componentId of ALL_COMPONENT_IDS) {
+    if (shouldComponentBeVisible(componentId, settings, features)) {
+      gridManager.showComponent(componentId);
+    } else {
+      gridManager.hideComponent(componentId);
+    }
+  }
+
+  if (settings.editMode) {
+    gridManager.enableEdit();
+  } else {
+    gridManager.disableEdit();
+  }
+
+  updateEditModeToggle(settings.editMode);
+}
+
+function refreshSettingsUI(settings: WebUISettings): void {
+  const checkboxes = document.querySelectorAll<HTMLInputElement>(
+    '#settings-modal input[type="checkbox"][data-component-id]',
+  );
+
+  checkboxes.forEach((checkbox) => {
+    const componentId = checkbox.dataset.componentId;
+    if (!componentId) {
+      return;
+    }
+
+    const supported = isComponentSupported(componentId, state.printerFeatures ?? null);
+    checkbox.checked = settings.visibleComponents.includes(componentId) && supported;
+    checkbox.disabled = !supported;
+  });
+
+  updateEditModeToggle(settings.editMode);
+}
+
+function handleLayoutChange(layout: WebUIGridLayout): void {
+  if (!currentPrinterSerial) return;
+  layoutPersistence.save(layout, currentPrinterSerial);
+}
+
+function saveCurrentLayoutSnapshot(): void {
+  if (!gridInitialized || !currentPrinterSerial) {
+    return;
+  }
+  const snapshot = gridManager.serialize();
+  layoutPersistence.save(snapshot, currentPrinterSerial);
+}
+
+function loadLayoutForCurrentPrinter(): void {
+  if (!currentPrinterSerial) {
+    // Fallback to demo layout if somehow serial is still null
+    currentPrinterSerial = DEMO_SERIAL;
+  }
+
+  ensureGridInitialized();
+  const storedLayout = layoutPersistence.load(currentPrinterSerial);
+  const layout = ensureCompleteLayout(storedLayout);
+
+  gridManager.load(layout);
+
+  if (gridChangeUnsubscribe) {
+    gridChangeUnsubscribe();
+  }
+  gridChangeUnsubscribe = gridManager.onChange(handleLayoutChange);
+
+  currentSettings = loadSettingsForSerial(currentPrinterSerial);
+  applySettings(currentSettings);
+  refreshSettingsUI(currentSettings);
+}
+
+function openSettingsModal(): void {
+  const modal = $('settings-modal');
+  if (!modal) return;
+  refreshSettingsUI(currentSettings);
+  modal.classList.remove('hidden');
+}
+
+function closeSettingsModal(): void {
+  const modal = $('settings-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+}
+
+function resetLayoutForCurrentPrinter(): void {
+  if (!currentPrinterSerial) {
+    return;
+  }
+
+  layoutPersistence.reset(currentPrinterSerial);
+  currentSettings = { ...DEFAULT_SETTINGS };
+  persistSettings();
+  loadLayoutForCurrentPrinter();
+  showToast('Layout reset to default', 'info');
+}
+
+function setupSettingsUI(): void {
+  const settingsButton = $('settings-button') as HTMLButtonElement | null;
+  const closeButton = $('close-settings') as HTMLButtonElement | null;
+  const saveButton = $('save-settings-btn') as HTMLButtonElement | null;
+  const resetButton = $('reset-layout-btn') as HTMLButtonElement | null;
+  const modal = $('settings-modal');
+  const modalEditToggle = $('toggle-edit-mode') as HTMLInputElement | null;
+  const headerEditToggle = $('edit-mode-toggle') as HTMLButtonElement | null;
+
+  if (settingsButton) {
+    settingsButton.addEventListener('click', () => openSettingsModal());
+  }
+
+  if (closeButton) {
+    closeButton.addEventListener('click', () => closeSettingsModal());
+  }
+
+  if (saveButton) {
+    saveButton.addEventListener('click', () => {
+      const checkboxes = document.querySelectorAll<HTMLInputElement>(
+        '#settings-modal input[type="checkbox"][data-component-id]',
+      );
+      const visibleComponents = Array.from(checkboxes)
+        .filter((checkbox) => checkbox.checked && !checkbox.disabled)
+        .map((checkbox) => checkbox.dataset.componentId ?? '')
+        .filter((componentId): componentId is string => componentId.length > 0);
+
+      const editMode = (modalEditToggle?.checked ?? false);
+
+      currentSettings = {
+        visibleComponents: visibleComponents.length > 0 ? visibleComponents : [...DEFAULT_SETTINGS.visibleComponents],
+        editMode,
+      };
+
+      applySettings(currentSettings);
+      persistSettings();
+      closeSettingsModal();
+    });
+  }
+
+  if (resetButton) {
+    resetButton.addEventListener('click', () => {
+      resetLayoutForCurrentPrinter();
+      refreshSettingsUI(currentSettings);
+    });
+  }
+
+  if (modalEditToggle) {
+    modalEditToggle.addEventListener('change', (event) => {
+      currentSettings.editMode = (event.target as HTMLInputElement).checked;
+      applySettings(currentSettings);
+      persistSettings();
+    });
+  }
+
+  if (headerEditToggle) {
+    headerEditToggle.addEventListener('click', () => {
+      currentSettings.editMode = !currentSettings.editMode;
+      applySettings(currentSettings);
+      persistSettings();
+      refreshSettingsUI(currentSettings);
+    });
+  }
+
+  if (modal) {
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        closeSettingsModal();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeSettingsModal();
+    }
+  });
+
+  updateEditModeToggle(currentSettings.editMode);
 }
 
 // ============================================================================
@@ -257,6 +589,16 @@ async function logout(): Promise<void> {
   if (state.websocket) {
     state.websocket.close();
   }
+
+  currentPrinterSerial = null;
+  currentSettings = { ...DEFAULT_SETTINGS };
+  contextById.clear();
+  if (gridInitialized) {
+    gridManager.clear();
+    gridManager.disableEdit();
+    updateEditModeToggle(false);
+  }
+  closeSettingsModal();
   
   // Show login screen
   showElement('login-screen');
@@ -627,7 +969,27 @@ async function fetchPrinterContexts(): Promise<void> {
 
     if (result.success && result.contexts) {
       console.log('[Contexts] Fetched contexts:', result.contexts);
-      updatePrinterSelector(result.contexts, result.activeContextId || '');
+      contextById.clear();
+      result.contexts.forEach((context) => {
+        contextById.set(context.id, context);
+      });
+
+      const fallbackContext =
+        result.contexts.find((context) => context.isActive) ?? result.contexts[0] ?? null;
+      const selectedContextId = result.activeContextId || fallbackContext?.id || '';
+
+      updatePrinterSelector(result.contexts, selectedContextId);
+
+      const activeContext = selectedContextId ? contextById.get(selectedContextId) : fallbackContext;
+      const resolvedSerial = resolveSerialForContext(activeContext);
+      if (resolvedSerial) {
+        currentPrinterSerial = resolvedSerial;
+        loadLayoutForCurrentPrinter();
+      } else {
+        // Use demo serial for testing/preview when no printer connected
+        currentPrinterSerial = DEMO_SERIAL;
+        loadLayoutForCurrentPrinter();
+      }
     } else {
       console.error('[Contexts] Failed to fetch contexts:', result.error);
     }
@@ -676,6 +1038,8 @@ async function switchPrinterContext(contextId: string): Promise<void> {
     return;
   }
 
+  saveCurrentLayoutSnapshot();
+
   try {
     const response = await fetch('/api/contexts/switch', {
       method: 'POST',
@@ -691,6 +1055,8 @@ async function switchPrinterContext(contextId: string): Promise<void> {
     if (result.success) {
       console.log('[Contexts] Switched to context:', contextId);
       showToast(result.message || 'Switched printer', 'success');
+      // Refresh context list to obtain updated serial numbers and load layout
+      await fetchPrinterContexts();
 
       // Reload features for the new context (handles filtration visibility, etc.)
       await loadPrinterFeatures();
@@ -757,6 +1123,8 @@ async function loadPrinterFeatures(): Promise<void> {
     if (result.success && result.features) {
       state.printerFeatures = result.features;
       updateFeatureVisibility();
+      applySettings(currentSettings);
+      refreshSettingsUI(currentSettings);
     }
   } catch (error) {
     console.error('Failed to load printer features:', error);
@@ -772,14 +1140,7 @@ function updateFeatureVisibility(): void {
   const ledEnabled = state.printerFeatures.hasLED || state.printerFeatures.ledUsesLegacyAPI || false;
   if (ledOn) ledOn.disabled = !ledEnabled;
   if (ledOff) ledOff.disabled = !ledEnabled;
-  
-  // Filtration controls (AD5M Pro only)
-  if (state.printerFeatures.hasFiltration) {
-    showElement('filtration-section');
-  } else {
-    hideElement('filtration-section');
-  }
-  
+
   // Camera
   if (state.printerFeatures.hasCamera) {
     void loadCameraStream();
@@ -1142,6 +1503,8 @@ async function setTemperature(): Promise<void> {
 // ============================================================================
 
 function setupEventHandlers(): void {
+  setupSettingsUI();
+
   // Login form
   const loginBtn = $('login-button');
   const passwordInput = $('password-input') as HTMLInputElement;
