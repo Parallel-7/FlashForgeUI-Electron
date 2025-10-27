@@ -16,64 +16,64 @@ import type {
   WebUIGridLayout,
 } from './types.js';
 
-const DEFAULT_LAYOUT_VERSION = 1;
+const DEFAULT_LAYOUT_VERSION = 2;
 
 const COMPONENT_DEFINITIONS: Record<string, WebUIComponentDefinition> = {
   camera: {
     id: 'camera',
     displayName: 'Camera View',
-    defaultSize: { w: 6, h: 4 },
-    minSize: { w: 4, h: 3 },
+    defaultSize: { w: 6, h: 6 },
+    minSize: { w: 4, h: 4 },
     defaultPosition: { x: 0, y: 0 },
   },
   controls: {
     id: 'controls',
     displayName: 'Controls',
-    defaultSize: { w: 3, h: 2 },
-    minSize: { w: 3, h: 2 },
+    defaultSize: { w: 6, h: 4 },
+    minSize: { w: 4, h: 3 },
     defaultPosition: { x: 6, y: 0 },
   },
   'model-preview': {
     id: 'model-preview',
     displayName: 'Model Preview',
-    defaultSize: { w: 3, h: 2 },
-    minSize: { w: 3, h: 2 },
-    defaultPosition: { x: 9, y: 0 },
+    defaultSize: { w: 6, h: 2 },
+    minSize: { w: 4, h: 2 },
+    defaultPosition: { x: 6, y: 4 },
   },
   'printer-state': {
     id: 'printer-state',
     displayName: 'Printer State',
     defaultSize: { w: 3, h: 2 },
-    minSize: { w: 3, h: 2 },
-    defaultPosition: { x: 6, y: 2 },
+    minSize: { w: 2, h: 2 },
+    defaultPosition: { x: 0, y: 6 },
   },
   'temp-control': {
     id: 'temp-control',
     displayName: 'Temperature Control',
-    defaultSize: { w: 3, h: 1.5 },
-    minSize: { w: 3, h: 1.5 },
-    defaultPosition: { x: 6, y: 4 },
+    defaultSize: { w: 3, h: 2 },
+    minSize: { w: 2, h: 2 },
+    defaultPosition: { x: 3, y: 6 },
   },
   'filtration-tvoc': {
     id: 'filtration-tvoc',
     displayName: 'Filtration & TVOC',
-    defaultSize: { w: 3, h: 1 },
-    minSize: { w: 3, h: 1 },
-    defaultPosition: { x: 6, y: 5.5 },
+    defaultSize: { w: 3, h: 2 },
+    minSize: { w: 2, h: 2 },
+    defaultPosition: { x: 0, y: 8 },
   },
   'job-progress': {
     id: 'job-progress',
     displayName: 'Job Progress',
-    defaultSize: { w: 3, h: 2 },
-    minSize: { w: 3, h: 2 },
-    defaultPosition: { x: 9, y: 2 },
+    defaultSize: { w: 6, h: 2 },
+    minSize: { w: 4, h: 2 },
+    defaultPosition: { x: 6, y: 6 },
   },
   'job-details': {
     id: 'job-details',
     displayName: 'Job Details',
-    defaultSize: { w: 3, h: 2.5 },
-    minSize: { w: 3, h: 2 },
-    defaultPosition: { x: 9, y: 4 },
+    defaultSize: { w: 6, h: 3 },
+    minSize: { w: 4, h: 3 },
+    defaultPosition: { x: 6, y: 8 },
   },
 };
 
@@ -251,14 +251,14 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
 };
 
 const DEFAULT_LAYOUT_COMPONENTS: WebUIComponentLayoutMap = {
-  camera: { x: 0, y: 0, w: 6, h: 4 },
-  controls: { x: 6, y: 0, w: 3, h: 2 },
-  'model-preview': { x: 9, y: 0, w: 3, h: 2 },
-  'printer-state': { x: 6, y: 2, w: 3, h: 2 },
-  'job-progress': { x: 9, y: 2, w: 3, h: 2 },
-  'temp-control': { x: 6, y: 4, w: 3, h: 1.5 },
-  'filtration-tvoc': { x: 6, y: 5.5, w: 3, h: 1 },
-  'job-details': { x: 9, y: 4, w: 3, h: 2.5 },
+  camera: { x: 0, y: 0, w: 6, h: 6 },
+  controls: { x: 6, y: 0, w: 6, h: 4 },
+  'model-preview': { x: 6, y: 4, w: 6, h: 2 },
+  'printer-state': { x: 0, y: 6, w: 3, h: 2 },
+  'temp-control': { x: 3, y: 6, w: 3, h: 2 },
+  'job-progress': { x: 6, y: 6, w: 6, h: 2 },
+  'filtration-tvoc': { x: 0, y: 8, w: 3, h: 2 },
+  'job-details': { x: 6, y: 8, w: 6, h: 3 },
 };
 
 const COMPONENT_IDS = Object.keys(COMPONENT_DEFINITIONS);

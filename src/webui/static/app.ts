@@ -22,7 +22,7 @@
 import { WebUIGridManager } from './grid/WebUIGridManager.js';
 import { WebUILayoutPersistence } from './grid/WebUILayoutPersistence.js';
 import { componentRegistry } from './grid/WebUIComponentRegistry.js';
-import type { WebUIGridLayout } from './grid/types.js';
+import type { WebUIComponentLayout, WebUIGridLayout } from './grid/types.js';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -231,35 +231,86 @@ function ensureGridInitialized(): void {
   gridManager.initialize({
     column: 12,
     cellHeight: 80,
-    margin: 8,           // Match Electron app (was 16)
+    margin: 8,           // Match Electron app
     staticGrid: true,
     float: false,
-    animate: true,       // Add smooth animations
-    minRow: 10,          // Minimum rows for proper layout
+    animate: true,       // Smooth transitions for resizes
+    minRow: 11,          // Ensure enough vertical space for taller panels
   });
   gridManager.disableEdit();
   gridInitialized = true;
 }
 
 function ensureCompleteLayout(baseLayout: WebUIGridLayout | null): WebUIGridLayout {
-  const layout = baseLayout ?? componentRegistry.getDefaultLayout();
-  const components: Record<string, WebUIGridLayout['components'][string]> = {
-    ...layout.components,
-  };
+  const defaults = componentRegistry.getDefaultLayout();
+  const incoming = baseLayout ?? defaults;
+  const normalizedComponents: Record<string, WebUIGridLayout['components'][string]> = {};
 
   for (const componentId of ALL_COMPONENT_IDS) {
-    if (!components[componentId]) {
-      const defaultConfig = componentRegistry.getDefault(componentId);
-      if (defaultConfig) {
-        components[componentId] = { ...defaultConfig };
-      }
+    const defaultConfig = defaults.components?.[componentId];
+    const customConfig = incoming.components?.[componentId];
+    normalizedComponents[componentId] = sanitizeLayoutConfig(componentId, defaultConfig, customConfig);
+  }
+
+  const hidden = (incoming.hiddenComponents ?? []).filter((componentId) =>
+    ALL_COMPONENT_IDS.includes(componentId),
+  );
+
+  return {
+    version: defaults.version,
+    components: normalizedComponents,
+    hiddenComponents: hidden.length > 0 ? hidden : undefined,
+  };
+}
+
+function sanitizeLayoutConfig(
+  componentId: string,
+  defaults: WebUIComponentLayout | undefined,
+  custom: WebUIComponentLayout | undefined,
+): WebUIComponentLayout {
+  const source = custom ?? defaults;
+  if (!source) {
+    throw new Error(`Missing layout configuration for component ${componentId}`);
+  }
+
+  const toInteger = (value: number | undefined): number | undefined => {
+    if (value === undefined || Number.isNaN(value)) {
+      return undefined;
     }
+    return Math.max(0, Math.round(value));
+  };
+
+  const minW = toInteger(custom?.minW ?? defaults?.minW);
+  const minH = toInteger(custom?.minH ?? defaults?.minH);
+  const maxW = toInteger(custom?.maxW ?? defaults?.maxW);
+  const maxH = toInteger(custom?.maxH ?? defaults?.maxH);
+
+  let width = Math.max(1, toInteger(source.w) ?? toInteger(defaults?.w) ?? 1);
+  if (minW !== undefined) {
+    width = Math.max(width, minW);
+  }
+  if (maxW !== undefined) {
+    width = Math.min(width, maxW);
+  }
+
+  let height = Math.max(1, toInteger(source.h) ?? toInteger(defaults?.h) ?? 1);
+  if (minH !== undefined) {
+    height = Math.max(height, minH);
+  }
+  if (maxH !== undefined) {
+    height = Math.min(height, maxH);
   }
 
   return {
-    version: layout.version,
-    components,
-    hiddenComponents: layout.hiddenComponents ? [...layout.hiddenComponents] : [],
+    x: toInteger(source.x) ?? toInteger(defaults?.x) ?? 0,
+    y: toInteger(source.y) ?? toInteger(defaults?.y) ?? 0,
+    w: width,
+    h: height,
+    minW,
+    minH,
+    maxW,
+    maxH,
+    locked: custom?.locked ?? defaults?.locked ?? false,
   };
 }
 
@@ -1752,4 +1803,3 @@ if (document.readyState === 'loading') {
 } else {
   void initialize();
 }
-

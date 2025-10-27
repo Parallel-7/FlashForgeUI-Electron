@@ -393,6 +393,8 @@ body {
   flex-direction: column;
   gap: 12px;
   color: var(--text-color-secondary);
+  flex: 1;
+  overflow-y: auto;
 }
 
 .camera-panel-content {
@@ -432,9 +434,10 @@ body {
 .panel .progress-row,
 .panel .temp-row {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
+  flex-wrap: wrap;
 }
 
 .panel .panel-content progress {
