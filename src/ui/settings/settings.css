@@ -148,6 +148,27 @@ input[type="checkbox"] {
     border-color: var(--button-hover);
 }
 
+.settings-action-button {
+    margin-top: 10px;
+    align-self: flex-start;
+    background: var(--button-bg);
+    border: 1px solid var(--button-bg);
+    color: #ffffff;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.settings-action-button:hover {
+    background: var(--button-hover);
+}
+
+.settings-action-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 /* Custom scrollbar styling */
 ::-webkit-scrollbar {
     width: 8px;

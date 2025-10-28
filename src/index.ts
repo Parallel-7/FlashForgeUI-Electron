@@ -45,6 +45,7 @@ import { injectUIStyleVariables } from './utils/CSSVariables';
 import { parseHeadlessArguments, validateHeadlessConfig } from './utils/HeadlessArguments';
 import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection';
 import { getHeadlessManager } from './managers/HeadlessManager';
+import { getAutoUpdateService } from './services/AutoUpdateService';
 
 /**
  * Main Electron process entry point. Handles app lifecycle, creates the main window,
@@ -616,6 +617,14 @@ const initializeApp = async (): Promise<void> => {
   // Initialize notification system (base system only, per-context coordinators created when polling starts)
   initializeNotificationSystem();
   console.log('Notification system initialized');
+
+  try {
+    const autoUpdateService = getAutoUpdateService();
+    await autoUpdateService.initialize();
+    console.log('Auto-update service initialized');
+  } catch (error) {
+    console.error('Failed to initialize auto-update service:', error);
+  }
 
   // Initialize multi-context notification coordinator
   const multiContextNotificationCoordinator = getMultiContextNotificationCoordinator();

@@ -47,10 +47,37 @@ interface IPrinterSettingsAPI {
   getPrinterName: () => Promise<string | null>;
 }
 
+interface UpdateInfoSummary {
+  readonly version?: string;
+  readonly releaseNotes?: unknown;
+}
+
+interface UpdateDownloadProgress {
+  readonly percent?: number;
+  readonly total?: number;
+  readonly transferred?: number;
+}
+
+interface UpdateStatusResponse {
+  readonly state: string;
+  readonly updateInfo: UpdateInfoSummary | null;
+  readonly downloadProgress: UpdateDownloadProgress | null;
+  readonly error: { readonly message: string } | null;
+  readonly currentVersion: string;
+  readonly supportsDownload: boolean;
+}
+
+interface IAutoUpdateAPI {
+  checkForUpdates: () => Promise<{ success: boolean; error?: string }>;
+  getStatus: () => Promise<UpdateStatusResponse>;
+  setUpdateChannel: (channel: 'stable' | 'alpha') => Promise<{ success: boolean }>;
+}
+
 declare global {
   interface Window {
     settingsAPI?: ISettingsAPI;
     printerSettingsAPI?: IPrinterSettingsAPI;
+    autoUpdateAPI?: IAutoUpdateAPI;
   }
 }
 
@@ -83,7 +110,10 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'discord-update-interval': 'DiscordUpdateIntervalMinutes',
   'rounded-ui': 'RoundedUI',
   'rtsp-frame-rate': 'RtspFrameRate',
-  'rtsp-quality': 'RtspQuality'
+  'rtsp-quality': 'RtspQuality',
+  'check-updates-on-launch': 'CheckForUpdatesOnLaunch',
+  'update-channel': 'UpdateChannel',
+  'auto-download-updates': 'AutoDownloadUpdates'
 };
 
 /**
@@ -99,10 +129,13 @@ interface MutableSettings {
 class SettingsRenderer {
   private readonly inputs: Map<string, HTMLInputElement> = new Map();
   private saveStatusElement: HTMLElement | null = null;
+  private updateStatusElement: HTMLElement | null = null;
+  private updateCheckButton: HTMLButtonElement | null = null;
   private statusTimeout: NodeJS.Timeout | null = null;
   private readonly settings: MutableSettings = { global: {}, perPrinter: {} };
   private printerName: string | null = null;
   private hasUnsavedChanges: boolean = false;
+  private autoDownloadSupported: boolean = true;
 
   constructor() {
     this.initialize();
@@ -132,6 +165,11 @@ class SettingsRenderer {
     }
 
     this.saveStatusElement = document.getElementById('save-status');
+    this.updateStatusElement = document.getElementById('update-check-result');
+    const checkButton = document.getElementById('btn-check-updates') as HTMLButtonElement | null;
+    if (checkButton) {
+      this.updateCheckButton = checkButton;
+    }
   }
 
   private setupEventListeners(): void {
@@ -158,6 +196,12 @@ class SettingsRenderer {
 
     if (saveBtn) {
       saveBtn.addEventListener('click', () => this.handleSave());
+    }
+
+    if (this.updateCheckButton) {
+      this.updateCheckButton.addEventListener('click', () => {
+        void this.handleCheckForUpdates();
+      });
     }
   }
 
@@ -186,6 +230,8 @@ class SettingsRenderer {
 
         this.loadConfiguration();
         this.updatePrinterContextIndicator();
+        await this.initializeAutoUpdateSupport();
+        this.updateInputStates();
       } catch (error) {
         console.error('Failed to request config:', error);
       }
@@ -274,6 +320,12 @@ class SettingsRenderer {
       }
     } else {
       value = input.value;
+      if (configKey === 'UpdateChannel' && typeof value === 'string') {
+        if (value !== 'stable' && value !== 'alpha') {
+          value = 'stable';
+          input.value = 'stable';
+        }
+      }
     }
 
     // Update appropriate settings store
@@ -309,6 +361,33 @@ class SettingsRenderer {
     const discordEnabled = this.inputs.get('discord-sync')?.checked || false;
     this.setInputEnabled('webhook-url', discordEnabled);
     this.setInputEnabled('discord-update-interval', discordEnabled);
+
+    if (!this.autoDownloadSupported) {
+      this.setInputEnabled('auto-download-updates', false);
+    }
+  }
+
+  private async initializeAutoUpdateSupport(): Promise<void> {
+    if (!window.autoUpdateAPI) {
+      this.autoDownloadSupported = true;
+      return;
+    }
+
+    try {
+      const status = await window.autoUpdateAPI.getStatus();
+      this.autoDownloadSupported = Boolean(status.supportsDownload);
+
+      if (!this.autoDownloadSupported) {
+        const autoDownloadInput = this.inputs.get('auto-download-updates');
+        if (autoDownloadInput) {
+          autoDownloadInput.checked = false;
+        }
+        this.settings.global['AutoDownloadUpdates'] = false;
+      }
+    } catch (error) {
+      console.warn('[Settings] Unable to determine auto-update capabilities:', error);
+      this.autoDownloadSupported = true;
+    }
   }
 
   private handleMacOSCompatibility(): void {
@@ -348,6 +427,48 @@ class SettingsRenderer {
     }
   }
 
+  private async handleCheckForUpdates(): Promise<void> {
+    if (!window.autoUpdateAPI) {
+      this.showUpdateStatus('Auto-update service is not available.', 'error');
+      return;
+    }
+
+    if (this.updateCheckButton) {
+      this.updateCheckButton.disabled = true;
+    }
+
+    this.showUpdateStatus('Checking for updates...', 'info');
+
+    try {
+      const result = await window.autoUpdateAPI.checkForUpdates();
+
+      if (!result.success) {
+        this.showUpdateStatus(result.error ?? 'Failed to start update check.', 'error');
+        return;
+      }
+
+      const status = await window.autoUpdateAPI.getStatus();
+      const availableVersion = status.updateInfo?.version;
+
+      if (status.state === 'available' && availableVersion) {
+        this.showUpdateStatus(`Update ${availableVersion} is available.`, 'success');
+      } else if (status.state === 'downloaded' && availableVersion) {
+        this.showUpdateStatus(`Update ${availableVersion} is ready to install.`, 'success');
+      } else if (status.state === 'error') {
+        this.showUpdateStatus(status.error?.message ?? 'Update check failed.', 'error');
+      } else {
+        this.showUpdateStatus('No updates available.', 'success');
+      }
+    } catch (error) {
+      console.error('[Settings] Auto-update check failed:', error);
+      this.showUpdateStatus('Failed to check for updates.', 'error');
+    } finally {
+      if (this.updateCheckButton) {
+        this.updateCheckButton.disabled = false;
+      }
+    }
+  }
+
   private async handleSave(): Promise<void> {
     if (!this.hasUnsavedChanges) {
       return;
@@ -375,6 +496,12 @@ class SettingsRenderer {
           this.hasUnsavedChanges = false;
           this.updateSaveButtonState();
           this.showSaveStatus('Settings saved successfully');
+
+          const channelValue = this.settings.global['UpdateChannel'];
+          if (typeof channelValue === 'string' && window.autoUpdateAPI) {
+            const normalizedChannel = channelValue === 'alpha' ? 'alpha' : 'stable';
+            void window.autoUpdateAPI.setUpdateChannel(normalizedChannel);
+          }
         } else {
           this.showSaveStatus('Failed to save settings', true);
         }
@@ -413,6 +540,21 @@ class SettingsRenderer {
       this.statusTimeout = setTimeout(() => {
         this.saveStatusElement?.classList.remove('visible');
       }, isError ? 3000 : 2000);
+    }
+  }
+
+  private showUpdateStatus(message: string, level: 'info' | 'success' | 'error'): void {
+    if (!this.updateStatusElement) {
+      return;
+    }
+
+    this.updateStatusElement.textContent = message;
+    if (level === 'error') {
+      this.updateStatusElement.style.color = '#e53e3e';
+    } else if (level === 'success') {
+      this.updateStatusElement.style.color = '#4CAF50';
+    } else {
+      this.updateStatusElement.style.color = '#aaa';
     }
   }
 

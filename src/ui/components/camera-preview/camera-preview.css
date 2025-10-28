@@ -33,13 +33,26 @@
   align-items: center;
   position: relative;
   background-color: var(--darker-bg);
-  min-height: 0; /* Remove minimum height to allow maximum expansion */
+  min-height: 0;
+
+  /* Prevent GPU layer transform accumulation */
+  transform: rotate(0deg);
+  will-change: auto;
 }
 
 .component-camera-preview .camera-view img {
   width: 100%;
   height: 100%;
-  object-fit: cover; /* Cover the container, may crop image */
+  object-fit: cover;
+
+  /* Explicitly prevent any rotation transforms */
+  transform: rotate(0deg) !important;
+
+  /* Prevent GPU compositor optimizations that could accumulate artifacts */
+  will-change: auto;
+
+  /* Force proper image rendering */
+  image-rendering: -webkit-optimize-contrast;
 }
 
 .component-camera-preview .no-camera {

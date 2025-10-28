@@ -69,6 +69,15 @@ module.exports = {
         "!**/*.spec.*"
     ],
 
+    publish: [
+        {
+            provider: "github",
+            owner: "Parallel-7",
+            repo: "FlashForgeUI-Electron",
+            releaseType: "release",
+        }
+    ],
+
     // Native module handling
     npmRebuild: false,
     nodeGypRebuild: false,

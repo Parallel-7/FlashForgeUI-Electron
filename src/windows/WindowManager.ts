@@ -96,7 +96,8 @@ export enum WindowType {
   CONNECT_CHOICE_DIALOG = 'connectChoiceDialog',
   PALETTE = 'palette',
   SHORTCUT_CONFIG_DIALOG = 'shortcutConfigDialog',
-  COMPONENT_DIALOG = 'componentDialog'
+  COMPONENT_DIALOG = 'componentDialog',
+  UPDATE_DIALOG = 'updateDialog'
 }
 
 class WindowManager {
@@ -385,6 +386,19 @@ class WindowManager {
 
   public hasComponentDialogWindow(): boolean {
     return this.hasWindow(WindowType.COMPONENT_DIALOG);
+  }
+
+  // Convenience methods for update dialog access
+  public getUpdateDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.UPDATE_DIALOG);
+  }
+
+  public setUpdateDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.UPDATE_DIALOG, window);
+  }
+
+  public hasUpdateDialogWindow(): boolean {
+    return this.hasWindow(WindowType.UPDATE_DIALOG);
   }
 
   /**

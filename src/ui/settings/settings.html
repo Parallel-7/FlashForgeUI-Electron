@@ -61,6 +61,30 @@
                 <label class="checkbox-label">
                     <input type="checkbox" id="alert-when-cooled"> Alert On Cooled
                 </label>
+
+                <div class="settings-section" style="margin-top: 20px;">
+                    <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #666;">
+                        Auto-Update Settings
+                    </h4>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="check-updates-on-launch"> Check for updates on launch
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="auto-download-updates"> Auto-download updates (Windows/macOS)
+                    </label>
+                    <div class="input-group">
+                        <label for="update-channel">Update channel:</label>
+                        <select id="update-channel" class="settings-input">
+                            <option value="stable">Stable (recommended)</option>
+                            <option value="alpha">Alpha (pre-release)</option>
+                        </select>
+                    </div>
+                    <div class="settings-info-text">
+                        Alpha channel receives new features sooner and may be unstable. Switching back to stable waits for the next production release.
+                    </div>
+                    <button id="btn-check-updates" class="settings-action-button">Check for Updates Now</button>
+                    <div id="update-check-result" class="settings-info-text" style="margin-top: 8px;"></div>
+                </div>
             </div>
 
             <!-- Column 2 -->

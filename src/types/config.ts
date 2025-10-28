@@ -21,6 +21,7 @@
  * - WebUI: WebUIEnabled, WebUIPort, WebUIPassword
  * - Integrations: DiscordSync, FilamentTrackerIntegrationEnabled
  * - Advanced: ForceLegacyAPI, CustomLeds
+ * - Auto-Update: CheckForUpdatesOnLaunch, UpdateChannel, AutoDownloadUpdates, DismissedUpdateVersion
  *
  * @module types/config
  */
@@ -45,6 +46,10 @@ export interface AppConfig {
   readonly RoundedUI: boolean;
   readonly FilamentTrackerIntegrationEnabled: boolean;
   readonly FilamentTrackerAPIKey: string;
+  readonly CheckForUpdatesOnLaunch: boolean;
+  readonly UpdateChannel: 'stable' | 'alpha';
+  readonly AutoDownloadUpdates: boolean;
+  readonly DismissedUpdateVersion: string;
   readonly RtspFrameRate: number;        // Per-printer, not saved to config.json
   readonly RtspQuality: number;          // Per-printer, not saved to config.json
 }
@@ -73,6 +78,10 @@ export interface MutableAppConfig {
   RoundedUI: boolean;
   FilamentTrackerIntegrationEnabled: boolean;
   FilamentTrackerAPIKey: string;
+  CheckForUpdatesOnLaunch: boolean;
+  UpdateChannel: 'stable' | 'alpha';
+  AutoDownloadUpdates: boolean;
+  DismissedUpdateVersion: string;
   RtspFrameRate: number;
   RtspQuality: number;
 }
@@ -101,6 +110,10 @@ export const DEFAULT_CONFIG: AppConfig = {
   RoundedUI: false,
   FilamentTrackerIntegrationEnabled: false,
   FilamentTrackerAPIKey: '',
+  CheckForUpdatesOnLaunch: true,
+  UpdateChannel: 'stable',
+  AutoDownloadUpdates: false,
+  DismissedUpdateVersion: '',
   RtspFrameRate: 30,           // Default 30 FPS
   RtspQuality: 3               // Default quality 3
 } as const;
@@ -188,6 +201,15 @@ export function sanitizeConfig(config: Partial<AppConfig>): AppConfig {
             } else {
               assignConfigValue(sanitized, key, numValue);
             }
+          }
+        } else if (expectedType === 'string') {
+          if (key === 'UpdateChannel') {
+            const channel = value as string;
+            if (channel === 'stable' || channel === 'alpha') {
+              assignConfigValue(sanitized, key, channel);
+            }
+          } else {
+            assignConfigValue(sanitized, key, value as MutableAppConfig[typeof key]);
           }
         } else {
           assignConfigValue(sanitized, key, value as MutableAppConfig[typeof key]);

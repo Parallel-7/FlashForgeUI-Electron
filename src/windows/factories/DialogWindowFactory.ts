@@ -691,3 +691,37 @@ export const createPrinterConnectedWarningDialog = (data: PrinterConnectedWarnin
     setupDevTools(printerWarningWindow);
   });
 };
+
+/**
+ * Create the update available dialog window. This dialog provides update status controls without returning a value.
+ */
+export const createUpdateAvailableDialog = async (): Promise<void> => {
+  const windowManager = getWindowManager();
+
+  // Focus existing dialog if one is already open
+  const existingDialog = windowManager.getUpdateDialogWindow();
+  if (existingDialog && !existingDialog.isDestroyed()) {
+    existingDialog.focus();
+    return;
+  }
+
+  const mainWindow = windowManager.getMainWindow();
+  if (!validateParentWindow(mainWindow, 'update available dialog')) {
+    return;
+  }
+
+  const updateDialogWindow = createModalWindow(
+    mainWindow,
+    WINDOW_SIZES.UPDATE_AVAILABLE_DIALOG,
+    createPreloadPath(path.join(__dirname, '../../ui/update-available/update-available-preload.js')),
+    { resizable: false, frame: false, transparent: true }
+  );
+
+  setupWindowLifecycle(updateDialogWindow, () => {
+    windowManager.setUpdateDialogWindow(null);
+  });
+
+  void loadWindowHTML(updateDialogWindow, 'update-available');
+  setupDevTools(updateDialogWindow);
+  windowManager.setUpdateDialogWindow(updateDialogWindow);
+};

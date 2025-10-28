@@ -170,6 +170,11 @@ export interface PrinterConnectedWarningData {
   readonly printerName: string;
 }
 
+// Update dialog data interface (currently empty, dialog fetches state via IPC)
+export interface UpdateDialogInitData {
+  readonly placeholder?: never;
+}
+
 // Job picker initialization data interface
 export interface JobPickerInitData {
   readonly isRecentFiles: boolean;
@@ -190,6 +195,7 @@ export type WindowType =
   | { kind: 'SingleColorConfirmation'; data: SingleColorConfirmationDialogData }
   | { kind: 'AutoConnectChoice'; data: AutoConnectChoiceDialogData }
   | { kind: 'ConnectChoice'; data: ConnectChoiceDialogData }
+  | { kind: 'UpdateAvailableDialog'; data?: UpdateDialogInitData }
   | { kind: 'PrinterConnectedWarning'; data: PrinterConnectedWarningData };
 
 // Common window size constants
@@ -289,5 +295,11 @@ export const WINDOW_SIZES = {
     height: createWindowHeight(700),
     minWidth: createWindowMinWidth(350),
     minHeight: createWindowMinHeight(700)
+  },
+  UPDATE_AVAILABLE_DIALOG: {
+    width: createWindowWidth(500),
+    height: createWindowHeight(420),
+    minWidth: createWindowMinWidth(460),
+    minHeight: createWindowMinHeight(380)
   }
 } as const;

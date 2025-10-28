@@ -213,6 +213,7 @@ const validReceiveChannels = [
   'edit-mode:toggle',
   'shortcut-config:open',
   'component-dialog:open',
+  'update-state-changed',
   'shortcut-config:updated',
   'shortcut-config:get-current-request',
   'shortcut-config:save-request',
@@ -341,7 +342,15 @@ contextBridge.exposeInMainWorld('api', {
       'shortcut-config:get-current',
       'shortcut-config:save',
       'shortcut-config:get-available-components',
-      'log-dialog-request-logs'
+      'log-dialog-request-logs',
+      'check-for-updates',
+      'download-update',
+      'install-update',
+      'open-installer',
+      'open-release-page',
+      'get-update-status',
+      'dismiss-update',
+      'set-update-channel'
     ];
     
     if (validInvokeChannels.includes(channel)) {
@@ -510,4 +519,3 @@ declare global {
     CAMERA_URL: string;
   }
 }
-
