@@ -469,6 +469,12 @@ function loadLayoutForCurrentPrinter(): void {
   currentSettings = loadSettingsForSerial(currentPrinterSerial);
   applySettings(currentSettings);
   refreshSettingsUI(currentSettings);
+
+  updateFeatureVisibility();
+
+  if (state.printerFeatures?.hasCamera) {
+    void loadCameraStream();
+  }
 }
 
 function openSettingsModal(): void {
@@ -1176,6 +1182,14 @@ async function loadPrinterFeatures(): Promise<void> {
       updateFeatureVisibility();
       applySettings(currentSettings);
       refreshSettingsUI(currentSettings);
+
+      if (state.printerFeatures.hasCamera && gridInitialized) {
+        const cameraPlaceholder = $('camera-placeholder');
+        const cameraStream = $('camera-stream');
+        if (cameraPlaceholder && cameraStream) {
+          void loadCameraStream();
+        }
+      }
     }
   } catch (error) {
     console.error('Failed to load printer features:', error);
@@ -1191,11 +1205,6 @@ function updateFeatureVisibility(): void {
   const ledEnabled = state.printerFeatures.hasLED || state.printerFeatures.ledUsesLegacyAPI || false;
   if (ledOn) ledOn.disabled = !ledEnabled;
   if (ledOff) ledOff.disabled = !ledEnabled;
-
-  // Camera
-  if (state.printerFeatures.hasCamera) {
-    void loadCameraStream();
-  }
 }
 
 function updateFiltrationStatus(mode?: 'external' | 'internal' | 'none'): void {
@@ -1237,9 +1246,11 @@ function updateFiltrationStatus(mode?: 'external' | 'internal' | 'none'): void {
 }
 
 function updateModelPreview(thumbnailData?: string | null): void {
-  const previewContainer = $('model-preview');
+  const previewContainer = document.querySelector<HTMLElement>(
+    '[data-component-id="model-preview"] .panel-content',
+  );
   if (!previewContainer) return;
-  
+
   if (thumbnailData) {
     // Clear existing content
     previewContainer.innerHTML = '';
@@ -1601,56 +1612,77 @@ function setupEventHandlers(): void {
     logoutBtn.addEventListener('click', logout);
   }
   
-  // Control buttons
-  const controls = [
-    { id: 'btn-led-on', endpoint: 'control/led-on' },
-    { id: 'btn-led-off', endpoint: 'control/led-off' },
-    { id: 'btn-clear-status', endpoint: 'control/clear-status' },
-    { id: 'btn-home-axes', endpoint: 'control/home' },
-    { id: 'btn-pause', endpoint: 'control/pause' },
-    { id: 'btn-resume', endpoint: 'control/resume' },
-    { id: 'btn-cancel', endpoint: 'control/cancel' },
-    { id: 'btn-bed-off', endpoint: 'temperature/bed/off' },
-    { id: 'btn-extruder-off', endpoint: 'temperature/extruder/off' },
-    { id: 'btn-external-filtration', endpoint: 'filtration/external' },
-    { id: 'btn-internal-filtration', endpoint: 'filtration/internal' },
-    { id: 'btn-no-filtration', endpoint: 'filtration/off' }
-  ];
-  
-  controls.forEach(({ id, endpoint }) => {
-    const btn = $(id);
-    if (btn) {
-      btn.addEventListener('click', () => sendPrinterCommand(endpoint));
-    }
-  });
-  
-  // Temperature set buttons
-  const bedSetBtn = $('btn-bed-set');
-  const extruderSetBtn = $('btn-extruder-set');
-  
-  if (bedSetBtn) {
-    bedSetBtn.addEventListener('click', () => showTemperatureDialog('bed'));
-  }
-  if (extruderSetBtn) {
-    extruderSetBtn.addEventListener('click', () => showTemperatureDialog('extruder'));
-  }
-  
-  // File selection buttons
-  const recentBtn = $('btn-start-recent');
-  const localBtn = $('btn-start-local');
-  
-  if (recentBtn) {
-    recentBtn.addEventListener('click', () => loadFileList('recent'));
-  }
-  if (localBtn) {
-    localBtn.addEventListener('click', () => loadFileList('local'));
-  }
-  
-  // Refresh button
-  const refreshBtn = $('btn-refresh');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => {
-      sendCommand({ command: 'REQUEST_STATUS' });
+  // GridStack component buttons
+  const gridContainer = $('webui-grid');
+  if (gridContainer) {
+    gridContainer.addEventListener('click', async (event) => {
+      const target = event.target as HTMLElement | null;
+      const button = target?.closest('button') as HTMLButtonElement | null;
+      if (!button || button.disabled) {
+        return;
+      }
+
+      let handled = true;
+      switch (button.id) {
+        case 'btn-led-on':
+          await sendPrinterCommand('control/led-on');
+          break;
+        case 'btn-led-off':
+          await sendPrinterCommand('control/led-off');
+          break;
+        case 'btn-clear-status':
+          await sendPrinterCommand('control/clear-status');
+          break;
+        case 'btn-home-axes':
+          await sendPrinterCommand('control/home');
+          break;
+        case 'btn-pause':
+          await sendPrinterCommand('control/pause');
+          break;
+        case 'btn-resume':
+          await sendPrinterCommand('control/resume');
+          break;
+        case 'btn-cancel':
+          await sendPrinterCommand('control/cancel');
+          break;
+        case 'btn-bed-set':
+          showTemperatureDialog('bed');
+          break;
+        case 'btn-bed-off':
+          await sendPrinterCommand('temperature/bed/off');
+          break;
+        case 'btn-extruder-set':
+          showTemperatureDialog('extruder');
+          break;
+        case 'btn-extruder-off':
+          await sendPrinterCommand('temperature/extruder/off');
+          break;
+        case 'btn-start-recent':
+          await loadFileList('recent');
+          break;
+        case 'btn-start-local':
+          await loadFileList('local');
+          break;
+        case 'btn-refresh':
+          sendCommand({ command: 'REQUEST_STATUS' });
+          break;
+        case 'btn-external-filtration':
+          await sendPrinterCommand('filtration/external');
+          break;
+        case 'btn-internal-filtration':
+          await sendPrinterCommand('filtration/internal');
+          break;
+        case 'btn-no-filtration':
+          await sendPrinterCommand('filtration/off');
+          break;
+        default:
+          handled = false;
+          break;
+      }
+
+      if (handled) {
+        event.preventDefault();
+      }
     });
   }
   
