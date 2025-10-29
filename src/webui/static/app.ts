@@ -22,6 +22,7 @@
 import { WebUIGridManager } from './grid/WebUIGridManager.js';
 import { WebUILayoutPersistence } from './grid/WebUILayoutPersistence.js';
 import { componentRegistry } from './grid/WebUIComponentRegistry.js';
+import { WebUIMobileLayoutManager } from './grid/WebUIMobileLayoutManager.js';
 import type { WebUIComponentLayout, WebUIGridLayout } from './grid/types.js';
 
 // ============================================================================
@@ -160,7 +161,8 @@ class AppState {
 
 const state = new AppState();
 
-const gridManager = new WebUIGridManager('.webui-grid');
+const gridManager = new WebUIGridManager('.webui-grid-desktop');
+const mobileLayoutManager = new WebUIMobileLayoutManager('.webui-grid-mobile');
 const layoutPersistence = new WebUILayoutPersistence();
 const ALL_COMPONENT_IDS = componentRegistry.getAllIds();
 const DEFAULT_SETTINGS: WebUISettings = {
@@ -168,12 +170,14 @@ const DEFAULT_SETTINGS: WebUISettings = {
   editMode: false,
 };
 
+const MOBILE_BREAKPOINT = 768;
 let currentPrinterSerial: string | null = null;
 const DEMO_SERIAL = 'demo-layout'; // Fallback when no printer connected
 let currentSettings: WebUISettings = { ...DEFAULT_SETTINGS };
 let gridInitialized = false;
 let gridChangeUnsubscribe: (() => void) | null = null;
 const contextById = new Map<string, PrinterContext>();
+let isMobileLayout = false;
 
 // ============================================================================
 // DOM HELPERS
@@ -222,6 +226,13 @@ function showToast(message: string, type: 'success' | 'error' | 'info' = 'info')
 // ============================================================================
 // GRID AND SETTINGS MANAGEMENT
 // ============================================================================
+
+/**
+ * Detects if viewport is mobile size
+ */
+function isMobileViewport(): boolean {
+  return window.innerWidth <= MOBILE_BREAKPOINT;
+}
 
 function ensureGridInitialized(): void {
   if (gridInitialized) {
@@ -375,46 +386,70 @@ function shouldComponentBeVisible(
 }
 
 function updateEditModeToggle(editMode: boolean): void {
+  const isMobile = isMobileViewport();
   const toggleButton = $('edit-mode-toggle') as HTMLButtonElement | null;
+
   if (toggleButton) {
-    toggleButton.setAttribute('aria-pressed', editMode ? 'true' : 'false');
-    const lockIcon = toggleButton.querySelector('.lock-icon');
-    const text = toggleButton.querySelector('.edit-text');
-    if (lockIcon) {
-      lockIcon.textContent = editMode ? '🔓' : '🔒';
-    }
-    if (text) {
-      text.textContent = editMode ? 'Unlocked' : 'Locked';
+    // Hide edit mode toggle on mobile (handled by CSS but reinforce here)
+    if (isMobile) {
+      toggleButton.style.display = 'none';
+    } else {
+      toggleButton.style.display = '';
+      toggleButton.setAttribute('aria-pressed', editMode ? 'true' : 'false');
+      const lockIcon = toggleButton.querySelector('.lock-icon');
+      const text = toggleButton.querySelector('.edit-text');
+      if (lockIcon) {
+        lockIcon.textContent = editMode ? '🔓' : '🔒';
+      }
+      if (text) {
+        text.textContent = editMode ? 'Unlocked' : 'Locked';
+      }
     }
   }
 
   const modalToggle = $('toggle-edit-mode') as HTMLInputElement | null;
   if (modalToggle) {
     modalToggle.checked = editMode;
+    // Disable edit mode checkbox in settings on mobile
+    modalToggle.disabled = isMobile;
   }
 }
 
 function applySettings(settings: WebUISettings): void {
-  if (!gridInitialized) {
-    return;
-  }
-
+  const isMobile = isMobileViewport();
   const features = state.printerFeatures ?? null;
+
   for (const componentId of ALL_COMPONENT_IDS) {
-    if (shouldComponentBeVisible(componentId, settings, features)) {
-      gridManager.showComponent(componentId);
+    const shouldShow = shouldComponentBeVisible(componentId, settings, features);
+
+    if (isMobile) {
+      // Apply to mobile layout
+      if (shouldShow) {
+        mobileLayoutManager.showComponent(componentId);
+      } else {
+        mobileLayoutManager.hideComponent(componentId);
+      }
     } else {
-      gridManager.hideComponent(componentId);
+      // Apply to desktop layout
+      if (!gridInitialized) return;
+      if (shouldShow) {
+        gridManager.showComponent(componentId);
+      } else {
+        gridManager.hideComponent(componentId);
+      }
     }
   }
 
-  if (settings.editMode) {
-    gridManager.enableEdit();
-  } else {
-    gridManager.disableEdit();
+  // Edit mode only applies to desktop
+  if (!isMobile && gridInitialized) {
+    if (settings.editMode) {
+      gridManager.enableEdit();
+    } else {
+      gridManager.disableEdit();
+    }
   }
 
-  updateEditModeToggle(settings.editMode);
+  updateEditModeToggle(isMobile ? false : settings.editMode);
 }
 
 function refreshSettingsUI(settings: WebUISettings): void {
@@ -455,16 +490,28 @@ function loadLayoutForCurrentPrinter(): void {
     currentPrinterSerial = DEMO_SERIAL;
   }
 
-  ensureGridInitialized();
-  const storedLayout = layoutPersistence.load(currentPrinterSerial);
-  const layout = ensureCompleteLayout(storedLayout);
+  const isMobile = isMobileViewport();
 
-  gridManager.load(layout);
+  if (isMobile) {
+    // Mobile: Use static layout
+    mobileLayoutManager.initialize();
+    currentSettings = loadSettingsForSerial(currentPrinterSerial);
+    mobileLayoutManager.load(currentSettings.visibleComponents);
+    isMobileLayout = true;
+  } else {
+    // Desktop: Use GridStack
+    ensureGridInitialized();
+    const storedLayout = layoutPersistence.load(currentPrinterSerial);
+    const layout = ensureCompleteLayout(storedLayout);
 
-  if (gridChangeUnsubscribe) {
-    gridChangeUnsubscribe();
+    gridManager.load(layout);
+
+    if (gridChangeUnsubscribe) {
+      gridChangeUnsubscribe();
+    }
+    gridChangeUnsubscribe = gridManager.onChange(handleLayoutChange);
+    isMobileLayout = false;
   }
-  gridChangeUnsubscribe = gridManager.onChange(handleLayoutChange);
 
   currentSettings = loadSettingsForSerial(currentPrinterSerial);
   applySettings(currentSettings);
@@ -1561,10 +1608,78 @@ async function setTemperature(): Promise<void> {
 }
 
 // ============================================================================
+// VIEWPORT AND LAYOUT SWITCHING
+// ============================================================================
+
+/**
+ * Handle viewport resize across breakpoint
+ */
+function handleViewportChange(): void {
+  const isMobile = isMobileViewport();
+
+  // Only reload if layout mode changed
+  if (isMobile !== isMobileLayout) {
+    console.log('[Layout] Viewport breakpoint crossed, switching layout mode');
+
+    // Save current desktop layout before switching
+    if (!isMobile && gridInitialized) {
+      saveCurrentLayoutSnapshot();
+    }
+
+    // Reload layout in new mode
+    loadLayoutForCurrentPrinter();
+
+    isMobileLayout = isMobile;
+
+    // CRITICAL FIX: Clear old camera stream elements before reloading
+    const oldCameraStream = $('camera-stream') as HTMLImageElement | null;
+    const oldCameraCanvas = $('camera-canvas') as HTMLCanvasElement | null;
+    if (oldCameraStream) {
+      oldCameraStream.src = '';
+      oldCameraStream.onload = null;
+      oldCameraStream.onerror = null;
+    }
+    if (oldCameraCanvas) {
+      const ctx = oldCameraCanvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, oldCameraCanvas.width, oldCameraCanvas.height);
+    }
+
+    // Reload camera stream after layout switch
+    if (state.printerFeatures?.hasCamera) {
+      console.log('[Layout] Reloading camera stream for new layout elements');
+      void loadCameraStream();
+    }
+  }
+}
+
+/**
+ * Setup viewport change listener
+ */
+function setupViewportListener(): void {
+  // Use matchMedia for efficient breakpoint detection
+  const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+
+  // Modern API
+  if (mediaQuery.addEventListener) {
+    mediaQuery.addEventListener('change', handleViewportChange);
+  } else {
+    // Fallback for older browsers (addListener is deprecated but needed for compatibility)
+    mediaQuery.addListener(handleViewportChange);
+  }
+
+  // Also handle window resize (for orientation changes)
+  let resizeTimeout: number;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = window.setTimeout(handleViewportChange, 250);
+  });
+}
+
+// ============================================================================
 // EVENT HANDLERS
 // ============================================================================
 
-function setupEventHandlers(): void {
+function setupEventHandlers(): void{
   setupSettingsUI();
 
   // Login form
@@ -1611,11 +1726,13 @@ function setupEventHandlers(): void {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', logout);
   }
-  
-  // GridStack component buttons
-  const gridContainer = $('webui-grid');
-  if (gridContainer) {
-    gridContainer.addEventListener('click', async (event) => {
+
+  // GridStack component buttons - attach to both desktop and mobile grids
+  const gridContainerDesktop = $('webui-grid-desktop');
+  const gridContainerMobile = $('webui-grid-mobile');
+  [gridContainerDesktop, gridContainerMobile].forEach(gridContainer => {
+    if (gridContainer) {
+      gridContainer.addEventListener('click', async (event) => {
       const target = event.target as HTMLElement | null;
       const button = target?.closest('button') as HTMLButtonElement | null;
       if (!button || button.disabled) {
@@ -1683,9 +1800,10 @@ function setupEventHandlers(): void {
       if (handled) {
         event.preventDefault();
       }
-    });
-  }
-  
+      });
+    }
+  });
+
   // File modal handlers
   const closeModalBtn = $('close-modal');
   const printFileBtn = $('print-file-btn');
@@ -1792,10 +1910,13 @@ async function checkAuthStatus(): Promise<boolean> {
 
 async function initialize(): Promise<void> {
   console.log('Initializing Web UI...');
-  
+
   // Setup event handlers
   setupEventHandlers();
-  
+
+  // Setup viewport change detection
+  setupViewportListener();
+
   // Check authentication status
   const isAuthenticated = await checkAuthStatus();
   

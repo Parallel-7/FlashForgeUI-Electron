@@ -73,8 +73,14 @@
 
       <!-- Main Layout -->
       <div class="main-layout">
-        <div class="grid-stack webui-grid" id="webui-grid" aria-live="polite">
+        <!-- Desktop GridStack Layout -->
+        <div class="grid-stack webui-grid webui-grid-desktop" id="webui-grid-desktop" aria-live="polite">
           <!-- Components injected dynamically via WebUIGridManager -->
+        </div>
+
+        <!-- Mobile Static Layout (hidden on desktop) -->
+        <div class="webui-grid webui-grid-mobile hidden" id="webui-grid-mobile" aria-live="polite">
+          <!-- Components injected in predefined mobile order -->
         </div>
       </div>
 

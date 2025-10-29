@@ -903,7 +903,42 @@ body {
   }
 }
 
+/* Mobile Layout - Static single-column layout below 768px */
+.webui-grid-mobile {
+  display: none;
+  flex-direction: column;
+  gap: 16px;
+  padding: 0;
+}
+
+.webui-grid-mobile .mobile-panel-container {
+  width: 100%;
+}
+
+/* Specific mobile panel heights */
+.webui-grid-mobile [data-component-id="camera"] {
+  min-height: 300px;
+}
+
+.webui-grid-mobile .panel {
+  min-height: 200px;
+}
+
 @media (max-width: 768px) {
+  /* Hide desktop grid, show mobile layout */
+  .webui-grid-desktop {
+    display: none !important;
+  }
+
+  .webui-grid-mobile {
+    display: flex !important;
+  }
+
+  /* Hide edit mode toggle on mobile */
+  .edit-mode-toggle {
+    display: none !important;
+  }
+
   .main-layout {
     padding: 12px;
   }
@@ -919,18 +954,13 @@ body {
     justify-content: space-between;
   }
 
-  .edit-mode-toggle,
   .settings-button,
   .logout-button {
-    width: 100%;
+    width: auto;
   }
 
-  .webui-grid {
-    min-height: auto;
-  }
-
-  .grid-stack-item {
-    width: 100% !important;
+  .settings-button {
+    display: none;
   }
 }
 
