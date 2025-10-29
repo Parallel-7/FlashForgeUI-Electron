@@ -297,9 +297,9 @@ export const WINDOW_SIZES = {
     minHeight: createWindowMinHeight(700)
   },
   UPDATE_AVAILABLE_DIALOG: {
-    width: createWindowWidth(500),
-    height: createWindowHeight(420),
-    minWidth: createWindowMinWidth(460),
-    minHeight: createWindowMinHeight(380)
+    width: createWindowWidth(680),
+    height: createWindowHeight(650),
+    minWidth: createWindowMinWidth(640),
+    minHeight: createWindowMinHeight(610)
   }
 } as const;

@@ -6,7 +6,7 @@ body {
 }
 
 .dialog-container {
-  max-width: 520px;
+  max-width: 700px;
 }
 
 .dialog-header {
@@ -96,7 +96,7 @@ body {
   border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.06);
   padding: 16px;
-  max-height: 160px;
+  max-height: 360px;
   overflow-y: auto;
 }
 

@@ -68,3 +68,8 @@
 - **AUTO-INVOKE code-documenter** when creating new files or working on undocumented code - maintains documentation standards
 - **PROACTIVE production-readiness-auditor** use after significant changes prevents build failures and deployment issues
 - **PREVENTIVE electron-security-analyst** deployment for authentication, IPC, and external integration work catches vulnerabilities early
+
+## Project Specifications Reference
+
+- **`ai_specs/`**: Contains feature specifications and planning documents for active development work
+- **`ai_specs/archive/`**: **Completed specifications only**. All specification files in this folder have already been fully implemented and should not be treated as active work items or TODO tasks

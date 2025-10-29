@@ -167,6 +167,10 @@ The multi-printer implementation is **complete but untested**. The following are
 - `src/renderer.ts` - Multi-printer UI integration
 - `src/webui/server/api-routes.ts` - WebUI multi-printer API support
 
+**Project Specifications:**
+- `ai_specs/` - Active feature specifications and planning documents
+- `ai_specs/archive/` - **Completed specifications only** - all specs in this folder have already been implemented
+
 ---
 
 External References:
