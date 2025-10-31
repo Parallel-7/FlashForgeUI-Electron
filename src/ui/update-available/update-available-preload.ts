@@ -4,7 +4,7 @@
  * Provides typed wrappers around update-related IPC channels:
  * - Status queries (`get-update-status`)
  * - Manual check/download/install operations
- * - Release page fallback and dismissal controls
+ * - Release page fallback for manual installation
  * - Real-time state change subscription for progress updates
  */
 
@@ -66,10 +66,6 @@ contextBridge.exposeInMainWorld('updateDialogAPI', {
 
   async openReleasePage(): Promise<{ success: boolean }> {
     return await ipcRenderer.invoke('open-release-page');
-  },
-
-  async dismissUpdate(version: string): Promise<{ success: boolean }> {
-    return await ipcRenderer.invoke('dismiss-update', version);
   },
 
   onStateChanged(callback: (payload: UpdateStatePayload) => void): void {

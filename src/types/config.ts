@@ -21,7 +21,7 @@
  * - WebUI: WebUIEnabled, WebUIPort, WebUIPassword
  * - Integrations: DiscordSync, FilamentTrackerIntegrationEnabled
  * - Advanced: ForceLegacyAPI, CustomLeds
- * - Auto-Update: CheckForUpdatesOnLaunch, UpdateChannel, AutoDownloadUpdates, DismissedUpdateVersion
+ * - Auto-Update: CheckForUpdatesOnLaunch, UpdateChannel, AutoDownloadUpdates
  *
  * @module types/config
  */
@@ -49,7 +49,6 @@ export interface AppConfig {
   readonly CheckForUpdatesOnLaunch: boolean;
   readonly UpdateChannel: 'stable' | 'alpha';
   readonly AutoDownloadUpdates: boolean;
-  readonly DismissedUpdateVersion: string;
   readonly RtspFrameRate: number;        // Per-printer, not saved to config.json
   readonly RtspQuality: number;          // Per-printer, not saved to config.json
 }
@@ -81,7 +80,6 @@ export interface MutableAppConfig {
   CheckForUpdatesOnLaunch: boolean;
   UpdateChannel: 'stable' | 'alpha';
   AutoDownloadUpdates: boolean;
-  DismissedUpdateVersion: string;
   RtspFrameRate: number;
   RtspQuality: number;
 }
@@ -113,7 +111,6 @@ export const DEFAULT_CONFIG: AppConfig = {
   CheckForUpdatesOnLaunch: true,
   UpdateChannel: 'stable',
   AutoDownloadUpdates: false,
-  DismissedUpdateVersion: '',
   RtspFrameRate: 30,           // Default 30 FPS
   RtspQuality: 3               // Default quality 3
 } as const;

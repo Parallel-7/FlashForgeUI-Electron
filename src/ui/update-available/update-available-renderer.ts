@@ -6,7 +6,6 @@
  * - Drives download / install workflows for Windows and macOS
  * - Opens GitHub releases for Linux users
  * - Tracks download progress and error states in real time
- * - Persists dismissed versions via main process IPC
  */
 
 type UpdateState = 'idle' | 'checking' | 'available' | 'not-available' | 'downloading' | 'downloaded' | 'error';
@@ -53,7 +52,6 @@ interface UpdateDialogAPI {
   installUpdate: () => Promise<AutoUpdateActionResult>;
   openInstaller: () => Promise<AutoUpdateActionResult>;
   openReleasePage: () => Promise<{ success: boolean }>;
-  dismissUpdate: (version: string) => Promise<{ success: boolean }>;
   onStateChanged: (callback: (payload: UpdateStatePayload) => void) => void;
   removeStateListeners: () => void;
   closeWindow: () => void;
@@ -86,7 +84,6 @@ class UpdateDialogController {
   private readonly downloadButton = document.getElementById('btn-download') as HTMLButtonElement;
   private readonly installWindowsButton = document.getElementById('btn-install-windows') as HTMLButtonElement;
   private readonly installMacButton = document.getElementById('btn-install-mac') as HTMLButtonElement;
-  private readonly remindLaterButton = document.getElementById('btn-later') as HTMLButtonElement;
   private readonly closeButton = document.getElementById('btn-close') as HTMLButtonElement;
 
   constructor() {
@@ -99,8 +96,7 @@ class UpdateDialogController {
     this.downloadButton?.addEventListener('click', () => void this.handlePrimaryAction());
     this.installWindowsButton?.addEventListener('click', () => void this.handleInstall());
     this.installMacButton?.addEventListener('click', () => void this.handleOpenInstaller());
-    this.remindLaterButton?.addEventListener('click', () => void this.handleRemindLater());
-    this.closeButton?.addEventListener('click', () => void this.handleRemindLater());
+    this.closeButton?.addEventListener('click', () => window.updateDialogAPI.closeWindow());
 
     window.addEventListener('beforeunload', () => {
       window.updateDialogAPI.removeStateListeners();
@@ -139,13 +135,8 @@ class UpdateDialogController {
       return;
     }
 
-    const version = this.state.updateInfo?.version ?? null;
-
     if (!this.state.supportsDownload || this.platform === 'linux') {
       await window.updateDialogAPI.openReleasePage();
-      if (version) {
-        await window.updateDialogAPI.dismissUpdate(version);
-      }
       window.updateDialogAPI.closeWindow();
       return;
     }
@@ -182,13 +173,6 @@ class UpdateDialogController {
     }
   }
 
-  private async handleRemindLater(): Promise<void> {
-    if (this.state?.updateInfo?.version) {
-      await window.updateDialogAPI.dismissUpdate(this.state.updateInfo.version);
-    }
-    window.updateDialogAPI.closeWindow();
-  }
-
   private render(): void {
     if (!this.state) {
       return;
@@ -211,7 +195,14 @@ class UpdateDialogController {
     }
 
     const releaseNotes = this.formatReleaseNotes(this.state.updateInfo.releaseNotes);
-    this.releaseNotesContent.textContent = releaseNotes || 'Release notes unavailable.';
+    const sanitizedNotes = this.sanitizeReleaseNotes(releaseNotes);
+
+    if (sanitizedNotes) {
+      this.releaseNotesContent.innerHTML = sanitizedNotes;
+    } else {
+      this.releaseNotesContent.textContent = 'Release notes unavailable.';
+    }
+
     this.releaseNotesContainer.style.display = 'block';
   }
 
@@ -369,14 +360,112 @@ class UpdateDialogController {
       return '';
     }
 
+    const toHtml = (content: string): string => {
+      const trimmed = content.trim();
+      if (!trimmed) {
+        return '';
+      }
+
+      const containsMarkup = /<\/?[a-z][\s\S]*>/i.test(trimmed);
+      if (containsMarkup) {
+        return trimmed;
+      }
+
+      const escaped = this.escapeHtml(trimmed);
+      return escaped
+        .split(/\n{2,}/)
+        .map((paragraph) => `<p>${paragraph.replace(/\n/g, '<br>')}</p>`)
+        .join('');
+    };
+
     if (typeof releaseNotes === 'string') {
-      return releaseNotes;
+      return toHtml(releaseNotes);
     }
 
     return releaseNotes
       .map(entry => entry.note ?? entry.notes ?? '')
       .filter(Boolean)
-      .join('\n\n');
+      .map(toHtml)
+      .join('');
+  }
+
+  private sanitizeReleaseNotes(rawHtml: string): string {
+    if (!rawHtml.trim()) {
+      return '';
+    }
+
+    const template = document.createElement('template');
+    template.innerHTML = rawHtml;
+
+    const allowedTags = new Set([
+      'A',
+      'B',
+      'BR',
+      'BLOCKQUOTE',
+      'CODE',
+      'DIV',
+      'EM',
+      'H1',
+      'H2',
+      'H3',
+      'H4',
+      'H5',
+      'H6',
+      'I',
+      'LI',
+      'OL',
+      'P',
+      'PRE',
+      'SPAN',
+      'STRONG',
+      'UL'
+    ]);
+
+    const sanitizeNode = (node: Node): void => {
+      if (node.nodeType === Node.COMMENT_NODE) {
+        const parent = node.parentNode;
+        if (parent) {
+          parent.removeChild(node);
+        }
+        return;
+      }
+
+      if (node.nodeType === Node.ELEMENT_NODE) {
+        const element = node as HTMLElement;
+        if (!allowedTags.has(element.tagName)) {
+          this.unwrapElement(element, sanitizeNode);
+          return;
+        }
+
+        const attributeWhitelist = element.tagName === 'A' ? ['href', 'title'] : ['title'];
+        for (const attr of Array.from(element.attributes)) {
+          const attrName = attr.name.toLowerCase();
+          if (!attributeWhitelist.includes(attrName)) {
+            element.removeAttribute(attr.name);
+          }
+        }
+
+        if (element.tagName === 'A') {
+          const href = element.getAttribute('href') ?? '';
+          const isSafeLink = /^(https?:\/\/|mailto:)/i.test(href);
+          if (!isSafeLink) {
+            element.removeAttribute('href');
+          }
+          element.setAttribute('rel', 'noopener noreferrer');
+          element.setAttribute('target', '_blank');
+        }
+      }
+
+      let child = node.firstChild;
+      while (child) {
+        const next = child.nextSibling;
+        sanitizeNode(child);
+        child = next;
+      }
+    };
+
+    sanitizeNode(template.content);
+    return template.innerHTML.trim();
   }
 
   private formatBytes(bytes: number): string {
@@ -391,6 +480,30 @@ class UpdateDialogController {
     }
 
     return `${megabytes.toFixed(2)} MB`;
+  }
+
+  private escapeHtml(value: string): string {
+    const span = document.createElement('span');
+    span.textContent = value;
+    return span.innerHTML;
+  }
+
+  private unwrapElement(element: HTMLElement, transformChild: (node: Node) => void): void {
+    const parent = element.parentNode;
+    if (!parent) {
+      element.remove();
+      return;
+    }
+
+    while (element.firstChild) {
+      const child = element.firstChild;
+      transformChild(child);
+      if (child.parentNode === element) {
+        parent.insertBefore(child, element);
+      }
+    }
+
+    parent.removeChild(element);
   }
 }
 

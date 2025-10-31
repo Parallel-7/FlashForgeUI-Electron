@@ -6,7 +6,7 @@
  * - Manages stable/alpha channel switching with downgrade control
  * - Handles update lifecycle states (checking, available, downloading, downloaded, error)
  * - Tracks download progress and exposes current status snapshots
- * - Respects configuration preferences (auto download, dismissed versions, launch checks)
+ * - Respects configuration preferences (auto download, launch checks)
  * - Provides platform-aware installation helpers (auto-install on Windows, manual on macOS/Linux)
  *
  * Key exports:
@@ -330,10 +330,12 @@ class AutoUpdateService extends EventEmitter {
 
   private applyUpdateChannel(channel: AllowedChannel): void {
     if (channel === 'alpha') {
+      autoUpdater.channel = 'alpha';
       autoUpdater.allowPrerelease = true;
       autoUpdater.allowDowngrade = true;
       log.info('[AutoUpdate] Channel set to alpha (pre-releases enabled).');
     } else {
+      autoUpdater.channel = null;
       autoUpdater.allowPrerelease = false;
       autoUpdater.allowDowngrade = false;
       log.info('[AutoUpdate] Channel set to stable (pre-releases disabled).');

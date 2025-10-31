@@ -74,7 +74,6 @@ module.exports = {
             provider: "github",
             owner: "Parallel-7",
             repo: "FlashForgeUI-Electron",
-            releaseType: "release",
         }
     ],
 

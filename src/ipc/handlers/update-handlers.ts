@@ -5,13 +5,12 @@
  * - Manual update checks and downloads triggered from settings or dialogs
  * - Platform-aware installation commands (auto on Windows, manual on macOS/Linux)
  * - Release page fallback for Linux users
- * - Dismissal tracking via persistent configuration
  * - Channel switching between stable and alpha streams
  * - State change broadcasting to main window and update dialog renderer
  *
  * Integration Points:
  * - AutoUpdateService for core update lifecycle
- * - ConfigManager for storing user preferences (channel, dismissed versions)
+ * - ConfigManager for storing user preferences (channel)
  * - WindowManager + Dialog factory for update notification dialog management
  */
 
@@ -89,13 +88,6 @@ export function registerUpdateHandlers(configManager: ConfigManager, windowManag
     };
   });
 
-  ipcMain.handle('dismiss-update', async (_event: IpcMainInvokeEvent, version: string) => {
-    if (typeof version === 'string') {
-      configManager.set('DismissedUpdateVersion', version);
-    }
-    return { success: true };
-  });
-
   ipcMain.handle('set-update-channel', async (_event: IpcMainInvokeEvent, channel: 'stable' | 'alpha') => {
     const normalized = channel === 'alpha' ? 'alpha' : 'stable';
     configManager.set('UpdateChannel', normalized);
@@ -120,9 +112,8 @@ export function registerUpdateHandlers(configManager: ConfigManager, windowManag
 
     if (payload.state === UpdateState.AVAILABLE || payload.state === UpdateState.DOWNLOADED) {
       const updateVersion = payload.updateInfo?.version;
-      const dismissedVersion = configManager.get('DismissedUpdateVersion');
 
-      if (updateVersion && updateVersion !== dismissedVersion && !windowManager.hasUpdateDialogWindow()) {
+      if (updateVersion && !windowManager.hasUpdateDialogWindow()) {
         void createUpdateAvailableDialog();
       }
     }

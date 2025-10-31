@@ -349,7 +349,6 @@ contextBridge.exposeInMainWorld('api', {
       'open-installer',
       'open-release-page',
       'get-update-status',
-      'dismiss-update',
       'set-update-channel'
     ];
     
