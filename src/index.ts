@@ -35,6 +35,7 @@ import type { PollingData } from './types/polling';
 import { getMultiContextPollingCoordinator } from './services/MultiContextPollingCoordinator';
 import { getMultiContextNotificationCoordinator } from './services/MultiContextNotificationCoordinator';
 import { getCameraProxyService } from './services/CameraProxyService';
+import { getRtspStreamService } from './services/RtspStreamService';
 import { cameraIPCHandler } from './ipc/camera-ipc-handler';
 import { getWebUIManager } from './webui/server/WebUIManager';
 import { getEnvironmentDetectionService } from './services/EnvironmentDetectionService';
@@ -611,6 +612,12 @@ const initializeApp = async (): Promise<void> => {
   // Initialize camera service
   await initializeCameraService();
 
+  // Initialize RTSP stream service (for RTSP camera support)
+  // This must be initialized unconditionally, not just when WebUI is enabled
+  const rtspStreamService = getRtspStreamService();
+  await rtspStreamService.initialize();
+  console.log('RTSP stream service initialized');
+
   // Note: WebUI server initialization moved to non-blocking context
   // (will be initialized after renderer-ready signal to prevent startup crashes)
 
@@ -666,6 +673,11 @@ async function initializeHeadless(): Promise<void> {
       configManager.once('config-loaded', () => resolve());
     }
   });
+
+  // Initialize RTSP stream service (for RTSP camera support in headless mode)
+  const rtspStreamService = getRtspStreamService();
+  await rtspStreamService.initialize();
+  console.log('[Headless] RTSP stream service initialized');
 
   // Initialize headless manager
   const headlessManager = getHeadlessManager();
