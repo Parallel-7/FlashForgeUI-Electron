@@ -167,9 +167,9 @@ class UpdateDialogController {
 
     if (!result.success) {
       this.installMacButton.disabled = false;
-      this.setStatusBanner(result.error ?? 'Failed to open installer.', 'error');
+      this.setStatusBanner(result.error ?? 'Failed to show downloaded file.', 'error');
     } else {
-      this.setStatusBanner('Installer opened. Complete installation manually.', 'success');
+      this.setStatusBanner('Download shown in Finder. Extract the ZIP and complete installation.', 'success');
     }
   }
 
@@ -314,7 +314,7 @@ class UpdateDialogController {
   private renderPlatformNotice(): void {
     const notices: Record<NodeJS.Platform, string> = {
       win32: '',
-      darwin: 'After downloading, open the installer and drag FlashForgeUI into the Applications folder.',
+      darwin: 'After downloading, the ZIP file will be shown in Finder. Extract it and drag FlashForgeUI to the Applications folder.',
       linux: 'Updates on Linux require manual installation from GitHub Releases.',
       aix: '',
       android: '',
