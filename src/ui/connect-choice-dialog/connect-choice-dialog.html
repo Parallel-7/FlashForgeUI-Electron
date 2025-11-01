@@ -16,6 +16,7 @@
     ">
     <title>Connect to Printer</title>
     <link rel="stylesheet" href="connect-choice-dialog.css">
+    <script src="../../../dist/webui/static/lucide.min.js"></script>
 </head>
 <body>
     <div class="dialog-container dialog-container--full">
@@ -28,9 +29,7 @@
             <div class="choice-options">
                 <button id="btn-enter-ip" class="choice-button">
                     <div class="choice-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-                        </svg>
+                        <i data-lucide="globe" aria-hidden="true"></i>
                     </div>
                     <div class="choice-content">
                         <h3>Enter IP Address</h3>
@@ -40,9 +39,7 @@
 
                 <button id="btn-scan-network" class="choice-button">
                     <div class="choice-icon">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                            <path d="M1 9l2 2c4.97-4.97 13.03-4.97 18 0l2-2C16.93 2.93 7.07 2.93 1 9zm8 8l3 3 3-3c-1.65-1.66-4.34-1.66-6 0zm-4-4l2 2c2.76-2.76 7.24-2.76 10 0l2-2C15.14 9.14 8.87 9.14 5 13z"/>
-                        </svg>
+                        <i data-lucide="wifi" aria-hidden="true"></i>
                     </div>
                     <div class="choice-content">
                         <h3>Scan Network</h3>
@@ -63,6 +60,7 @@
             var exports = {};
         }
     </script>
+    <script src="../../../lib/ui/shared/lucide.js"></script>
     <script src="../../../lib/ui/connect-choice-dialog/connect-choice-dialog-renderer.js"></script>
-</body>
+  </body>
 </html>

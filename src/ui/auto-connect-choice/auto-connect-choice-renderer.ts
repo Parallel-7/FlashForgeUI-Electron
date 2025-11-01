@@ -15,6 +15,7 @@ let isHandlingChoice = false;
  */
 document.addEventListener('DOMContentLoaded', (): void => {
   console.log('Auto-connect choice dialog renderer loaded');
+  window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['link-2', 'check', 'globe', 'x']);
   setupEventListeners();
   
   // Listen for initialization data from main process
@@ -103,6 +104,7 @@ function updateDialogUI(data: AutoConnectChoiceData): void {
   // Update dialog description based on available options
   updateDialogDescription(data);
 }
+
 
 /**
  * Update dialog description based on available options

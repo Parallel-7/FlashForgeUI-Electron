@@ -6,6 +6,7 @@
  * and allows user to confirm or cancel the action.
  */
 
+
 // Ensure this file is treated as a module
 export {};
 
@@ -37,6 +38,7 @@ interface DialogElements {
 
 // Initialize dialog when DOM is loaded
 document.addEventListener('DOMContentLoaded', (): void => {
+    window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['alert-triangle']);
     // Get DOM element references with proper type safety
     const elements: DialogElements = {
         titleElement: document.getElementById('dialog-title'),

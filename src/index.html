@@ -21,54 +21,35 @@
     <div class="left-controls">
       <!-- Hamburger Menu Button -->
       <button id="btn-main-menu" class="main-menu-button" aria-label="Main Menu" aria-expanded="false">
-        <svg class="hamburger-icon" viewBox="0 0 24 24" aria-hidden="true">
-          <line x1="3" y1="6" x2="21" y2="6"></line>
-          <line x1="3" y1="12" x2="21" y2="12"></line>
-          <line x1="3" y1="18" x2="21" y2="18"></line>
-        </svg>
+        <i data-lucide="menu" class="hamburger-icon" aria-hidden="true"></i>
       </button>
 
       <!-- Dropdown Menu -->
       <div id="main-menu-dropdown" class="main-menu-dropdown hidden" role="menu" aria-label="Primary actions">
         <button class="menu-item" data-action="connect" role="menuitem">
-          <svg class="menu-item-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M6 9h12M6 15h12M9 3v3M15 3v3M9 18v3M15 18v3M5 8h14a1 1 0 0 1 1 1v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"></path>
-          </svg>
+          <i data-lucide="printer" class="menu-item-icon" aria-hidden="true"></i>
           <span class="menu-item-label">Connect</span>
         </button>
 
         <button class="menu-item" data-action="settings" role="menuitem">
-          <svg class="menu-item-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="3"></circle>
-            <path d="M12 1v6m0 6v6M1 12h6m6 0h6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M19.78 4.22l-4.24 4.24m-5.08 5.08l-4.24 4.24"></path>
-          </svg>
+          <i data-lucide="settings" class="menu-item-icon" aria-hidden="true"></i>
           <span class="menu-item-label">Settings</span>
         </button>
 
         <button class="menu-item" data-action="status" role="menuitem">
-          <svg class="menu-item-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <line x1="18" y1="20" x2="18" y2="10"></line>
-            <line x1="12" y1="20" x2="12" y2="4"></line>
-            <line x1="6" y1="20" x2="6" y2="14"></line>
-          </svg>
+          <i data-lucide="bar-chart-3" class="menu-item-icon" aria-hidden="true"></i>
           <span class="menu-item-label">Status</span>
         </button>
 
         <button id="menu-item-ifs" class="menu-item hidden" data-action="ifs" role="menuitem">
-          <svg class="menu-item-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <rect x="3" y="3" width="18" height="18" rx="2"></rect>
-            <line x1="3" y1="9" x2="21" y2="9"></line>
-            <line x1="9" y1="21" x2="9" y2="9"></line>
-          </svg>
+          <i data-lucide="grid-3x3" class="menu-item-icon" aria-hidden="true"></i>
           <span class="menu-item-label">IFS</span>
         </button>
 
         <div class="menu-divider" role="presentation"></div>
 
         <button class="menu-item" data-action="pin-config" role="menuitem">
-          <svg class="menu-item-icon" viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M12 17v5M9 10.76a2 2 0 0 1-1.11 1.79l-1.78.9A2 2 0 0 0 5 15.24V16a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-.76a2 2 0 0 0-1.11-1.79l-1.78-.9A2 2 0 0 1 15 10.76V7a1 1 0 0 1 1-1 2 2 0 0 0 0-4H8a2 2 0 0 0 0 4 1 1 0 0 1 1 1z"></path>
-          </svg>
+          <i data-lucide="pin" class="menu-item-icon" aria-hidden="true"></i>
           <span class="menu-item-label">Configure Shortcuts</span>
         </button>
       </div>

@@ -28,6 +28,10 @@ const vendorLibraries = [
   {
     src: 'node_modules/gridstack/dist/gridstack.min.css',
     dest: 'gridstack.min.css'
+  },
+  {
+    src: 'node_modules/lucide/dist/umd/lucide.min.js',
+    dest: 'lucide.min.js'
   }
 ];
 

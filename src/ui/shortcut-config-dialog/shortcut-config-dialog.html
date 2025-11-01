@@ -5,15 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Shortcut Button Configuration</title>
   <link rel="stylesheet" href="shortcut-config-dialog.css">
+  <script src="../../../dist/webui/static/lucide.min.js"></script>
 </head>
 <body>
   <div class="dialog-container">
     <!-- Dialog Header -->
     <div class="dialog-header">
       <div class="dialog-title">
-        <svg class="dialog-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <path d="M12 5v14M5 12h14"/>
-        </svg>
+        <i data-lucide="plus" class="dialog-icon" aria-hidden="true"></i>
         <span class="dialog-title-text">Shortcut Button Configuration</span>
       </div>
       <button class="dialog-close" id="btn-close" aria-label="Close dialog">×</button>
@@ -32,10 +31,9 @@
         <!-- Slot 1 -->
         <div class="slot-config">
           <label for="slot1-select" class="slot-label">
-            <svg class="slot-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <text x="12" y="16" text-anchor="middle" fill="currentColor" font-size="12" font-weight="bold">1</text>
-            </svg>
+            <span class="slot-icon" data-slot-number="1">
+              <i data-lucide="circle" aria-hidden="true"></i>
+            </span>
             Slot 1
           </label>
           <select id="slot1-select" class="slot-select" data-slot="1">
@@ -47,10 +45,9 @@
         <!-- Slot 2 -->
         <div class="slot-config">
           <label for="slot2-select" class="slot-label">
-            <svg class="slot-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <text x="12" y="16" text-anchor="middle" fill="currentColor" font-size="12" font-weight="bold">2</text>
-            </svg>
+            <span class="slot-icon" data-slot-number="2">
+              <i data-lucide="circle" aria-hidden="true"></i>
+            </span>
             Slot 2
           </label>
           <select id="slot2-select" class="slot-select" data-slot="2">
@@ -62,10 +59,9 @@
         <!-- Slot 3 -->
         <div class="slot-config">
           <label for="slot3-select" class="slot-label">
-            <svg class="slot-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <circle cx="12" cy="12" r="10"/>
-              <text x="12" y="16" text-anchor="middle" fill="currentColor" font-size="12" font-weight="bold">3</text>
-            </svg>
+            <span class="slot-icon" data-slot-number="3">
+              <i data-lucide="circle" aria-hidden="true"></i>
+            </span>
             Slot 3
           </label>
           <select id="slot3-select" class="slot-select" data-slot="3">
@@ -94,6 +90,12 @@
     </div>
   </div>
 
+  <script>
+    if (typeof exports === 'undefined') {
+      var exports = {};
+    }
+  </script>
+  <script src="../../../lib/ui/shared/lucide.js"></script>
   <script src="../../../lib/ui/shortcut-config-dialog/shortcut-config-dialog.js"></script>
 </body>
 </html>

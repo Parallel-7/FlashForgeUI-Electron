@@ -14,8 +14,9 @@
         base-uri 'self';
         form-action 'self';
     ">
-    <title>Auto-Connect Options</title>
-    <link rel="stylesheet" href="auto-connect-choice.css" />
+  <title>Auto-Connect Options</title>
+  <link rel="stylesheet" href="auto-connect-choice.css" />
+  <script src="../../../dist/webui/static/lucide.min.js"></script>
 </head>
 <body>
 <div class="dialog-container dialog-container--full">
@@ -34,9 +35,7 @@
         <div class="options-container">
             <button class="option-button primary" id="btn-connect-last-used" style="display: none;">
                 <div class="option-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M3.9 12c0-1.71 1.39-3.1 3.1-3.1h4V7H6.99c-2.76 0-5 2.24-5 5s2.24 5 5 5H11v-1.9H7c-1.71 0-3.1-1.39-3.1-3.1zm4.1 1h8v-2H8v2zm9-6h-4v1.9h4c1.71 0 3.1 1.39 3.1 3.1s-1.39 3.1-3.1 3.1h-4V17h4c2.76 0 5-2.24 5-5s-2.24-5-5-5z"/>
-                    </svg>
+                    <i data-lucide="link-2" aria-hidden="true"></i>
                 </div>
                 <div class="option-content">
                     <div class="option-title">Connect to Last Used Printer</div>
@@ -46,9 +45,7 @@
 
             <button class="option-button" id="btn-show-saved-printers" style="display: none;">
                 <div class="option-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                    </svg>
+                    <i data-lucide="check" aria-hidden="true"></i>
                 </div>
                 <div class="option-content">
                     <div class="option-title">Show All Saved Printers</div>
@@ -58,9 +55,7 @@
 
             <button class="option-button" id="btn-manual-ip">
                 <div class="option-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/>
-                    </svg>
+                    <i data-lucide="globe" aria-hidden="true"></i>
                 </div>
                 <div class="option-content">
                     <div class="option-title">Enter IP Manually</div>
@@ -70,9 +65,7 @@
 
             <button class="option-button cancel" id="btn-cancel">
                 <div class="option-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/>
-                    </svg>
+                    <i data-lucide="x" aria-hidden="true"></i>
                 </div>
                 <div class="option-content">
                     <div class="option-title">Cancel</div>
@@ -89,6 +82,7 @@
     var exports = {};
   }
 </script>
+<script src="../../../lib/ui/shared/lucide.js"></script>
 <script src="../../../lib/ui/auto-connect-choice/auto-connect-choice-renderer.js"></script>
 </body>
 </html>

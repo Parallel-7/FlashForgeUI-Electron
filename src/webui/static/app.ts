@@ -26,6 +26,22 @@ import { componentRegistry } from './grid/WebUIComponentRegistry.js';
 import { WebUIMobileLayoutManager } from './grid/WebUIMobileLayoutManager.js';
 import type { WebUIComponentLayout, WebUIGridLayout } from './grid/types.js';
 
+type LucideGlobal = {
+  readonly createIcons: (options?: {
+    readonly icons?: Record<string, [string, Record<string, string | number>][]>;
+    readonly nameAttr?: string;
+    readonly attrs?: Record<string, string>;
+    readonly root?: Document | Element | DocumentFragment;
+  }) => void;
+  readonly icons: Record<string, [string, Record<string, string | number>][]>;
+};
+
+declare global {
+  interface Window {
+    lucide?: LucideGlobal;
+  }
+}
+
 // ============================================================================
 // TYPES AND INTERFACES
 // ============================================================================
@@ -187,6 +203,31 @@ interface PendingJobStart {
 }
 
 type MaterialMessageType = 'error' | 'warning';
+
+function initializeLucideSettingsIcon(): void {
+  const lucide = window.lucide;
+  if (!lucide?.createIcons) {
+    return;
+  }
+
+  const settingsIcon = lucide.icons?.Settings ?? lucide.icons?.settings;
+  if (!settingsIcon) {
+    console.warn('[WebUI] Lucide settings icon is not available.');
+    return;
+  }
+
+  lucide.createIcons({
+    icons: { Settings: settingsIcon },
+    nameAttr: 'data-lucide',
+    attrs: {
+      'stroke-width': '2',
+      'aria-hidden': 'true',
+      focusable: 'false',
+      class: 'lucide-icon',
+    },
+    root: document,
+  });
+}
 
 // Extended HTMLElement for temperature dialog
 interface TemperatureDialogElement extends HTMLElement {
@@ -2630,6 +2671,7 @@ async function checkAuthStatus(): Promise<boolean> {
 
 async function initialize(): Promise<void> {
   console.log('Initializing Web UI...');
+  initializeLucideSettingsIcon();
 
   // Setup event handlers
   setupEventHandlers();

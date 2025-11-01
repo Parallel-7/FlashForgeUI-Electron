@@ -24,6 +24,8 @@
 // Core styles and dependencies
 import './index.css';
 
+import { initializeLucideIcons, getLucideIcons } from './utils/icons';
+
 // Component system imports
 import {
   componentManager,
@@ -2008,6 +2010,11 @@ function initializeStateAndEventListeners(): void {
  */
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('Renderer process started - DOM loaded');
+
+  initializeLucideIcons(
+    document,
+    getLucideIcons('menu', 'printer', 'settings', 'bar-chart-3', 'grid-3x3', 'pin')
+  );
 
   // Check if window.api is available
   if (!window.api) {

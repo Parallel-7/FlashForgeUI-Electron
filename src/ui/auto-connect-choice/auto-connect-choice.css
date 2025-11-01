@@ -114,10 +114,8 @@
 
 .option-icon {
     flex-shrink: 0;
-    width: 48px;
-    height: 48px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
+    width: 32px;
+    height: 32px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -127,12 +125,16 @@
     font-size: 24px;
 }
 
-.option-button.primary .option-icon {
-    background: rgba(255, 255, 255, 0.2);
+.option-icon i {
+    display: inline-flex;
+    width: 24px;
+    height: 24px;
+    color: inherit;
 }
 
-.option-button.cancel .option-icon {
-    background: rgba(255, 255, 255, 0.2);
+.option-icon .lucide-icon {
+    width: 100%;
+    height: 100%;
 }
 
 .option-button:hover .option-icon {

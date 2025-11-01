@@ -72,6 +72,15 @@ body {
 
 .dialog-icon {
   flex-shrink: 0;
+  display: inline-flex;
+  width: 20px;
+  height: 20px;
+  color: var(--text-primary);
+}
+
+.dialog-icon .lucide-icon {
+  width: 100%;
+  height: 100%;
 }
 
 .dialog-close {
@@ -155,7 +164,37 @@ body {
 }
 
 .slot-icon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  color: var(--text-primary);
+}
+
+.slot-icon::after {
+  content: attr(data-slot-number);
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 10px;
+  font-weight: 700;
+  color: currentColor;
+  line-height: 1;
+}
+
+.slot-icon i {
+  display: inline-flex;
+  width: 16px;
+  height: 16px;
+}
+
+.slot-icon .lucide-icon {
+  width: 100%;
+  height: 100%;
 }
 
 .slot-select {

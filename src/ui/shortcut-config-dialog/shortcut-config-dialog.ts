@@ -16,6 +16,8 @@
  * @module ui/shortcut-config-dialog/shortcut-config-dialog
  */
 
+import { initializeLucideIconsFromGlobal } from '../shared/lucide';
+
 /**
  * Response channel for closing dialog
  */
@@ -354,5 +356,6 @@ window.shortcutConfigAPI.onDialogInit((data) => {
  */
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[ShortcutConfigDialog] DOM ready');
+  window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['plus', 'circle']);
   setupEventListeners();
 });

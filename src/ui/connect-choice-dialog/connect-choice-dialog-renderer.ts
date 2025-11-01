@@ -14,6 +14,7 @@ let isHandlingChoice = false;
  */
 document.addEventListener('DOMContentLoaded', (): void => {
   console.log('Connect choice dialog renderer loaded');
+  window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['globe', 'wifi']);
   setupEventListeners();
   
   // Listen for initialization data from main process
@@ -231,6 +232,7 @@ function showErrorFeedback(message: string): void {
     }, 5000);
   }
 }
+
 
 /**
  * Export for potential testing purposes

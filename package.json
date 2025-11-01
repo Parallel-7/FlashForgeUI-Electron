@@ -52,6 +52,7 @@
     "electron-updater": "^6.6.2",
     "express": "^5.1.0",
     "gridstack": "^12.3.3",
+    "lucide": "^0.552.0",
     "node-rtsp-stream": "^0.0.9",
     "ws": "^8.18.3",
     "zod": "^4.0.5"

@@ -44,17 +44,21 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 64px;
-    height: 64px;
-    background: var(--warning-bg);
-    border: 2px solid var(--warning-border);
-    border-radius: 50%;
+    width: 32px;
+    height: 32px;
     flex-shrink: 0;
 }
 
-.warning-icon svg {
+.warning-icon i {
+    display: inline-flex;
     width: 32px;
     height: 32px;
+    color: currentColor;
+}
+
+.warning-icon .lucide-icon {
+    width: 100%;
+    height: 100%;
     filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 
@@ -168,7 +172,7 @@
         height: 56px;
     }
 
-    .warning-icon svg {
+    .warning-icon i {
         width: 28px;
         height: 28px;
     }

@@ -61,6 +61,13 @@ body {
   user-select: none;
 }
 
+.lucide-icon {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  fill: none;
+}
+
 /* App Container */
 .app-container {
   width: 100vw;
@@ -272,10 +279,16 @@ body {
   padding: 0;
 }
 
-.settings-button svg {
-  width: 20px;
-  height: 20px;
-  fill: currentColor;
+.settings-button i {
+  display: inline-flex;
+  width: 17px;
+  height: 17px;
+  color: currentColor;
+}
+
+.settings-button .lucide-icon {
+  width: 100%;
+  height: 100%;
 }
 
 .edit-mode-toggle:hover,
