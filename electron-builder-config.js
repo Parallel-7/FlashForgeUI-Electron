@@ -116,6 +116,10 @@ module.exports = {
                 target: "dmg",
                 arch: ["universal"],
             },
+            {
+                target: "zip",
+                arch: ["universal"],
+            },
         ],
     },
 

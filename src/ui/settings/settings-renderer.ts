@@ -257,9 +257,23 @@ class SettingsRenderer {
             value = this.settings.perPrinter[perPrinterKey];
             console.log(`[Settings] Loading per-printer setting ${configKey} (${perPrinterKey}):`, value);
           } else {
-            // No value set - skip this setting (let input use its HTML default value)
-            console.log(`[Settings] No value for ${configKey}, using input default`);
-            return;
+            // No value set - read HTML default value from input element
+            console.log(`[Settings] No value for ${configKey}, reading HTML default from input`);
+
+            if (input.type === 'checkbox') {
+              value = input.checked; // HTML checked attribute
+            } else if (input.type === 'number') {
+              // Read HTML value attribute and parse as number
+              const htmlValue = input.getAttribute('value');
+              value = htmlValue ? parseInt(htmlValue, 10) : 0;
+            } else {
+              // Read HTML value attribute for text/password inputs
+              value = input.getAttribute('value') || '';
+            }
+
+            // Store this default in our settings object so it gets saved
+            this.settings.perPrinter[perPrinterKey] = value;
+            console.log(`[Settings] Using HTML default for ${perPrinterKey}:`, value);
           }
         } else {
           // For global settings, use config.json

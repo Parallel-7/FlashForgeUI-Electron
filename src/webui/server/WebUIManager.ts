@@ -336,8 +336,8 @@ export class WebUIManager extends EventEmitter {
       this.expressApp = express();
       this.port = config.WebUIPort;
 
-      // Initialize RTSP stream service (check ffmpeg availability)
-      await this.rtspStreamService.initialize();
+      // Note: RTSP stream service is now initialized globally in index.ts
+      // No need for conditional initialization here
 
       // Setup middleware and routes
       this.setupMiddleware();
