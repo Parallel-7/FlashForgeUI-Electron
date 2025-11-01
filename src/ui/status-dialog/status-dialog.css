@@ -2,113 +2,154 @@
 /* Import shared template for consistent rounded/square UI switching */
 @import url('../shared/rounded-dialog-template.css');
 
+/* Template provides: global reset, dialog container, header, content, footer */
 
-/* Template provides: * reset styles */
+.status-dialog-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+}
 
-/* Template provides: body styles */
+.status-tabs {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+}
 
-/* Template provides: .dialog-container, animation styles */
-
-.dialog-titlebar {
-    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-    color: white;
-    padding: 16px 24px;
-    text-align: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    border-top-left-radius: var(--header-border-radius-top, 12px);
-    border-top-right-radius: var(--header-border-radius-top, 12px);
+.status-tab-button {
     flex-shrink: 0;
-    -webkit-app-region: drag;
-    position: relative;
-}
-
-.dialog-title {
-    margin: 0;
-    font-size: 1.4rem;
-    font-weight: 600;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-    -webkit-app-region: no-drag;
-}
-
-.dialog-close-btn {
-    -webkit-app-region: no-drag;
-    position: absolute;
-    top: 16px;
-    right: 24px;
-    background: none;
-    border: none;
-    color: white;
-    font-size: 16px;
+    padding: 8px 14px;
+    border-radius: 6px 6px 0 0;
+    border: 1px solid #444;
+    border-bottom: none;
+    background: rgba(255, 255, 255, 0.04);
+    color: #e0e0e0;
     cursor: pointer;
-    width: 30px;
-    height: 30px;
-    border-radius: 4px;
-    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    transition: background 0.2s ease, color 0.2s ease;
 }
 
-.dialog-close-btn:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+.status-tab-button[aria-selected="true"] {
+    background: #1e1e1e;
+    color: #ffffff;
+    font-weight: 600;
 }
 
-.status-container {
-    padding: 24px;
+.status-tab-button:focus-visible {
+    outline: 2px solid #4285f4;
+    outline-offset: 2px;
+}
+
+.tab-panels {
+    border: 1px solid #444;
+    border-radius: 0 6px 6px 6px;
+    background: #1e1e1e;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.tab-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
     flex: 1;
     overflow-y: auto;
-    /* Hide scrollbars while maintaining scroll functionality */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* Internet Explorer 10+ */
 }
 
-/* Hide scrollbars for WebKit browsers (Chrome, Safari, Edge) */
-.status-container::-webkit-scrollbar {
+.tab-panel[hidden] {
     display: none;
 }
 
-.status-section {
-    margin-bottom: 12px;
-    border: 1px solid #444;
-    border-radius: 5px;
-    padding: 8px;
-    background-color: #252525;
+.tab-panel-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #f0f0f0;
 }
 
-.status-section h3 {
-    margin-top: 0;
-    border-bottom: 1px solid #444;
-    padding-bottom: 5px;
+.status-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.status-summary-card {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid #444;
+    border-radius: 8px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.summary-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.summary-title {
+    font-size: 0.95rem;
+    font-weight: 600;
     color: #ffffff;
+}
+
+.summary-value {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.summary-subtext {
+    font-size: 0.85rem;
+    color: #b8b8b8;
+}
+
+.status-section {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.04);
+    padding: 16px;
+    border-radius: 8px;
+    border: 1px solid #444;
 }
 
 .status-row {
     display: flex;
     justify-content: space-between;
-    margin: 5px 0;
+    align-items: center;
+    gap: 12px;
     flex-wrap: wrap;
-    padding: 3px 0;
+}
+
+.status-label {
+    font-weight: 600;
+    color: #e0e0e0;
 }
 
 .status-value {
-    max-width: 200px;
+    max-width: 250px;
     overflow: hidden;
     text-overflow: ellipsis;
     word-break: break-all;
     color: #b8b8b8;
 }
 
-.status-label {
-    font-weight: bold;
-    margin-right: 10px;
-    color: #e0e0e0;
-}
-
-/* Removed controls section styles as manual refresh has been removed */
-
-.status-indicator {
+.status-indicator,
+.summary-indicator {
     display: inline-block;
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    margin-right: 5px;
+    margin-right: 6px;
+    flex-shrink: 0;
 }
 
 .status-active {
@@ -119,38 +160,6 @@
     background-color: #f44336;
 }
 
-button {
-    background-color: #3a3a3a;
-    color: #e0e0e0;
-    border: 1px solid #555;
-    border-radius: 3px;
-    padding: 5px 10px;
-    cursor: pointer;
-}
-
-button:hover {
-    background-color: #444;
-}
-
-input[type="checkbox"] {
-    accent-color: #4CAF50;
-}
-
-/* Custom scrollbar styling */
-::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-::-webkit-scrollbar-track {
-    background: #1e1e1e;
-}
-
-::-webkit-scrollbar-thumb {
-    background: #666;
-    border-radius: 4px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-    background: #888;
+.dialog-footer .dialog-button {
+    min-width: 90px;
 }
