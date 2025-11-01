@@ -26,31 +26,46 @@
 
       <!-- Dropdown Menu -->
       <div id="main-menu-dropdown" class="main-menu-dropdown hidden" role="menu" aria-label="Primary actions">
-        <button class="menu-item" data-action="connect" role="menuitem">
-          <i data-lucide="printer" class="menu-item-icon" aria-hidden="true"></i>
-          <span class="menu-item-label">Connect</span>
+        <button class="menu-item" data-action="connect" role="menuitem" aria-keyshortcuts="Control+K">
+          <span class="menu-item-content">
+            <i data-lucide="printer" class="menu-item-icon" aria-hidden="true"></i>
+            <span class="menu-item-label">Connect</span>
+          </span>
+          <span class="menu-item-shortcut" data-shortcut-id="connect">Ctrl+K</span>
         </button>
 
-        <button class="menu-item" data-action="settings" role="menuitem">
-          <i data-lucide="settings" class="menu-item-icon" aria-hidden="true"></i>
-          <span class="menu-item-label">Settings</span>
+        <button class="menu-item" data-action="settings" role="menuitem" aria-keyshortcuts="Control+,">
+          <span class="menu-item-content">
+            <i data-lucide="settings" class="menu-item-icon" aria-hidden="true"></i>
+            <span class="menu-item-label">Settings</span>
+          </span>
+          <span class="menu-item-shortcut" data-shortcut-id="settings">Ctrl+,</span>
         </button>
 
-        <button class="menu-item" data-action="status" role="menuitem">
-          <i data-lucide="bar-chart-3" class="menu-item-icon" aria-hidden="true"></i>
-          <span class="menu-item-label">Status</span>
+        <button class="menu-item" data-action="status" role="menuitem" aria-keyshortcuts="Control+I">
+          <span class="menu-item-content">
+            <i data-lucide="bar-chart-3" class="menu-item-icon" aria-hidden="true"></i>
+            <span class="menu-item-label">Status</span>
+          </span>
+          <span class="menu-item-shortcut" data-shortcut-id="status">Ctrl+I</span>
         </button>
 
-        <button id="menu-item-ifs" class="menu-item hidden" data-action="ifs" role="menuitem">
-          <i data-lucide="grid-3x3" class="menu-item-icon" aria-hidden="true"></i>
-          <span class="menu-item-label">IFS</span>
+        <button id="menu-item-ifs" class="menu-item hidden" data-action="ifs" role="menuitem" aria-keyshortcuts="Control+M">
+          <span class="menu-item-content">
+            <i data-lucide="grid-3x3" class="menu-item-icon" aria-hidden="true"></i>
+            <span class="menu-item-label">IFS</span>
+          </span>
+          <span class="menu-item-shortcut" data-shortcut-id="ifs">Ctrl+M</span>
         </button>
 
         <div class="menu-divider" role="presentation"></div>
 
-        <button class="menu-item" data-action="pin-config" role="menuitem">
-          <i data-lucide="pin" class="menu-item-icon" aria-hidden="true"></i>
-          <span class="menu-item-label">Configure Shortcuts</span>
+        <button class="menu-item" data-action="pin-config" role="menuitem" aria-keyshortcuts="Control+P">
+          <span class="menu-item-content">
+            <i data-lucide="pin" class="menu-item-icon" aria-hidden="true"></i>
+            <span class="menu-item-label">Configure Shortcuts</span>
+          </span>
+          <span class="menu-item-shortcut" data-shortcut-id="pin-config">Ctrl+P</span>
         </button>
       </div>
 

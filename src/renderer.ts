@@ -91,6 +91,192 @@ let mainMenuButton: HTMLButtonElement | null = null;
 let mainMenuDropdown: HTMLDivElement | null = null;
 let mainMenuCloseTimeout: number | null = null;
 
+const MAIN_MENU_ACTIONS = ['connect', 'settings', 'status', 'ifs', 'pin-config'] as const;
+type MainMenuAction = typeof MAIN_MENU_ACTIONS[number];
+
+const MAIN_MENU_ACTION_CHANNELS: Record<MainMenuAction, string> = {
+  connect: 'open-printer-selection',
+  settings: 'open-settings-window',
+  status: 'open-status-dialog',
+  ifs: 'open-ifs-dialog',
+  'pin-config': 'shortcut-config:open'
+};
+
+const MAIN_MENU_SHORTCUTS: Record<MainMenuAction, { key: string; label: string }> = {
+  connect: { key: 'k', label: 'K' },
+  settings: { key: ',', label: ',' },
+  status: { key: 'i', label: 'I' },
+  ifs: { key: 'm', label: 'M' },
+  'pin-config': { key: 'p', label: 'P' }
+};
+
+const TEXT_INPUT_TYPES = new Set([
+  'text',
+  'email',
+  'search',
+  'password',
+  'url',
+  'tel',
+  'number'
+]);
+
+function isMainMenuAction(action: string | null): action is MainMenuAction {
+  return MAIN_MENU_ACTIONS.includes(action as MainMenuAction);
+}
+
+class MenuShortcutManager {
+  private initialized = false;
+  private isMac = false;
+  private enabledActions: Record<MainMenuAction, boolean> = {
+    connect: true,
+    settings: true,
+    status: true,
+    ifs: false,
+    'pin-config': true
+  };
+
+  initialize(): void {
+    this.isMac = window.PLATFORM === 'darwin';
+    this.enabledActions.ifs = ifsMenuItemVisible;
+    this.updateShortcutLabels();
+
+    if (this.initialized) {
+      return;
+    }
+
+    document.addEventListener('keydown', this.handleKeydown);
+    this.initialized = true;
+  }
+
+  dispose(): void {
+    if (!this.initialized) {
+      return;
+    }
+
+    document.removeEventListener('keydown', this.handleKeydown);
+    this.initialized = false;
+  }
+
+  setActionEnabled(action: MainMenuAction, enabled: boolean): void {
+    this.enabledActions[action] = enabled;
+  }
+
+  updateShortcutLabels(): void {
+    const displayPrefix = this.isMac ? '⌘' : 'Ctrl+';
+    const ariaPrefix = this.isMac ? 'Meta+' : 'Control+';
+
+    MAIN_MENU_ACTIONS.forEach((action) => {
+      const config = MAIN_MENU_SHORTCUTS[action];
+      const displayValue = this.isMac ? `${displayPrefix}${config.label}` : `${displayPrefix}${config.label}`;
+      const ariaValue = `${ariaPrefix}${config.label}`;
+
+      const shortcutEl = document.querySelector<HTMLSpanElement>(
+        `.menu-item-shortcut[data-shortcut-id="${action}"]`
+      );
+      if (shortcutEl) {
+        shortcutEl.textContent = displayValue;
+      }
+
+      const button = document.querySelector<HTMLButtonElement>(`.menu-item[data-action="${action}"]`);
+      if (button) {
+        button.setAttribute('aria-keyshortcuts', ariaValue);
+      }
+    });
+  }
+
+  private readonly handleKeydown = (event: KeyboardEvent): void => {
+    if (!this.initialized) {
+      return;
+    }
+
+    if (event.defaultPrevented || event.repeat) {
+      return;
+    }
+
+    if (!this.isRelevantModifier(event)) {
+      return;
+    }
+
+    if (event.altKey || event.shiftKey) {
+      return;
+    }
+
+    if (this.isEditableContext()) {
+      return;
+    }
+
+    const action = this.getActionFromEvent(event);
+    if (!action || !this.enabledActions[action]) {
+      return;
+    }
+
+    const channel = MAIN_MENU_ACTION_CHANNELS[action];
+    if (!channel || !window.api?.send) {
+      return;
+    }
+
+    event.preventDefault();
+
+    window.api.send(channel);
+    closeMainMenu();
+  };
+
+  private isRelevantModifier(event: KeyboardEvent): boolean {
+    return this.isMac ? event.metaKey : event.ctrlKey;
+  }
+
+  private isEditableContext(): boolean {
+    const activeElement = document.activeElement;
+    if (!(activeElement instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (activeElement instanceof HTMLInputElement) {
+      if (!TEXT_INPUT_TYPES.has(activeElement.type)) {
+        return false;
+      }
+
+      return !activeElement.readOnly && !activeElement.disabled;
+    }
+
+    if (activeElement instanceof HTMLTextAreaElement) {
+      return !activeElement.readOnly && !activeElement.disabled;
+    }
+
+    if (activeElement instanceof HTMLSelectElement) {
+      return !activeElement.disabled;
+    }
+
+    if (activeElement.isContentEditable) {
+      return true;
+    }
+
+    return Boolean(activeElement.closest('[contenteditable="true"]'));
+  }
+
+  private getActionFromEvent(event: KeyboardEvent): MainMenuAction | null {
+    const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+
+    for (const action of MAIN_MENU_ACTIONS) {
+      const shortcut = MAIN_MENU_SHORTCUTS[action];
+      if (shortcut.key === ',') {
+        if (event.key === ',') {
+          return action;
+        }
+        continue;
+      }
+
+      if (key === shortcut.key) {
+        return action;
+      }
+    }
+
+    return null;
+  }
+}
+
+const menuShortcutManager = new MenuShortcutManager();
+
 // Track filtration availability from backend
 let filtrationAvailable = false;
 
@@ -1536,19 +1722,11 @@ function initializeMainMenu(): void {
     toggleMainMenu();
   });
 
-  const menuActions: Record<string, string> = {
-    connect: 'open-printer-selection',
-    settings: 'open-settings-window',
-    status: 'open-status-dialog',
-    ifs: 'open-ifs-dialog',
-    'pin-config': 'shortcut-config:open'
-  };
-
   const menuItems = mainMenuDropdown.querySelectorAll<HTMLButtonElement>('.menu-item');
   menuItems.forEach((item) => {
     item.addEventListener('click', () => {
       const action = item.getAttribute('data-action');
-      const channel = action ? menuActions[action] : undefined;
+      const channel = isMainMenuAction(action) ? MAIN_MENU_ACTION_CHANNELS[action] : undefined;
       if (channel && window.api?.send) {
         window.api.send(channel);
       }
@@ -1739,6 +1917,8 @@ function updateIFSMenuItemVisibility(): void {
   } else {
     ifsMenuItem.classList.add('hidden');
   }
+
+  menuShortcutManager.setActionEnabled('ifs', ifsMenuItemVisible);
 }
 
 /**
@@ -2038,6 +2218,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupLoadingEventListeners();
   initializeUI();
   initializeMainMenu();
+  menuShortcutManager.initialize();
 
   // Initialize shortcut button system
   initializeShortcutButtons();
@@ -2092,6 +2273,7 @@ document.addEventListener('DOMContentLoaded', async () => {
  */
 window.addEventListener('beforeunload', () => {
   console.log('Cleaning up resources in enhanced renderer with GridStack and component system');
+  menuShortcutManager.dispose();
 
   // Clean up GridStack system
   try {
