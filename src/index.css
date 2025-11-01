@@ -261,7 +261,7 @@ body {
 }
 
 .window-controls button {
-  margin-left: 5px;
+  margin-left: 0;
   background: none;
   border: none;
   color: var(--text-color);
@@ -269,6 +269,17 @@ body {
   cursor: pointer;
   width: 30px;
   height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0;
+  padding: 0;
+}
+
+.window-controls button .lucide-icon {
+  width: 16px !important;
+  height: 16px !important;
+  stroke-width: 1.5 !important;
 }
 
 .window-controls button:hover {

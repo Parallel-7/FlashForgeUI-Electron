@@ -2013,7 +2013,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initializeLucideIcons(
     document,
-    getLucideIcons('menu', 'printer', 'settings', 'bar-chart-3', 'grid-3x3', 'pin')
+    getLucideIcons('menu', 'printer', 'settings', 'bar-chart-3', 'grid-3x3', 'pin', 'minus', 'square', 'x')
   );
 
   // Check if window.api is available
