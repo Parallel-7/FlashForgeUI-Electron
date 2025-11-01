@@ -6,7 +6,7 @@
     <link rel="stylesheet" href="settings.css" />
 </head>
 <body>
-<div class="dialog-container">
+<div class="dialog-container dialog-container--full">
     <!-- Header -->
     <div class="dialog-header">
         <div class="dialog-title">Settings</div>
@@ -15,57 +15,180 @@
 
     <!-- Content -->
     <div class="dialog-content">
-        <div class="settings-grid">
-            <!-- Column 1 -->
-            <div class="settings-column">
-                <label class="checkbox-label">
-                    <input type="checkbox" id="web-ui"> Web UI
-                </label>
-                <div class="input-group">
-                    <label for="web-ui-port">Web UI Port:</label>
-                    <input type="number" id="web-ui-port" class="settings-input" min="1" max="65535" placeholder="3000">
-                </div>
-                <div class="input-group">
-                    <label for="web-ui-password">Web UI Password:</label>
-                    <input type="password" id="web-ui-password" class="settings-input" placeholder="changeme">
-                </div>
-                <div class="input-group">
-                    <label for="camera-proxy-port">Camera Proxy Port:</label>
-                    <input type="number" id="camera-proxy-port" class="settings-input" min="1" max="65535" placeholder="8181">
-                </div>
-                <div class="settings-info-text">
-                    Port for the camera proxy used by both the app and Web UI
-                </div>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="filament-tracker-enabled"> Filament Tracker Integration
-                </label>
-                <div class="settings-info-text">
-                    Enable HTTP API endpoints for integration with filament-tracker-electron application. Uses the Web UI port.
-                </div>
-                <div class="input-group">
-                    <label for="filament-tracker-api-key">Filament Tracker API Key (Optional):</label>
-                    <input type="text" id="filament-tracker-api-key" class="settings-input" placeholder="Leave empty for no authentication">
-                </div>
-                <div class="settings-info-text">
-                    Optional API key for authentication. If set, external applications must include this key in the x-api-key header.
-                </div>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="custom-camera"> Custom Camera
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="discord-sync"> Discord Sync
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="alert-when-complete"> Alert On Complete
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="alert-when-cooled"> Alert On Cooled
-                </label>
+        <div class="settings-header">
+            <div id="printer-context-indicator" class="printer-context-indicator" aria-live="polite"></div>
+        </div>
 
-                <div class="settings-section" style="margin-top: 20px;">
-                    <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #666;">
-                        Auto-Update Settings
-                    </h4>
+        <nav class="settings-tabs" role="tablist" aria-label="Settings categories">
+            <button class="settings-tab-button" role="tab" id="tab-button-camera" data-tab="camera" aria-controls="tab-panel-camera" aria-selected="true">
+                Camera
+            </button>
+            <button class="settings-tab-button" role="tab" id="tab-button-notifications" data-tab="notifications" aria-controls="tab-panel-notifications" aria-selected="false" tabindex="-1">
+                Notifications
+            </button>
+            <button class="settings-tab-button" role="tab" id="tab-button-network" data-tab="network" aria-controls="tab-panel-network" aria-selected="false" tabindex="-1">
+                Network
+            </button>
+            <button class="settings-tab-button" role="tab" id="tab-button-appearance" data-tab="appearance" aria-controls="tab-panel-appearance" aria-selected="false" tabindex="-1">
+                Appearance
+            </button>
+            <button class="settings-tab-button" role="tab" id="tab-button-advanced" data-tab="advanced" aria-controls="tab-panel-advanced" aria-selected="false" tabindex="-1">
+                Advanced
+            </button>
+            <button class="settings-tab-button" role="tab" id="tab-button-printer" data-tab="printer" aria-controls="tab-panel-printer" aria-selected="false" tabindex="-1">
+                Printer Settings
+            </button>
+        </nav>
+
+        <div class="tab-panels">
+            <section id="tab-panel-camera" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-camera">
+                <h3 class="tab-panel-title">Camera and Streaming</h3>
+                <div class="settings-section">
+                    <div class="input-group">
+                        <label for="camera-proxy-port">Camera Proxy Port:</label>
+                        <input type="number" id="camera-proxy-port" class="settings-input" min="1" max="65535" placeholder="8181">
+                    </div>
+                    <div class="settings-info-text">
+                        Port for the camera proxy used by both the app and Web UI.
+                    </div>
+                </div>
+
+                <div id="camera-printer-empty-state" class="settings-info-text" hidden>
+                    Connect to a printer to configure per-printer camera options.
+                </div>
+
+                <div id="camera-printer-settings" class="camera-printer-settings">
+                    <div class="settings-info-text">
+                        Camera overrides below apply to the active printer only.
+                    </div>
+
+                    <div class="settings-section">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="custom-camera"> Custom Camera
+                        </label>
+                        <div class="input-group">
+                            <label for="custom-camera-url">Camera URL:</label>
+                            <input type="text" id="custom-camera-url" class="settings-input" placeholder="http://...">
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <h4 class="section-title">RTSP Stream Configuration</h4>
+                        <div class="settings-info-text">
+                            Settings for RTSP camera streams. Applies to RTSP URLs (rtsp://...). Changes take effect on next connection.
+                        </div>
+                        <div class="input-group">
+                            <label for="rtsp-frame-rate">Frame Rate (FPS):</label>
+                            <input type="number" id="rtsp-frame-rate" class="settings-input" min="1" max="60" value="30">
+                        </div>
+                        <div class="settings-info-text">
+                            1-60 fps (default: 30). Lower values reduce bandwidth usage.
+                        </div>
+
+                        <div class="input-group">
+                            <label for="rtsp-quality">Quality (1-5):</label>
+                            <input type="number" id="rtsp-quality" class="settings-input" min="1" max="5" value="3">
+                        </div>
+                        <div class="settings-info-text">
+                            1 = best quality (largest bandwidth), 5 = lowest quality (default: 3).
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-panel-notifications" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-notifications" hidden>
+                <h3 class="tab-panel-title">Notifications and Alerts</h3>
+                <div class="settings-section">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="discord-sync"> Discord Sync
+                    </label>
+                    <div class="input-group">
+                        <label for="webhook-url">Discord Webhook:</label>
+                        <input type="text" id="webhook-url" class="settings-input" placeholder="https://discord.com/api/webhooks/...">
+                    </div>
+                    <div class="input-group">
+                        <label for="discord-update-interval">Discord Update Interval (minutes):</label>
+                        <input type="number" id="discord-update-interval" class="settings-input" min="1" max="60" placeholder="5">
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="alert-when-complete"> Alert On Complete
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="alert-when-cooled"> Alert On Cooled
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="visual-alerts"> Visual Alerts
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="audio-alerts"> Audio Alerts
+                    </label>
+                </div>
+            </section>
+
+            <section id="tab-panel-network" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-network" hidden>
+                <h3 class="tab-panel-title">Network Services</h3>
+                <div class="settings-section">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="web-ui"> Web UI
+                    </label>
+                    <div class="input-group">
+                        <label for="web-ui-port">Web UI Port:</label>
+                        <input type="number" id="web-ui-port" class="settings-input" min="1" max="65535" placeholder="3000">
+                    </div>
+                    <div class="input-group">
+                        <label for="web-ui-password">Web UI Password:</label>
+                        <input type="password" id="web-ui-password" class="settings-input" placeholder="changeme">
+                    </div>
+                </div>
+
+        <div class="settings-section">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="filament-tracker-enabled"> Filament Tracker Integration
+                    </label>
+                    <div class="settings-info-text">
+                        Enable HTTP API endpoints for integration with filament-tracker-electron application. Uses the Web UI port.
+                    </div>
+                    <div class="input-group">
+                        <label for="filament-tracker-api-key">Filament Tracker API Key (Optional):</label>
+                        <input type="text" id="filament-tracker-api-key" class="settings-input" placeholder="Leave empty for no authentication">
+                    </div>
+                    <div class="settings-info-text">
+                        Optional API key for authentication. If set, external applications must include this key in the x-api-key header.
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-panel-appearance" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-appearance" hidden>
+                <h3 class="tab-panel-title">Appearance</h3>
+                <div class="settings-section">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="always-on-top"> Always On Top
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="rounded-ui"> Rounded UI
+                    </label>
+                    <div class="settings-info-text">
+                        Enable rounded windows and dialogs. Restart required after changing.
+                        <span class="macos-warning" style="display: none; color: #ff9800; font-weight: 500;">
+                            ⚠️ Disabled on macOS due to system compatibility issues.
+                        </span>
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-panel-advanced" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-advanced" hidden>
+                <h3 class="tab-panel-title">Advanced</h3>
+                <div class="settings-section">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="debug-mode"> Debug Mode
+                    </label>
+                </div>
+
+                <div class="settings-section">
+                    <h4 class="section-title">Auto-Update Settings</h4>
                     <label class="checkbox-label">
                         <input type="checkbox" id="check-updates-on-launch"> Check for updates on launch
                     </label>
@@ -85,86 +208,33 @@
                     <button id="btn-check-updates" class="settings-action-button">Check for Updates Now</button>
                     <div id="update-check-result" class="settings-info-text" style="margin-top: 8px;"></div>
                 </div>
-            </div>
+            </section>
 
-            <!-- Column 2 -->
-            <div class="settings-column">
-                <label class="checkbox-label">
-                    <input type="checkbox" id="always-on-top"> Always On Top
-                </label>
-                <div class="input-group">
-                    <label for="custom-camera-url">Camera URL:</label>
-                    <input type="text" id="custom-camera-url" class="settings-input" placeholder="http://...">
-                </div>
-                <div class="input-group">
-                    <label for="webhook-url">Discord Webhook:</label>
-                    <input type="text" id="webhook-url" class="settings-input" placeholder="https://discord.com/api/webhooks/...">
-                </div>
-                <div class="input-group">
-                    <label for="discord-update-interval">Discord Update Interval (minutes):</label>
-                    <input type="number" id="discord-update-interval" class="settings-input" min="1" max="60" placeholder="5">
-                </div>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="visual-alerts"> Visual Alerts
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="audio-alerts"> Audio Alerts
-                </label>
-            </div>
-
-            <!-- Column 3 -->
-            <div class="settings-column">
-                <label class="checkbox-label">
-                    <input type="checkbox" id="debug-mode"> Debug Mode
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="custom-leds"> Custom LEDs
-                </label>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="force-legacy-api"> Force Legacy API
-                </label>
-                <div class="settings-info-text">
-                    When enabled, the application will use the legacy TCP API even for 5M/Pro printers.
-                    Requires reconnection to take effect.
-                </div>
-                <label class="checkbox-label">
-                    <input type="checkbox" id="rounded-ui"> Rounded UI
-                </label>
-                <div class="settings-info-text">
-                    Enable rounded windows and dialogs. Restart required after changing.
-                    <span class="macos-warning" style="display: none; color: #ff9800; font-weight: 500;">
-                        ⚠️ Disabled on macOS due to system compatibility issues.
-                    </span>
+            <section id="tab-panel-printer" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-printer" hidden>
+                <h3 class="tab-panel-title">Per-Printer Overrides</h3>
+                <div id="printer-settings-empty-state" class="settings-info-text" hidden>
+                    Connect to a printer to configure per-printer options.
                 </div>
 
-                <!-- RTSP Stream Configuration -->
-                <div class="settings-section" style="margin-top: 20px;">
-                    <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #666;">
-                        RTSP Stream Configuration
-                    </h4>
-                    <div class="settings-info-text" style="margin-bottom: 15px; margin-top: 0;">
-                        Settings for RTSP camera streams. Only applies to RTSP URLs (rtsp://...).
-                        Changes take effect on next connection.
+                <div id="printer-settings-content" class="printer-settings-content">
+                    <div class="settings-info-text">
+                        These settings apply to the active printer only.
                     </div>
 
-                    <div class="input-group">
-                        <label for="rtsp-frame-rate">Frame Rate (FPS):</label>
-                        <input type="number" id="rtsp-frame-rate" class="settings-input" min="1" max="60" value="30">
-                    </div>
-                    <div class="settings-info-text" style="margin-top: 8px; margin-bottom: 18px;">
-                        1-60 fps (default: 30). Lower values reduce bandwidth usage.
-                    </div>
-
-                    <div class="input-group">
-                        <label for="rtsp-quality">Quality (1-5):</label>
-                        <input type="number" id="rtsp-quality" class="settings-input" min="1" max="5" value="3">
-                    </div>
-                    <div class="settings-info-text" style="margin-top: 8px; margin-bottom: 10px;">
-                        1 = best quality (larger file size), 5 = lowest quality (default: 3).
+                    <div class="settings-section">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="custom-leds"> Custom LEDs
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="force-legacy-api"> Force Legacy API
+                        </label>
+                        <div class="settings-info-text">
+                            When enabled, the application will use the legacy TCP API even for 5M/Pro printers.
+                            Requires reconnection to take effect.
+                        </div>
                     </div>
                 </div>
-                <div></div>
-            </div>
+            </section>
         </div>
     </div>
 

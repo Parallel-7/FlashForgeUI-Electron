@@ -26,16 +26,102 @@
 
 /* Template provides: .dialog-content base styles */
 
-.settings-grid {
-    display: flex;
-    gap: 30px; /* Space between columns */
+.settings-header {
+    margin-bottom: 16px;
 }
 
-.settings-column {
+.printer-context-indicator {
+    padding: 8px 10px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    color: #aaa;
+    font-size: 0.85em;
+}
+
+.settings-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+    overflow-x: auto;
+    padding-bottom: 2px;
+}
+
+.settings-tab-button {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    border-radius: 6px 6px 0 0;
+    border: 1px solid var(--border-color);
+    border-bottom: none;
+    background: rgba(255, 255, 255, 0.04);
+    color: #e0e0e0;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.settings-tab-button[aria-selected="true"] {
+    background: var(--darker-bg);
+    color: white;
+    font-weight: 600;
+}
+
+.settings-tab-button:focus-visible {
+    outline: 2px solid var(--button-bg);
+    outline-offset: 2px;
+}
+
+.tab-panels {
+    border: 1px solid var(--border-color);
+    border-radius: 0 6px 6px 6px;
+    background: var(--darker-bg);
+    padding: 18px;
     display: flex;
     flex-direction: column;
-    gap: 15px; /* Space between items in a column */
-    flex: 1; /* Allow columns to share space */
+    flex: 1;
+    min-height: 0;
+}
+
+.tab-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.tab-panel[hidden] {
+    display: none;
+}
+
+.tab-panel-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #f0f0f0;
+}
+
+.settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.section-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #ddd;
+    margin-bottom: -4px;
+}
+
+.printer-settings-content {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+}
+
+.camera-printer-settings {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
 }
 
 /* Form Elements */
@@ -69,7 +155,6 @@ input[type="checkbox"] {
 .settings-info-text {
     font-size: 0.8em;
     color: #aaa;
-    margin-top: -10px;
     line-height: 1.3;
 }
 

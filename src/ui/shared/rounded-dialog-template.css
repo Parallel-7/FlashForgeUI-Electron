@@ -24,6 +24,7 @@ body {
     align-items: center;
     justify-content: center;
     height: 100vh;
+    min-height: 100vh;
     -webkit-font-smoothing: antialiased;
     overflow: hidden;
     box-sizing: border-box;
@@ -45,6 +46,13 @@ body {
     opacity: 0;
     transform: scale(0.95);
     animation: dialogFadeIn 0.2s ease-out forwards;
+}
+
+.dialog-container--full {
+    align-self: stretch;
+    height: calc(100vh - (var(--ui-padding) * 2));
+    max-height: none;
+    max-width: none;
 }
 
 @keyframes dialogFadeIn {

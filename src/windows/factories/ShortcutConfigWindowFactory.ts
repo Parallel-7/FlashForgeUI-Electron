@@ -102,7 +102,7 @@ export const createShortcutConfigDialog = (): Promise<void> => {
           '../../ui/shortcut-config-dialog/shortcut-config-dialog-preload.js'
         )
       ),
-      { resizable: false, frame: false, transparent: true }
+      { resizable: false, frame: false }
     );
 
     // Set up response handler

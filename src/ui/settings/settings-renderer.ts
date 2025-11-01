@@ -136,6 +136,12 @@ class SettingsRenderer {
   private printerName: string | null = null;
   private hasUnsavedChanges: boolean = false;
   private autoDownloadSupported: boolean = true;
+  private tabButtons: HTMLButtonElement[] = [];
+  private readonly tabPanels: Map<string, HTMLElement> = new Map();
+  private activeTabId: string = 'camera';
+  private perPrinterControlsEnabled: boolean = true;
+
+  private static readonly TAB_STORAGE_KEY = 'settingsDialogActiveTab';
 
   constructor() {
     this.initialize();
@@ -170,6 +176,8 @@ class SettingsRenderer {
     if (checkButton) {
       this.updateCheckButton = checkButton;
     }
+
+    this.initializeTabs();
   }
 
   private setupEventListeners(): void {
@@ -231,7 +239,7 @@ class SettingsRenderer {
         this.loadConfiguration();
         this.updatePrinterContextIndicator();
         await this.initializeAutoUpdateSupport();
-        this.updateInputStates();
+        this.updatePrinterSettingsAvailability();
       } catch (error) {
         console.error('Failed to request config:', error);
       }
@@ -295,6 +303,112 @@ class SettingsRenderer {
     this.handleMacOSCompatibility();
     this.hasUnsavedChanges = false;
     this.updateSaveButtonState();
+  }
+
+  private initializeTabs(): void {
+    this.tabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.settings-tab-button'));
+    const panelElements = document.querySelectorAll<HTMLElement>('.tab-panel');
+
+    panelElements.forEach((panel) => {
+      const dataTab = panel.id.replace('tab-panel-', '');
+      this.tabPanels.set(dataTab, panel);
+    });
+
+    this.tabButtons.forEach((button, index) => {
+      button.addEventListener('click', () => {
+        const tabId = button.dataset.tab;
+        if (tabId) {
+          this.setActiveTab(tabId, true, true);
+        }
+      });
+
+      button.addEventListener('keydown', (event) => {
+        this.handleTabKeydown(event, index);
+      });
+    });
+
+    const persistedTab = this.loadPersistedTabId();
+    if (persistedTab && this.tabPanels.has(persistedTab)) {
+      this.setActiveTab(persistedTab, false, false);
+    } else if (this.tabButtons.length > 0) {
+      const fallbackTab = this.tabButtons[0].dataset.tab ?? 'camera';
+      this.setActiveTab(fallbackTab, true, false);
+    }
+  }
+
+  private setActiveTab(tabId: string, persist: boolean, focusTab: boolean): void {
+    if (!this.tabPanels.has(tabId)) {
+      return;
+    }
+
+    this.tabButtons.forEach((button) => {
+      const isActive = button.dataset.tab === tabId;
+      button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+      button.tabIndex = isActive ? 0 : -1;
+      if (isActive && focusTab) {
+        button.focus();
+      }
+    });
+
+    this.tabPanels.forEach((panel, id) => {
+      if (id === tabId) {
+        panel.removeAttribute('hidden');
+      } else {
+        panel.setAttribute('hidden', 'true');
+      }
+    });
+
+    this.activeTabId = tabId;
+    if (persist) {
+      this.persistTabId(tabId);
+    }
+  }
+
+  private handleTabKeydown(event: KeyboardEvent, currentIndex: number): void {
+    if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (event.key === 'Home') {
+      const firstTab = this.tabButtons[0];
+      if (firstTab?.dataset.tab) {
+        this.setActiveTab(firstTab.dataset.tab, true, true);
+      }
+      return;
+    }
+
+    if (event.key === 'End') {
+      const lastTab = this.tabButtons[this.tabButtons.length - 1];
+      if (lastTab?.dataset.tab) {
+        this.setActiveTab(lastTab.dataset.tab, true, true);
+      }
+      return;
+    }
+
+    const increment = event.key === 'ArrowRight' ? 1 : -1;
+    const newIndex = (currentIndex + increment + this.tabButtons.length) % this.tabButtons.length;
+    const nextTab = this.tabButtons[newIndex];
+    if (nextTab?.dataset.tab) {
+      this.setActiveTab(nextTab.dataset.tab, true, true);
+    }
+  }
+
+  private persistTabId(tabId: string): void {
+    try {
+      window.localStorage.setItem(SettingsRenderer.TAB_STORAGE_KEY, tabId);
+    } catch (error) {
+      console.warn('[Settings] Unable to persist tab selection:', error);
+    }
+  }
+
+  private loadPersistedTabId(): string | null {
+    try {
+      return window.localStorage.getItem(SettingsRenderer.TAB_STORAGE_KEY);
+    } catch {
+      return null;
+    }
   }
 
   private handleInputChange(inputId: string): void {
@@ -368,8 +482,22 @@ class SettingsRenderer {
     this.setInputEnabled('filament-tracker-api-key', filamentTrackerEnabled);
 
     // Custom Camera settings
-    const customCameraEnabled = this.inputs.get('custom-camera')?.checked || false;
-    this.setInputEnabled('custom-camera-url', customCameraEnabled);
+    if (this.perPrinterControlsEnabled) {
+      const customCameraEnabled = this.inputs.get('custom-camera')?.checked || false;
+      this.setInputEnabled('custom-camera', true);
+      this.setInputEnabled('custom-camera-url', customCameraEnabled);
+      this.setInputEnabled('custom-leds', true);
+      this.setInputEnabled('force-legacy-api', true);
+      this.setInputEnabled('rtsp-frame-rate', true);
+      this.setInputEnabled('rtsp-quality', true);
+    } else {
+      this.setInputEnabled('custom-camera', false);
+      this.setInputEnabled('custom-camera-url', false);
+      this.setInputEnabled('custom-leds', false);
+      this.setInputEnabled('force-legacy-api', false);
+      this.setInputEnabled('rtsp-frame-rate', false);
+      this.setInputEnabled('rtsp-quality', false);
+    }
 
     // Discord settings
     const discordEnabled = this.inputs.get('discord-sync')?.checked || false;
@@ -628,6 +756,34 @@ class SettingsRenderer {
         indicator.style.display = 'block';
       }
     }
+  }
+
+  private updatePrinterSettingsAvailability(): void {
+    const content = document.getElementById('printer-settings-content');
+    const emptyState = document.getElementById('printer-settings-empty-state');
+    const cameraContent = document.getElementById('camera-printer-settings');
+    const cameraEmptyState = document.getElementById('camera-printer-empty-state');
+
+    const hasPrinter = Boolean(this.printerName);
+    this.perPrinterControlsEnabled = hasPrinter;
+
+    if (content) {
+      content.style.display = hasPrinter ? 'flex' : 'none';
+    }
+
+    if (emptyState) {
+      emptyState.hidden = hasPrinter;
+    }
+
+    if (cameraContent) {
+      cameraContent.style.display = hasPrinter ? 'flex' : 'none';
+    }
+
+    if (cameraEmptyState) {
+      cameraEmptyState.hidden = hasPrinter;
+    }
+
+    this.updateInputStates();
   }
 
   private cleanup(): void {

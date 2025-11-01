@@ -110,7 +110,6 @@ export function createComponentDialog(componentId: string): BrowserWindow {
     {
       resizable: true,
       frame: false,
-      transparent: true,
     }
   );
 

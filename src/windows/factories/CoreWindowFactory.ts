@@ -89,7 +89,7 @@ export const createSettingsWindow = (): void => {
     mainWindow,
     dimensions,
     preloadPath,
-    { resizable: true, frame: false, transparent: true }
+    { resizable: true, frame: false }
   );
 
   // Load HTML file with error handling

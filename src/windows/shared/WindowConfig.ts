@@ -134,24 +134,9 @@ export const createModalWindow = (
 ): BrowserWindow => {
   const { resizable = true, frame, transparent, useUIConfig = true } = options;
   
-  // Determine final window options with backward compatibility
-  let finalFrame: boolean;
-  let finalTransparent: boolean;
-  
-  if (frame !== undefined || transparent !== undefined) {
-    // Backward compatibility: use explicit frame/transparent values if provided
-    finalFrame = frame !== undefined ? frame : true;
-    finalTransparent = transparent !== undefined ? transparent : false;
-  } else if (useUIConfig) {
-    // New behavior: use UI configuration based on RoundedUI setting
-    const uiOptions = getUIWindowOptions();
-    finalFrame = uiOptions.frame;
-    finalTransparent = uiOptions.transparent;
-  } else {
-    // Default values
-    finalFrame = true;
-    finalTransparent = false;
-  }
+  const uiOptions = useUIConfig ? getUIWindowOptions() : { frame: true, transparent: false };
+  const finalFrame = frame !== undefined ? frame : uiOptions.frame;
+  const finalTransparent = transparent !== undefined ? transparent : uiOptions.transparent;
   
   const window = new BrowserWindow({
     width: dimensions.width,

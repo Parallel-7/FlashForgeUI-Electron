@@ -129,7 +129,7 @@ export const createInputDialog = (options: InputDialogOptions): Promise<string |
       mainWindow,
       WINDOW_SIZES.INPUT_DIALOG,
       createPreloadPath(path.join(__dirname, '../../ui/input-dialog/input-dialog-preload.js')),
-      { resizable: false, frame: false, transparent: true }
+      { resizable: false, frame: false }
     );
 
     // Set up response handler using handle/invoke pattern
@@ -208,7 +208,7 @@ export const createMaterialMatchingDialog = (data: MaterialMatchingDialogData): 
       parentWindow,
       WINDOW_SIZES.MATERIAL_MATCHING,
       createPreloadPath(path.join(__dirname, '../../ui/material-matching-dialog/material-matching-dialog-preload.js')),
-      { resizable: false, frame: false, transparent: true }
+      { resizable: false, frame: false }
     ) as DialogWindow<unknown[] | null>;
 
     // Store window data for IPC handlers
@@ -261,7 +261,7 @@ export const createSingleColorConfirmationDialog = (data: SingleColorConfirmatio
       parentWindow,
       WINDOW_SIZES.SINGLE_COLOR_CONFIRMATION,
       createPreloadPath(path.join(__dirname, '../../ui/single-color-confirmation-dialog/single-color-confirmation-dialog-preload.js')),
-      { resizable: false, frame: false, transparent: true }
+      { resizable: false, frame: false }
     ) as DialogWindow<boolean>;
 
     // Store window data for IPC handlers
@@ -312,7 +312,7 @@ export const createMaterialInfoDialog = (materialData: unknown): void => {
     parentWindow,
     WINDOW_SIZES.MATERIAL_INFO,
     createPreloadPath(path.join(__dirname, '../../ui/material-info-dialog/material-info-dialog-preload.js')),
-    { resizable: false, frame: false, transparent: true }
+    { resizable: false, frame: false }
   );
 
   // Load HTML and setup lifecycle
@@ -354,7 +354,7 @@ export const createIFSDialog = (): void => {
     mainWindow,
     WINDOW_SIZES.IFS_DIALOG,
     createPreloadPath(path.join(__dirname, '../../ui/ifs-dialog/ifs-dialog-preload.js')),
-    { resizable: false, frame: false, transparent: true }
+    { resizable: false, frame: false }
   );
 
   // Load HTML and setup lifecycle
@@ -404,7 +404,7 @@ export const createAutoConnectChoiceDialog = (data: AutoConnectChoiceDialogData)
       mainWindow,
       WINDOW_SIZES.AUTO_CONNECT_CHOICE,
       createPreloadPath(path.join(__dirname, '../../ui/auto-connect-choice/auto-connect-choice-preload.js')),
-      { resizable: false, frame: false, transparent: true }
+      { resizable: false, frame: false }
     );
 
     // Set up response handler using handle/invoke pattern
@@ -513,7 +513,7 @@ export const createConnectChoiceDialog = (data: ConnectChoiceDialogData): Promis
       mainWindow,
       WINDOW_SIZES.CONNECT_CHOICE,
       createPreloadPath(path.join(__dirname, '../../ui/connect-choice-dialog/connect-choice-dialog-preload.js')),
-      { resizable: false, frame: false, transparent: true }
+      { resizable: false, frame: false }
     );
 
     // Set up response handler using handle/invoke pattern
@@ -615,7 +615,7 @@ export const createPrinterConnectedWarningDialog = (data: PrinterConnectedWarnin
       mainWindow,
       WINDOW_SIZES.PRINTER_CONNECTED_WARNING,
       createPreloadPath(path.join(__dirname, '../../ui/printer-connected-warning/printer-connected-warning-preload.js')),
-      { resizable: false, frame: false, transparent: true }
+      { resizable: false, frame: false }
     );
 
     let isHandled = false;
@@ -714,7 +714,7 @@ export const createUpdateAvailableDialog = async (): Promise<void> => {
     mainWindow,
     WINDOW_SIZES.UPDATE_AVAILABLE_DIALOG,
     createPreloadPath(path.join(__dirname, '../../ui/update-available/update-available-preload.js')),
-    { resizable: false, frame: false, transparent: true }
+    { resizable: false, frame: false }
   );
 
   setupWindowLifecycle(updateDialogWindow, () => {
