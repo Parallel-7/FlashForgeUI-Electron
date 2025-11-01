@@ -16,6 +16,7 @@
  * - Multi-printer: Context switching with dynamic UI updates and feature detection
  * - Camera: MJPEG proxy streaming and RTSP streaming via JSMpeg with WebSocket
  * - File management: Recent/local file browsing, file selection dialogs, job start with options
+ * - Material matching: AD5X multi-color job mapping to material station slots prior to start
  * - UI updates: Real-time temperature, progress, layer info, ETA, lifetime statistics, thumbnails
  */
 
@@ -82,12 +83,25 @@ interface PrinterFeatures {
   ledUsesLegacyAPI?: boolean; // Whether custom LED control is enabled
 }
 
-interface JobFile {
+interface AD5XToolData {
+  toolId: number;
+  materialName: string;
+  materialColor: string;
+  filamentWeight: number;
+  slotId?: number | null;
+}
+
+type JobMetadataType = 'basic' | 'ad5x';
+
+interface WebUIJobFile {
   fileName: string;
   displayName: string;
-  size?: number;
-  lastModified?: string;
-  thumbnail?: string;
+  printingTime?: number;
+  metadataType?: JobMetadataType;
+  toolCount?: number;
+  toolDatas?: AD5XToolData[];
+  totalFilamentWeight?: number;
+  useMatlStation?: boolean;
 }
 
 // API Response interfaces
@@ -113,7 +127,8 @@ interface CameraProxyConfigResponse extends ApiResponse {
 }
 
 interface FileListResponse extends ApiResponse {
-  files?: JobFile[];
+  files?: WebUIJobFile[];
+  totalCount?: number;
 }
 
 type PrintJobStartResponse = ApiResponse;
@@ -137,6 +152,42 @@ interface WebUISettings {
   editMode: boolean;
 }
 
+interface MaterialSlotInfo {
+  slotId: number;
+  isEmpty: boolean;
+  materialType: string | null;
+  materialColor: string | null;
+}
+
+interface MaterialStationStatus {
+  connected: boolean;
+  slots: MaterialSlotInfo[];
+  activeSlot: number | null;
+  overallStatus: 'ready' | 'warming' | 'error' | 'disconnected';
+  errorMessage: string | null;
+}
+
+interface MaterialStationStatusResponse extends ApiResponse {
+  status?: MaterialStationStatus | null;
+}
+
+interface MaterialMapping {
+  toolId: number;
+  slotId: number;
+  materialName: string;
+  toolMaterialColor: string;
+  slotMaterialColor: string;
+}
+
+interface PendingJobStart {
+  filename: string;
+  leveling: boolean;
+  startNow: boolean;
+  job: WebUIJobFile | undefined;
+}
+
+type MaterialMessageType = 'error' | 'warning';
+
 // Extended HTMLElement for temperature dialog
 interface TemperatureDialogElement extends HTMLElement {
   temperatureType?: 'bed' | 'extruder';
@@ -154,6 +205,8 @@ class AppState {
   public printerStatus: PrinterStatus | null = null;
   public printerFeatures: PrinterFeatures | null = null;
   public selectedFile: string | null = null;
+  public jobMetadata: Map<string, WebUIJobFile> = new Map();
+  public pendingJobStart: PendingJobStart | null = null;
   public reconnectAttempts: number = 0;
   public maxReconnectAttempts: number = 5;
   public reconnectDelay: number = 2000;
@@ -179,6 +232,15 @@ let gridChangeUnsubscribe: (() => void) | null = null;
 const contextById = new Map<string, PrinterContext>();
 let isMobileLayout = false;
 
+interface MaterialMatchingState {
+  pending: PendingJobStart;
+  materialStation: MaterialStationStatus | null;
+  selectedToolId: number | null;
+  mappings: Map<number, MaterialMapping>;
+}
+
+let materialMatchingState: MaterialMatchingState | null = null;
+
 // ============================================================================
 // DOM HELPERS
 // ============================================================================
@@ -199,6 +261,67 @@ function hideElement(id: string): void {
   if (element) {
     element.classList.add('hidden');
   }
+}
+
+function isAD5XJobFile(job?: WebUIJobFile): job is WebUIJobFile & { metadataType: 'ad5x'; toolDatas: AD5XToolData[] } {
+  return !!job && job.metadataType === 'ad5x' && Array.isArray(job.toolDatas);
+}
+
+function isMultiColorJobFile(job?: WebUIJobFile): job is WebUIJobFile & { metadataType: 'ad5x'; toolDatas: AD5XToolData[] } {
+  return isAD5XJobFile(job) && job.toolDatas.length > 1;
+}
+
+function buildMaterialBadgeTooltip(job: WebUIJobFile): string {
+  if (!isAD5XJobFile(job)) {
+    return 'Multi-color job';
+  }
+
+  const materials = job.toolDatas
+    .map(tool => `Tool ${tool.toolId + 1}: ${tool.materialName}`)
+    .join('\n');
+  return `Requires material station\n${materials}`;
+}
+
+function formatJobPrintingTime(printingTime?: number): string {
+  if (!printingTime || Number.isNaN(printingTime) || printingTime <= 0) {
+    return '';
+  }
+
+  const totalMinutes = Math.round(printingTime / 60);
+  if (totalMinutes <= 0) {
+    return `${Math.max(printingTime, 1)}s`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  }
+
+  return `${minutes}m`;
+}
+
+function hasMaterialStationSupport(): boolean {
+  return Boolean(state.printerFeatures?.hasMaterialStation);
+}
+
+function normalizeMaterialString(value: string | null | undefined): string {
+  return (value ?? '').trim().toLowerCase();
+}
+
+function colorsDiffer(toolColor: string, slotColor: string | null): boolean {
+  if (!toolColor) {
+    return false;
+  }
+  return normalizeMaterialString(toolColor) !== normalizeMaterialString(slotColor);
+}
+
+function materialsMatch(toolMaterial: string, slotMaterial: string | null): boolean {
+  if (!toolMaterial) {
+    return false;
+  }
+  return normalizeMaterialString(toolMaterial) === normalizeMaterialString(slotMaterial);
 }
 
 function setTextContent(id: string, text: string): void {
@@ -1472,6 +1595,10 @@ async function loadFileList(source: 'recent' | 'local'): Promise<void> {
     const result = await response.json() as FileListResponse;
     
     if (result.success && result.files) {
+      state.jobMetadata.clear();
+      result.files.forEach((file) => {
+        state.jobMetadata.set(file.fileName, file);
+      });
       showFileModal(result.files, source);
     } else {
       showToast('Failed to load files', 'error');
@@ -1482,7 +1609,7 @@ async function loadFileList(source: 'recent' | 'local'): Promise<void> {
   }
 }
 
-function showFileModal(files: JobFile[], source: string): void {
+function showFileModal(files: WebUIJobFile[], source: 'recent' | 'local'): void {
   const modal = $('file-modal');
   const fileList = $('file-list');
   const title = $('modal-title');
@@ -1495,24 +1622,85 @@ function showFileModal(files: JobFile[], source: string): void {
   // Clear and populate file list
   fileList.innerHTML = '';
   state.selectedFile = null;
+
+  const printBtn = $('print-file-btn') as HTMLButtonElement | null;
+  if (printBtn) {
+    printBtn.disabled = true;
+  }
   
   files.forEach(file => {
     const item = document.createElement('div');
     item.className = 'file-item';
-    item.innerHTML = `<span class="file-name">${file.displayName || file.fileName}</span>`;
-    
+    item.dataset.filename = file.fileName;
+
+    const header = document.createElement('div');
+    header.className = 'file-item-header';
+
+    const name = document.createElement('span');
+    name.className = 'file-name';
+    name.textContent = file.displayName || file.fileName;
+    header.appendChild(name);
+
+    if (isMultiColorJobFile(file)) {
+      const badge = document.createElement('span');
+      badge.className = 'file-badge multi-color';
+      badge.textContent = 'Multi-color';
+      badge.title = buildMaterialBadgeTooltip(file);
+      header.appendChild(badge);
+    }
+
+    item.appendChild(header);
+
+    const meta = document.createElement('div');
+    meta.className = 'file-meta';
+
+    const printingTimeLabel = formatJobPrintingTime(file.printingTime);
+    if (printingTimeLabel) {
+      const timeEl = document.createElement('span');
+      timeEl.className = 'file-meta-item';
+      timeEl.textContent = printingTimeLabel;
+      meta.appendChild(timeEl);
+    }
+
+    if (file.metadataType === 'ad5x' && Array.isArray(file.toolDatas) && file.toolDatas.length > 0) {
+      const requirementSummary = document.createElement('div');
+      requirementSummary.className = 'material-preview';
+
+      file.toolDatas.forEach((tool) => {
+        const chip = document.createElement('div');
+        chip.className = 'material-chip';
+
+        const swatch = document.createElement('span');
+        swatch.className = 'material-chip-swatch';
+        if (tool.materialColor) {
+          swatch.style.backgroundColor = tool.materialColor;
+        }
+
+        const label = document.createElement('span');
+        label.className = 'material-chip-label';
+        label.textContent = tool.materialName || `Tool ${tool.toolId + 1}`;
+
+        chip.appendChild(swatch);
+        chip.appendChild(label);
+        requirementSummary.appendChild(chip);
+      });
+
+      meta.appendChild(requirementSummary);
+    }
+
+    if (meta.childElementCount > 0) {
+      item.appendChild(meta);
+    }
+
     item.addEventListener('click', () => {
-      // Remove selected class from all items
       fileList.querySelectorAll('.file-item').forEach(el => el.classList.remove('selected'));
-      // Add selected class to clicked item
       item.classList.add('selected');
       state.selectedFile = file.fileName;
-      
-      // Enable print button
+
       const printBtn = $('print-file-btn') as HTMLButtonElement;
       if (printBtn) printBtn.disabled = false;
     });
-    
+
     fileList.appendChild(item);
   });
   
@@ -1523,9 +1711,46 @@ function showFileModal(files: JobFile[], source: string): void {
 async function startPrintJob(): Promise<void> {
   if (!state.selectedFile || !state.authToken) return;
   
-  const autoLevel = ($('auto-level') as HTMLInputElement)?.checked || false;
-  const startNow = ($('start-now') as HTMLInputElement)?.checked || true;
-  
+  const autoLevel = ($('auto-level') as HTMLInputElement)?.checked ?? false;
+  const startNow = ($('start-now') as HTMLInputElement)?.checked ?? true;
+  const jobInfo = state.jobMetadata.get(state.selectedFile);
+
+  if (startNow && hasMaterialStationSupport() && isMultiColorJobFile(jobInfo)) {
+    state.pendingJobStart = {
+      filename: state.selectedFile,
+      leveling: autoLevel,
+      startNow,
+      job: jobInfo
+    };
+    await openMaterialMatchingModal();
+    return;
+  }
+
+  const success = await sendJobStartRequest({
+    filename: state.selectedFile,
+    leveling: autoLevel,
+    startNow,
+    materialMappings: undefined
+  });
+
+  if (success) {
+    hideElement('file-modal');
+  }
+}
+
+interface StartJobOptions {
+  filename: string;
+  leveling: boolean;
+  startNow: boolean;
+  materialMappings?: MaterialMapping[];
+}
+
+async function sendJobStartRequest(options: StartJobOptions): Promise<boolean> {
+  if (!state.authToken) {
+    showToast('Not authenticated', 'error');
+    return false;
+  }
+
   try {
     const response = await fetch('/api/jobs/start', {
       method: 'POST',
@@ -1534,23 +1759,492 @@ async function startPrintJob(): Promise<void> {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        filename: state.selectedFile,
-        leveling: autoLevel,
-        startNow: startNow
+        filename: options.filename,
+        leveling: options.leveling,
+        startNow: options.startNow,
+        materialMappings: options.materialMappings
       })
     });
-    
+
     const result = await response.json() as PrintJobStartResponse;
-    
+
     if (result.success) {
       showToast(result.message || 'Print job started', 'success');
-      hideElement('file-modal');
-    } else {
-      showToast(result.error || 'Failed to start print', 'error');
+      return true;
     }
+
+    showToast(result.error || 'Failed to start print', 'error');
+    return false;
   } catch (error) {
     console.error('Failed to start print:', error);
     showToast('Failed to start print job', 'error');
+    return false;
+  }
+}
+
+function getMaterialMatchingElement<T extends HTMLElement>(id: string): T | null {
+  return $(id) as T | null;
+}
+
+function getMaterialMessageElement(type: MaterialMessageType): HTMLDivElement | null {
+  const id = type === 'error' ? 'material-matching-error' : 'material-matching-warning';
+  return getMaterialMatchingElement<HTMLDivElement>(id);
+}
+
+function clearMaterialMessages(): void {
+  (['error', 'warning'] as const).forEach((type) => {
+    const messageEl = getMaterialMessageElement(type);
+    if (messageEl) {
+      messageEl.classList.add('hidden');
+      messageEl.textContent = '';
+    }
+  });
+}
+
+function showMaterialError(text: string): void {
+  const errorEl = getMaterialMessageElement('error');
+  const warningEl = getMaterialMessageElement('warning');
+  if (warningEl) {
+    warningEl.classList.add('hidden');
+    warningEl.textContent = '';
+  }
+  if (errorEl) {
+    errorEl.textContent = text;
+    errorEl.classList.remove('hidden');
+  }
+}
+
+function showMaterialWarning(text: string): void {
+  const warningEl = getMaterialMessageElement('warning');
+  if (warningEl) {
+    warningEl.textContent = text;
+    warningEl.classList.remove('hidden');
+  }
+}
+
+function updateMaterialMatchingConfirmState(): void {
+  const confirmButton = getMaterialMatchingElement<HTMLButtonElement>('material-matching-confirm');
+  if (!confirmButton) return;
+
+  if (!materialMatchingState) {
+    confirmButton.disabled = true;
+    return;
+  }
+
+  const job = materialMatchingState.pending.job;
+  const requiredMappings = isAD5XJobFile(job) ? job.toolDatas.length : 0;
+  confirmButton.disabled = materialMatchingState.mappings.size !== requiredMappings;
+}
+
+function renderMaterialMappings(): void {
+  const container = getMaterialMatchingElement<HTMLDivElement>('material-mappings');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  if (!materialMatchingState || materialMatchingState.mappings.size === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'material-mapping-empty';
+    empty.textContent = 'Select a tool and then choose a matching slot to create mappings.';
+    container.appendChild(empty);
+    return;
+  }
+
+  materialMatchingState.mappings.forEach((mapping) => {
+    const item = document.createElement('div');
+    item.className = 'material-mapping-item';
+
+    if (colorsDiffer(mapping.toolMaterialColor, mapping.slotMaterialColor)) {
+      item.classList.add('warning');
+    }
+
+    const text = document.createElement('span');
+    text.className = 'material-mapping-text';
+    text.innerHTML = `Tool ${mapping.toolId + 1} <span class="material-mapping-arrow">&rarr;</span> Slot ${mapping.slotId}`;
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'material-mapping-remove';
+    removeBtn.type = 'button';
+    removeBtn.innerHTML = '&times;';
+    removeBtn.title = 'Remove mapping';
+    removeBtn.addEventListener('click', () => {
+      handleRemoveMapping(mapping.toolId);
+    });
+
+    item.appendChild(text);
+    item.appendChild(removeBtn);
+    container.appendChild(item);
+  });
+}
+
+function handleRemoveMapping(toolId: number): void {
+  if (!materialMatchingState) {
+    return;
+  }
+
+  materialMatchingState.mappings.delete(toolId);
+  renderMaterialRequirements(materialMatchingState.pending.job);
+  renderMaterialSlots(materialMatchingState.materialStation);
+  renderMaterialMappings();
+  updateMaterialMatchingConfirmState();
+  clearMaterialMessages();
+}
+
+function renderMaterialRequirements(job: WebUIJobFile | undefined): void {
+  const container = getMaterialMatchingElement<HTMLDivElement>('material-job-requirements');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  if (!job || !isAD5XJobFile(job) || job.toolDatas.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'material-placeholder';
+    empty.textContent = 'No material requirements available for this job.';
+    container.appendChild(empty);
+    return;
+  }
+
+  job.toolDatas.forEach((tool) => {
+    const item = document.createElement('div');
+    item.className = 'material-tool-item';
+    item.dataset.toolId = `${tool.toolId}`;
+
+    if (materialMatchingState?.selectedToolId === tool.toolId) {
+      item.classList.add('selected');
+    }
+
+    if (materialMatchingState?.mappings.has(tool.toolId)) {
+      item.classList.add('mapped');
+    }
+
+    const header = document.createElement('div');
+    header.className = 'material-tool-header';
+
+    const label = document.createElement('span');
+    label.className = 'material-tool-label';
+    label.textContent = `Tool ${tool.toolId + 1}`;
+
+    const swatch = document.createElement('span');
+    swatch.className = 'material-tool-swatch';
+    if (tool.materialColor) {
+      swatch.style.backgroundColor = tool.materialColor;
+    }
+
+    header.appendChild(label);
+    header.appendChild(swatch);
+    item.appendChild(header);
+
+    const details = document.createElement('div');
+    details.className = 'material-tool-details';
+    const materialName = tool.materialName || 'Unknown Material';
+    const weightText = typeof tool.filamentWeight === 'number'
+      ? `${tool.filamentWeight.toFixed(1)} g`
+      : 'Weight unavailable';
+
+    details.innerHTML = `
+      <div class="material-tool-material">${materialName}</div>
+      <div class="material-tool-weight">${weightText}</div>
+    `;
+
+    if (materialMatchingState?.mappings.has(tool.toolId)) {
+      const mapping = materialMatchingState.mappings.get(tool.toolId);
+      if (mapping) {
+        const mappingInfo = document.createElement('div');
+        mappingInfo.className = 'material-tool-mapping';
+        mappingInfo.textContent = `Mapped to Slot ${mapping.slotId}`;
+        details.appendChild(mappingInfo);
+      }
+    }
+
+    item.appendChild(details);
+
+    item.addEventListener('click', () => {
+      handleToolSelection(tool.toolId);
+    });
+
+    container.appendChild(item);
+  });
+}
+
+function handleToolSelection(toolId: number): void {
+  if (!materialMatchingState) {
+    return;
+  }
+
+  if (materialMatchingState.selectedToolId === toolId) {
+    materialMatchingState.selectedToolId = null;
+  } else {
+    materialMatchingState.selectedToolId = toolId;
+  }
+
+  clearMaterialMessages();
+  renderMaterialRequirements(materialMatchingState.pending.job);
+  renderMaterialSlots(materialMatchingState.materialStation);
+}
+
+function isSlotAlreadyAssigned(slotDisplayId: number): boolean {
+  if (!materialMatchingState) {
+    return false;
+  }
+
+  for (const mapping of materialMatchingState.mappings.values()) {
+    if (mapping.slotId === slotDisplayId) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function renderMaterialSlots(status: MaterialStationStatus | null): void {
+  const container = getMaterialMatchingElement<HTMLDivElement>('material-slot-list');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  if (!status) {
+    const empty = document.createElement('div');
+    empty.className = 'material-placeholder';
+    empty.textContent = 'Material station status unavailable.';
+    container.appendChild(empty);
+    return;
+  }
+
+  if (!status.connected || status.slots.length === 0) {
+    const disconnected = document.createElement('div');
+    disconnected.className = 'material-placeholder';
+    disconnected.textContent = status.errorMessage || 'Material station not connected.';
+    container.appendChild(disconnected);
+    return;
+  }
+
+  status.slots.forEach((slot) => {
+    const displaySlotId = slot.slotId + 1;
+    const item = document.createElement('div');
+    item.className = 'material-slot-item';
+    item.dataset.slotId = `${displaySlotId}`;
+
+    if (slot.isEmpty) {
+      item.classList.add('empty');
+    }
+
+    if (isSlotAlreadyAssigned(displaySlotId)) {
+      item.classList.add('assigned');
+    }
+
+    const swatch = document.createElement('span');
+    swatch.className = 'material-slot-swatch';
+    if (slot.materialColor) {
+      swatch.style.backgroundColor = slot.materialColor;
+    }
+
+    const info = document.createElement('div');
+    info.className = 'material-slot-info';
+
+    const label = document.createElement('div');
+    label.className = 'material-slot-label';
+    label.textContent = `Slot ${displaySlotId}`;
+
+    const material = document.createElement('div');
+    material.className = 'material-slot-material';
+    material.textContent = slot.isEmpty ? 'Empty' : (slot.materialType || 'Unknown');
+
+    info.appendChild(label);
+    info.appendChild(material);
+
+    item.appendChild(swatch);
+    item.appendChild(info);
+
+    if (!slot.isEmpty && !isSlotAlreadyAssigned(displaySlotId)) {
+      item.addEventListener('click', () => {
+        handleSlotSelection(slot);
+      });
+    } else {
+      item.classList.add('disabled');
+    }
+
+    container.appendChild(item);
+  });
+}
+
+function handleSlotSelection(slot: MaterialSlotInfo): void {
+  if (!materialMatchingState) {
+    return;
+  }
+
+  const job = materialMatchingState.pending.job;
+  if (!job || !isAD5XJobFile(job)) {
+    return;
+  }
+
+  const selectedToolId = materialMatchingState.selectedToolId;
+  if (selectedToolId === null) {
+    showMaterialError('Select a tool on the left before choosing a slot.');
+    return;
+  }
+
+  if (slot.isEmpty) {
+    showMaterialError('Cannot assign an empty slot. Load filament before starting the print.');
+    return;
+  }
+
+  const tool = job.toolDatas.find(t => t.toolId === selectedToolId);
+  if (!tool) {
+    showMaterialError('Selected tool data is unavailable.');
+    return;
+  }
+
+  if (!materialsMatch(tool.materialName, slot.materialType)) {
+    showMaterialError(`Material mismatch: Tool ${tool.toolId + 1} requires ${tool.materialName}, but Slot ${slot.slotId + 1} contains ${slot.materialType || 'no material'}.`);
+    return;
+  }
+
+  const displaySlotId = slot.slotId + 1;
+
+  if (isSlotAlreadyAssigned(displaySlotId)) {
+    showMaterialError(`Slot ${displaySlotId} is already assigned to another tool.`);
+    return;
+  }
+
+  const mapping: MaterialMapping = {
+    toolId: tool.toolId,
+    slotId: displaySlotId,
+    materialName: tool.materialName,
+    toolMaterialColor: tool.materialColor,
+    slotMaterialColor: slot.materialColor || '#333333'
+  };
+
+  materialMatchingState.mappings.set(tool.toolId, mapping);
+  materialMatchingState.selectedToolId = null;
+
+  if (colorsDiffer(tool.materialColor, slot.materialColor)) {
+    showMaterialWarning(`Tool ${tool.toolId + 1} color (${tool.materialColor}) does not match Slot ${displaySlotId} color (${slot.materialColor || 'unknown'}). The print will succeed, but appearance may differ.`);
+  } else {
+    clearMaterialMessages();
+  }
+
+  renderMaterialRequirements(job);
+  renderMaterialSlots(materialMatchingState.materialStation);
+  renderMaterialMappings();
+  updateMaterialMatchingConfirmState();
+}
+
+async function fetchMaterialStationStatus(): Promise<MaterialStationStatus | null> {
+  if (!state.authToken) {
+    return null;
+  }
+
+  try {
+    const response = await fetch('/api/printer/material-station', {
+      headers: {
+        'Authorization': `Bearer ${state.authToken}`
+      }
+    });
+
+    const result = await response.json() as MaterialStationStatusResponse;
+    if (result.success) {
+      return result.status ?? null;
+    }
+
+    showMaterialError(result.error || 'Material station not available.');
+    return null;
+  } catch (error) {
+    console.error('Failed to fetch material station status:', error);
+    showMaterialError('Failed to load material station status.');
+    return null;
+  }
+}
+
+function resetMaterialMatchingState(): void {
+  materialMatchingState = null;
+  state.pendingJobStart = null;
+  clearMaterialMessages();
+  updateMaterialMatchingConfirmState();
+}
+
+function closeMaterialMatchingModal(): void {
+  const modal = getMaterialMatchingElement<HTMLDivElement>('material-matching-modal');
+  if (modal) {
+    hideElement('material-matching-modal');
+  }
+  resetMaterialMatchingState();
+}
+
+async function openMaterialMatchingModal(): Promise<void> {
+  const modal = getMaterialMatchingElement<HTMLDivElement>('material-matching-modal');
+  const title = getMaterialMatchingElement<HTMLHeadingElement>('material-matching-title');
+
+  if (!modal || !state.pendingJobStart || !state.pendingJobStart.job || !isAD5XJobFile(state.pendingJobStart.job)) {
+    showToast('Material matching is not available for this job.', 'error');
+    resetMaterialMatchingState();
+    return;
+  }
+
+  materialMatchingState = {
+    pending: state.pendingJobStart,
+    materialStation: null,
+    selectedToolId: null,
+    mappings: new Map()
+  };
+
+  if (title) {
+    title.textContent = `Match Materials – ${state.pendingJobStart.job.displayName || state.pendingJobStart.job.fileName}`;
+  }
+
+  renderMaterialRequirements(state.pendingJobStart.job);
+  renderMaterialSlots(null);
+  renderMaterialMappings();
+  updateMaterialMatchingConfirmState();
+  clearMaterialMessages();
+  showElement('material-matching-modal');
+
+  const status = await fetchMaterialStationStatus();
+  if (!materialMatchingState) {
+    return;
+  }
+
+  materialMatchingState.materialStation = status;
+  renderMaterialSlots(status);
+
+  if (!status || !status.connected) {
+    showMaterialError(status?.errorMessage || 'Material station not connected.');
+  }
+}
+
+async function confirmMaterialMatching(): Promise<void> {
+  if (!materialMatchingState || !materialMatchingState.pending.job || !isAD5XJobFile(materialMatchingState.pending.job)) {
+    return;
+  }
+
+  const job = materialMatchingState.pending.job;
+  const requiredMappings = job.toolDatas.length;
+
+  if (materialMatchingState.mappings.size !== requiredMappings) {
+    showMaterialError('Map every tool to a material slot before starting the job.');
+    return;
+  }
+
+  const mappings = Array.from(materialMatchingState.mappings.values());
+  const confirmButton = getMaterialMatchingElement<HTMLButtonElement>('material-matching-confirm');
+
+  if (confirmButton) {
+    confirmButton.disabled = true;
+  }
+
+  const success = await sendJobStartRequest({
+    filename: materialMatchingState.pending.filename,
+    leveling: materialMatchingState.pending.leveling,
+    startNow: true,
+    materialMappings: mappings
+  });
+
+  if (confirmButton) {
+    confirmButton.disabled = false;
+  }
+
+  if (success) {
+    hideElement('file-modal');
+    closeMaterialMatchingModal();
   }
 }
 
@@ -1812,11 +2506,37 @@ function setupEventHandlers(): void{
     closeModalBtn.addEventListener('click', () => {
       hideElement('file-modal');
       state.selectedFile = null;
+      if (!getMaterialMatchingElement<HTMLDivElement>('material-matching-modal')?.classList.contains('hidden')) {
+        closeMaterialMatchingModal();
+      } else {
+        state.pendingJobStart = null;
+      }
     });
   }
   
   if (printFileBtn) {
     printFileBtn.addEventListener('click', startPrintJob);
+  }
+
+  const materialModalClose = $('material-matching-close');
+  if (materialModalClose) {
+    materialModalClose.addEventListener('click', () => {
+      closeMaterialMatchingModal();
+    });
+  }
+
+  const materialModalCancel = $('material-matching-cancel');
+  if (materialModalCancel) {
+    materialModalCancel.addEventListener('click', () => {
+      closeMaterialMatchingModal();
+    });
+  }
+
+  const materialModalConfirm = $('material-matching-confirm');
+  if (materialModalConfirm) {
+    materialModalConfirm.addEventListener('click', () => {
+      void confirmMaterialMatching();
+    });
   }
   
   // Temperature dialog handlers

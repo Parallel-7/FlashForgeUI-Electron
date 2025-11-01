@@ -88,6 +88,28 @@ export interface PrinterStatusData {
 }
 
 /**
+ * Tool metadata for AD5X multi-color jobs
+ */
+export interface AD5XToolData {
+  readonly toolId: number;
+  readonly materialName: string;
+  readonly materialColor: string;
+  readonly filamentWeight: number;
+  readonly slotId?: number | null;
+}
+
+/**
+ * Material mapping payload for multi-color job start
+ */
+export interface MaterialMapping {
+  readonly toolId: number;
+  readonly slotId: number;
+  readonly materialName: string;
+  readonly toolMaterialColor: string;
+  readonly slotMaterialColor: string;
+}
+
+/**
  * Client to server command
  */
 export interface WebSocketCommand {
@@ -136,6 +158,7 @@ export interface JobStartRequest {
   readonly filename: string;
   readonly leveling?: boolean;
   readonly startNow?: boolean;
+  readonly materialMappings?: readonly MaterialMapping[];
 }
 
 /**
@@ -215,6 +238,60 @@ export interface PrinterFeatures {
   readonly canResume: boolean;
   readonly canCancel: boolean;
   readonly ledUsesLegacyAPI?: boolean; // Whether LED control should use legacy G-code commands
+}
+
+/**
+ * Material station slot information returned to WebUI
+ */
+export interface MaterialSlotInfo {
+  readonly slotId: number;
+  readonly isEmpty: boolean;
+  readonly materialType: string | null;
+  readonly materialColor: string | null;
+}
+
+/**
+ * Material station status returned to WebUI
+ */
+export interface MaterialStationStatus {
+  readonly connected: boolean;
+  readonly slots: readonly MaterialSlotInfo[];
+  readonly activeSlot: number | null;
+  readonly overallStatus: 'ready' | 'warming' | 'error' | 'disconnected';
+  readonly errorMessage: string | null;
+}
+
+/**
+ * AD5X job information for WebUI job lists
+ */
+export interface AD5XJobInfo {
+  readonly fileName: string;
+  readonly printingTime?: number;
+  readonly toolCount?: number;
+  readonly toolDatas?: readonly AD5XToolData[];
+  readonly totalFilamentWeight?: number;
+  readonly useMatlStation?: boolean;
+}
+
+/**
+ * Unified WebUI job file metadata
+ */
+export interface WebUIJobFile {
+  readonly fileName: string;
+  readonly displayName: string;
+  readonly printingTime?: number;
+  readonly metadataType?: 'basic' | 'ad5x';
+  readonly toolCount?: number;
+  readonly toolDatas?: readonly AD5XToolData[];
+  readonly totalFilamentWeight?: number;
+  readonly useMatlStation?: boolean;
+}
+
+/**
+ * Response for material station endpoint
+ */
+export interface MaterialStationStatusResponse extends StandardAPIResponse {
+  readonly status?: MaterialStationStatus | null;
 }
 
 // ============================================================================

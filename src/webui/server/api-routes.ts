@@ -31,10 +31,12 @@ import {
   StandardAPIResponse,
   PrinterStatusResponse,
   PrinterFeatures,
-  CameraStatusResponse
+  CameraStatusResponse,
+  MaterialStationStatusResponse
 } from '../types/web-api.types';
 import { toAppError } from '../../utils/error.utils';
 import { FiveMClient } from '@ghosttypes/ff-api';
+import { isAD5XJobInfo } from '../../printer-backends/ad5x/ad5x-utils';
 
 /**
  * Extended printer status interface for accessing additional properties
@@ -333,6 +335,54 @@ export function createAPIRoutes(): Router {
   // ============================================================================
   // PRINTER CONTROL ROUTES
   // ============================================================================
+
+  /**
+   * GET /api/printer/material-station - Get material station status
+   */
+  router.get('/printer/material-station', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        const response: MaterialStationStatusResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
+      if (!connectionManager.isConnected()) {
+        const response: MaterialStationStatusResponse = {
+          success: false,
+          error: 'Printer not connected'
+        };
+        return res.status(503).json(response);
+      }
+
+      if (!backendManager.isFeatureAvailable(contextId, 'material-station')) {
+        const response: MaterialStationStatusResponse = {
+          success: false,
+          error: 'Material station not available on this printer'
+        };
+        return res.status(200).json(response);
+      }
+
+      const status = backendManager.getMaterialStationStatus(contextId);
+      const response: MaterialStationStatusResponse = {
+        success: true,
+        status: status ?? null
+      };
+
+      return res.json(response);
+    } catch (error) {
+      const appError = toAppError(error);
+      const response: MaterialStationStatusResponse = {
+        success: false,
+        error: appError.message
+      };
+      return res.status(500).json(response);
+    }
+  });
 
   /**
    * POST /api/printer/control/home - Home printer axes
@@ -1054,7 +1104,19 @@ export function createAPIRoutes(): Router {
           displayName: job.fileName, // Basic jobs don't have displayName
           size: 0, // Basic jobs don't have size
           lastModified: undefined, // Basic jobs don't have lastModified
-          thumbnail: undefined // Basic jobs don't have thumbnail
+          thumbnail: undefined, // Basic jobs don't have thumbnail
+          printingTime: job.printingTime ?? 0,
+          ...(isAD5XJobInfo(job)
+            ? {
+                metadataType: 'ad5x' as const,
+                toolCount: job.toolCount ?? job.toolDatas?.length ?? 0,
+                toolDatas: job.toolDatas ?? [],
+                totalFilamentWeight: job.totalFilamentWeight,
+                useMatlStation: job.useMatlStation
+              }
+            : {
+                metadataType: 'basic' as const
+              })
         })),
         totalCount: result.totalCount
       });
@@ -1109,7 +1171,19 @@ export function createAPIRoutes(): Router {
           displayName: job.fileName, // Basic jobs don't have displayName
           size: 0, // Basic jobs don't have size
           lastModified: undefined, // Basic jobs don't have lastModified
-          thumbnail: undefined // Basic jobs don't have thumbnail
+          thumbnail: undefined, // Basic jobs don't have thumbnail
+          printingTime: job.printingTime ?? 0,
+          ...(isAD5XJobInfo(job)
+            ? {
+                metadataType: 'ad5x' as const,
+                toolCount: job.toolCount ?? job.toolDatas?.length ?? 0,
+                toolDatas: job.toolDatas ?? [],
+                totalFilamentWeight: job.totalFilamentWeight,
+                useMatlStation: job.useMatlStation
+              }
+            : {
+                metadataType: 'basic' as const
+              })
         })),
         totalCount: result.totalCount
       });
@@ -1158,11 +1232,41 @@ export function createAPIRoutes(): Router {
         return res.status(400).json(response);
       }
 
+      const materialMappings = validation.data.materialMappings;
+
+      if (materialMappings) {
+        const toolIdSet = new Set<number>();
+        const slotIdSet = new Set<number>();
+
+        for (const mapping of materialMappings) {
+          if (toolIdSet.has(mapping.toolId)) {
+            const response: StandardAPIResponse = {
+              success: false,
+              error: `Duplicate toolId in materialMappings: ${mapping.toolId}`
+            };
+            return res.status(400).json(response);
+          }
+          if (slotIdSet.has(mapping.slotId)) {
+            const response: StandardAPIResponse = {
+              success: false,
+              error: `Duplicate slotId in materialMappings: ${mapping.slotId}`
+            };
+            return res.status(400).json(response);
+          }
+
+          toolIdSet.add(mapping.toolId);
+          slotIdSet.add(mapping.slotId);
+        }
+      }
+
       const result = await backendManager.startJob(contextId, {
         operation: 'start',
         fileName: validation.data.filename,
         startNow: validation.data.startNow,
-        leveling: validation.data.leveling
+        leveling: validation.data.leveling,
+        additionalParams: materialMappings && materialMappings.length > 0
+          ? { materialMappings }
+          : undefined
       });
 
       const response: StandardAPIResponse = {

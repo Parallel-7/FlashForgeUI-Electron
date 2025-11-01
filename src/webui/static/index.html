@@ -146,6 +146,41 @@
         </div>
       </div>
 
+      <!-- Material Matching Modal -->
+      <div id="material-matching-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="material-matching-title">
+        <div class="modal-content material-matching">
+          <div class="modal-header">
+            <h2 id="material-matching-title">Match Materials</h2>
+            <button id="material-matching-close" class="close-btn" aria-label="Close material matching">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p class="material-matching-description">
+              Match each material used in your print to the corresponding material station slot. Material types must match (for example, PLA to PLA).
+            </p>
+            <div id="material-matching-error" class="material-matching-message error hidden" role="alert"></div>
+            <div id="material-matching-warning" class="material-matching-message warning hidden" role="status"></div>
+            <div class="material-matching-layout">
+              <section class="material-column">
+                <h3>Job Requirements</h3>
+                <div id="material-job-requirements" class="material-list"></div>
+              </section>
+              <section class="material-column">
+                <h3>Material Station</h3>
+                <div id="material-slot-list" class="material-list"></div>
+              </section>
+            </div>
+            <section class="material-mappings-section">
+              <h3>Current Mappings</h3>
+              <div id="material-mappings" class="material-mappings"></div>
+            </section>
+          </div>
+          <div class="modal-footer">
+            <button id="material-matching-cancel" class="secondary-btn" type="button">Cancel</button>
+            <button id="material-matching-confirm" class="primary-btn" type="button" disabled>Start Print</button>
+          </div>
+        </div>
+      </div>
+
       <!-- Temperature Input Dialog -->
       <div id="temp-dialog" class="modal hidden">
         <div class="modal-content small">
