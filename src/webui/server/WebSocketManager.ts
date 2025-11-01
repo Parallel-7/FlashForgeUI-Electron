@@ -48,14 +48,14 @@ type WebSocketManagerInstance = WebSocketManager & WebSocketManagerBrand;
  * Extended HTTP request interface that includes wsToken
  */
 interface ExtendedIncomingMessage extends http.IncomingMessage {
-  wsToken?: string;
+  wsToken?: string | null;
 }
 
 /**
  * Client information stored for each WebSocket connection
  */
 interface ClientInfo {
-  readonly token: string;
+  readonly token: string | null;
   readonly connectedAt: Date;
   lastActivity: Date; // Mutable for updates
   readonly clientId: string;
@@ -133,6 +133,14 @@ export class WebSocketManager extends EventEmitter {
     callback: (res: boolean, code?: number, message?: string) => void
   ): void {
     try {
+      if (!this.authManager.isAuthenticationRequired()) {
+        const url = new URL(info.req.url || '', `http://${info.req.headers.host}`);
+        const token = url.searchParams.get('token') || null;
+        (info.req as ExtendedIncomingMessage).wsToken = token;
+        callback(true);
+        return;
+      }
+
       // Extract token from URL query params or Authorization header
       const url = new URL(info.req.url || '', `http://${info.req.headers.host}`);
       const token = url.searchParams.get('token') || 
@@ -168,7 +176,7 @@ export class WebSocketManager extends EventEmitter {
     const extendedReq = req as ExtendedIncomingMessage;
     const token = extendedReq.wsToken;
     
-    if (!token) {
+    if (this.authManager.isAuthenticationRequired() && !token) {
       console.error('WebSocket connection without token');
       ws.close(1008, 'Token required');
       return;
@@ -178,7 +186,7 @@ export class WebSocketManager extends EventEmitter {
     
     // Create client info
     const clientInfo: ClientInfo = {
-      token,
+      token: token ?? null,
       connectedAt: new Date(),
       lastActivity: new Date(),
       clientId
@@ -188,10 +196,12 @@ export class WebSocketManager extends EventEmitter {
     this.clients.set(ws, clientInfo);
 
     // Add to token-based map for multi-tab support
-    if (!this.clientsByToken.has(token)) {
-      this.clientsByToken.set(token, new Set());
+    if (clientInfo.token) {
+      if (!this.clientsByToken.has(clientInfo.token)) {
+        this.clientsByToken.set(clientInfo.token, new Set());
+      }
+      this.clientsByToken.get(clientInfo.token)!.add(ws);
     }
-    this.clientsByToken.get(token)!.add(ws);
 
     // Update client count
     this.updateClientCount();
@@ -351,11 +361,13 @@ export class WebSocketManager extends EventEmitter {
     this.clients.delete(ws);
     
     // Remove from token map
-    const tokenClients = this.clientsByToken.get(clientInfo.token);
-    if (tokenClients) {
-      tokenClients.delete(ws);
-      if (tokenClients.size === 0) {
-        this.clientsByToken.delete(clientInfo.token);
+    if (clientInfo.token) {
+      const tokenClients = this.clientsByToken.get(clientInfo.token);
+      if (tokenClients) {
+        tokenClients.delete(ws);
+        if (tokenClients.size === 0) {
+          this.clientsByToken.delete(clientInfo.token);
+        }
       }
     }
     

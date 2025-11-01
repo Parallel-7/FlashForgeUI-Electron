@@ -92,6 +92,7 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'web-ui': 'WebUIEnabled',
   'web-ui-port': 'WebUIPort',
   'web-ui-password': 'WebUIPassword',
+  'web-ui-password-required': 'WebUIPasswordRequired',
   'camera-proxy-port': 'CameraProxyPort',
   'filament-tracker-enabled': 'FilamentTrackerIntegrationEnabled',
   'filament-tracker-api-key': 'FilamentTrackerAPIKey',
@@ -474,8 +475,10 @@ class SettingsRenderer {
   private updateInputStates(): void {
     // Web UI settings
     const webUIEnabled = this.inputs.get('web-ui')?.checked || false;
+    const passwordRequired = this.inputs.get('web-ui-password-required')?.checked ?? true;
     this.setInputEnabled('web-ui-port', webUIEnabled);
-    this.setInputEnabled('web-ui-password', webUIEnabled);
+    this.setInputEnabled('web-ui-password-required', webUIEnabled);
+    this.setInputEnabled('web-ui-password', webUIEnabled && passwordRequired);
 
     // Filament Tracker Integration settings
     const filamentTrackerEnabled = this.inputs.get('filament-tracker-enabled')?.checked || false;

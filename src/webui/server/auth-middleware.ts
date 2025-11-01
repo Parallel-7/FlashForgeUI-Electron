@@ -37,6 +37,15 @@ export function createAuthMiddleware() {
   const authManager = getAuthManager();
   
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    if (!authManager.isAuthenticationRequired()) {
+      req.auth = {
+        token: '',
+        authenticated: true
+      };
+      next();
+      return;
+    }
+
     // Extract token from Authorization header
     const authHeader = req.headers.authorization;
     const token = authManager.extractTokenFromHeader(authHeader);
@@ -77,6 +86,15 @@ export function createOptionalAuthMiddleware() {
   const authManager = getAuthManager();
   
   return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
+    if (!authManager.isAuthenticationRequired()) {
+      req.auth = {
+        token: '',
+        authenticated: true
+      };
+      next();
+      return;
+    }
+
     // Extract token from Authorization header
     const authHeader = req.headers.authorization;
     const token = authManager.extractTokenFromHeader(authHeader);

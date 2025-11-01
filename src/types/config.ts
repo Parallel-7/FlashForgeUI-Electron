@@ -42,6 +42,7 @@ export interface AppConfig {
   readonly WebUIEnabled: boolean;
   readonly WebUIPort: number;
   readonly WebUIPassword: string;
+  readonly WebUIPasswordRequired: boolean;
   readonly CameraProxyPort: number;
   readonly RoundedUI: boolean;
   readonly FilamentTrackerIntegrationEnabled: boolean;
@@ -73,6 +74,7 @@ export interface MutableAppConfig {
   WebUIEnabled: boolean;
   WebUIPort: number;
   WebUIPassword: string;
+  WebUIPasswordRequired: boolean;
   CameraProxyPort: number;
   RoundedUI: boolean;
   FilamentTrackerIntegrationEnabled: boolean;
@@ -104,6 +106,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   WebUIEnabled: false,
   WebUIPort: 3000,
   WebUIPassword: 'changeme',
+  WebUIPasswordRequired: true,
   CameraProxyPort: 8181,
   RoundedUI: false,
   FilamentTrackerIntegrationEnabled: false,

@@ -52,6 +52,12 @@ interface AuthResponse {
   message?: string;
 }
 
+interface AuthStatusResponse {
+  authRequired: boolean;
+  hasPassword: boolean;
+  defaultPassword: boolean;
+}
+
 interface WebSocketMessage {
   type: 'AUTH_SUCCESS' | 'STATUS_UPDATE' | 'ERROR' | 'COMMAND_RESULT' | 'PONG';
   timestamp: string;
@@ -251,6 +257,9 @@ class AppState {
   public reconnectAttempts: number = 0;
   public maxReconnectAttempts: number = 5;
   public reconnectDelay: number = 2000;
+  public authRequired: boolean = true;
+  public defaultPassword: boolean = false;
+  public hasPassword: boolean = true;
 }
 
 const state = new AppState();
@@ -302,6 +311,18 @@ function hideElement(id: string): void {
   if (element) {
     element.classList.add('hidden');
   }
+}
+
+function buildAuthHeaders(
+  extra: Record<string, string> = {},
+): Record<string, string> {
+  if (state.authRequired && state.authToken) {
+    return {
+      ...extra,
+      Authorization: `Bearer ${state.authToken}`,
+    };
+  }
+  return { ...extra };
 }
 
 function isAD5XJobFile(job?: WebUIJobFile): job is WebUIJobFile & { metadataType: 'ad5x'; toolDatas: AD5XToolData[] } {
@@ -799,6 +820,11 @@ function setupSettingsUI(): void {
 // ============================================================================
 
 async function login(password: string, rememberMe: boolean): Promise<boolean> {
+  if (!state.authRequired) {
+    state.isAuthenticated = true;
+    return true;
+  }
+
   try {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
@@ -834,13 +860,11 @@ async function login(password: string, rememberMe: boolean): Promise<boolean> {
 }
 
 async function logout(): Promise<void> {
-  if (state.authToken) {
+  if (state.authRequired && state.authToken) {
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${state.authToken}`
-        }
+        headers: buildAuthHeaders()
       });
     } catch (error) {
       console.error('Logout error:', error);
@@ -868,9 +892,13 @@ async function logout(): Promise<void> {
   }
   closeSettingsModal();
   
-  // Show login screen
-  showElement('login-screen');
-  hideElement('main-ui');
+  if (state.authRequired) {
+    showElement('login-screen');
+    hideElement('main-ui');
+  } else {
+    hideElement('login-screen');
+    showElement('main-ui');
+  }
 }
 
 // ============================================================================
@@ -878,13 +906,14 @@ async function logout(): Promise<void> {
 // ============================================================================
 
 function connectWebSocket(): void {
-  if (!state.authToken) {
+  if (state.authRequired && !state.authToken) {
     console.error('Cannot connect WebSocket without auth token');
     return;
   }
   
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/ws?token=${state.authToken}`;
+  const tokenQuery = state.authRequired && state.authToken ? `?token=${state.authToken}` : '';
+  const wsUrl = `${protocol}//${window.location.host}/ws${tokenQuery}`;
   
   try {
     state.websocket = new WebSocket(wsUrl);
@@ -1221,16 +1250,14 @@ function updatePrinterStateCard(status: PrinterStatus | null): void {
 // ============================================================================
 
 async function fetchPrinterContexts(): Promise<void> {
-  if (!state.authToken) {
+  if (state.authRequired && !state.authToken) {
     console.log('[Contexts] No auth token, skipping context fetch');
     return;
   }
 
   try {
     const response = await fetch('/api/contexts', {
-      headers: {
-        'Authorization': `Bearer ${state.authToken}`
-      }
+      headers: buildAuthHeaders()
     });
 
     const result = await response.json() as ContextsResponse;
@@ -1301,7 +1328,7 @@ function updatePrinterSelector(contexts: PrinterContext[], activeContextId: stri
 }
 
 async function switchPrinterContext(contextId: string): Promise<void> {
-  if (!state.authToken) {
+  if (state.authRequired && !state.authToken) {
     showToast('Not authenticated', 'error');
     return;
   }
@@ -1311,10 +1338,7 @@ async function switchPrinterContext(contextId: string): Promise<void> {
   try {
     const response = await fetch('/api/contexts/switch', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${state.authToken}`,
-        'Content-Type': 'application/json'
-      },
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ contextId })
     });
 
@@ -1348,7 +1372,7 @@ async function switchPrinterContext(contextId: string): Promise<void> {
 // ============================================================================
 
 async function sendPrinterCommand(endpoint: string, data?: unknown): Promise<void> {
-  if (!state.authToken) {
+  if (state.authRequired && !state.authToken) {
     showToast('Not authenticated', 'error');
     return;
   }
@@ -1356,10 +1380,7 @@ async function sendPrinterCommand(endpoint: string, data?: unknown): Promise<voi
   try {
     const response = await fetch(`/api/printer/${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${state.authToken}`,
-        'Content-Type': 'application/json'
-      },
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
       body: data ? JSON.stringify(data) : undefined
     });
     
@@ -1377,13 +1398,11 @@ async function sendPrinterCommand(endpoint: string, data?: unknown): Promise<voi
 }
 
 async function loadPrinterFeatures(): Promise<void> {
-  if (!state.authToken) return;
+  if (state.authRequired && !state.authToken) return;
   
   try {
     const response = await fetch('/api/printer/features', {
-      headers: {
-        'Authorization': `Bearer ${state.authToken}`
-      }
+      headers: buildAuthHeaders()
     });
     
     const result = await response.json() as PrinterFeaturesResponse;
@@ -1507,13 +1526,16 @@ async function loadCameraStream(): Promise<void> {
     console.error('Camera elements not found');
     return;
   }
+
+  if (state.authRequired && !state.authToken) {
+    console.warn('Skipping camera stream load due to missing auth token');
+    return;
+  }
   
   try {
     // Get camera proxy configuration from the server
     const response = await fetch('/api/camera/proxy-config', {
-      headers: {
-        'Authorization': `Bearer ${state.authToken}`
-      }
+      headers: buildAuthHeaders()
     });
     
     if (!response.ok) {
@@ -1624,13 +1646,11 @@ async function loadCameraStream(): Promise<void> {
 // ============================================================================
 
 async function loadFileList(source: 'recent' | 'local'): Promise<void> {
-  if (!state.authToken) return;
+  if (state.authRequired && !state.authToken) return;
   
   try {
     const response = await fetch(`/api/jobs/${source}`, {
-      headers: {
-        'Authorization': `Bearer ${state.authToken}`
-      }
+      headers: buildAuthHeaders()
     });
     
     const result = await response.json() as FileListResponse;
@@ -1750,7 +1770,7 @@ function showFileModal(files: WebUIJobFile[], source: 'recent' | 'local'): void 
 }
 
 async function startPrintJob(): Promise<void> {
-  if (!state.selectedFile || !state.authToken) return;
+  if (!state.selectedFile || (state.authRequired && !state.authToken)) return;
   
   const autoLevel = ($('auto-level') as HTMLInputElement)?.checked ?? false;
   const startNow = ($('start-now') as HTMLInputElement)?.checked ?? true;
@@ -1787,7 +1807,7 @@ interface StartJobOptions {
 }
 
 async function sendJobStartRequest(options: StartJobOptions): Promise<boolean> {
-  if (!state.authToken) {
+  if (state.authRequired && !state.authToken) {
     showToast('Not authenticated', 'error');
     return false;
   }
@@ -1795,10 +1815,7 @@ async function sendJobStartRequest(options: StartJobOptions): Promise<boolean> {
   try {
     const response = await fetch('/api/jobs/start', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${state.authToken}`,
-        'Content-Type': 'application/json'
-      },
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
         filename: options.filename,
         leveling: options.leveling,
@@ -2171,15 +2188,13 @@ function handleSlotSelection(slot: MaterialSlotInfo): void {
 }
 
 async function fetchMaterialStationStatus(): Promise<MaterialStationStatus | null> {
-  if (!state.authToken) {
+  if (state.authRequired && !state.authToken) {
     return null;
   }
 
   try {
     const response = await fetch('/api/printer/material-station', {
-      headers: {
-        'Authorization': `Bearer ${state.authToken}`
-      }
+      headers: buildAuthHeaders()
     });
 
     const result = await response.json() as MaterialStationStatusResponse;
@@ -2627,7 +2642,34 @@ function setupEventHandlers(): void{
 // INITIALIZATION
 // ============================================================================
 
+async function loadAuthStatus(): Promise<void> {
+  try {
+    const response = await fetch('/api/auth/status');
+    if (!response.ok) {
+      throw new Error(`Status request failed with ${response.status}`);
+    }
+
+    const status = await response.json() as AuthStatusResponse;
+    state.authRequired = status.authRequired;
+    state.defaultPassword = status.defaultPassword;
+    state.hasPassword = status.hasPassword;
+  } catch (error) {
+    console.error('Failed to load authentication status:', error);
+    state.authRequired = true;
+    state.defaultPassword = false;
+    state.hasPassword = true;
+  }
+}
+
 async function checkAuthStatus(): Promise<boolean> {
+  if (!state.authRequired) {
+    state.authToken = null;
+    state.isAuthenticated = true;
+    localStorage.removeItem('webui-token');
+    sessionStorage.removeItem('webui-token');
+    return true;
+  }
+
   // Check for stored token
   const storedToken = localStorage.getItem('webui-token') || sessionStorage.getItem('webui-token');
   
@@ -2643,9 +2685,7 @@ async function checkAuthStatus(): Promise<boolean> {
   try {
     // Test with printer status endpoint which requires auth
     const response = await fetch('/api/printer/status', {
-      headers: {
-        'Authorization': `Bearer ${storedToken}`
-      }
+      headers: buildAuthHeaders()
     });
     
     if (response.ok || response.status === 503) {
@@ -2679,11 +2719,13 @@ async function initialize(): Promise<void> {
   // Setup viewport change detection
   setupViewportListener();
 
+  await loadAuthStatus();
+
   // Check authentication status
   const isAuthenticated = await checkAuthStatus();
   
   if (isAuthenticated) {
-    // Token exists and might be valid
+    // Authenticated session (or authentication not required)
     hideElement('login-screen');
     showElement('main-ui');
     
