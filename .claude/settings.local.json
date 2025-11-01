@@ -83,7 +83,9 @@
       "Bash(git checkout:*)",
       "WebFetch(domain:donkie.github.io)",
       "WebFetch(domain:fftrac-bg.ffmpeg.org)",
-      "WebFetch(domain:ffmpeg.org)"
+      "WebFetch(domain:ffmpeg.org)",
+      "WebFetch(domain:lucide.dev)",
+      "mcp__context7__get-library-docs"
     ],
     "deny": [],
     "additionalDirectories": [

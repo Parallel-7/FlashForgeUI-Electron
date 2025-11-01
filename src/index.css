@@ -73,8 +73,9 @@ body {
 /* Header */
 .header {
   display: flex;
-  justify-content: space-between;
+  justify-content: flex-start;
   align-items: center;
+  gap: 10px;
   background-color: var(--header-bg);
   height: 32px;
   padding: 0 10px;
@@ -83,44 +84,134 @@ body {
   flex: 0 0 32px; /* Fixed height for header */
 }
 
+.title {
+  flex: 0 0 auto;
+  text-align: left;
+  margin: 0 12px 0 0;
+}
+
 .left-controls {
+  position: relative;
   display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 12px;
+  flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
 
-.left-controls button {
-  padding: 3px 8px;
-  margin-right: 5px;
-  background-color: var(--dark-bg);
-  color: var(--text-color);
-  border: 1px solid var(--border-color);
-  cursor: pointer;
-  transition: background-color var(--transition-fast);
-}
-
-.left-controls button:hover {
-  background-color: var(--card-bg-hover);
-}
-
-/* Pin Configuration Button */
-#btn-pin-config {
-  padding: 4px 8px;
-  margin-left: 8px;
-  border-left: 2px solid var(--border-color-light);
+.main-menu-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background-color: var(--dark-bg);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
-#btn-pin-config .pin-icon {
-  width: 16px;
-  height: 16px;
-  color: var(--text-color-secondary);
-  transition: color var(--transition-fast);
+.main-menu-button:hover {
+  background-color: var(--card-bg-hover);
+  border-color: var(--border-color-light);
 }
 
-#btn-pin-config:hover .pin-icon {
-  color: var(--accent-color);
+.main-menu-button:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
+.hamburger-icon {
+  width: 20px;
+  height: 20px;
+  stroke: var(--text-color);
+  stroke-width: 2;
+  stroke-linecap: round;
+  fill: none;
+}
+
+.main-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  width: 200px;
+  padding: 8px 0;
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color-light);
+  border-radius: 6px;
+  box-shadow: var(--shadow-lg);
+  opacity: 0;
+  transform: translateY(-10px);
+  pointer-events: none;
+  transition: opacity 0.15s ease, transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  z-index: 1000;
+  -webkit-app-region: no-drag;
+}
+
+.main-menu-dropdown.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.main-menu-dropdown.hidden {
+  display: none;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 36px;
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  color: var(--text-color);
+  cursor: pointer;
+  text-align: left;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+  -webkit-app-region: no-drag;
+}
+
+.menu-item:hover {
+  background-color: var(--card-bg-hover);
+  transform: translateX(2px);
+}
+
+.menu-item:active {
+  background-color: var(--border-color-light);
+}
+
+.menu-item.hidden {
+  display: none;
+}
+
+.menu-item-icon {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  margin-right: 8px;
+  stroke: var(--text-color);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  fill: none;
+}
+
+.menu-item-label {
+  font-size: 14px;
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.menu-divider {
+  height: 1px;
+  margin: 4px 8px;
+  background-color: var(--border-color);
 }
 
 /* Shortcut Buttons */
@@ -164,6 +255,7 @@ body {
 .window-controls {
   display: flex;
   -webkit-app-region: no-drag;
+  margin-left: auto;
 }
 
 .window-controls button {
@@ -276,16 +368,17 @@ body.platform-darwin .traffic-lights {
   flex-shrink: 0;
 }
 
-.platform-darwin .title {
-  order: 2;
-  flex: 1;
-  text-align: center;
-  margin: 0 10px;
-}
-
 .platform-darwin .left-controls {
   order: 3;
+  margin-left: 16px;
   flex-shrink: 0;
+}
+
+.platform-darwin .title {
+  order: 2;
+  flex: 0 0 auto;
+  text-align: left;
+  margin: 0 12px;
 }
 
 /* Main Layout */

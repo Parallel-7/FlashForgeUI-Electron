@@ -83,11 +83,17 @@ let lastPollingData: PollingData | null = null;
 let previewEnabled = false;
 let cameraStreamElement: HTMLImageElement | null = null;
 
+// Hamburger menu state references
+let isMainMenuOpen = false;
+let mainMenuButton: HTMLButtonElement | null = null;
+let mainMenuDropdown: HTMLDivElement | null = null;
+let mainMenuCloseTimeout: number | null = null;
+
 // Track filtration availability from backend
 let filtrationAvailable = false;
 
-// Track IFS button visibility for AD5X printers
-let ifsButtonVisible = false;
+// Track IFS menu item visibility for AD5X printers
+let ifsMenuItemVisible = false;
 
 // Track legacy printer status for feature detection
 let isLegacyPrinter = false;
@@ -625,12 +631,12 @@ async function initializePrinterTabs(): Promise<void> {
       // Clear printer-specific state from previous context
       // Note: filtrationAvailable will be updated by polling data
       filtrationAvailable = false;
-      ifsButtonVisible = false;
+      ifsMenuItemVisible = false;
       isLegacyPrinter = false;
 
       // Update button states to reflect cleared state
       // Note: Filtration buttons are managed by FiltrationControlsComponent
-      updateIFSButtonVisibility();
+      updateIFSMenuItemVisibility();
       updateLegacyPrinterButtonStates();
 
       //       // Request fresh printer data for the new context
@@ -989,7 +995,7 @@ async function handleCameraToggle(button: HTMLElement): Promise<void> {
 
 /**
  * Initialize shortcut buttons in topbar
- * Sets up pin config button, shortcut slots, and IPC listeners for config updates
+ * Sets up shortcut slots and IPC listeners for config updates
  */
 function initializeShortcutButtons(): void {
   console.log('[ShortcutButtons] Initializing topbar shortcuts');
@@ -997,21 +1003,6 @@ function initializeShortcutButtons(): void {
   // Load and apply current configuration
   const config = shortcutConfigManager.load();
   updateShortcutButtons(config);
-
-  // Setup pin config button click handler
-  const pinConfigBtn = document.getElementById('btn-pin-config');
-  if (pinConfigBtn) {
-    pinConfigBtn.addEventListener('click', () => {
-      console.log('[ShortcutButtons] Opening shortcut config dialog');
-      if (window.api?.send) {
-        window.api.send('shortcut-config:open');
-      } else {
-        console.error('[ShortcutButtons] window.api.send not available');
-      }
-    });
-  } else {
-    console.warn('[ShortcutButtons] Pin config button not found in DOM');
-  }
 
   // Setup shortcut button click handlers
   for (let i = 1; i <= 3; i++) {
@@ -1365,7 +1356,6 @@ function createComponentInstance(componentId: string, container: HTMLElement) {
 function setupBasicButtons(): void {
   // Add click listeners to all buttons for visual feedback
   const buttons = [
-    'btn-connect', 'btn-settings', 'btn-status', 'btn-ifs',
     'btn-led-on', 'btn-led-off', 'btn-clear-status', 'btn-home-axes',
     'btn-pause', 'btn-resume', 'btn-stop', 'btn-upload-job',
     'btn-start-recent', 'btn-start-local', 'btn-swap-filament', 'btn-send-cmds',
@@ -1396,10 +1386,6 @@ function setupBasicButtons(): void {
         if (window.api) {
           // Map button IDs to IPC channels (for dialogs and simple sends only)
           const channelMap: { [key: string]: string | { channel: string; data?: unknown } } = {
-            'btn-connect': 'open-printer-selection',
-            'btn-settings': 'open-settings-window',
-            'btn-status': 'open-status-dialog',
-            'btn-ifs': 'open-ifs-dialog',
             'btn-upload-job': 'open-job-uploader',
             'btn-start-recent': 'show-recent-files',
             'btn-start-local': 'show-local-files',
@@ -1460,6 +1446,136 @@ function setupBasicButtons(): void {
           }
         }
       });
+    }
+  });
+}
+
+// ============================================================================
+// HAMBURGER MENU FUNCTIONALITY
+// ============================================================================
+
+/**
+ * Closes the hamburger menu with fade-out timing
+ */
+function closeMainMenu(): void {
+  if (!isMainMenuOpen || !mainMenuDropdown) {
+    return;
+  }
+
+  isMainMenuOpen = false;
+  mainMenuDropdown.classList.remove('show');
+  mainMenuButton?.setAttribute('aria-expanded', 'false');
+
+  if (mainMenuCloseTimeout !== null) {
+    window.clearTimeout(mainMenuCloseTimeout);
+    mainMenuCloseTimeout = null;
+  }
+
+  // Hide the dropdown after the fade-out animation completes
+  mainMenuCloseTimeout = window.setTimeout(() => {
+    if (!isMainMenuOpen && mainMenuDropdown) {
+      mainMenuDropdown.classList.add('hidden');
+    }
+    mainMenuCloseTimeout = null;
+  }, 150);
+}
+
+/**
+ * Opens the hamburger menu and prepares animation state
+ */
+function openMainMenu(): void {
+  if (isMainMenuOpen || !mainMenuDropdown) {
+    return;
+  }
+
+  if (mainMenuCloseTimeout !== null) {
+    window.clearTimeout(mainMenuCloseTimeout);
+    mainMenuCloseTimeout = null;
+  }
+
+  isMainMenuOpen = true;
+  mainMenuDropdown.classList.remove('hidden');
+
+  // Trigger reflow to ensure the transition runs
+  void mainMenuDropdown.offsetHeight;
+
+  mainMenuDropdown.classList.add('show');
+  mainMenuButton?.setAttribute('aria-expanded', 'true');
+}
+
+/**
+ * Toggles hamburger menu visibility
+ */
+function toggleMainMenu(): void {
+  if (isMainMenuOpen) {
+    closeMainMenu();
+  } else {
+    openMainMenu();
+  }
+}
+
+/**
+ * Initializes hamburger menu interactions and IPC wiring
+ */
+function initializeMainMenu(): void {
+  mainMenuButton = document.getElementById('btn-main-menu') as HTMLButtonElement | null;
+  mainMenuDropdown = document.getElementById('main-menu-dropdown') as HTMLDivElement | null;
+
+  if (!mainMenuButton || !mainMenuDropdown) {
+    console.warn('[MainMenu] Hamburger menu elements not found in DOM');
+    return;
+  }
+
+  mainMenuButton.setAttribute('aria-expanded', 'false');
+  mainMenuDropdown.classList.add('hidden');
+
+  mainMenuButton.addEventListener('click', (event: MouseEvent) => {
+    event.stopPropagation();
+    toggleMainMenu();
+  });
+
+  const menuActions: Record<string, string> = {
+    connect: 'open-printer-selection',
+    settings: 'open-settings-window',
+    status: 'open-status-dialog',
+    ifs: 'open-ifs-dialog',
+    'pin-config': 'shortcut-config:open'
+  };
+
+  const menuItems = mainMenuDropdown.querySelectorAll<HTMLButtonElement>('.menu-item');
+  menuItems.forEach((item) => {
+    item.addEventListener('click', () => {
+      const action = item.getAttribute('data-action');
+      const channel = action ? menuActions[action] : undefined;
+      if (channel && window.api?.send) {
+        window.api.send(channel);
+      }
+      closeMainMenu();
+    });
+  });
+
+  // Close menu when clicking outside of it
+  document.addEventListener('click', (event: MouseEvent) => {
+    const target = event.target as Node | null;
+    const button = mainMenuButton;
+    const dropdown = mainMenuDropdown;
+    if (
+      isMainMenuOpen &&
+      target &&
+      button &&
+      dropdown &&
+      !button.contains(target) &&
+      !dropdown.contains(target)
+    ) {
+      closeMainMenu();
+    }
+  });
+
+  // Close menu on Escape and return focus to trigger
+  document.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && isMainMenuOpen) {
+      closeMainMenu();
+      mainMenuButton?.focus();
     }
   });
 }
@@ -1608,16 +1724,18 @@ function updateFiltrationButtonStates(): void {
 }
 
 /**
- * Update IFS button visibility based on material station availability
+ * Update IFS menu item visibility based on material station availability
  */
-function updateIFSButtonVisibility(): void {
-  const ifsButton = document.getElementById('btn-ifs');
-  if (ifsButton) {
-    if (ifsButtonVisible) {
-      ifsButton.classList.remove('hidden');
-    } else {
-      ifsButton.classList.add('hidden');
-    }
+function updateIFSMenuItemVisibility(): void {
+  const ifsMenuItem = document.getElementById('menu-item-ifs');
+  if (!ifsMenuItem) {
+    return;
+  }
+
+  if (ifsMenuItemVisible) {
+    ifsMenuItem.classList.remove('hidden');
+  } else {
+    ifsMenuItem.classList.add('hidden');
   }
 }
 
@@ -1731,17 +1849,17 @@ function initializePollingListeners(): void {
         }
       }
       
-      // Update IFS button visibility for AD5X printers with material station (preserve existing logic)
+      // Update IFS menu item visibility for AD5X printers with material station
       if (pollingData.materialStation && pollingData.isConnected) {
         const shouldShowIFS = pollingData.materialStation.connected;
-        if (shouldShowIFS !== ifsButtonVisible) {
-          ifsButtonVisible = shouldShowIFS;
-          updateIFSButtonVisibility();
+        if (shouldShowIFS !== ifsMenuItemVisible) {
+          ifsMenuItemVisible = shouldShowIFS;
+          updateIFSMenuItemVisibility();
         }
-      } else if (ifsButtonVisible) {
-        // Hide IFS button when disconnected or no material station
-        ifsButtonVisible = false;
-        updateIFSButtonVisibility();
+      } else if (ifsMenuItemVisible) {
+        // Hide IFS menu item when disconnected or no material station
+        ifsMenuItemVisible = false;
+        updateIFSMenuItemVisibility();
       }
       
       // COMPONENT SYSTEM INTEGRATION: Replace updateAllPanels with componentManager.updateAll
@@ -1815,9 +1933,9 @@ function initializeStateAndEventListeners(): void {
     filtrationAvailable = false;
     updateFiltrationButtonStates();
     
-    // Reset IFS button visibility on disconnect
-    ifsButtonVisible = false;
-    updateIFSButtonVisibility();
+    // Reset IFS menu visibility on disconnect
+    ifsMenuItemVisible = false;
+    updateIFSMenuItemVisibility();
     
     // Reset legacy printer flag on disconnect
     isLegacyPrinter = false;
@@ -1912,6 +2030,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupBasicButtons();
   setupLoadingEventListeners();
   initializeUI();
+  initializeMainMenu();
 
   // Initialize shortcut button system
   initializeShortcutButtons();
