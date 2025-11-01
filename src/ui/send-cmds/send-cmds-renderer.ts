@@ -47,6 +47,7 @@ declare global {
 }
 
 document.addEventListener('DOMContentLoaded', (): void => {
+    window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
     // Get DOM elements with type safety
     const logOutput = document.getElementById('log-output') as HTMLDivElement | null;
     const commandInput = document.getElementById('command-input') as HTMLInputElement | null;

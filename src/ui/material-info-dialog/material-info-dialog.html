@@ -4,13 +4,22 @@
     <meta charset="UTF-8" />
     <title>Material Information</title>
     <link rel="stylesheet" href="material-info-dialog.css">
+    <script src="../../../dist/webui/static/lucide.min.js"></script>
+    <script>
+        if (typeof exports === 'undefined') {
+            var exports = {};
+        }
+    </script>
+    <script src="../../../lib/ui/shared/lucide.js"></script>
 </head>
 <body>
     <div class="dialog-container dialog-container--full">
         <!-- Dialog Header -->
         <div class="dialog-header">
             <div class="dialog-title">Material Information</div>
-            <button id="btn-close" class="dialog-close">×</button>
+            <button id="btn-close" class="dialog-close" aria-label="Close">
+                <i data-lucide="x" aria-hidden="true"></i>
+            </button>
         </div>
         
         <!-- Dialog Content -->

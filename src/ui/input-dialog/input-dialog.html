@@ -4,12 +4,21 @@
     <meta charset="UTF-8" />
     <title>Input Dialog</title>
     <link rel="stylesheet" href="input-dialog.css">
+    <script src="../../../dist/webui/static/lucide.min.js"></script>
+    <script>
+        if (typeof exports === 'undefined') {
+            var exports = {};
+        }
+    </script>
+    <script src="../../../lib/ui/shared/lucide.js"></script>
 </head>
 <body>
 <div class="dialog-container dialog-container--full">
     <div class="dialog-header">
         <div class="dialog-title" id="dialog-title">Input Dialog</div>
-        <button class="dialog-close" id="dialog-close">×</button>
+        <button class="dialog-close" id="dialog-close" aria-label="Close">
+            <i data-lucide="x" aria-hidden="true"></i>
+        </button>
     </div>
     <div class="dialog-content">
         <div class="dialog-message" id="dialog-message">Please enter a value:</div>

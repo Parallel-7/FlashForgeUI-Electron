@@ -195,5 +195,6 @@ class LogDialogRenderer {
 // Initialize the log dialog when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Log Dialog: DOM loaded, initializing renderer...');
+  window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
   new LogDialogRenderer();
 });

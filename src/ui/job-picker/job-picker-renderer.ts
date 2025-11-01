@@ -160,6 +160,7 @@ let startNowCheckbox: HTMLInputElement | null = null;
  * Initialize the job picker dialog when DOM is ready
  */
 function initializeJobPicker(): void {
+    window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
     // Get DOM element references
     loadingElement = document.getElementById('loading');
     fileListElement = document.getElementById('file-list');

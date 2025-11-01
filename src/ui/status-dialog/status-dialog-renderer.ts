@@ -95,6 +95,7 @@ class StatusDialogRenderer {
   }
 
   private initialize(): void {
+    window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
     this.initializeTabs();
     this.setupCloseButtons();
 

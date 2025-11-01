@@ -35,24 +35,6 @@
 
 /* Template provides: .dialog-header, .dialog-title, .close-button styles */
 
-.close-button {
-    top: 24px;
-    right: 24px;
-    background: none;
-    border: none;
-    color: white;
-    font-size: 16px;
-    cursor: pointer;
-    width: 30px;
-    height: 30px;
-    border-radius: 4px;
-    transition: all 0.2s ease;
-}
-
-.close-button:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-}
-
 .dialog-content {
     padding: 24px;
     flex: 1;

@@ -233,6 +233,7 @@ function showError(message: string): void {
  */
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[ComponentDialog] DOM ready, setting up event listeners');
+  window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
   setupEventListeners();
 });
 

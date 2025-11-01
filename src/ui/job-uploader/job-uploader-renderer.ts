@@ -160,6 +160,7 @@ function showNoFilamentDataWarning(filePath: string): void {
 
 // Initialize dialog when DOM is loaded
 document.addEventListener('DOMContentLoaded', (): void => {
+    window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
     // Get DOM element references with proper type safety
     const elements: DialogElements = {
         filePathDisplay: document.getElementById('file-path-display'),

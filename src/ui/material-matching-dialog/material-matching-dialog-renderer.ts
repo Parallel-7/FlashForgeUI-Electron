@@ -110,6 +110,7 @@ let confirmButton: HTMLButtonElement | null = null;
  * Initialize the material matching dialog
  */
 function initializeDialog(): void {
+  window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
   // Get DOM elements
   printRequirementsElement = document.getElementById('print-requirements');
   ifsSlotsElement = document.getElementById('ifs-slots');

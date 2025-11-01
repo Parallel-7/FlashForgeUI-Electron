@@ -34,6 +34,7 @@ declare global {
 // Initialize dialog when DOM is loaded
 document.addEventListener('DOMContentLoaded', (): void => {
     console.log('Material Info Dialog renderer loaded');
+    window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
     
     // Check if material info dialog API is available
     if (!window.materialInfoDialogAPI) {

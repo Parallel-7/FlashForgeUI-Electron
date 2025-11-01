@@ -6,17 +6,21 @@
   <title>Material Matching</title>
   <link rel="stylesheet" href="../../index.css">
   <link rel="stylesheet" href="material-matching-dialog.css">
+  <script src="../../../dist/webui/static/lucide.min.js"></script>
   <script>
     // CommonJS compatibility shim for exports
     if (typeof exports === 'undefined') { var exports = {}; }
   </script>
+  <script src="../../../lib/ui/shared/lucide.js"></script>
 </head>
 <body>
   <div class="dialog-container dialog-container--full">
     <div class="dialog-header with-description">
       <h2 class="dialog-title">Match Print Materials to IFS Slots</h2>
       <p class="dialog-description">Match each material used in your print to the corresponding IFS slot. Materials must be the same type (e.g., PLA to PLA).</p>
-      <button class="dialog-close" id="btn-close" title="Close">×</button>
+      <button class="dialog-close" id="btn-close" title="Close" aria-label="Close">
+        <i data-lucide="x" aria-hidden="true"></i>
+      </button>
     </div>
     
     <div class="dialog-content">

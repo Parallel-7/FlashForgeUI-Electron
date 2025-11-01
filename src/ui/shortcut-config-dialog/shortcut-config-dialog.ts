@@ -356,6 +356,6 @@ window.shortcutConfigAPI.onDialogInit((data) => {
  */
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[ShortcutConfigDialog] DOM ready');
-  window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['plus', 'circle']);
+  window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['plus', 'circle', 'x']);
   setupEventListeners();
 });

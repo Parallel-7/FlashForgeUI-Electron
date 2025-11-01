@@ -150,6 +150,7 @@ class SettingsRenderer {
 
   private initialize(): void {
     document.addEventListener('DOMContentLoaded', () => {
+      window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
       this.initializeElements();
       this.setupEventListeners();
       void this.requestInitialConfig();

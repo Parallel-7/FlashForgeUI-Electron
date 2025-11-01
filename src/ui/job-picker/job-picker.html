@@ -4,13 +4,22 @@
     <meta charset="UTF-8" />
     <title>Select Job</title>
     <link rel="stylesheet" href="job-picker.css">
+    <script src="../../../dist/webui/static/lucide.min.js"></script>
+    <script>
+      if (typeof exports === 'undefined') {
+        var exports = {};
+      }
+    </script>
+    <script src="../../../lib/ui/shared/lucide.js"></script>
 </head>
 
 <body>
 <div class="dialog-container dialog-container--full">
     <div class="dialog-header">
         <div class="dialog-title">Select Job</div>
-        <button class="close-button" id="btn-close">×</button>
+        <button class="dialog-close" id="btn-close" aria-label="Close">
+            <i data-lucide="x" aria-hidden="true"></i>
+        </button>
     </div>
 
     <div class="dialog-content">

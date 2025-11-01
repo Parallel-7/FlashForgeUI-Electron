@@ -23,6 +23,7 @@ import type { MaterialSlotData, MaterialStationData } from './ifs-dialog-preload
 // Initialize dialog when DOM is loaded
 document.addEventListener('DOMContentLoaded', (): void => {
     console.log('IFS Dialog renderer loaded');
+    window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
     
     // Check if IFS dialog API is available
     if (!window.ifsDialogAPI) {

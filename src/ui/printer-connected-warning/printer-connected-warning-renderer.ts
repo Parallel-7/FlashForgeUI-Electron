@@ -38,7 +38,7 @@ interface DialogElements {
 
 // Initialize dialog when DOM is loaded
 document.addEventListener('DOMContentLoaded', (): void => {
-    window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['alert-triangle']);
+    window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['alert-triangle', 'x']);
     // Get DOM element references with proper type safety
     const elements: DialogElements = {
         titleElement: document.getElementById('dialog-title'),

@@ -4,13 +4,22 @@
     <meta charset="UTF-8" />
     <title>Select a Printer</title>
     <link rel="stylesheet" href="printer-selection.css" />
+    <script src="../../../dist/webui/static/lucide.min.js"></script>
+    <script>
+        if (typeof exports === 'undefined') {
+            var exports = {};
+        }
+    </script>
+    <script src="../../../lib/ui/shared/lucide.js"></script>
 </head>
 <body>
 <div class="dialog-container dialog-container--full">
     <!-- Header -->
     <div class="dialog-header">
         <div class="dialog-title" id="dialog-title">Select a Printer</div>
-        <button class="dialog-close" id="btn-close">×</button>
+        <button class="dialog-close" id="btn-close" aria-label="Close">
+            <i data-lucide="x" aria-hidden="true"></i>
+        </button>
     </div>
 
     <!-- Content: Table -->
