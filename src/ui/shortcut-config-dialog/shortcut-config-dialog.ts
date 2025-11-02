@@ -109,7 +109,7 @@ function populateDropdowns(): void {
     availableComponents.forEach((component) => {
       const option = document.createElement('option');
       option.value = component.id;
-      option.textContent = `${component.icon} ${component.name}`;
+      option.textContent = component.name;
 
       // Disable if already assigned to another slot
       const assignedSlot = findAssignedSlot(component.id);
@@ -153,23 +153,47 @@ function updateComponentsList(): void {
     (id): id is string => id !== null
   );
 
-  listContainer.innerHTML = availableComponents
-    .map((component) => {
-      const isPinned = pinnedIds.includes(component.id);
-      const statusClass = isPinned ? 'pinned' : 'available';
-      const statusText = isPinned ? 'Pinned' : 'Available';
+  listContainer.innerHTML = '';
 
-      return `
-        <div class="component-item">
-          <div class="component-name">
-            <span class="component-icon-display">${component.icon}</span>
-            <span>${component.name}</span>
-          </div>
-          <span class="component-status ${statusClass}">${statusText}</span>
-        </div>
-      `;
-    })
-    .join('');
+  availableComponents.forEach((component) => {
+    const isPinned = pinnedIds.includes(component.id);
+    const statusClass = isPinned ? 'pinned' : 'available';
+    const statusText = isPinned ? 'Pinned' : 'Available';
+
+    const item = document.createElement('div');
+    item.className = 'component-item';
+
+    const nameContainer = document.createElement('div');
+    nameContainer.className = 'component-name';
+
+    const iconDisplay = document.createElement('span');
+    iconDisplay.className = 'component-icon-display';
+    const iconsToHydrate: string[] = [];
+    if (component.icon) {
+      const iconElement = document.createElement('i');
+      iconElement.setAttribute('data-lucide', component.icon);
+      iconDisplay.appendChild(iconElement);
+      iconsToHydrate.push(component.icon);
+    }
+
+    const nameText = document.createElement('span');
+    nameText.textContent = component.name;
+
+    nameContainer.appendChild(iconDisplay);
+    nameContainer.appendChild(nameText);
+
+    const status = document.createElement('span');
+    status.className = `component-status ${statusClass}`;
+    status.textContent = statusText;
+
+    item.appendChild(nameContainer);
+    item.appendChild(status);
+    listContainer.appendChild(item);
+
+    if (iconsToHydrate.length > 0) {
+      initializeLucideIconsFromGlobal(iconsToHydrate, item);
+    }
+  });
 }
 
 /**

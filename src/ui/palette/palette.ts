@@ -7,6 +7,8 @@
  * availability and dispatching add requests.
  */
 
+import { initializeLucideIconsFromGlobal } from '../shared/lucide';
+
 interface PaletteAPI {
   close: () => void;
   onUpdateStatus: (callback: (componentsInUse: string[], pinnedComponents?: string[]) => void) => void;
@@ -124,7 +126,13 @@ class PaletteManager {
 
     const icon = document.createElement('div');
     icon.className = 'palette-item-icon';
-    icon.textContent = component.icon;
+    const iconsToHydrate: string[] = [];
+    if (component.icon) {
+      const iconElement = document.createElement('i');
+      iconElement.setAttribute('data-lucide', component.icon);
+      icon.appendChild(iconElement);
+      iconsToHydrate.push(component.icon);
+    }
 
     const label = document.createElement('div');
     label.className = 'palette-item-label';
@@ -134,9 +142,17 @@ class PaletteManager {
     const statusBadge = document.createElement('div');
     statusBadge.className = 'palette-item-status';
     if (isPinned) {
-      statusBadge.textContent = '📌 Pinned';
+      const pinIcon = document.createElement('i');
+      pinIcon.setAttribute('data-lucide', 'pin');
+      statusBadge.appendChild(pinIcon);
+      statusBadge.appendChild(document.createTextNode('Pinned'));
+      iconsToHydrate.push('pin');
     } else if (isInUse) {
-      statusBadge.textContent = '✓ In Grid';
+      const checkIcon = document.createElement('i');
+      checkIcon.setAttribute('data-lucide', 'check');
+      statusBadge.appendChild(checkIcon);
+      statusBadge.appendChild(document.createTextNode('In Grid'));
+      iconsToHydrate.push('check');
     } else {
       statusBadge.textContent = 'Available';
     }
@@ -164,6 +180,10 @@ class PaletteManager {
     item.appendChild(label);
     item.appendChild(statusBadge);
     item.appendChild(actionButton);
+
+    if (iconsToHydrate.length > 0) {
+      initializeLucideIconsFromGlobal(iconsToHydrate, item);
+    }
 
     return item;
   }

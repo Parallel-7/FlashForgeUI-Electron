@@ -50,6 +50,7 @@
 import type { GridStackManager } from './GridStackManager';
 import type { LayoutPersistence } from './LayoutPersistence';
 import type { EditModeState } from './types';
+import { initializeLucideIconsFromGlobal } from '../shared/lucide';
 
 /**
  * Edit mode controller
@@ -125,10 +126,19 @@ export class EditModeController {
       indicator = document.createElement('div');
       indicator.className = 'edit-mode-indicator';
       indicator.style.display = 'none';
-      indicator.innerHTML = `
-        <span class="edit-mode-icon">✏️</span>
-        <span class="edit-mode-text">Edit Mode - CTRL+E to exit</span>
-      `;
+
+      const iconWrapper = document.createElement('span');
+      iconWrapper.className = 'edit-mode-icon';
+      const iconElement = document.createElement('i');
+      iconElement.setAttribute('data-lucide', 'pencil');
+      iconWrapper.appendChild(iconElement);
+
+      const textElement = document.createElement('span');
+      textElement.className = 'edit-mode-text';
+      textElement.textContent = 'Edit Mode - CTRL+E to exit';
+
+      indicator.append(iconWrapper, textElement);
+      initializeLucideIconsFromGlobal(['pencil'], indicator);
       document.body.appendChild(indicator);
     }
 

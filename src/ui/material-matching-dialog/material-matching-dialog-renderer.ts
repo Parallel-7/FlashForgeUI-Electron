@@ -467,11 +467,14 @@ function createMappingItem(mapping: AD5XMaterialMapping): HTMLElement {
   text.className = 'mapping-text';
   text.innerHTML = `Tool ${mapping.toolId + 1} <span class="mapping-arrow">→</span> Slot ${mapping.slotId}`;
 
-  const removeButton = document.createElement('button');
-  removeButton.className = 'remove-mapping';
-  removeButton.innerHTML = '✕';
-  removeButton.title = 'Remove mapping';
-  removeButton.addEventListener('click', () => removeMapping(mapping.toolId));
+    const removeButton = document.createElement('button');
+    removeButton.className = 'remove-mapping';
+    const removeIcon = document.createElement('i');
+    removeIcon.setAttribute('data-lucide', 'x');
+    removeButton.appendChild(removeIcon);
+    window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x'], removeButton);
+    removeButton.title = 'Remove mapping';
+    removeButton.addEventListener('click', () => removeMapping(mapping.toolId));
 
   item.appendChild(text);
   item.appendChild(removeButton);

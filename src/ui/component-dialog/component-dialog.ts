@@ -19,6 +19,7 @@
 import './component-dialog.css';
 import { ComponentManager } from '../components/ComponentManager';
 import { getComponentDefinition } from '../gridstack/ComponentRegistry';
+import { initializeLucideIconsFromGlobal } from '../shared/lucide';
 import {
   BaseComponent,
   CameraPreviewComponent,
@@ -77,7 +78,12 @@ async function initializeDialog(componentId: string): Promise<void> {
     titleElement.textContent = componentDef.name;
   }
   if (iconElement) {
-    iconElement.textContent = componentDef.icon || '📦';
+    iconElement.innerHTML = '';
+    const iconName = componentDef.icon?.trim() || 'package';
+    const iconNode = document.createElement('i');
+    iconNode.setAttribute('data-lucide', iconName);
+    iconElement.appendChild(iconNode);
+    initializeLucideIconsFromGlobal([iconName], iconElement);
   }
 
   // Get component container
@@ -216,11 +222,14 @@ function showError(message: string): void {
         padding: 20px;
       ">
         <div>
-          <div style="font-size: 48px; margin-bottom: 16px;">⚠️</div>
+          <div style="margin-bottom: 16px; display: flex; justify-content: center;">
+            <i data-lucide="alert-triangle" aria-hidden="true" style="width: 48px; height: 48px; stroke-width: 1.75;"></i>
+          </div>
           <div>${message}</div>
         </div>
       </div>
     `;
+    initializeLucideIconsFromGlobal(['alert-triangle'], container);
   }
 }
 

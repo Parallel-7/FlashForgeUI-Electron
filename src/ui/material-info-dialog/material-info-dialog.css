@@ -209,7 +209,8 @@
   color: var(--success-color);
 }
 
-.material-station-indicator::before {
-  content: "🏭";
-  font-size: 12px;
-} 
+.material-station-indicator .lucide-icon {
+  width: 14px;
+  height: 14px;
+  stroke-width: 2;
+}

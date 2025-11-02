@@ -85,7 +85,8 @@
       "WebFetch(domain:fftrac-bg.ffmpeg.org)",
       "WebFetch(domain:ffmpeg.org)",
       "WebFetch(domain:lucide.dev)",
-      "mcp__context7__get-library-docs"
+      "mcp__context7__get-library-docs",
+      "WebFetch(domain:developer.chrome.com)"
     ],
     "deny": [],
     "additionalDirectories": [

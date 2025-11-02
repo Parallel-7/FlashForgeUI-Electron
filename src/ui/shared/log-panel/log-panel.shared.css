@@ -53,6 +53,12 @@
   font-size: 15px;
 }
 
+.ff-log-panel__title-icon .lucide-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
 .ff-log-panel__body {
   position: relative;
   flex: 1 1 auto;

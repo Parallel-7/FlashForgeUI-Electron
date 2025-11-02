@@ -53,7 +53,7 @@ const COMPONENT_REGISTRY: ReadonlyMap<string, ComponentDefinition> = new Map([
     {
       id: 'camera-preview',
       name: 'Camera Preview',
-      icon: '📷',
+      icon: 'camera',
       defaultSize: { w: 6, h: 6 },
       minSize: { w: 4, h: 4 },
       category: 'main',
@@ -68,7 +68,7 @@ const COMPONENT_REGISTRY: ReadonlyMap<string, ComponentDefinition> = new Map([
     {
       id: 'controls-grid',
       name: 'Printer Controls',
-      icon: '🎮',
+      icon: 'gamepad-2',
       defaultSize: { w: 6, h: 3 },
       minSize: { w: 4, h: 2 },
       category: 'main',
@@ -83,7 +83,7 @@ const COMPONENT_REGISTRY: ReadonlyMap<string, ComponentDefinition> = new Map([
     {
       id: 'model-preview',
       name: 'Model Preview',
-      icon: '🔲',
+      icon: 'box',
       defaultSize: { w: 6, h: 3 },
       minSize: { w: 4, h: 2 },
       category: 'main',
@@ -98,7 +98,7 @@ const COMPONENT_REGISTRY: ReadonlyMap<string, ComponentDefinition> = new Map([
     {
       id: 'job-stats',
       name: 'Job Statistics',
-      icon: '📊',
+      icon: 'bar-chart-3',
       defaultSize: { w: 6, h: 2 },
       minSize: { w: 4, h: 1 },
       category: 'main',
@@ -117,7 +117,7 @@ const COMPONENT_REGISTRY: ReadonlyMap<string, ComponentDefinition> = new Map([
     {
       id: 'printer-status',
       name: 'Printer Status',
-      icon: '🖨️',
+      icon: 'printer',
       defaultSize: { w: 3, h: 2 },
       minSize: { w: 2, h: 2 },
       category: 'status-bar',
@@ -132,7 +132,7 @@ const COMPONENT_REGISTRY: ReadonlyMap<string, ComponentDefinition> = new Map([
     {
       id: 'temperature-controls',
       name: 'Temperature Controls',
-      icon: '🌡️',
+      icon: 'thermometer',
       defaultSize: { w: 3, h: 2 },
       minSize: { w: 2, h: 2 },
       category: 'status-bar',
@@ -147,7 +147,7 @@ const COMPONENT_REGISTRY: ReadonlyMap<string, ComponentDefinition> = new Map([
     {
       id: 'filtration-controls',
       name: 'Filtration Controls',
-      icon: '💨',
+      icon: 'wind',
       defaultSize: { w: 3, h: 2 },
       minSize: { w: 2, h: 2 },
       category: 'status-bar',
@@ -162,7 +162,7 @@ const COMPONENT_REGISTRY: ReadonlyMap<string, ComponentDefinition> = new Map([
     {
       id: 'additional-info',
       name: 'Additional Info',
-      icon: 'ℹ️',
+      icon: 'info',
       defaultSize: { w: 3, h: 2 },
       minSize: { w: 2, h: 2 },
       category: 'status-bar',
@@ -181,7 +181,7 @@ const COMPONENT_REGISTRY: ReadonlyMap<string, ComponentDefinition> = new Map([
     {
       id: 'log-panel',
       name: 'Log Panel',
-      icon: '📝',
+      icon: 'scroll-text',
       defaultSize: { w: 12, h: 3 },
       minSize: { w: 4, h: 2 },
       category: 'utility',

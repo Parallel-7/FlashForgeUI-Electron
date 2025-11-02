@@ -1306,7 +1306,7 @@ function getAvailableComponentsForShortcutConfig(): Array<{
     .map((component) => ({
       id: component.id,
       name: component.name,
-      icon: component.icon ?? '📦',
+      icon: component.icon ?? '',
       category: component.category,
       isPinned: pinnedIds.has(component.id),
     }))
@@ -1357,7 +1357,6 @@ function updateShortcutButtons(config: ShortcutButtonConfig): void {
       const componentDef = getComponentDefinition(componentId);
       if (componentDef) {
         btn.setAttribute('data-component-id', componentId);
-        btn.setAttribute('data-icon', componentDef.icon || '📦');
         btn.textContent = componentDef.name;
         btn.classList.remove('hidden');
         console.log(`[ShortcutButtons] Slot ${i} configured: ${componentDef.name}`);
@@ -2193,7 +2192,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   initializeLucideIcons(
     document,
-    getLucideIcons('menu', 'printer', 'settings', 'bar-chart-3', 'grid-3x3', 'pin', 'minus', 'square', 'x')
+    getLucideIcons(
+      'menu',
+      'printer',
+      'settings',
+      'bar-chart-3',
+      'grid-3x3',
+      'pin',
+      'minus',
+      'square',
+      'x',
+      'check-circle',
+      'x-circle'
+    )
   );
 
   // Check if window.api is available

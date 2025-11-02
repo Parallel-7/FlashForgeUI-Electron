@@ -287,6 +287,15 @@ body {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.component-icon-display .lucide-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
 }
 
 .component-status {

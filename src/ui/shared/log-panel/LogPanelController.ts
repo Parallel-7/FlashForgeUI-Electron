@@ -8,6 +8,7 @@
  */
 
 import '../../shared/log-panel/log-panel.shared.css';
+import { initializeLucideIconsFromGlobal } from '../lucide';
 
 export interface LogEntry {
   readonly timestamp: string;
@@ -198,7 +199,10 @@ export function createLogPanel(options: LogPanelOptions): LogPanelController {
 
     const iconElement = document.createElement('span');
     iconElement.className = 'ff-log-panel__title-icon';
-    iconElement.textContent = '📝';
+    const svgIcon = document.createElement('i');
+    svgIcon.setAttribute('data-lucide', 'scroll-text');
+    iconElement.appendChild(svgIcon);
+    initializeLucideIconsFromGlobal(['scroll-text'], iconElement);
 
     titleElement.append(iconElement, document.createTextNode(title));
     headerElement.appendChild(titleElement);

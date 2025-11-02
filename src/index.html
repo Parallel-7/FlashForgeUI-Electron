@@ -103,8 +103,12 @@
     <div class="loading-container">
       <div class="loading-content">
         <div class="loading-spinner"></div>
-        <div class="loading-success-icon" id="loading-success-icon">✓</div>
-        <div class="loading-error-icon" id="loading-error-icon">✕</div>
+        <div class="loading-success-icon" id="loading-success-icon" aria-hidden="true">
+          <i data-lucide="check-circle" aria-hidden="true"></i>
+        </div>
+        <div class="loading-error-icon" id="loading-error-icon" aria-hidden="true">
+          <i data-lucide="x-circle" aria-hidden="true"></i>
+        </div>
         <div class="loading-message" id="loading-message">Loading...</div>
         <div class="loading-progress-container" id="loading-progress-container">
           <div class="loading-progress-bar">

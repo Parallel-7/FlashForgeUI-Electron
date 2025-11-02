@@ -247,7 +247,6 @@ body {
   cursor: pointer;
   transition: all var(--transition-fast);
   align-items: center;
-  gap: 6px;
   font-weight: 500;
 }
 
@@ -264,13 +263,6 @@ body {
 .shortcut-button:active {
   background-color: var(--button-active);
   transform: translateY(1px);
-}
-
-/* Shortcut button icon (using data attribute) */
-.shortcut-button::before {
-  content: attr(data-icon);
-  font-size: 16px;
-  line-height: 1;
 }
 
 .window-controls {
@@ -702,14 +694,12 @@ body.platform-darwin .traffic-lights {
 .loading-success-icon,
 .loading-error-icon {
   display: none;
+  align-items: center;
+  justify-content: center;
   width: 48px;
   height: 48px;
   border-radius: 50%;
   color: white;
-  font-size: 24px;
-  font-weight: bold;
-  text-align: center;
-  line-height: 48px;
   margin: 0 auto 16px;
 }
 
@@ -740,7 +730,7 @@ body.platform-darwin .traffic-lights {
 }
 
 .loading-overlay.state-success .loading-success-icon {
-  display: block;
+  display: flex;
   width: 48px;
   height: 48px;
   margin: 0 auto 16px; /* Same positioning as spinner */
@@ -759,7 +749,7 @@ body.platform-darwin .traffic-lights {
 }
 
 .loading-overlay.state-error .loading-error-icon {
-  display: block;
+  display: flex;
   width: 48px;
   height: 48px;
   margin: 0 auto 16px; /* Same positioning as spinner */
@@ -767,6 +757,13 @@ body.platform-darwin .traffic-lights {
 
 .loading-overlay.state-error .loading-success-icon {
   display: none;
+}
+
+.loading-success-icon .lucide-icon,
+.loading-error-icon .lucide-icon {
+  width: 24px;
+  height: 24px;
+  stroke-width: 2.25;
 }
 
 /* Remove the separate container styling since icons are now inside content */

@@ -42,6 +42,53 @@ declare global {
   }
 }
 
+function toPascalCase(value: string): string {
+  return value
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join('');
+}
+
+function hydrateLucideIcons(iconNames: string[], root: Document | Element | DocumentFragment = document): void {
+  const lucide = window.lucide;
+  if (!lucide?.createIcons) {
+    return;
+  }
+
+  const icons: Record<string, [string, Record<string, string | number>][]> = {};
+  iconNames.forEach((name) => {
+    const pascal = toPascalCase(name);
+    const iconNode =
+      lucide.icons?.[pascal] ??
+      lucide.icons?.[name] ??
+      lucide.icons?.[name.toUpperCase()] ??
+      lucide.icons?.[name.toLowerCase()];
+
+    if (iconNode) {
+      icons[pascal] = iconNode;
+    } else {
+      console.warn(`[WebUI] Lucide icon "${name}" not available in global registry.`);
+    }
+  });
+
+  if (Object.keys(icons).length === 0) {
+    return;
+  }
+
+  lucide.createIcons({
+    icons,
+    nameAttr: 'data-lucide',
+    attrs: {
+      'stroke-width': '2',
+      'aria-hidden': 'true',
+      focusable: 'false',
+      class: 'lucide-icon',
+    },
+    root,
+  });
+}
+
 // ============================================================================
 // TYPES AND INTERFACES
 // ============================================================================
@@ -210,29 +257,8 @@ interface PendingJobStart {
 
 type MaterialMessageType = 'error' | 'warning';
 
-function initializeLucideSettingsIcon(): void {
-  const lucide = window.lucide;
-  if (!lucide?.createIcons) {
-    return;
-  }
-
-  const settingsIcon = lucide.icons?.Settings ?? lucide.icons?.settings;
-  if (!settingsIcon) {
-    console.warn('[WebUI] Lucide settings icon is not available.');
-    return;
-  }
-
-  lucide.createIcons({
-    icons: { Settings: settingsIcon },
-    nameAttr: 'data-lucide',
-    attrs: {
-      'stroke-width': '2',
-      'aria-hidden': 'true',
-      focusable: 'false',
-      class: 'lucide-icon',
-    },
-    root: document,
-  });
+function initializeLucideIcons(): void {
+  hydrateLucideIcons(['settings', 'lock'], document);
 }
 
 // Extended HTMLElement for temperature dialog
@@ -581,10 +607,12 @@ function updateEditModeToggle(editMode: boolean): void {
     } else {
       toggleButton.style.display = '';
       toggleButton.setAttribute('aria-pressed', editMode ? 'true' : 'false');
-      const lockIcon = toggleButton.querySelector('.lock-icon');
+      const lockIcon = toggleButton.querySelector<HTMLElement>('.lock-icon');
       const text = toggleButton.querySelector('.edit-text');
       if (lockIcon) {
-        lockIcon.textContent = editMode ? '🔓' : '🔒';
+        const iconName = editMode ? 'unlock' : 'lock';
+        lockIcon.setAttribute('data-lucide', iconName);
+        hydrateLucideIcons([iconName], lockIcon);
       }
       if (text) {
         text.textContent = editMode ? 'Unlocked' : 'Locked';
@@ -2711,7 +2739,7 @@ async function checkAuthStatus(): Promise<boolean> {
 
 async function initialize(): Promise<void> {
   console.log('Initializing Web UI...');
-  initializeLucideSettingsIcon();
+  initializeLucideIcons();
 
   // Setup event handlers
   setupEventHandlers();
