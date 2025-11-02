@@ -4,7 +4,7 @@
 
 A complete rewrite of FlashForgeUI (C#) bringing enhanced features and better compatibility to all platforms!
 
-Download the latest release for your OS [here](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/tag/v1.0.1)!
+Download the latest release for your OS [here](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/tag/v1.0.2)!
 
 ## Setup & FAQs
 Check out the user guide [here](https://github.com/Parallel-7/FlashForgeUI-Electron/tree/main/docs)
