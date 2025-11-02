@@ -69,6 +69,14 @@ module.exports = {
         "!**/*.spec.*"
     ],
 
+    publish: [
+        {
+            provider: "github",
+            owner: "Parallel-7",
+            repo: "FlashForgeUI-Electron",
+        }
+    ],
+
     // Native module handling
     npmRebuild: false,
     nodeGypRebuild: false,
@@ -106,6 +114,10 @@ module.exports = {
         target: [
             {
                 target: "dmg",
+                arch: ["universal"],
+            },
+            {
+                target: "zip",
                 arch: ["universal"],
             },
         ],

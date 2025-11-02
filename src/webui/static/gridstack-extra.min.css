@@ -1,0 +1,6 @@
+/*!
+ * GridStack extra overrides for FlashForge WebUI.
+ * Provides minimal placeholder styling to complement the dark theme when
+ * panels are dragged or resized in edit mode.
+ */
+.grid-stack .grid-stack-placeholder>.placeholder-content{border:2px dashed rgba(66,133,244,0.4);background:rgba(66,133,244,0.12);border-radius:12px;transition:border-color .2s ease,background-color .2s ease}

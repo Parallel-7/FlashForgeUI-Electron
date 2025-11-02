@@ -99,6 +99,19 @@ function setElementText(id: string, text: string): void {
 
 
 /**
+ * Track optional elements that are legitimately absent so we do not spam warnings.
+ * Many legacy IDs are unused once the component grid is active, but updates still run.
+ */
+const missingOptionalElements = new Set<string>();
+
+function logOptionalElementAbsence(elementId: string): void {
+  if (!missingOptionalElements.has(elementId)) {
+    missingOptionalElements.add(elementId);
+    console.debug(`[UIUpdater] Optional element "${elementId}" not found; skipping update.`);
+  }
+}
+
+/**
  * Safely set element attribute
  */
 function setElementAttribute(id: string, attribute: string, value: string | number): void {
@@ -118,7 +131,7 @@ function updateLabelSpanElement(elementId: string, label: string, value: string)
     // Use innerHTML to maintain the label + span structure
     element.innerHTML = `${label} <span>${value}</span>`;
   } else {
-    console.warn(`Element with ID "${elementId}" not found.`);
+    logOptionalElementAbsence(elementId);
   }
 }
 
@@ -137,11 +150,11 @@ function updateSpanInLabelElement(elementId: string, value: string): void {
       if (spanElement) {
         spanElement.textContent = value;
       } else {
-        console.warn(`Span element not found within "${elementId}"`);
+        console.debug(`[UIUpdater] Span element not found within "${elementId}"`);
       }
     }
   } else {
-    console.warn(`Element with ID "${elementId}" not found.`);
+    logOptionalElementAbsence(elementId);
   }
 }
 

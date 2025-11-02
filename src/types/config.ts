@@ -21,6 +21,7 @@
  * - WebUI: WebUIEnabled, WebUIPort, WebUIPassword
  * - Integrations: DiscordSync, FilamentTrackerIntegrationEnabled
  * - Advanced: ForceLegacyAPI, CustomLeds
+ * - Auto-Update: CheckForUpdatesOnLaunch, UpdateChannel, AutoDownloadUpdates
  *
  * @module types/config
  */
@@ -41,10 +42,14 @@ export interface AppConfig {
   readonly WebUIEnabled: boolean;
   readonly WebUIPort: number;
   readonly WebUIPassword: string;
+  readonly WebUIPasswordRequired: boolean;
   readonly CameraProxyPort: number;
   readonly RoundedUI: boolean;
   readonly FilamentTrackerIntegrationEnabled: boolean;
   readonly FilamentTrackerAPIKey: string;
+  readonly CheckForUpdatesOnLaunch: boolean;
+  readonly UpdateChannel: 'stable' | 'alpha';
+  readonly AutoDownloadUpdates: boolean;
   readonly RtspFrameRate: number;        // Per-printer, not saved to config.json
   readonly RtspQuality: number;          // Per-printer, not saved to config.json
 }
@@ -69,10 +74,14 @@ export interface MutableAppConfig {
   WebUIEnabled: boolean;
   WebUIPort: number;
   WebUIPassword: string;
+  WebUIPasswordRequired: boolean;
   CameraProxyPort: number;
   RoundedUI: boolean;
   FilamentTrackerIntegrationEnabled: boolean;
   FilamentTrackerAPIKey: string;
+  CheckForUpdatesOnLaunch: boolean;
+  UpdateChannel: 'stable' | 'alpha';
+  AutoDownloadUpdates: boolean;
   RtspFrameRate: number;
   RtspQuality: number;
 }
@@ -97,10 +106,14 @@ export const DEFAULT_CONFIG: AppConfig = {
   WebUIEnabled: false,
   WebUIPort: 3000,
   WebUIPassword: 'changeme',
+  WebUIPasswordRequired: true,
   CameraProxyPort: 8181,
   RoundedUI: false,
   FilamentTrackerIntegrationEnabled: false,
   FilamentTrackerAPIKey: '',
+  CheckForUpdatesOnLaunch: true,
+  UpdateChannel: 'stable',
+  AutoDownloadUpdates: false,
   RtspFrameRate: 30,           // Default 30 FPS
   RtspQuality: 3               // Default quality 3
 } as const;
@@ -188,6 +201,15 @@ export function sanitizeConfig(config: Partial<AppConfig>): AppConfig {
             } else {
               assignConfigValue(sanitized, key, numValue);
             }
+          }
+        } else if (expectedType === 'string') {
+          if (key === 'UpdateChannel') {
+            const channel = value as string;
+            if (channel === 'stable' || channel === 'alpha') {
+              assignConfigValue(sanitized, key, channel);
+            }
+          } else {
+            assignConfigValue(sanitized, key, value as MutableAppConfig[typeof key]);
           }
         } else {
           assignConfigValue(sanitized, key, value as MutableAppConfig[typeof key]);

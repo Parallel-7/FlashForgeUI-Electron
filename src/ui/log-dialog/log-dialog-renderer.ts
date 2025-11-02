@@ -13,6 +13,8 @@
  * while providing a dedicated dialog interface for viewing logs.
  */
 
+import { createLogPanel, type LogEntry, type LogPanelController } from '../shared/log-panel';
+
 // Define interfaces for type safety
 interface LogMessage {
   timestamp: string;
@@ -37,7 +39,7 @@ declare global {
 export {};
 
 class LogDialogRenderer {
-  private logOutputElement: HTMLElement | null = null;
+  private logPanel: LogPanelController | null = null;
   private logCountElement: HTMLElement | null = null;
   private clearLogsButton: HTMLElement | null = null;
   private closeButton: HTMLElement | null = null;
@@ -51,16 +53,27 @@ class LogDialogRenderer {
   }
 
   private initializeElements(): void {
-    this.logOutputElement = document.getElementById('log-output');
+    const logPanelHost = document.getElementById('log-panel-root');
     this.logCountElement = document.getElementById('log-count');
     this.clearLogsButton = document.getElementById('btn-clear-logs');
     this.closeButton = document.getElementById('btn-close');
     this.closeFooterButton = document.getElementById('btn-close-footer');
 
-    if (!this.logOutputElement || !this.logCountElement) {
+    if (!logPanelHost || !this.logCountElement) {
       console.error('Log Dialog: Failed to find required elements');
       return;
     }
+
+    this.logPanel = createLogPanel({
+      mountPoint: logPanelHost,
+      showHeader: false,
+      autoScroll: true,
+      placeholder: 'No log messages to display',
+      onCountChanged: (count) => {
+        this.messageCount = count;
+        this.updateMessageCount();
+      }
+    });
 
     console.log('Log Dialog: Elements initialized successfully');
   }
@@ -82,7 +95,7 @@ class LogDialogRenderer {
 
     // Listen for new log messages from main process
     window.logDialogAPI?.onLogMessage((message: LogMessage) => {
-      this.addLogMessage(message);
+      this.appendLogEntry(message);
     });
 
     // Handle window close event
@@ -103,19 +116,11 @@ class LogDialogRenderer {
       const logs = await window.logDialogAPI.requestLogs();
       
       if (logs && logs.length > 0) {
-        // Clear any existing content
-        if (this.logOutputElement) {
-          this.logOutputElement.innerHTML = '';
-          this.messageCount = 0;
-        }
-
-        // Add all existing logs
-        logs.forEach(log => {
-          this.addLogMessage(log, false); // Don't scroll for each message
-        });
-
-        // Scroll to bottom after adding all messages
-        this.scrollToBottom();
+        this.logPanel?.load(logs, { scrollToLatest: true });
+        this.messageCount = this.logPanel?.getEntryCount() ?? logs.length;
+      } else {
+        this.logPanel?.clear();
+        this.messageCount = 0;
       }
 
       this.updateMessageCount();
@@ -125,27 +130,15 @@ class LogDialogRenderer {
     }
   }
 
-  private addLogMessage(message: LogMessage, shouldScroll: boolean = true): void {
-    if (!this.logOutputElement) {
+  private appendLogEntry(message: LogEntry, shouldScroll: boolean = true): void {
+    if (!this.logPanel) {
       return;
     }
 
     try {
-      // Create message element
-      const messageElement = document.createElement('div');
-      messageElement.textContent = `[${message.timestamp}] ${message.message}`;
-      
-      // Add message to log output
-      this.logOutputElement.appendChild(messageElement);
-      this.messageCount++;
-
-      // Update message count
+      this.logPanel.appendEntry(message, { scroll: shouldScroll });
+      this.messageCount = this.logPanel.getEntryCount();
       this.updateMessageCount();
-      
-      // Auto-scroll to show latest message if requested
-      if (shouldScroll) {
-        this.scrollToBottom();
-      }
     } catch (error) {
       console.error('Log Dialog: Failed to add log message:', error);
     }
@@ -160,8 +153,8 @@ class LogDialogRenderer {
 
       const success = await window.logDialogAPI.clearLogs();
       
-      if (success && this.logOutputElement) {
-        this.logOutputElement.innerHTML = '';
+      if (success) {
+        this.logPanel?.clear();
         this.messageCount = 0;
         this.updateMessageCount();
         console.log('Log Dialog: Logs cleared successfully');
@@ -181,20 +174,11 @@ class LogDialogRenderer {
     }
   }
 
-  private scrollToBottom(): void {
-    if (!this.logOutputElement) {
-      return;
+  private updateMessageCount(forcedCount?: number): void {
+    if (typeof forcedCount === 'number') {
+      this.messageCount = forcedCount;
     }
 
-    try {
-      // Scroll to the bottom of the log output
-      this.logOutputElement.scrollTop = this.logOutputElement.scrollHeight;
-    } catch (error) {
-      console.error('Log Dialog: Failed to scroll to bottom:', error);
-    }
-  }
-
-  private updateMessageCount(): void {
     if (this.logCountElement) {
       const messageText = this.messageCount === 1 ? 'message' : 'messages';
       this.logCountElement.textContent = `${this.messageCount} ${messageText}`;
@@ -211,5 +195,6 @@ class LogDialogRenderer {
 // Initialize the log dialog when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Log Dialog: DOM loaded, initializing renderer...');
+  window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
   new LogDialogRenderer();
 });

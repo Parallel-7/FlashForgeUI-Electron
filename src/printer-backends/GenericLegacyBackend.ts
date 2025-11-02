@@ -599,13 +599,23 @@ export class GenericLegacyBackend extends BasePrinterBackend {
   
   /**
    * Set LED enabled state using proper ff-api methods
-   * Always enabled for legacy printers (no CustomLeds setting requirement)
+   * Requires Custom LEDs setting to be enabled (user must opt-in)
+   * Matches Main UI IPC handler logic for identical behavior across UIs
    */
   public async setLedEnabled(enabled: boolean): Promise<CommandResult> {
     try {
+      // Check if LED control is available (requires Custom LEDs setting for Generic Legacy)
+      if (!this.isFeatureAvailable('led-control')) {
+        return {
+          success: false,
+          error: 'LED control not available on this printer. Enable "Custom LEDs" in printer settings to use LED control.',
+          timestamp: new Date()
+        };
+      }
+
       // Use proper FlashForgeClient LED methods
       const result = enabled ? await this.legacyClient.ledOn() : await this.legacyClient.ledOff();
-      
+
       if (!result) {
         return {
           success: false,
@@ -613,10 +623,10 @@ export class GenericLegacyBackend extends BasePrinterBackend {
           timestamp: new Date()
         };
       }
-      
+
       return {
         success: true,
-        data: enabled ? 'LED turned on' : 'LED turned off',
+        data: enabled ? 'LED turned on (TCP API)' : 'LED turned off (TCP API)',
         timestamp: new Date()
       };
     } catch (error) {

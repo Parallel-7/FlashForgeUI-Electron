@@ -27,17 +27,20 @@ export class PrinterStatusComponent extends BaseComponent {
   public readonly componentId = 'printer-status';
   public readonly templateHTML = `
     <div class="printer-status-container">
-      <div class="status-display-row">
-        <span class="status-label">Printer:</span>
-        <span id="printer-status-text" class="status-value">idle</span>
-      </div>
-      <div class="status-display-row">
-        <span class="status-label">Run time:</span>
-        <span id="run-time-text" class="status-value">0h:0m</span>
-      </div>
-      <div class="status-display-row">
-        <span class="status-label">Filament used:</span>
-        <span id="filament-used-text" class="status-value">0m</span>
+      <div class="panel-header">Printer Status</div>
+      <div class="panel-content">
+        <div class="status-display-row">
+          <span class="status-label">Printer:</span>
+          <span id="printer-status-text" class="status-value">idle</span>
+        </div>
+        <div class="status-display-row">
+          <span class="status-label">Run time:</span>
+          <span id="run-time-text" class="status-value">0h:0m</span>
+        </div>
+        <div class="status-display-row">
+          <span class="status-label">Filament used:</span>
+          <span id="filament-used-text" class="status-value">0m</span>
+        </div>
       </div>
     </div>
   `;

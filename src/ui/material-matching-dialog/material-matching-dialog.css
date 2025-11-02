@@ -205,7 +205,6 @@
   border: none;
   color: var(--error-color);
   cursor: pointer;
-  font-size: 16px;
   padding: 0;
   width: 24px;
   height: 24px;
@@ -218,6 +217,12 @@
 
 .remove-mapping:hover {
   background-color: rgba(255, 68, 68, 0.2);
+}
+
+.remove-mapping .lucide-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
 }
 
 /* Messages */

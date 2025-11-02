@@ -22,7 +22,7 @@ import { EventEmitter } from 'events';
 import * as http from 'http';
 import express from 'express';
 import * as os from 'os';
-import { app, dialog } from 'electron';
+import { app, dialog, BrowserWindow } from 'electron';
 import { getConfigManager } from '../../managers/ConfigManager';
 import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager';
 import { getPrinterBackendManager } from '../../managers/PrinterBackendManager';
@@ -30,9 +30,8 @@ import { getEnvironmentDetectionService } from '../../services/EnvironmentDetect
 
 import { AppError, ErrorCode } from '../../utils/error.utils';
 import { getAuthManager } from './AuthManager';
-import { 
-  createAuthMiddleware, 
-  createCorsMiddleware, 
+import {
+  createAuthMiddleware,
   createErrorMiddleware,
   createRequestLogger,
   createLoginRateLimiter,
@@ -48,6 +47,7 @@ import { getWebSocketManager } from './WebSocketManager';
 import { getRtspStreamService } from '../../services/RtspStreamService';
 import type { PollingData } from '../../types/polling';
 import { isHeadlessMode } from '../../utils/HeadlessDetection';
+import type { WebUILoginResponse } from '../types/web-api.types';
 
 /**
  * Branded type for WebUIManager singleton
@@ -128,7 +128,7 @@ export class WebUIManager extends EventEmitter {
   private setupEventHandlers(): void {
     // Monitor configuration changes
     this.configManager.on('configUpdated', (event: { changedKeys: readonly string[] }) => {
-      const webUIKeys = ['WebUIEnabled', 'WebUIPort', 'WebUIPassword'];
+      const webUIKeys = ['WebUIEnabled', 'WebUIPort', 'WebUIPassword', 'WebUIPasswordRequired'];
       const hasWebUIChanges = event.changedKeys.some((key: string) => webUIKeys.includes(key));
       
       if (hasWebUIChanges) {
@@ -153,13 +153,10 @@ export class WebUIManager extends EventEmitter {
    */
   private setupMiddleware(): void {
     if (!this.expressApp) return;
-    
+
     // Request logging
     this.expressApp.use(createRequestLogger());
-    
-    // CORS for web clients
-    this.expressApp.use(createCorsMiddleware());
-    
+
     // JSON body parsing
     this.expressApp.use(express.json());
     
@@ -219,6 +216,15 @@ export class WebUIManager extends EventEmitter {
     
     // Login endpoint with rate limiting
     this.expressApp.post('/api/auth/login', createLoginRateLimiter(), (req, res) => {
+      if (!this.authManager.isAuthenticationRequired()) {
+        const response: WebUILoginResponse = {
+          success: true,
+          message: 'Authentication not required'
+        };
+        res.json(response);
+        return;
+      }
+
       const validation = WebUILoginRequestSchema.safeParse(req.body);
       
       if (!validation.success) {
@@ -340,8 +346,8 @@ export class WebUIManager extends EventEmitter {
       this.expressApp = express();
       this.port = config.WebUIPort;
 
-      // Initialize RTSP stream service (check ffmpeg availability)
-      await this.rtspStreamService.initialize();
+      // Note: RTSP stream service is now initialized globally in index.ts
+      // No need for conditional initialization here
 
       // Setup middleware and routes
       this.setupMiddleware();
@@ -614,15 +620,11 @@ export class WebUIManager extends EventEmitter {
     }
 
     // Use proper import instead of require to avoid TypeScript warnings
-    import('../../windows/WindowManager').then(({ getWindowManager }) => {
-      const windowManager = getWindowManager();
-      const mainWindow = windowManager.getMainWindow();
-
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('log-message', message);
+    const windows = BrowserWindow.getAllWindows();
+    windows.forEach((window) => {
+      if (!window.isDestroyed()) {
+        window.webContents.send('log-message', message);
       }
-    }).catch((error) => {
-      console.error('Failed to send UI log message:', error);
     });
 
     // Also log to console for development

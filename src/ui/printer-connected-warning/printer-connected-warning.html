@@ -16,20 +16,27 @@
     ">
     <title>Printer Connected</title>
     <link rel="stylesheet" href="printer-connected-warning.css">
+    <script src="../../../dist/webui/static/lucide.min.js"></script>
+    <script>
+        if (typeof exports === 'undefined') {
+            var exports = {};
+        }
+    </script>
+    <script src="../../../lib/ui/shared/lucide.js"></script>
 </head>
 <body>
-    <div class="dialog-container">
+    <div class="dialog-container dialog-container--full">
         <div class="dialog-header">
             <div class="dialog-title" id="dialog-title">Printer Connected</div>
-            <button class="dialog-close" id="dialog-close">×</button>
+            <button class="dialog-close" id="dialog-close" aria-label="Close">
+                <i data-lucide="x" aria-hidden="true"></i>
+            </button>
         </div>
 
         <div class="dialog-content">
             <div class="warning-content">
                 <div class="warning-icon">
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z"/>
-                    </svg>
+                    <i data-lucide="alert-triangle" aria-hidden="true"></i>
                 </div>
 
                 <div class="warning-message">
@@ -46,11 +53,6 @@
     </div>
 
     <!-- CommonJS shim for TypeScript compilation compatibility -->
-    <script>
-        if (typeof exports === 'undefined') {
-            var exports = {};
-        }
-    </script>
     <script src="../../../lib/ui/printer-connected-warning/printer-connected-warning-renderer.js"></script>
 </body>
 </html>

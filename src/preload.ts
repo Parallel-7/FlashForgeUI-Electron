@@ -166,7 +166,16 @@ const validSendChannels = [
   'loading-set-progress',
   'loading-update-message',
   'add-log-message',
-  'open-log-dialog'
+  'open-log-dialog',
+  'open-component-palette',
+  'close-component-palette',
+  'palette:remove-component',
+  'palette:add-component',
+  'palette:update-status',
+  'palette:opened',
+  'palette:toggle-edit-mode',
+  'shortcut-config:open',
+  'component-dialog:open'
 ];
 
 const validReceiveChannels = [
@@ -196,7 +205,19 @@ const validReceiveChannels = [
   'printer-context-created',
   'printer-context-switched',
   'printer-context-removed',
-  'printer-context-updated'
+  'printer-context-updated',
+  'grid:remove-component',
+  'grid:add-component',
+  'grid:component-added',
+  'palette:opened',
+  'edit-mode:toggle',
+  'shortcut-config:open',
+  'component-dialog:open',
+  'update-state-changed',
+  'shortcut-config:updated',
+  'shortcut-config:get-current-request',
+  'shortcut-config:save-request',
+  'shortcut-config:get-components-request'
 ];
 
 // Expose camera URL for renderer
@@ -225,7 +246,12 @@ contextBridge.exposeInMainWorld('api', {
   isProxyAvailable: true,
   
   send: (channel: string, data?: unknown) => {
-    if (validSendChannels.includes(channel)) {
+    // Allow response channels (they start with specific prefixes and end with timestamps)
+    const isResponseChannel =
+      channel.startsWith('shortcut-config:') && channel.includes('-response-') ||
+      channel.startsWith('component-dialog:') && channel.includes('-response-');
+
+    if (validSendChannels.includes(channel) || isResponseChannel) {
       ipcRenderer.send(channel, data);
     } else {
       console.warn(`Invalid send channel: ${channel}`);
@@ -311,7 +337,19 @@ contextBridge.exposeInMainWorld('api', {
       'camera:get-rtsp-relay-info',
       'printer-settings:get',
       'printer-settings:update',
-      'printer-settings:get-printer-name'
+      'printer-settings:get-printer-name',
+      'palette:get-components',
+      'shortcut-config:get-current',
+      'shortcut-config:save',
+      'shortcut-config:get-available-components',
+      'log-dialog-request-logs',
+      'check-for-updates',
+      'download-update',
+      'install-update',
+      'open-installer',
+      'open-release-page',
+      'get-update-status',
+      'set-update-channel'
     ];
     
     if (validInvokeChannels.includes(channel)) {

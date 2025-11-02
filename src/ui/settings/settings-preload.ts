@@ -64,6 +64,18 @@ contextBridge.exposeInMainWorld('printerSettingsAPI', {
   }
 });
 
+contextBridge.exposeInMainWorld('autoUpdateAPI', {
+  checkForUpdates: async (): Promise<{ success: boolean; error?: string }> => {
+    return await ipcRenderer.invoke('check-for-updates');
+  },
+  getStatus: async (): Promise<unknown> => {
+    return await ipcRenderer.invoke('get-update-status');
+  },
+  setUpdateChannel: async (channel: 'stable' | 'alpha'): Promise<{ success: boolean }> => {
+    return await ipcRenderer.invoke('set-update-channel', channel);
+  }
+});
+
 // Generic window controls for sub-windows
 contextBridge.exposeInMainWorld('windowControls', {
   minimize: () => ipcRenderer.send('dialog-window-minimize'),

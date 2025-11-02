@@ -15,50 +15,87 @@
       <button class="traffic-light minimize" id="traffic-minimize" aria-label="Minimize"></button>
       <button class="traffic-light maximize" id="traffic-maximize" aria-label="Maximize"></button>
     </div>
-    
-    <div class="left-controls">
-      <button id="btn-connect">Connect</button>
-      <button id="btn-settings">Settings</button>
-      <button id="btn-status">Status</button>
-      <button id="btn-ifs" class="hidden">IFS</button>
-      <button id="btn-logs">Logs</button>
-    </div>
+
     <div class="title">FlashForgeUI</div>
+
+    <div class="left-controls">
+      <!-- Hamburger Menu Button -->
+      <button id="btn-main-menu" class="main-menu-button" aria-label="Main Menu" aria-expanded="false">
+        <i data-lucide="menu" class="hamburger-icon" aria-hidden="true"></i>
+      </button>
+
+      <!-- Dropdown Menu -->
+      <div id="main-menu-dropdown" class="main-menu-dropdown hidden" role="menu" aria-label="Primary actions">
+        <button class="menu-item" data-action="connect" role="menuitem" aria-keyshortcuts="Control+K">
+          <span class="menu-item-content">
+            <i data-lucide="printer" class="menu-item-icon" aria-hidden="true"></i>
+            <span class="menu-item-label">Connect</span>
+          </span>
+          <span class="menu-item-shortcut" data-shortcut-id="connect">Ctrl+K</span>
+        </button>
+
+        <button class="menu-item" data-action="settings" role="menuitem" aria-keyshortcuts="Control+,">
+          <span class="menu-item-content">
+            <i data-lucide="settings" class="menu-item-icon" aria-hidden="true"></i>
+            <span class="menu-item-label">Settings</span>
+          </span>
+          <span class="menu-item-shortcut" data-shortcut-id="settings">Ctrl+,</span>
+        </button>
+
+        <button class="menu-item" data-action="status" role="menuitem" aria-keyshortcuts="Control+I">
+          <span class="menu-item-content">
+            <i data-lucide="bar-chart-3" class="menu-item-icon" aria-hidden="true"></i>
+            <span class="menu-item-label">Status</span>
+          </span>
+          <span class="menu-item-shortcut" data-shortcut-id="status">Ctrl+I</span>
+        </button>
+
+        <button id="menu-item-ifs" class="menu-item hidden" data-action="ifs" role="menuitem" aria-keyshortcuts="Control+M">
+          <span class="menu-item-content">
+            <i data-lucide="grid-3x3" class="menu-item-icon" aria-hidden="true"></i>
+            <span class="menu-item-label">IFS</span>
+          </span>
+          <span class="menu-item-shortcut" data-shortcut-id="ifs">Ctrl+M</span>
+        </button>
+
+        <div class="menu-divider" role="presentation"></div>
+
+        <button class="menu-item" data-action="pin-config" role="menuitem" aria-keyshortcuts="Control+P">
+          <span class="menu-item-content">
+            <i data-lucide="pin" class="menu-item-icon" aria-hidden="true"></i>
+            <span class="menu-item-label">Configure Shortcuts</span>
+          </span>
+          <span class="menu-item-shortcut" data-shortcut-id="pin-config">Ctrl+P</span>
+        </button>
+      </div>
+
+      <!-- Shortcut Button Slots (hidden by default) -->
+      <button id="btn-shortcut-1" class="shortcut-button hidden" data-slot="1" data-component-id="" aria-label="Shortcut 1"></button>
+      <button id="btn-shortcut-2" class="shortcut-button hidden" data-slot="2" data-component-id="" aria-label="Shortcut 2"></button>
+      <button id="btn-shortcut-3" class="shortcut-button hidden" data-slot="3" data-component-id="" aria-label="Shortcut 3"></button>
+    </div>
+
     <div class="window-controls">
-      <button id="btn-minimize">—</button>
-      <button id="btn-maximize">□</button>
-      <button id="btn-close">×</button>
+      <button id="btn-minimize" aria-label="Minimize">
+        <i data-lucide="minus" class="lucide-icon" aria-hidden="true"></i>
+      </button>
+      <button id="btn-maximize" aria-label="Maximize">
+        <i data-lucide="square" class="lucide-icon" aria-hidden="true"></i>
+      </button>
+      <button id="btn-close" aria-label="Close">
+        <i data-lucide="x" class="lucide-icon" aria-hidden="true"></i>
+      </button>
     </div>
   </div>
 
   <!-- Printer Tabs Bar -->
   <div id="printer-tabs-container"></div>
 
-  <!-- Main Layout (Component Containers) -->
-  <div class="main-layout">
-    <!-- Left Side -->
-    <div class="left-side">
-      <div id="camera-preview-container"></div>
-    </div>
+  <!-- GridStack Container -->
+  <div class="grid-stack"></div>
 
-    <!-- Right Side -->
-    <div class="right-side">
-      <div id="controls-grid-container"></div>
-      <div id="model-preview-container"></div>
-      <div id="job-stats-container"></div>
-    </div>
-  </div>
-
-  <!-- Status Bar -->
-  <div class="status-bar">
-    <div id="printer-status-container"></div>
-    <div id="temperature-controls-container"></div>
-    <div id="filtration-controls-container"></div>
-    <div id="additional-info-container"></div>
-  </div>
-
-  <!-- Log Panel -->
-  <div id="log-panel-container"></div>
+  <!-- Edit Mode Indicator (hidden by default, managed by EditModeController) -->
+  <!-- Indicator will be created dynamically by EditModeController -->
 
   <!-- Loading Overlay -->
   <div id="loading-overlay" class="loading-overlay hidden">
@@ -66,8 +103,12 @@
     <div class="loading-container">
       <div class="loading-content">
         <div class="loading-spinner"></div>
-        <div class="loading-success-icon" id="loading-success-icon">✓</div>
-        <div class="loading-error-icon" id="loading-error-icon">✕</div>
+        <div class="loading-success-icon" id="loading-success-icon" aria-hidden="true">
+          <i data-lucide="check-circle" aria-hidden="true"></i>
+        </div>
+        <div class="loading-error-icon" id="loading-error-icon" aria-hidden="true">
+          <i data-lucide="x-circle" aria-hidden="true"></i>
+        </div>
         <div class="loading-message" id="loading-message">Loading...</div>
         <div class="loading-progress-container" id="loading-progress-container">
           <div class="loading-progress-bar">

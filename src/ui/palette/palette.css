@@ -1,0 +1,323 @@
+/**
+ * Component Palette CSS - Button-based component picker
+ * Beautiful dark-themed palette window for GridStack.js dashboard customization
+ */
+
+/* Universal reset for consistent styling */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Oxygen',
+    'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+}
+
+/* Ensure Electron window background remains solid for square layout */
+html,
+body {
+  width: 100%;
+  height: 100%;
+  background: #2a2a2a;
+}
+
+/* Body styling with transparency support */
+body {
+  color: #e0e0e0;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+/* Main palette window container */
+.palette-window {
+  width: 350px;
+  height: 700px;
+  background: #2a2a2a;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 0;
+  border: 1px solid rgba(85, 85, 85, 0.6);
+  box-shadow: none;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: paletteSlideIn 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+/* Slide-in animation for smooth appearance */
+@keyframes paletteSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Palette header with gradient */
+.palette-header {
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  color: white;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+  flex-shrink: 0;
+  -webkit-app-region: drag;
+}
+
+.palette-title {
+  font-size: 1.2rem;
+  font-weight: 600;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  -webkit-app-region: no-drag;
+  margin: 0;
+}
+
+/* Close button styling */
+.close-btn {
+  -webkit-app-region: no-drag;
+  background: none;
+  border: none;
+  color: white;
+  font-size: 24px;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.close-btn:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.1);
+}
+
+.close-btn:active {
+  transform: scale(0.95);
+}
+
+/* Palette body container */
+.palette-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding: 16px;
+  gap: 16px;
+}
+
+/* Available components section */
+.available-components {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.section-heading {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #a0a0a0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(85, 85, 85, 0.5);
+}
+
+/* Component list container with custom scrollbar */
+.component-list {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Custom scrollbar styling for component list */
+.component-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.component-list::-webkit-scrollbar-track {
+  background: rgba(30, 30, 30, 0.5);
+  border-radius: 3px;
+}
+
+.component-list::-webkit-scrollbar-thumb {
+  background: rgba(85, 85, 85, 0.7);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.component-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(105, 105, 105, 0.9);
+}
+
+/* Individual component item */
+.palette-item {
+  background: rgba(55, 55, 55, 0.9);
+  border: 1px solid rgba(85, 85, 85, 0.6);
+  border-radius: 8px;
+  padding: 12px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+.palette-item:hover {
+  background: rgba(65, 65, 65, 0.95);
+  border-color: rgba(74, 144, 226, 0.6);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* Component icon */
+.palette-item-icon {
+  width: 36px;
+  height: 36px;
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.palette-item-icon .lucide-icon {
+  width: 20px;
+  height: 20px;
+  stroke-width: 2;
+}
+
+/* Component label */
+.palette-item-label {
+  flex: 1;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #e0e0e0;
+  line-height: 1.3;
+}
+
+.palette-item-action {
+  -webkit-app-region: no-drag;
+  background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+  border: none;
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+
+.palette-item-action:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5aa0f2 0%, #468bce 100%);
+  transform: translateY(-1px);
+}
+
+.palette-item-action:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.palette-item-action:disabled,
+.palette-item.in-use .palette-item-action {
+  cursor: default;
+  background: rgba(90, 90, 90, 0.6);
+  color: #bbb;
+  transform: none;
+}
+
+/* In-use state for components already in grid */
+.palette-item.in-use {
+  opacity: 0.5;
+  background: rgba(45, 45, 45, 0.7);
+  border-color: rgba(70, 70, 70, 0.5);
+}
+
+.palette-item.in-use:hover {
+  background: rgba(45, 45, 45, 0.7);
+  border-color: rgba(70, 70, 70, 0.5);
+  transform: none;
+  box-shadow: none;
+}
+
+.palette-item.in-use .palette-item-icon {
+  background: linear-gradient(135deg, #555 0%, #444 100%);
+  opacity: 0.6;
+}
+
+.palette-item.in-use .palette-item-label {
+  color: #888;
+}
+
+/* Loading and empty states */
+.component-list.loading::after {
+  content: 'Loading components...';
+  display: block;
+  text-align: center;
+  color: #888;
+  padding: 20px;
+  font-size: 0.9rem;
+}
+
+.component-list-empty,
+.component-list-error {
+  text-align: center;
+  padding: 24px;
+  font-size: 0.9rem;
+  color: #999;
+}
+
+.component-list-error {
+  color: #f8b4b4;
+}
+
+.palette-item-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.palette-item-status .lucide-icon {
+  width: 16px;
+  height: 16px;
+  stroke-width: 2;
+}
+
+/* Accessibility improvements */
+.close-btn:focus,
+.palette-item:focus,
+.palette-item-action:focus {
+  outline: 2px solid rgba(74, 144, 226, 0.8);
+  outline-offset: 2px;
+}
+
+/* Smooth transitions for all interactive elements */
+button,
+.palette-item {
+  transition-property: background-color, border-color, transform, box-shadow, opacity;
+  transition-duration: 0.2s;
+  transition-timing-function: ease;
+}

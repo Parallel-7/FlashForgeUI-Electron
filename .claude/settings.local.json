@@ -79,6 +79,14 @@
       "Bash(rm:*)",
       "Bash(Select-String -Pattern \"src\\index.ts\" -Context 0,5)",
       "Bash(Select-String \"Total console\\.log statements found:\")",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(git checkout:*)",
+      "WebFetch(domain:donkie.github.io)",
+      "WebFetch(domain:fftrac-bg.ffmpeg.org)",
+      "WebFetch(domain:ffmpeg.org)",
+      "WebFetch(domain:lucide.dev)",
+      "mcp__context7__get-library-docs",
+      "WebFetch(domain:developer.chrome.com)"
       "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": [],

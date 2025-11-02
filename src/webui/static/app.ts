@@ -16,8 +16,78 @@
  * - Multi-printer: Context switching with dynamic UI updates and feature detection
  * - Camera: MJPEG proxy streaming and RTSP streaming via JSMpeg with WebSocket
  * - File management: Recent/local file browsing, file selection dialogs, job start with options
+ * - Material matching: AD5X multi-color job mapping to material station slots prior to start
  * - UI updates: Real-time temperature, progress, layer info, ETA, lifetime statistics, thumbnails
  */
+
+import { WebUIGridManager } from './grid/WebUIGridManager.js';
+import { WebUILayoutPersistence } from './grid/WebUILayoutPersistence.js';
+import { componentRegistry } from './grid/WebUIComponentRegistry.js';
+import { WebUIMobileLayoutManager } from './grid/WebUIMobileLayoutManager.js';
+import type { WebUIComponentLayout, WebUIGridLayout } from './grid/types.js';
+
+type LucideGlobal = {
+  readonly createIcons: (options?: {
+    readonly icons?: Record<string, [string, Record<string, string | number>][]>;
+    readonly nameAttr?: string;
+    readonly attrs?: Record<string, string>;
+    readonly root?: Document | Element | DocumentFragment;
+  }) => void;
+  readonly icons: Record<string, [string, Record<string, string | number>][]>;
+};
+
+declare global {
+  interface Window {
+    lucide?: LucideGlobal;
+  }
+}
+
+function toPascalCase(value: string): string {
+  return value
+    .split(/[^a-zA-Z0-9]+/)
+    .filter(Boolean)
+    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
+    .join('');
+}
+
+function hydrateLucideIcons(iconNames: string[], root: Document | Element | DocumentFragment = document): void {
+  const lucide = window.lucide;
+  if (!lucide?.createIcons) {
+    return;
+  }
+
+  const icons: Record<string, [string, Record<string, string | number>][]> = {};
+  iconNames.forEach((name) => {
+    const pascal = toPascalCase(name);
+    const iconNode =
+      lucide.icons?.[pascal] ??
+      lucide.icons?.[name] ??
+      lucide.icons?.[name.toUpperCase()] ??
+      lucide.icons?.[name.toLowerCase()];
+
+    if (iconNode) {
+      icons[pascal] = iconNode;
+    } else {
+      console.warn(`[WebUI] Lucide icon "${name}" not available in global registry.`);
+    }
+  });
+
+  if (Object.keys(icons).length === 0) {
+    return;
+  }
+
+  lucide.createIcons({
+    icons,
+    nameAttr: 'data-lucide',
+    attrs: {
+      'stroke-width': '2',
+      'aria-hidden': 'true',
+      focusable: 'false',
+      class: 'lucide-icon',
+    },
+    root,
+  });
+}
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -27,6 +97,12 @@ interface AuthResponse {
   success: boolean;
   token?: string;
   message?: string;
+}
+
+interface AuthStatusResponse {
+  authRequired: boolean;
+  hasPassword: boolean;
+  defaultPassword: boolean;
 }
 
 interface WebSocketMessage {
@@ -76,12 +152,25 @@ interface PrinterFeatures {
   ledUsesLegacyAPI?: boolean; // Whether custom LED control is enabled
 }
 
-interface JobFile {
+interface AD5XToolData {
+  toolId: number;
+  materialName: string;
+  materialColor: string;
+  filamentWeight: number;
+  slotId?: number | null;
+}
+
+type JobMetadataType = 'basic' | 'ad5x';
+
+interface WebUIJobFile {
   fileName: string;
   displayName: string;
-  size?: number;
-  lastModified?: string;
-  thumbnail?: string;
+  printingTime?: number;
+  metadataType?: JobMetadataType;
+  toolCount?: number;
+  toolDatas?: AD5XToolData[];
+  totalFilamentWeight?: number;
+  useMatlStation?: boolean;
 }
 
 // API Response interfaces
@@ -107,7 +196,8 @@ interface CameraProxyConfigResponse extends ApiResponse {
 }
 
 interface FileListResponse extends ApiResponse {
-  files?: JobFile[];
+  files?: WebUIJobFile[];
+  totalCount?: number;
 }
 
 type PrintJobStartResponse = ApiResponse;
@@ -124,6 +214,51 @@ interface PrinterContext {
 interface ContextsResponse extends ApiResponse {
   contexts?: PrinterContext[];
   activeContextId?: string;
+}
+
+interface WebUISettings {
+  visibleComponents: string[];
+  editMode: boolean;
+}
+
+interface MaterialSlotInfo {
+  slotId: number;
+  isEmpty: boolean;
+  materialType: string | null;
+  materialColor: string | null;
+}
+
+interface MaterialStationStatus {
+  connected: boolean;
+  slots: MaterialSlotInfo[];
+  activeSlot: number | null;
+  overallStatus: 'ready' | 'warming' | 'error' | 'disconnected';
+  errorMessage: string | null;
+}
+
+interface MaterialStationStatusResponse extends ApiResponse {
+  status?: MaterialStationStatus | null;
+}
+
+interface MaterialMapping {
+  toolId: number;
+  slotId: number;
+  materialName: string;
+  toolMaterialColor: string;
+  slotMaterialColor: string;
+}
+
+interface PendingJobStart {
+  filename: string;
+  leveling: boolean;
+  startNow: boolean;
+  job: WebUIJobFile | undefined;
+}
+
+type MaterialMessageType = 'error' | 'warning';
+
+function initializeLucideIcons(): void {
+  hydrateLucideIcons(['settings', 'lock'], document);
 }
 
 // Extended HTMLElement for temperature dialog
@@ -143,12 +278,44 @@ class AppState {
   public printerStatus: PrinterStatus | null = null;
   public printerFeatures: PrinterFeatures | null = null;
   public selectedFile: string | null = null;
+  public jobMetadata: Map<string, WebUIJobFile> = new Map();
+  public pendingJobStart: PendingJobStart | null = null;
   public reconnectAttempts: number = 0;
   public maxReconnectAttempts: number = 5;
   public reconnectDelay: number = 2000;
+  public authRequired: boolean = true;
+  public defaultPassword: boolean = false;
+  public hasPassword: boolean = true;
 }
 
 const state = new AppState();
+
+const gridManager = new WebUIGridManager('.webui-grid-desktop');
+const mobileLayoutManager = new WebUIMobileLayoutManager('.webui-grid-mobile');
+const layoutPersistence = new WebUILayoutPersistence();
+const ALL_COMPONENT_IDS = componentRegistry.getAllIds();
+const DEFAULT_SETTINGS: WebUISettings = {
+  visibleComponents: [...ALL_COMPONENT_IDS],
+  editMode: false,
+};
+
+const MOBILE_BREAKPOINT = 768;
+let currentPrinterSerial: string | null = null;
+const DEMO_SERIAL = 'demo-layout'; // Fallback when no printer connected
+let currentSettings: WebUISettings = { ...DEFAULT_SETTINGS };
+let gridInitialized = false;
+let gridChangeUnsubscribe: (() => void) | null = null;
+const contextById = new Map<string, PrinterContext>();
+let isMobileLayout = false;
+
+interface MaterialMatchingState {
+  pending: PendingJobStart;
+  materialStation: MaterialStationStatus | null;
+  selectedToolId: number | null;
+  mappings: Map<number, MaterialMapping>;
+}
+
+let materialMatchingState: MaterialMatchingState | null = null;
 
 // ============================================================================
 // DOM HELPERS
@@ -170,6 +337,79 @@ function hideElement(id: string): void {
   if (element) {
     element.classList.add('hidden');
   }
+}
+
+function buildAuthHeaders(
+  extra: Record<string, string> = {},
+): Record<string, string> {
+  if (state.authRequired && state.authToken) {
+    return {
+      ...extra,
+      Authorization: `Bearer ${state.authToken}`,
+    };
+  }
+  return { ...extra };
+}
+
+function isAD5XJobFile(job?: WebUIJobFile): job is WebUIJobFile & { metadataType: 'ad5x'; toolDatas: AD5XToolData[] } {
+  return !!job && job.metadataType === 'ad5x' && Array.isArray(job.toolDatas);
+}
+
+function isMultiColorJobFile(job?: WebUIJobFile): job is WebUIJobFile & { metadataType: 'ad5x'; toolDatas: AD5XToolData[] } {
+  return isAD5XJobFile(job) && job.toolDatas.length > 1;
+}
+
+function buildMaterialBadgeTooltip(job: WebUIJobFile): string {
+  if (!isAD5XJobFile(job)) {
+    return 'Multi-color job';
+  }
+
+  const materials = job.toolDatas
+    .map(tool => `Tool ${tool.toolId + 1}: ${tool.materialName}`)
+    .join('\n');
+  return `Requires material station\n${materials}`;
+}
+
+function formatJobPrintingTime(printingTime?: number): string {
+  if (!printingTime || Number.isNaN(printingTime) || printingTime <= 0) {
+    return '';
+  }
+
+  const totalMinutes = Math.round(printingTime / 60);
+  if (totalMinutes <= 0) {
+    return `${Math.max(printingTime, 1)}s`;
+  }
+
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  }
+
+  return `${minutes}m`;
+}
+
+function hasMaterialStationSupport(): boolean {
+  return Boolean(state.printerFeatures?.hasMaterialStation);
+}
+
+function normalizeMaterialString(value: string | null | undefined): string {
+  return (value ?? '').trim().toLowerCase();
+}
+
+function colorsDiffer(toolColor: string, slotColor: string | null): boolean {
+  if (!toolColor) {
+    return false;
+  }
+  return normalizeMaterialString(toolColor) !== normalizeMaterialString(slotColor);
+}
+
+function materialsMatch(toolMaterial: string, slotMaterial: string | null): boolean {
+  if (!toolMaterial) {
+    return false;
+  }
+  return normalizeMaterialString(toolMaterial) === normalizeMaterialString(slotMaterial);
 }
 
 function setTextContent(id: string, text: string): void {
@@ -195,10 +435,424 @@ function showToast(message: string, type: 'success' | 'error' | 'info' = 'info')
 }
 
 // ============================================================================
+// GRID AND SETTINGS MANAGEMENT
+// ============================================================================
+
+/**
+ * Detects if viewport is mobile size
+ */
+function isMobileViewport(): boolean {
+  return window.innerWidth <= MOBILE_BREAKPOINT;
+}
+
+function ensureGridInitialized(): void {
+  if (gridInitialized) {
+    return;
+  }
+
+  gridManager.initialize({
+    column: 12,
+    cellHeight: 80,
+    margin: 8,           // Match Electron app
+    staticGrid: true,
+    float: false,
+    animate: true,       // Smooth transitions for resizes
+    minRow: 11,          // Ensure enough vertical space for taller panels
+  });
+  gridManager.disableEdit();
+  gridInitialized = true;
+}
+
+function ensureCompleteLayout(baseLayout: WebUIGridLayout | null): WebUIGridLayout {
+  const defaults = componentRegistry.getDefaultLayout();
+  const incoming = baseLayout ?? defaults;
+  const normalizedComponents: Record<string, WebUIGridLayout['components'][string]> = {};
+
+  for (const componentId of ALL_COMPONENT_IDS) {
+    const defaultConfig = defaults.components?.[componentId];
+    const customConfig = incoming.components?.[componentId];
+    normalizedComponents[componentId] = sanitizeLayoutConfig(componentId, defaultConfig, customConfig);
+  }
+
+  const hidden = (incoming.hiddenComponents ?? []).filter((componentId) =>
+    ALL_COMPONENT_IDS.includes(componentId),
+  );
+
+  return {
+    version: defaults.version,
+    components: normalizedComponents,
+    hiddenComponents: hidden.length > 0 ? hidden : undefined,
+  };
+}
+
+function sanitizeLayoutConfig(
+  componentId: string,
+  defaults: WebUIComponentLayout | undefined,
+  custom: WebUIComponentLayout | undefined,
+): WebUIComponentLayout {
+  const source = custom ?? defaults;
+  if (!source) {
+    throw new Error(`Missing layout configuration for component ${componentId}`);
+  }
+
+  const toInteger = (value: number | undefined): number | undefined => {
+    if (value === undefined || Number.isNaN(value)) {
+      return undefined;
+    }
+    return Math.max(0, Math.round(value));
+  };
+
+  const minW = toInteger(custom?.minW ?? defaults?.minW);
+  const minH = toInteger(custom?.minH ?? defaults?.minH);
+  const maxW = toInteger(custom?.maxW ?? defaults?.maxW);
+  const maxH = toInteger(custom?.maxH ?? defaults?.maxH);
+
+  let width = Math.max(1, toInteger(source.w) ?? toInteger(defaults?.w) ?? 1);
+  if (minW !== undefined) {
+    width = Math.max(width, minW);
+  }
+  if (maxW !== undefined) {
+    width = Math.min(width, maxW);
+  }
+
+  let height = Math.max(1, toInteger(source.h) ?? toInteger(defaults?.h) ?? 1);
+  if (minH !== undefined) {
+    height = Math.max(height, minH);
+  }
+  if (maxH !== undefined) {
+    height = Math.min(height, maxH);
+  }
+
+  return {
+    x: toInteger(source.x) ?? toInteger(defaults?.x) ?? 0,
+    y: toInteger(source.y) ?? toInteger(defaults?.y) ?? 0,
+    w: width,
+    h: height,
+    minW,
+    minH,
+    maxW,
+    maxH,
+    locked: custom?.locked ?? defaults?.locked ?? false,
+  };
+}
+
+function resolveSerialForContext(context: PrinterContext | undefined): string | null {
+  if (!context) {
+    return null;
+  }
+  if (context.serialNumber && context.serialNumber.trim().length > 0) {
+    return context.serialNumber;
+  }
+  return context.id || null;
+}
+
+function loadSettingsForSerial(serialNumber: string | null): WebUISettings {
+  const stored = layoutPersistence.loadSettings(serialNumber) as Partial<WebUISettings> | null;
+  if (!stored) {
+    return { ...DEFAULT_SETTINGS };
+  }
+
+  const visibleComponents = Array.isArray(stored.visibleComponents)
+    ? stored.visibleComponents.filter((componentId): componentId is string =>
+        typeof componentId === 'string' && ALL_COMPONENT_IDS.includes(componentId),
+      )
+    : [...DEFAULT_SETTINGS.visibleComponents];
+
+  if (visibleComponents.length === 0) {
+    visibleComponents.push(...DEFAULT_SETTINGS.visibleComponents);
+  }
+
+  return {
+    visibleComponents,
+    editMode: stored.editMode === true,
+  };
+}
+
+function persistSettings(): void {
+  if (!currentPrinterSerial) return;
+  layoutPersistence.saveSettings(currentPrinterSerial, currentSettings);
+}
+
+function isComponentSupported(componentId: string, features: PrinterFeatures | null): boolean {
+  if (!features) {
+    return true;
+  }
+
+  if (componentId === 'filtration-tvoc') {
+    return Boolean(features.hasFiltration);
+  }
+
+  return true;
+}
+
+function shouldComponentBeVisible(
+  componentId: string,
+  settings: WebUISettings,
+  features: PrinterFeatures | null,
+): boolean {
+  if (!settings.visibleComponents.includes(componentId)) {
+    return false;
+  }
+  return isComponentSupported(componentId, features);
+}
+
+function updateEditModeToggle(editMode: boolean): void {
+  const isMobile = isMobileViewport();
+  const toggleButton = $('edit-mode-toggle') as HTMLButtonElement | null;
+
+  if (toggleButton) {
+    // Hide edit mode toggle on mobile (handled by CSS but reinforce here)
+    if (isMobile) {
+      toggleButton.style.display = 'none';
+    } else {
+      toggleButton.style.display = '';
+      toggleButton.setAttribute('aria-pressed', editMode ? 'true' : 'false');
+      const lockIcon = toggleButton.querySelector<HTMLElement>('.lock-icon');
+      const text = toggleButton.querySelector('.edit-text');
+      if (lockIcon) {
+        const iconName = editMode ? 'unlock' : 'lock';
+        lockIcon.setAttribute('data-lucide', iconName);
+        hydrateLucideIcons([iconName], lockIcon);
+      }
+      if (text) {
+        text.textContent = editMode ? 'Unlocked' : 'Locked';
+      }
+    }
+  }
+
+  const modalToggle = $('toggle-edit-mode') as HTMLInputElement | null;
+  if (modalToggle) {
+    modalToggle.checked = editMode;
+    // Disable edit mode checkbox in settings on mobile
+    modalToggle.disabled = isMobile;
+  }
+}
+
+function applySettings(settings: WebUISettings): void {
+  const isMobile = isMobileViewport();
+  const features = state.printerFeatures ?? null;
+
+  for (const componentId of ALL_COMPONENT_IDS) {
+    const shouldShow = shouldComponentBeVisible(componentId, settings, features);
+
+    if (isMobile) {
+      // Apply to mobile layout
+      if (shouldShow) {
+        mobileLayoutManager.showComponent(componentId);
+      } else {
+        mobileLayoutManager.hideComponent(componentId);
+      }
+    } else {
+      // Apply to desktop layout
+      if (!gridInitialized) return;
+      if (shouldShow) {
+        gridManager.showComponent(componentId);
+      } else {
+        gridManager.hideComponent(componentId);
+      }
+    }
+  }
+
+  // Edit mode only applies to desktop
+  if (!isMobile && gridInitialized) {
+    if (settings.editMode) {
+      gridManager.enableEdit();
+    } else {
+      gridManager.disableEdit();
+    }
+  }
+
+  updateEditModeToggle(isMobile ? false : settings.editMode);
+}
+
+function refreshSettingsUI(settings: WebUISettings): void {
+  const checkboxes = document.querySelectorAll<HTMLInputElement>(
+    '#settings-modal input[type="checkbox"][data-component-id]',
+  );
+
+  checkboxes.forEach((checkbox) => {
+    const componentId = checkbox.dataset.componentId;
+    if (!componentId) {
+      return;
+    }
+
+    const supported = isComponentSupported(componentId, state.printerFeatures ?? null);
+    checkbox.checked = settings.visibleComponents.includes(componentId) && supported;
+    checkbox.disabled = !supported;
+  });
+
+  updateEditModeToggle(settings.editMode);
+}
+
+function handleLayoutChange(layout: WebUIGridLayout): void {
+  if (!currentPrinterSerial) return;
+  layoutPersistence.save(layout, currentPrinterSerial);
+}
+
+function saveCurrentLayoutSnapshot(): void {
+  if (!gridInitialized || !currentPrinterSerial) {
+    return;
+  }
+  const snapshot = gridManager.serialize();
+  layoutPersistence.save(snapshot, currentPrinterSerial);
+}
+
+function loadLayoutForCurrentPrinter(): void {
+  if (!currentPrinterSerial) {
+    // Fallback to demo layout if somehow serial is still null
+    currentPrinterSerial = DEMO_SERIAL;
+  }
+
+  const isMobile = isMobileViewport();
+
+  if (isMobile) {
+    // Mobile: Use static layout
+    mobileLayoutManager.initialize();
+    currentSettings = loadSettingsForSerial(currentPrinterSerial);
+    mobileLayoutManager.load(currentSettings.visibleComponents);
+    isMobileLayout = true;
+  } else {
+    // Desktop: Use GridStack
+    ensureGridInitialized();
+    const storedLayout = layoutPersistence.load(currentPrinterSerial);
+    const layout = ensureCompleteLayout(storedLayout);
+
+    gridManager.load(layout);
+
+    if (gridChangeUnsubscribe) {
+      gridChangeUnsubscribe();
+    }
+    gridChangeUnsubscribe = gridManager.onChange(handleLayoutChange);
+    isMobileLayout = false;
+  }
+
+  currentSettings = loadSettingsForSerial(currentPrinterSerial);
+  applySettings(currentSettings);
+  refreshSettingsUI(currentSettings);
+
+  updateFeatureVisibility();
+
+  if (state.printerFeatures?.hasCamera) {
+    void loadCameraStream();
+  }
+}
+
+function openSettingsModal(): void {
+  const modal = $('settings-modal');
+  if (!modal) return;
+  refreshSettingsUI(currentSettings);
+  modal.classList.remove('hidden');
+}
+
+function closeSettingsModal(): void {
+  const modal = $('settings-modal');
+  if (!modal) return;
+  modal.classList.add('hidden');
+}
+
+function resetLayoutForCurrentPrinter(): void {
+  if (!currentPrinterSerial) {
+    return;
+  }
+
+  layoutPersistence.reset(currentPrinterSerial);
+  currentSettings = { ...DEFAULT_SETTINGS };
+  persistSettings();
+  loadLayoutForCurrentPrinter();
+  showToast('Layout reset to default', 'info');
+}
+
+function setupSettingsUI(): void {
+  const settingsButton = $('settings-button') as HTMLButtonElement | null;
+  const closeButton = $('close-settings') as HTMLButtonElement | null;
+  const saveButton = $('save-settings-btn') as HTMLButtonElement | null;
+  const resetButton = $('reset-layout-btn') as HTMLButtonElement | null;
+  const modal = $('settings-modal');
+  const modalEditToggle = $('toggle-edit-mode') as HTMLInputElement | null;
+  const headerEditToggle = $('edit-mode-toggle') as HTMLButtonElement | null;
+
+  if (settingsButton) {
+    settingsButton.addEventListener('click', () => openSettingsModal());
+  }
+
+  if (closeButton) {
+    closeButton.addEventListener('click', () => closeSettingsModal());
+  }
+
+  if (saveButton) {
+    saveButton.addEventListener('click', () => {
+      const checkboxes = document.querySelectorAll<HTMLInputElement>(
+        '#settings-modal input[type="checkbox"][data-component-id]',
+      );
+      const visibleComponents = Array.from(checkboxes)
+        .filter((checkbox) => checkbox.checked && !checkbox.disabled)
+        .map((checkbox) => checkbox.dataset.componentId ?? '')
+        .filter((componentId): componentId is string => componentId.length > 0);
+
+      const editMode = (modalEditToggle?.checked ?? false);
+
+      currentSettings = {
+        visibleComponents: visibleComponents.length > 0 ? visibleComponents : [...DEFAULT_SETTINGS.visibleComponents],
+        editMode,
+      };
+
+      applySettings(currentSettings);
+      persistSettings();
+      closeSettingsModal();
+    });
+  }
+
+  if (resetButton) {
+    resetButton.addEventListener('click', () => {
+      resetLayoutForCurrentPrinter();
+      refreshSettingsUI(currentSettings);
+    });
+  }
+
+  if (modalEditToggle) {
+    modalEditToggle.addEventListener('change', (event) => {
+      currentSettings.editMode = (event.target as HTMLInputElement).checked;
+      applySettings(currentSettings);
+      persistSettings();
+    });
+  }
+
+  if (headerEditToggle) {
+    headerEditToggle.addEventListener('click', () => {
+      currentSettings.editMode = !currentSettings.editMode;
+      applySettings(currentSettings);
+      persistSettings();
+      refreshSettingsUI(currentSettings);
+    });
+  }
+
+  if (modal) {
+    modal.addEventListener('click', (event) => {
+      if (event.target === modal) {
+        closeSettingsModal();
+      }
+    });
+  }
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+      closeSettingsModal();
+    }
+  });
+
+  updateEditModeToggle(currentSettings.editMode);
+}
+
+// ============================================================================
 // AUTHENTICATION
 // ============================================================================
 
 async function login(password: string, rememberMe: boolean): Promise<boolean> {
+  if (!state.authRequired) {
+    state.isAuthenticated = true;
+    return true;
+  }
+
   try {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
@@ -234,13 +888,11 @@ async function login(password: string, rememberMe: boolean): Promise<boolean> {
 }
 
 async function logout(): Promise<void> {
-  if (state.authToken) {
+  if (state.authRequired && state.authToken) {
     try {
       await fetch('/api/auth/logout', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${state.authToken}`
-        }
+        headers: buildAuthHeaders()
       });
     } catch (error) {
       console.error('Logout error:', error);
@@ -257,10 +909,24 @@ async function logout(): Promise<void> {
   if (state.websocket) {
     state.websocket.close();
   }
+
+  currentPrinterSerial = null;
+  currentSettings = { ...DEFAULT_SETTINGS };
+  contextById.clear();
+  if (gridInitialized) {
+    gridManager.clear();
+    gridManager.disableEdit();
+    updateEditModeToggle(false);
+  }
+  closeSettingsModal();
   
-  // Show login screen
-  showElement('login-screen');
-  hideElement('main-ui');
+  if (state.authRequired) {
+    showElement('login-screen');
+    hideElement('main-ui');
+  } else {
+    hideElement('login-screen');
+    showElement('main-ui');
+  }
 }
 
 // ============================================================================
@@ -268,13 +934,14 @@ async function logout(): Promise<void> {
 // ============================================================================
 
 function connectWebSocket(): void {
-  if (!state.authToken) {
+  if (state.authRequired && !state.authToken) {
     console.error('Cannot connect WebSocket without auth token');
     return;
   }
   
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const wsUrl = `${protocol}//${window.location.host}/ws?token=${state.authToken}`;
+  const tokenQuery = state.authRequired && state.authToken ? `?token=${state.authToken}` : '';
+  const wsUrl = `${protocol}//${window.location.host}/ws${tokenQuery}`;
   
   try {
     state.websocket = new WebSocket(wsUrl);
@@ -611,23 +1278,41 @@ function updatePrinterStateCard(status: PrinterStatus | null): void {
 // ============================================================================
 
 async function fetchPrinterContexts(): Promise<void> {
-  if (!state.authToken) {
+  if (state.authRequired && !state.authToken) {
     console.log('[Contexts] No auth token, skipping context fetch');
     return;
   }
 
   try {
     const response = await fetch('/api/contexts', {
-      headers: {
-        'Authorization': `Bearer ${state.authToken}`
-      }
+      headers: buildAuthHeaders()
     });
 
     const result = await response.json() as ContextsResponse;
 
     if (result.success && result.contexts) {
       console.log('[Contexts] Fetched contexts:', result.contexts);
-      updatePrinterSelector(result.contexts, result.activeContextId || '');
+      contextById.clear();
+      result.contexts.forEach((context) => {
+        contextById.set(context.id, context);
+      });
+
+      const fallbackContext =
+        result.contexts.find((context) => context.isActive) ?? result.contexts[0] ?? null;
+      const selectedContextId = result.activeContextId || fallbackContext?.id || '';
+
+      updatePrinterSelector(result.contexts, selectedContextId);
+
+      const activeContext = selectedContextId ? contextById.get(selectedContextId) : fallbackContext;
+      const resolvedSerial = resolveSerialForContext(activeContext);
+      if (resolvedSerial) {
+        currentPrinterSerial = resolvedSerial;
+        loadLayoutForCurrentPrinter();
+      } else {
+        // Use demo serial for testing/preview when no printer connected
+        currentPrinterSerial = DEMO_SERIAL;
+        loadLayoutForCurrentPrinter();
+      }
     } else {
       console.error('[Contexts] Failed to fetch contexts:', result.error);
     }
@@ -671,18 +1356,17 @@ function updatePrinterSelector(contexts: PrinterContext[], activeContextId: stri
 }
 
 async function switchPrinterContext(contextId: string): Promise<void> {
-  if (!state.authToken) {
+  if (state.authRequired && !state.authToken) {
     showToast('Not authenticated', 'error');
     return;
   }
 
+  saveCurrentLayoutSnapshot();
+
   try {
     const response = await fetch('/api/contexts/switch', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${state.authToken}`,
-        'Content-Type': 'application/json'
-      },
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({ contextId })
     });
 
@@ -691,6 +1375,8 @@ async function switchPrinterContext(contextId: string): Promise<void> {
     if (result.success) {
       console.log('[Contexts] Switched to context:', contextId);
       showToast(result.message || 'Switched printer', 'success');
+      // Refresh context list to obtain updated serial numbers and load layout
+      await fetchPrinterContexts();
 
       // Reload features for the new context (handles filtration visibility, etc.)
       await loadPrinterFeatures();
@@ -714,7 +1400,7 @@ async function switchPrinterContext(contextId: string): Promise<void> {
 // ============================================================================
 
 async function sendPrinterCommand(endpoint: string, data?: unknown): Promise<void> {
-  if (!state.authToken) {
+  if (state.authRequired && !state.authToken) {
     showToast('Not authenticated', 'error');
     return;
   }
@@ -722,10 +1408,7 @@ async function sendPrinterCommand(endpoint: string, data?: unknown): Promise<voi
   try {
     const response = await fetch(`/api/printer/${endpoint}`, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${state.authToken}`,
-        'Content-Type': 'application/json'
-      },
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
       body: data ? JSON.stringify(data) : undefined
     });
     
@@ -743,13 +1426,11 @@ async function sendPrinterCommand(endpoint: string, data?: unknown): Promise<voi
 }
 
 async function loadPrinterFeatures(): Promise<void> {
-  if (!state.authToken) return;
+  if (state.authRequired && !state.authToken) return;
   
   try {
     const response = await fetch('/api/printer/features', {
-      headers: {
-        'Authorization': `Bearer ${state.authToken}`
-      }
+      headers: buildAuthHeaders()
     });
     
     const result = await response.json() as PrinterFeaturesResponse;
@@ -757,6 +1438,16 @@ async function loadPrinterFeatures(): Promise<void> {
     if (result.success && result.features) {
       state.printerFeatures = result.features;
       updateFeatureVisibility();
+      applySettings(currentSettings);
+      refreshSettingsUI(currentSettings);
+
+      if (state.printerFeatures.hasCamera && gridInitialized) {
+        const cameraPlaceholder = $('camera-placeholder');
+        const cameraStream = $('camera-stream');
+        if (cameraPlaceholder && cameraStream) {
+          void loadCameraStream();
+        }
+      }
     }
   } catch (error) {
     console.error('Failed to load printer features:', error);
@@ -772,18 +1463,6 @@ function updateFeatureVisibility(): void {
   const ledEnabled = state.printerFeatures.hasLED || state.printerFeatures.ledUsesLegacyAPI || false;
   if (ledOn) ledOn.disabled = !ledEnabled;
   if (ledOff) ledOff.disabled = !ledEnabled;
-  
-  // Filtration controls (AD5M Pro only)
-  if (state.printerFeatures.hasFiltration) {
-    showElement('filtration-section');
-  } else {
-    hideElement('filtration-section');
-  }
-  
-  // Camera
-  if (state.printerFeatures.hasCamera) {
-    void loadCameraStream();
-  }
 }
 
 function updateFiltrationStatus(mode?: 'external' | 'internal' | 'none'): void {
@@ -825,9 +1504,11 @@ function updateFiltrationStatus(mode?: 'external' | 'internal' | 'none'): void {
 }
 
 function updateModelPreview(thumbnailData?: string | null): void {
-  const previewContainer = $('model-preview');
+  const previewContainer = document.querySelector<HTMLElement>(
+    '[data-component-id="model-preview"] .panel-content',
+  );
   if (!previewContainer) return;
-  
+
   if (thumbnailData) {
     // Clear existing content
     previewContainer.innerHTML = '';
@@ -873,13 +1554,16 @@ async function loadCameraStream(): Promise<void> {
     console.error('Camera elements not found');
     return;
   }
+
+  if (state.authRequired && !state.authToken) {
+    console.warn('Skipping camera stream load due to missing auth token');
+    return;
+  }
   
   try {
     // Get camera proxy configuration from the server
     const response = await fetch('/api/camera/proxy-config', {
-      headers: {
-        'Authorization': `Bearer ${state.authToken}`
-      }
+      headers: buildAuthHeaders()
     });
     
     if (!response.ok) {
@@ -990,18 +1674,20 @@ async function loadCameraStream(): Promise<void> {
 // ============================================================================
 
 async function loadFileList(source: 'recent' | 'local'): Promise<void> {
-  if (!state.authToken) return;
+  if (state.authRequired && !state.authToken) return;
   
   try {
     const response = await fetch(`/api/jobs/${source}`, {
-      headers: {
-        'Authorization': `Bearer ${state.authToken}`
-      }
+      headers: buildAuthHeaders()
     });
     
     const result = await response.json() as FileListResponse;
     
     if (result.success && result.files) {
+      state.jobMetadata.clear();
+      result.files.forEach((file) => {
+        state.jobMetadata.set(file.fileName, file);
+      });
       showFileModal(result.files, source);
     } else {
       showToast('Failed to load files', 'error');
@@ -1012,7 +1698,7 @@ async function loadFileList(source: 'recent' | 'local'): Promise<void> {
   }
 }
 
-function showFileModal(files: JobFile[], source: string): void {
+function showFileModal(files: WebUIJobFile[], source: 'recent' | 'local'): void {
   const modal = $('file-modal');
   const fileList = $('file-list');
   const title = $('modal-title');
@@ -1025,24 +1711,85 @@ function showFileModal(files: JobFile[], source: string): void {
   // Clear and populate file list
   fileList.innerHTML = '';
   state.selectedFile = null;
+
+  const printBtn = $('print-file-btn') as HTMLButtonElement | null;
+  if (printBtn) {
+    printBtn.disabled = true;
+  }
   
   files.forEach(file => {
     const item = document.createElement('div');
     item.className = 'file-item';
-    item.innerHTML = `<span class="file-name">${file.displayName || file.fileName}</span>`;
-    
+    item.dataset.filename = file.fileName;
+
+    const header = document.createElement('div');
+    header.className = 'file-item-header';
+
+    const name = document.createElement('span');
+    name.className = 'file-name';
+    name.textContent = file.displayName || file.fileName;
+    header.appendChild(name);
+
+    if (isMultiColorJobFile(file)) {
+      const badge = document.createElement('span');
+      badge.className = 'file-badge multi-color';
+      badge.textContent = 'Multi-color';
+      badge.title = buildMaterialBadgeTooltip(file);
+      header.appendChild(badge);
+    }
+
+    item.appendChild(header);
+
+    const meta = document.createElement('div');
+    meta.className = 'file-meta';
+
+    const printingTimeLabel = formatJobPrintingTime(file.printingTime);
+    if (printingTimeLabel) {
+      const timeEl = document.createElement('span');
+      timeEl.className = 'file-meta-item';
+      timeEl.textContent = printingTimeLabel;
+      meta.appendChild(timeEl);
+    }
+
+    if (file.metadataType === 'ad5x' && Array.isArray(file.toolDatas) && file.toolDatas.length > 0) {
+      const requirementSummary = document.createElement('div');
+      requirementSummary.className = 'material-preview';
+
+      file.toolDatas.forEach((tool) => {
+        const chip = document.createElement('div');
+        chip.className = 'material-chip';
+
+        const swatch = document.createElement('span');
+        swatch.className = 'material-chip-swatch';
+        if (tool.materialColor) {
+          swatch.style.backgroundColor = tool.materialColor;
+        }
+
+        const label = document.createElement('span');
+        label.className = 'material-chip-label';
+        label.textContent = tool.materialName || `Tool ${tool.toolId + 1}`;
+
+        chip.appendChild(swatch);
+        chip.appendChild(label);
+        requirementSummary.appendChild(chip);
+      });
+
+      meta.appendChild(requirementSummary);
+    }
+
+    if (meta.childElementCount > 0) {
+      item.appendChild(meta);
+    }
+
     item.addEventListener('click', () => {
-      // Remove selected class from all items
       fileList.querySelectorAll('.file-item').forEach(el => el.classList.remove('selected'));
-      // Add selected class to clicked item
       item.classList.add('selected');
       state.selectedFile = file.fileName;
-      
-      // Enable print button
+
       const printBtn = $('print-file-btn') as HTMLButtonElement;
       if (printBtn) printBtn.disabled = false;
     });
-    
+
     fileList.appendChild(item);
   });
   
@@ -1051,36 +1798,537 @@ function showFileModal(files: JobFile[], source: string): void {
 }
 
 async function startPrintJob(): Promise<void> {
-  if (!state.selectedFile || !state.authToken) return;
+  if (!state.selectedFile || (state.authRequired && !state.authToken)) return;
   
-  const autoLevel = ($('auto-level') as HTMLInputElement)?.checked || false;
-  const startNow = ($('start-now') as HTMLInputElement)?.checked || true;
-  
+  const autoLevel = ($('auto-level') as HTMLInputElement)?.checked ?? false;
+  const startNow = ($('start-now') as HTMLInputElement)?.checked ?? true;
+  const jobInfo = state.jobMetadata.get(state.selectedFile);
+
+  if (startNow && hasMaterialStationSupport() && isMultiColorJobFile(jobInfo)) {
+    state.pendingJobStart = {
+      filename: state.selectedFile,
+      leveling: autoLevel,
+      startNow,
+      job: jobInfo
+    };
+    await openMaterialMatchingModal();
+    return;
+  }
+
+  const success = await sendJobStartRequest({
+    filename: state.selectedFile,
+    leveling: autoLevel,
+    startNow,
+    materialMappings: undefined
+  });
+
+  if (success) {
+    hideElement('file-modal');
+  }
+}
+
+interface StartJobOptions {
+  filename: string;
+  leveling: boolean;
+  startNow: boolean;
+  materialMappings?: MaterialMapping[];
+}
+
+async function sendJobStartRequest(options: StartJobOptions): Promise<boolean> {
+  if (state.authRequired && !state.authToken) {
+    showToast('Not authenticated', 'error');
+    return false;
+  }
+
   try {
     const response = await fetch('/api/jobs/start', {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${state.authToken}`,
-        'Content-Type': 'application/json'
-      },
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
-        filename: state.selectedFile,
-        leveling: autoLevel,
-        startNow: startNow
+        filename: options.filename,
+        leveling: options.leveling,
+        startNow: options.startNow,
+        materialMappings: options.materialMappings
       })
     });
-    
+
     const result = await response.json() as PrintJobStartResponse;
-    
+
     if (result.success) {
       showToast(result.message || 'Print job started', 'success');
-      hideElement('file-modal');
-    } else {
-      showToast(result.error || 'Failed to start print', 'error');
+      return true;
     }
+
+    showToast(result.error || 'Failed to start print', 'error');
+    return false;
   } catch (error) {
     console.error('Failed to start print:', error);
     showToast('Failed to start print job', 'error');
+    return false;
+  }
+}
+
+function getMaterialMatchingElement<T extends HTMLElement>(id: string): T | null {
+  return $(id) as T | null;
+}
+
+function getMaterialMessageElement(type: MaterialMessageType): HTMLDivElement | null {
+  const id = type === 'error' ? 'material-matching-error' : 'material-matching-warning';
+  return getMaterialMatchingElement<HTMLDivElement>(id);
+}
+
+function clearMaterialMessages(): void {
+  (['error', 'warning'] as const).forEach((type) => {
+    const messageEl = getMaterialMessageElement(type);
+    if (messageEl) {
+      messageEl.classList.add('hidden');
+      messageEl.textContent = '';
+    }
+  });
+}
+
+function showMaterialError(text: string): void {
+  const errorEl = getMaterialMessageElement('error');
+  const warningEl = getMaterialMessageElement('warning');
+  if (warningEl) {
+    warningEl.classList.add('hidden');
+    warningEl.textContent = '';
+  }
+  if (errorEl) {
+    errorEl.textContent = text;
+    errorEl.classList.remove('hidden');
+  }
+}
+
+function showMaterialWarning(text: string): void {
+  const warningEl = getMaterialMessageElement('warning');
+  if (warningEl) {
+    warningEl.textContent = text;
+    warningEl.classList.remove('hidden');
+  }
+}
+
+function updateMaterialMatchingConfirmState(): void {
+  const confirmButton = getMaterialMatchingElement<HTMLButtonElement>('material-matching-confirm');
+  if (!confirmButton) return;
+
+  if (!materialMatchingState) {
+    confirmButton.disabled = true;
+    return;
+  }
+
+  const job = materialMatchingState.pending.job;
+  const requiredMappings = isAD5XJobFile(job) ? job.toolDatas.length : 0;
+  confirmButton.disabled = materialMatchingState.mappings.size !== requiredMappings;
+}
+
+function renderMaterialMappings(): void {
+  const container = getMaterialMatchingElement<HTMLDivElement>('material-mappings');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  if (!materialMatchingState || materialMatchingState.mappings.size === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'material-mapping-empty';
+    empty.textContent = 'Select a tool and then choose a matching slot to create mappings.';
+    container.appendChild(empty);
+    return;
+  }
+
+  materialMatchingState.mappings.forEach((mapping) => {
+    const item = document.createElement('div');
+    item.className = 'material-mapping-item';
+
+    if (colorsDiffer(mapping.toolMaterialColor, mapping.slotMaterialColor)) {
+      item.classList.add('warning');
+    }
+
+    const text = document.createElement('span');
+    text.className = 'material-mapping-text';
+    text.innerHTML = `Tool ${mapping.toolId + 1} <span class="material-mapping-arrow">&rarr;</span> Slot ${mapping.slotId}`;
+
+    const removeBtn = document.createElement('button');
+    removeBtn.className = 'material-mapping-remove';
+    removeBtn.type = 'button';
+    removeBtn.innerHTML = '&times;';
+    removeBtn.title = 'Remove mapping';
+    removeBtn.addEventListener('click', () => {
+      handleRemoveMapping(mapping.toolId);
+    });
+
+    item.appendChild(text);
+    item.appendChild(removeBtn);
+    container.appendChild(item);
+  });
+}
+
+function handleRemoveMapping(toolId: number): void {
+  if (!materialMatchingState) {
+    return;
+  }
+
+  materialMatchingState.mappings.delete(toolId);
+  renderMaterialRequirements(materialMatchingState.pending.job);
+  renderMaterialSlots(materialMatchingState.materialStation);
+  renderMaterialMappings();
+  updateMaterialMatchingConfirmState();
+  clearMaterialMessages();
+}
+
+function renderMaterialRequirements(job: WebUIJobFile | undefined): void {
+  const container = getMaterialMatchingElement<HTMLDivElement>('material-job-requirements');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  if (!job || !isAD5XJobFile(job) || job.toolDatas.length === 0) {
+    const empty = document.createElement('div');
+    empty.className = 'material-placeholder';
+    empty.textContent = 'No material requirements available for this job.';
+    container.appendChild(empty);
+    return;
+  }
+
+  job.toolDatas.forEach((tool) => {
+    const item = document.createElement('div');
+    item.className = 'material-tool-item';
+    item.dataset.toolId = `${tool.toolId}`;
+
+    if (materialMatchingState?.selectedToolId === tool.toolId) {
+      item.classList.add('selected');
+    }
+
+    if (materialMatchingState?.mappings.has(tool.toolId)) {
+      item.classList.add('mapped');
+    }
+
+    const header = document.createElement('div');
+    header.className = 'material-tool-header';
+
+    const label = document.createElement('span');
+    label.className = 'material-tool-label';
+    label.textContent = `Tool ${tool.toolId + 1}`;
+
+    const swatch = document.createElement('span');
+    swatch.className = 'material-tool-swatch';
+    if (tool.materialColor) {
+      swatch.style.backgroundColor = tool.materialColor;
+    }
+
+    header.appendChild(label);
+    header.appendChild(swatch);
+    item.appendChild(header);
+
+    const details = document.createElement('div');
+    details.className = 'material-tool-details';
+    const materialName = tool.materialName || 'Unknown Material';
+    const weightText = typeof tool.filamentWeight === 'number'
+      ? `${tool.filamentWeight.toFixed(1)} g`
+      : 'Weight unavailable';
+
+    details.innerHTML = `
+      <div class="material-tool-material">${materialName}</div>
+      <div class="material-tool-weight">${weightText}</div>
+    `;
+
+    if (materialMatchingState?.mappings.has(tool.toolId)) {
+      const mapping = materialMatchingState.mappings.get(tool.toolId);
+      if (mapping) {
+        const mappingInfo = document.createElement('div');
+        mappingInfo.className = 'material-tool-mapping';
+        mappingInfo.textContent = `Mapped to Slot ${mapping.slotId}`;
+        details.appendChild(mappingInfo);
+      }
+    }
+
+    item.appendChild(details);
+
+    item.addEventListener('click', () => {
+      handleToolSelection(tool.toolId);
+    });
+
+    container.appendChild(item);
+  });
+}
+
+function handleToolSelection(toolId: number): void {
+  if (!materialMatchingState) {
+    return;
+  }
+
+  if (materialMatchingState.selectedToolId === toolId) {
+    materialMatchingState.selectedToolId = null;
+  } else {
+    materialMatchingState.selectedToolId = toolId;
+  }
+
+  clearMaterialMessages();
+  renderMaterialRequirements(materialMatchingState.pending.job);
+  renderMaterialSlots(materialMatchingState.materialStation);
+}
+
+function isSlotAlreadyAssigned(slotDisplayId: number): boolean {
+  if (!materialMatchingState) {
+    return false;
+  }
+
+  for (const mapping of materialMatchingState.mappings.values()) {
+    if (mapping.slotId === slotDisplayId) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function renderMaterialSlots(status: MaterialStationStatus | null): void {
+  const container = getMaterialMatchingElement<HTMLDivElement>('material-slot-list');
+  if (!container) return;
+
+  container.innerHTML = '';
+
+  if (!status) {
+    const empty = document.createElement('div');
+    empty.className = 'material-placeholder';
+    empty.textContent = 'Material station status unavailable.';
+    container.appendChild(empty);
+    return;
+  }
+
+  if (!status.connected || status.slots.length === 0) {
+    const disconnected = document.createElement('div');
+    disconnected.className = 'material-placeholder';
+    disconnected.textContent = status.errorMessage || 'Material station not connected.';
+    container.appendChild(disconnected);
+    return;
+  }
+
+  status.slots.forEach((slot) => {
+    const displaySlotId = slot.slotId + 1;
+    const item = document.createElement('div');
+    item.className = 'material-slot-item';
+    item.dataset.slotId = `${displaySlotId}`;
+
+    if (slot.isEmpty) {
+      item.classList.add('empty');
+    }
+
+    if (isSlotAlreadyAssigned(displaySlotId)) {
+      item.classList.add('assigned');
+    }
+
+    const swatch = document.createElement('span');
+    swatch.className = 'material-slot-swatch';
+    if (slot.materialColor) {
+      swatch.style.backgroundColor = slot.materialColor;
+    }
+
+    const info = document.createElement('div');
+    info.className = 'material-slot-info';
+
+    const label = document.createElement('div');
+    label.className = 'material-slot-label';
+    label.textContent = `Slot ${displaySlotId}`;
+
+    const material = document.createElement('div');
+    material.className = 'material-slot-material';
+    material.textContent = slot.isEmpty ? 'Empty' : (slot.materialType || 'Unknown');
+
+    info.appendChild(label);
+    info.appendChild(material);
+
+    item.appendChild(swatch);
+    item.appendChild(info);
+
+    if (!slot.isEmpty && !isSlotAlreadyAssigned(displaySlotId)) {
+      item.addEventListener('click', () => {
+        handleSlotSelection(slot);
+      });
+    } else {
+      item.classList.add('disabled');
+    }
+
+    container.appendChild(item);
+  });
+}
+
+function handleSlotSelection(slot: MaterialSlotInfo): void {
+  if (!materialMatchingState) {
+    return;
+  }
+
+  const job = materialMatchingState.pending.job;
+  if (!job || !isAD5XJobFile(job)) {
+    return;
+  }
+
+  const selectedToolId = materialMatchingState.selectedToolId;
+  if (selectedToolId === null) {
+    showMaterialError('Select a tool on the left before choosing a slot.');
+    return;
+  }
+
+  if (slot.isEmpty) {
+    showMaterialError('Cannot assign an empty slot. Load filament before starting the print.');
+    return;
+  }
+
+  const tool = job.toolDatas.find(t => t.toolId === selectedToolId);
+  if (!tool) {
+    showMaterialError('Selected tool data is unavailable.');
+    return;
+  }
+
+  if (!materialsMatch(tool.materialName, slot.materialType)) {
+    showMaterialError(`Material mismatch: Tool ${tool.toolId + 1} requires ${tool.materialName}, but Slot ${slot.slotId + 1} contains ${slot.materialType || 'no material'}.`);
+    return;
+  }
+
+  const displaySlotId = slot.slotId + 1;
+
+  if (isSlotAlreadyAssigned(displaySlotId)) {
+    showMaterialError(`Slot ${displaySlotId} is already assigned to another tool.`);
+    return;
+  }
+
+  const mapping: MaterialMapping = {
+    toolId: tool.toolId,
+    slotId: displaySlotId,
+    materialName: tool.materialName,
+    toolMaterialColor: tool.materialColor,
+    slotMaterialColor: slot.materialColor || '#333333'
+  };
+
+  materialMatchingState.mappings.set(tool.toolId, mapping);
+  materialMatchingState.selectedToolId = null;
+
+  if (colorsDiffer(tool.materialColor, slot.materialColor)) {
+    showMaterialWarning(`Tool ${tool.toolId + 1} color (${tool.materialColor}) does not match Slot ${displaySlotId} color (${slot.materialColor || 'unknown'}). The print will succeed, but appearance may differ.`);
+  } else {
+    clearMaterialMessages();
+  }
+
+  renderMaterialRequirements(job);
+  renderMaterialSlots(materialMatchingState.materialStation);
+  renderMaterialMappings();
+  updateMaterialMatchingConfirmState();
+}
+
+async function fetchMaterialStationStatus(): Promise<MaterialStationStatus | null> {
+  if (state.authRequired && !state.authToken) {
+    return null;
+  }
+
+  try {
+    const response = await fetch('/api/printer/material-station', {
+      headers: buildAuthHeaders()
+    });
+
+    const result = await response.json() as MaterialStationStatusResponse;
+    if (result.success) {
+      return result.status ?? null;
+    }
+
+    showMaterialError(result.error || 'Material station not available.');
+    return null;
+  } catch (error) {
+    console.error('Failed to fetch material station status:', error);
+    showMaterialError('Failed to load material station status.');
+    return null;
+  }
+}
+
+function resetMaterialMatchingState(): void {
+  materialMatchingState = null;
+  state.pendingJobStart = null;
+  clearMaterialMessages();
+  updateMaterialMatchingConfirmState();
+}
+
+function closeMaterialMatchingModal(): void {
+  const modal = getMaterialMatchingElement<HTMLDivElement>('material-matching-modal');
+  if (modal) {
+    hideElement('material-matching-modal');
+  }
+  resetMaterialMatchingState();
+}
+
+async function openMaterialMatchingModal(): Promise<void> {
+  const modal = getMaterialMatchingElement<HTMLDivElement>('material-matching-modal');
+  const title = getMaterialMatchingElement<HTMLHeadingElement>('material-matching-title');
+
+  if (!modal || !state.pendingJobStart || !state.pendingJobStart.job || !isAD5XJobFile(state.pendingJobStart.job)) {
+    showToast('Material matching is not available for this job.', 'error');
+    resetMaterialMatchingState();
+    return;
+  }
+
+  materialMatchingState = {
+    pending: state.pendingJobStart,
+    materialStation: null,
+    selectedToolId: null,
+    mappings: new Map()
+  };
+
+  if (title) {
+    title.textContent = `Match Materials – ${state.pendingJobStart.job.displayName || state.pendingJobStart.job.fileName}`;
+  }
+
+  renderMaterialRequirements(state.pendingJobStart.job);
+  renderMaterialSlots(null);
+  renderMaterialMappings();
+  updateMaterialMatchingConfirmState();
+  clearMaterialMessages();
+  showElement('material-matching-modal');
+
+  const status = await fetchMaterialStationStatus();
+  if (!materialMatchingState) {
+    return;
+  }
+
+  materialMatchingState.materialStation = status;
+  renderMaterialSlots(status);
+
+  if (!status || !status.connected) {
+    showMaterialError(status?.errorMessage || 'Material station not connected.');
+  }
+}
+
+async function confirmMaterialMatching(): Promise<void> {
+  if (!materialMatchingState || !materialMatchingState.pending.job || !isAD5XJobFile(materialMatchingState.pending.job)) {
+    return;
+  }
+
+  const job = materialMatchingState.pending.job;
+  const requiredMappings = job.toolDatas.length;
+
+  if (materialMatchingState.mappings.size !== requiredMappings) {
+    showMaterialError('Map every tool to a material slot before starting the job.');
+    return;
+  }
+
+  const mappings = Array.from(materialMatchingState.mappings.values());
+  const confirmButton = getMaterialMatchingElement<HTMLButtonElement>('material-matching-confirm');
+
+  if (confirmButton) {
+    confirmButton.disabled = true;
+  }
+
+  const success = await sendJobStartRequest({
+    filename: materialMatchingState.pending.filename,
+    leveling: materialMatchingState.pending.leveling,
+    startNow: true,
+    materialMappings: mappings
+  });
+
+  if (confirmButton) {
+    confirmButton.disabled = false;
+  }
+
+  if (success) {
+    hideElement('file-modal');
+    closeMaterialMatchingModal();
   }
 }
 
@@ -1138,10 +2386,80 @@ async function setTemperature(): Promise<void> {
 }
 
 // ============================================================================
+// VIEWPORT AND LAYOUT SWITCHING
+// ============================================================================
+
+/**
+ * Handle viewport resize across breakpoint
+ */
+function handleViewportChange(): void {
+  const isMobile = isMobileViewport();
+
+  // Only reload if layout mode changed
+  if (isMobile !== isMobileLayout) {
+    console.log('[Layout] Viewport breakpoint crossed, switching layout mode');
+
+    // Save current desktop layout before switching
+    if (!isMobile && gridInitialized) {
+      saveCurrentLayoutSnapshot();
+    }
+
+    // Reload layout in new mode
+    loadLayoutForCurrentPrinter();
+
+    isMobileLayout = isMobile;
+
+    // CRITICAL FIX: Clear old camera stream elements before reloading
+    const oldCameraStream = $('camera-stream') as HTMLImageElement | null;
+    const oldCameraCanvas = $('camera-canvas') as HTMLCanvasElement | null;
+    if (oldCameraStream) {
+      oldCameraStream.src = '';
+      oldCameraStream.onload = null;
+      oldCameraStream.onerror = null;
+    }
+    if (oldCameraCanvas) {
+      const ctx = oldCameraCanvas.getContext('2d');
+      if (ctx) ctx.clearRect(0, 0, oldCameraCanvas.width, oldCameraCanvas.height);
+    }
+
+    // Reload camera stream after layout switch
+    if (state.printerFeatures?.hasCamera) {
+      console.log('[Layout] Reloading camera stream for new layout elements');
+      void loadCameraStream();
+    }
+  }
+}
+
+/**
+ * Setup viewport change listener
+ */
+function setupViewportListener(): void {
+  // Use matchMedia for efficient breakpoint detection
+  const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
+
+  // Modern API
+  if (mediaQuery.addEventListener) {
+    mediaQuery.addEventListener('change', handleViewportChange);
+  } else {
+    // Fallback for older browsers (addListener is deprecated but needed for compatibility)
+    mediaQuery.addListener(handleViewportChange);
+  }
+
+  // Also handle window resize (for orientation changes)
+  let resizeTimeout: number;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimeout);
+    resizeTimeout = window.setTimeout(handleViewportChange, 250);
+  });
+}
+
+// ============================================================================
 // EVENT HANDLERS
 // ============================================================================
 
-function setupEventHandlers(): void {
+function setupEventHandlers(): void{
+  setupSettingsUI();
+
   // Login form
   const loginBtn = $('login-button');
   const passwordInput = $('password-input') as HTMLInputElement;
@@ -1186,60 +2504,84 @@ function setupEventHandlers(): void {
   if (logoutBtn) {
     logoutBtn.addEventListener('click', logout);
   }
-  
-  // Control buttons
-  const controls = [
-    { id: 'btn-led-on', endpoint: 'control/led-on' },
-    { id: 'btn-led-off', endpoint: 'control/led-off' },
-    { id: 'btn-clear-status', endpoint: 'control/clear-status' },
-    { id: 'btn-home-axes', endpoint: 'control/home' },
-    { id: 'btn-pause', endpoint: 'control/pause' },
-    { id: 'btn-resume', endpoint: 'control/resume' },
-    { id: 'btn-cancel', endpoint: 'control/cancel' },
-    { id: 'btn-bed-off', endpoint: 'temperature/bed/off' },
-    { id: 'btn-extruder-off', endpoint: 'temperature/extruder/off' },
-    { id: 'btn-external-filtration', endpoint: 'filtration/external' },
-    { id: 'btn-internal-filtration', endpoint: 'filtration/internal' },
-    { id: 'btn-no-filtration', endpoint: 'filtration/off' }
-  ];
-  
-  controls.forEach(({ id, endpoint }) => {
-    const btn = $(id);
-    if (btn) {
-      btn.addEventListener('click', () => sendPrinterCommand(endpoint));
+
+  // GridStack component buttons - attach to both desktop and mobile grids
+  const gridContainerDesktop = $('webui-grid-desktop');
+  const gridContainerMobile = $('webui-grid-mobile');
+  [gridContainerDesktop, gridContainerMobile].forEach(gridContainer => {
+    if (gridContainer) {
+      gridContainer.addEventListener('click', async (event) => {
+      const target = event.target as HTMLElement | null;
+      const button = target?.closest('button') as HTMLButtonElement | null;
+      if (!button || button.disabled) {
+        return;
+      }
+
+      let handled = true;
+      switch (button.id) {
+        case 'btn-led-on':
+          await sendPrinterCommand('control/led-on');
+          break;
+        case 'btn-led-off':
+          await sendPrinterCommand('control/led-off');
+          break;
+        case 'btn-clear-status':
+          await sendPrinterCommand('control/clear-status');
+          break;
+        case 'btn-home-axes':
+          await sendPrinterCommand('control/home');
+          break;
+        case 'btn-pause':
+          await sendPrinterCommand('control/pause');
+          break;
+        case 'btn-resume':
+          await sendPrinterCommand('control/resume');
+          break;
+        case 'btn-cancel':
+          await sendPrinterCommand('control/cancel');
+          break;
+        case 'btn-bed-set':
+          showTemperatureDialog('bed');
+          break;
+        case 'btn-bed-off':
+          await sendPrinterCommand('temperature/bed/off');
+          break;
+        case 'btn-extruder-set':
+          showTemperatureDialog('extruder');
+          break;
+        case 'btn-extruder-off':
+          await sendPrinterCommand('temperature/extruder/off');
+          break;
+        case 'btn-start-recent':
+          await loadFileList('recent');
+          break;
+        case 'btn-start-local':
+          await loadFileList('local');
+          break;
+        case 'btn-refresh':
+          sendCommand({ command: 'REQUEST_STATUS' });
+          break;
+        case 'btn-external-filtration':
+          await sendPrinterCommand('filtration/external');
+          break;
+        case 'btn-internal-filtration':
+          await sendPrinterCommand('filtration/internal');
+          break;
+        case 'btn-no-filtration':
+          await sendPrinterCommand('filtration/off');
+          break;
+        default:
+          handled = false;
+          break;
+      }
+
+      if (handled) {
+        event.preventDefault();
+      }
+      });
     }
   });
-  
-  // Temperature set buttons
-  const bedSetBtn = $('btn-bed-set');
-  const extruderSetBtn = $('btn-extruder-set');
-  
-  if (bedSetBtn) {
-    bedSetBtn.addEventListener('click', () => showTemperatureDialog('bed'));
-  }
-  if (extruderSetBtn) {
-    extruderSetBtn.addEventListener('click', () => showTemperatureDialog('extruder'));
-  }
-  
-  // File selection buttons
-  const recentBtn = $('btn-start-recent');
-  const localBtn = $('btn-start-local');
-  
-  if (recentBtn) {
-    recentBtn.addEventListener('click', () => loadFileList('recent'));
-  }
-  if (localBtn) {
-    localBtn.addEventListener('click', () => loadFileList('local'));
-  }
-  
-  // Refresh button
-  const refreshBtn = $('btn-refresh');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', () => {
-      sendCommand({ command: 'REQUEST_STATUS' });
-    });
-  }
-  
+
   // File modal handlers
   const closeModalBtn = $('close-modal');
   const printFileBtn = $('print-file-btn');
@@ -1248,11 +2590,37 @@ function setupEventHandlers(): void {
     closeModalBtn.addEventListener('click', () => {
       hideElement('file-modal');
       state.selectedFile = null;
+      if (!getMaterialMatchingElement<HTMLDivElement>('material-matching-modal')?.classList.contains('hidden')) {
+        closeMaterialMatchingModal();
+      } else {
+        state.pendingJobStart = null;
+      }
     });
   }
   
   if (printFileBtn) {
     printFileBtn.addEventListener('click', startPrintJob);
+  }
+
+  const materialModalClose = $('material-matching-close');
+  if (materialModalClose) {
+    materialModalClose.addEventListener('click', () => {
+      closeMaterialMatchingModal();
+    });
+  }
+
+  const materialModalCancel = $('material-matching-cancel');
+  if (materialModalCancel) {
+    materialModalCancel.addEventListener('click', () => {
+      closeMaterialMatchingModal();
+    });
+  }
+
+  const materialModalConfirm = $('material-matching-confirm');
+  if (materialModalConfirm) {
+    materialModalConfirm.addEventListener('click', () => {
+      void confirmMaterialMatching();
+    });
   }
   
   // Temperature dialog handlers
@@ -1302,7 +2670,34 @@ function setupEventHandlers(): void {
 // INITIALIZATION
 // ============================================================================
 
+async function loadAuthStatus(): Promise<void> {
+  try {
+    const response = await fetch('/api/auth/status');
+    if (!response.ok) {
+      throw new Error(`Status request failed with ${response.status}`);
+    }
+
+    const status = await response.json() as AuthStatusResponse;
+    state.authRequired = status.authRequired;
+    state.defaultPassword = status.defaultPassword;
+    state.hasPassword = status.hasPassword;
+  } catch (error) {
+    console.error('Failed to load authentication status:', error);
+    state.authRequired = true;
+    state.defaultPassword = false;
+    state.hasPassword = true;
+  }
+}
+
 async function checkAuthStatus(): Promise<boolean> {
+  if (!state.authRequired) {
+    state.authToken = null;
+    state.isAuthenticated = true;
+    localStorage.removeItem('webui-token');
+    sessionStorage.removeItem('webui-token');
+    return true;
+  }
+
   // Check for stored token
   const storedToken = localStorage.getItem('webui-token') || sessionStorage.getItem('webui-token');
   
@@ -1318,9 +2713,7 @@ async function checkAuthStatus(): Promise<boolean> {
   try {
     // Test with printer status endpoint which requires auth
     const response = await fetch('/api/printer/status', {
-      headers: {
-        'Authorization': `Bearer ${storedToken}`
-      }
+      headers: buildAuthHeaders()
     });
     
     if (response.ok || response.status === 503) {
@@ -1346,15 +2739,21 @@ async function checkAuthStatus(): Promise<boolean> {
 
 async function initialize(): Promise<void> {
   console.log('Initializing Web UI...');
-  
+  initializeLucideIcons();
+
   // Setup event handlers
   setupEventHandlers();
-  
+
+  // Setup viewport change detection
+  setupViewportListener();
+
+  await loadAuthStatus();
+
   // Check authentication status
   const isAuthenticated = await checkAuthStatus();
   
   if (isAuthenticated) {
-    // Token exists and might be valid
+    // Authenticated session (or authentication not required)
     hideElement('login-screen');
     showElement('main-ui');
     

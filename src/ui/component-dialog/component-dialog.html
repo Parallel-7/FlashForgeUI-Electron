@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Component Dialog</title>
+  <script src="../../../dist/webui/static/lucide.min.js"></script>
+  <script>
+    if (typeof exports === 'undefined') {
+      var exports = {};
+    }
+  </script>
+  <script src="../../../lib/ui/shared/lucide.js"></script>
+</head>
+<body>
+  <div class="dialog-container dialog-container--full">
+    <!-- Dialog Header -->
+    <div class="dialog-header">
+      <div class="dialog-title">
+        <span class="dialog-icon" id="dialog-icon" aria-hidden="true">
+          <i data-lucide="package" aria-hidden="true"></i>
+        </span>
+        <span class="dialog-title-text" id="dialog-title">Component</span>
+      </div>
+      <button class="dialog-close" id="btn-close" aria-label="Close">
+        <i data-lucide="x" aria-hidden="true"></i>
+      </button>
+    </div>
+    <!-- Component Container -->
+    <div class="dialog-content">
+      <div id="component-container" class="component-wrapper"></div>
+    </div>
+  </div>
+
+  <script src="../../../dist/renderer/component-dialog.bundle.js"></script>
+</body>
+</html>

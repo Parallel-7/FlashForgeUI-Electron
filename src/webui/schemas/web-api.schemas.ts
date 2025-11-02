@@ -97,10 +97,28 @@ export const TemperatureSetRequestSchema = z.object({
 /**
  * Job start request validation
  */
+const MaterialMappingSchema = z.object({
+  toolId: z.number()
+    .int('toolId must be an integer')
+    .min(0, 'toolId must be non-negative'),
+  slotId: z.number()
+    .int('slotId must be an integer')
+    .min(1, 'slotId must be at least 1'),
+  materialName: z.string()
+    .min(1, 'materialName is required'),
+  toolMaterialColor: z.string()
+    .min(1, 'toolMaterialColor is required'),
+  slotMaterialColor: z.string()
+    .min(1, 'slotMaterialColor is required')
+});
+
 export const JobStartRequestSchema = z.object({
   filename: z.string().min(1, 'Filename is required'),
   leveling: z.boolean().optional().default(false),
-  startNow: z.boolean().optional().default(true)
+  startNow: z.boolean().optional().default(true),
+  materialMappings: z.array(MaterialMappingSchema)
+    .min(1, 'materialMappings must contain at least one mapping')
+    .optional()
 });
 
 /**

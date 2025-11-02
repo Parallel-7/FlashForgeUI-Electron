@@ -24,6 +24,8 @@
 // Core styles and dependencies
 import './index.css';
 
+import { initializeLucideIcons, getLucideIcons } from './utils/icons';
+
 // Component system imports
 import {
   componentManager,
@@ -37,8 +39,20 @@ import {
   FiltrationControlsComponent,
   AdditionalInfoComponent,
   PrinterTabsComponent,
-  type ComponentUpdateData
+  type ComponentUpdateData,
+  type BaseComponent
 } from './ui/components';
+
+// GridStack system imports
+import { gridStackManager } from './ui/gridstack/GridStackManager';
+import { layoutPersistence } from './ui/gridstack/LayoutPersistence';
+import { editModeController } from './ui/gridstack/EditModeController';
+import { getComponentDefinition, getAllComponents } from './ui/gridstack/ComponentRegistry';
+import type { GridStackWidgetConfig } from './ui/gridstack/types';
+
+// Shortcut system imports
+import { shortcutConfigManager } from './ui/shortcuts/ShortcutConfigManager';
+import type { ShortcutButtonConfig } from './ui/shortcuts/types';
 
 // Existing service imports
 import { getGlobalStateTracker, STATE_EVENTS, type StateChangeEvent } from './services/printer-state';
@@ -60,6 +74,9 @@ let printerTabsComponent: PrinterTabsComponent | null = null;
 /** Whether components have been initialized */
 let componentsInitialized = false;
 
+/** Track last polling data for new components */
+let lastPollingData: PollingData | null = null;
+
 // ============================================================================
 // EXISTING STATE TRACKING (preserved for compatibility)
 // ============================================================================
@@ -68,11 +85,203 @@ let componentsInitialized = false;
 let previewEnabled = false;
 let cameraStreamElement: HTMLImageElement | null = null;
 
+// Hamburger menu state references
+let isMainMenuOpen = false;
+let mainMenuButton: HTMLButtonElement | null = null;
+let mainMenuDropdown: HTMLDivElement | null = null;
+let mainMenuCloseTimeout: number | null = null;
+
+const MAIN_MENU_ACTIONS = ['connect', 'settings', 'status', 'ifs', 'pin-config'] as const;
+type MainMenuAction = typeof MAIN_MENU_ACTIONS[number];
+
+const MAIN_MENU_ACTION_CHANNELS: Record<MainMenuAction, string> = {
+  connect: 'open-printer-selection',
+  settings: 'open-settings-window',
+  status: 'open-status-dialog',
+  ifs: 'open-ifs-dialog',
+  'pin-config': 'shortcut-config:open'
+};
+
+const MAIN_MENU_SHORTCUTS: Record<MainMenuAction, { key: string; label: string }> = {
+  connect: { key: 'k', label: 'K' },
+  settings: { key: ',', label: ',' },
+  status: { key: 'i', label: 'I' },
+  ifs: { key: 'm', label: 'M' },
+  'pin-config': { key: 'p', label: 'P' }
+};
+
+const TEXT_INPUT_TYPES = new Set([
+  'text',
+  'email',
+  'search',
+  'password',
+  'url',
+  'tel',
+  'number'
+]);
+
+function isMainMenuAction(action: string | null): action is MainMenuAction {
+  return MAIN_MENU_ACTIONS.includes(action as MainMenuAction);
+}
+
+class MenuShortcutManager {
+  private initialized = false;
+  private isMac = false;
+  private enabledActions: Record<MainMenuAction, boolean> = {
+    connect: true,
+    settings: true,
+    status: true,
+    ifs: false,
+    'pin-config': true
+  };
+
+  initialize(): void {
+    this.isMac = window.PLATFORM === 'darwin';
+    this.enabledActions.ifs = ifsMenuItemVisible;
+    this.updateShortcutLabels();
+
+    if (this.initialized) {
+      return;
+    }
+
+    document.addEventListener('keydown', this.handleKeydown);
+    this.initialized = true;
+  }
+
+  dispose(): void {
+    if (!this.initialized) {
+      return;
+    }
+
+    document.removeEventListener('keydown', this.handleKeydown);
+    this.initialized = false;
+  }
+
+  setActionEnabled(action: MainMenuAction, enabled: boolean): void {
+    this.enabledActions[action] = enabled;
+  }
+
+  updateShortcutLabels(): void {
+    const displayPrefix = this.isMac ? '⌘' : 'Ctrl+';
+    const ariaPrefix = this.isMac ? 'Meta+' : 'Control+';
+
+    MAIN_MENU_ACTIONS.forEach((action) => {
+      const config = MAIN_MENU_SHORTCUTS[action];
+      const displayValue = this.isMac ? `${displayPrefix}${config.label}` : `${displayPrefix}${config.label}`;
+      const ariaValue = `${ariaPrefix}${config.label}`;
+
+      const shortcutEl = document.querySelector<HTMLSpanElement>(
+        `.menu-item-shortcut[data-shortcut-id="${action}"]`
+      );
+      if (shortcutEl) {
+        shortcutEl.textContent = displayValue;
+      }
+
+      const button = document.querySelector<HTMLButtonElement>(`.menu-item[data-action="${action}"]`);
+      if (button) {
+        button.setAttribute('aria-keyshortcuts', ariaValue);
+      }
+    });
+  }
+
+  private readonly handleKeydown = (event: KeyboardEvent): void => {
+    if (!this.initialized) {
+      return;
+    }
+
+    if (event.defaultPrevented || event.repeat) {
+      return;
+    }
+
+    if (!this.isRelevantModifier(event)) {
+      return;
+    }
+
+    if (event.altKey || event.shiftKey) {
+      return;
+    }
+
+    if (this.isEditableContext()) {
+      return;
+    }
+
+    const action = this.getActionFromEvent(event);
+    if (!action || !this.enabledActions[action]) {
+      return;
+    }
+
+    const channel = MAIN_MENU_ACTION_CHANNELS[action];
+    if (!channel || !window.api?.send) {
+      return;
+    }
+
+    event.preventDefault();
+
+    window.api.send(channel);
+    closeMainMenu();
+  };
+
+  private isRelevantModifier(event: KeyboardEvent): boolean {
+    return this.isMac ? event.metaKey : event.ctrlKey;
+  }
+
+  private isEditableContext(): boolean {
+    const activeElement = document.activeElement;
+    if (!(activeElement instanceof HTMLElement)) {
+      return false;
+    }
+
+    if (activeElement instanceof HTMLInputElement) {
+      if (!TEXT_INPUT_TYPES.has(activeElement.type)) {
+        return false;
+      }
+
+      return !activeElement.readOnly && !activeElement.disabled;
+    }
+
+    if (activeElement instanceof HTMLTextAreaElement) {
+      return !activeElement.readOnly && !activeElement.disabled;
+    }
+
+    if (activeElement instanceof HTMLSelectElement) {
+      return !activeElement.disabled;
+    }
+
+    if (activeElement.isContentEditable) {
+      return true;
+    }
+
+    return Boolean(activeElement.closest('[contenteditable="true"]'));
+  }
+
+  private getActionFromEvent(event: KeyboardEvent): MainMenuAction | null {
+    const key = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+
+    for (const action of MAIN_MENU_ACTIONS) {
+      const shortcut = MAIN_MENU_SHORTCUTS[action];
+      if (shortcut.key === ',') {
+        if (event.key === ',') {
+          return action;
+        }
+        continue;
+      }
+
+      if (key === shortcut.key) {
+        return action;
+      }
+    }
+
+    return null;
+  }
+}
+
+const menuShortcutManager = new MenuShortcutManager();
+
 // Track filtration availability from backend
 let filtrationAvailable = false;
 
-// Track IFS button visibility for AD5X printers
-let ifsButtonVisible = false;
+// Track IFS menu item visibility for AD5X printers
+let ifsMenuItemVisible = false;
 
 // Track legacy printer status for feature detection
 let isLegacyPrinter = false;
@@ -190,109 +399,363 @@ function setupLoadingEventListeners(): void {
 }
 
 // ============================================================================
-// COMPONENT SYSTEM INITIALIZATION
+// GRIDSTACK SYSTEM INTEGRATION
 // ============================================================================
 
 /**
- * Initialize all UI components and register them with ComponentManager
- * Creates instances of all 10 Phase 1 components and sets up their containers
+ * Create a component instance for GridStack integration
+ * Maps component IDs to their class instantiations
+ * @param componentId - The component ID to create
+ * @param container - The container element for the component
+ * @returns Component instance or null if unknown component
  */
-async function initializeComponents(): Promise<void> {
-  console.log('Initializing component system...');
-  
+function createComponentForGrid(componentId: string, container: HTMLElement): BaseComponent | null {
+  switch (componentId) {
+    case 'camera-preview':
+      return new CameraPreviewComponent(container);
+    case 'controls-grid':
+      return new ControlsGridComponent(container);
+    case 'model-preview':
+      return new ModelPreviewComponent(container);
+    case 'job-stats':
+      return new JobStatsComponent(container);
+    case 'printer-status':
+      return new PrinterStatusComponent(container);
+    case 'temperature-controls':
+      return new TemperatureControlsComponent(container);
+    case 'filtration-controls':
+      return new FiltrationControlsComponent(container);
+    case 'additional-info':
+      return new AdditionalInfoComponent(container);
+    case 'log-panel': {
+      const logPanel = new LogPanelComponent(container);
+      logPanelComponent = logPanel;
+      return logPanel;
+    }
+    default:
+      console.error(`Unknown component ID: ${componentId}`);
+      return null;
+  }
+}
+
+/**
+ * Create a grid widget element for a component
+ * @param componentId - The component ID
+ * @returns Grid widget element
+ */
+function createGridWidget(componentId: string): HTMLElement {
+  const item = document.createElement('div');
+  item.className = 'grid-stack-item';
+  item.setAttribute('data-component-id', componentId);
+
+  const content = document.createElement('div');
+  content.className = 'grid-stack-item-content';
+  content.id = `grid-${componentId}-content`;
+
+  item.appendChild(content);
+  const removeButton = document.createElement('button');
+  removeButton.type = 'button';
+  removeButton.className = 'grid-stack-item-remove';
+  removeButton.setAttribute('aria-label', `Remove ${componentId}`);
+  removeButton.title = 'Remove component';
+  removeButton.innerHTML = '&times;';
+  removeButton.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (!editModeController.isEnabled()) {
+      logMessage('Enable edit mode (CTRL+E) to remove components.');
+      return;
+    }
+
+    if (window.api?.send) {
+      window.api.send('palette:remove-component', componentId);
+    } else {
+      console.warn('[GridStack] Removal API unavailable');
+    }
+  });
+  item.appendChild(removeButton);
+  return item;
+}
+
+/**
+ * Initialize GridStack layout system
+ * Sets up grid, loads layout, creates widgets, and initializes edit mode
+ */
+async function initializeGridStack(): Promise<void> {
+  console.log('Initializing GridStack layout system...');
+
   try {
-    // Map component IDs to their container element IDs
-    const componentContainerMap: { [componentId: string]: string } = {
-      'camera-preview': 'camera-preview-container',
-      'controls-grid': 'controls-grid-container',
-      'model-preview': 'model-preview-container',
-      'job-stats': 'job-stats-container',
-      'printer-status': 'printer-status-container',
-      'temperature-controls': 'temperature-controls-container',
-      'filtration-controls': 'filtration-controls-container',
-      'additional-info': 'additional-info-container',
-      'log-panel': 'log-panel-container'
-    };
+    // 1. Initialize layout persistence
+    layoutPersistence.initialize();
 
-    // Create and register all components
-    const componentRegistrations = [
-      {
-        id: 'camera-preview',
-        factory: (container: HTMLElement) => new CameraPreviewComponent(container)
-      },
-      {
-        id: 'controls-grid', 
-        factory: (container: HTMLElement) => new ControlsGridComponent(container)
-      },
-      {
-        id: 'model-preview',
-        factory: (container: HTMLElement) => new ModelPreviewComponent(container)
-      },
-      {
-        id: 'job-stats',
-        factory: (container: HTMLElement) => new JobStatsComponent(container)
-      },
-      {
-        id: 'printer-status',
-        factory: (container: HTMLElement) => new PrinterStatusComponent(container)
-      },
-      {
-        id: 'temperature-controls',
-        factory: (container: HTMLElement) => new TemperatureControlsComponent(container)
-      },
-      {
-        id: 'filtration-controls',
-        factory: (container: HTMLElement) => new FiltrationControlsComponent(container)
-      },
-      {
-        id: 'additional-info',
-        factory: (container: HTMLElement) => new AdditionalInfoComponent(container)
-      },
-      {
-        id: 'log-panel',
-        factory: (container: HTMLElement) => {
-          const logPanel = new LogPanelComponent(container);
-          logPanelComponent = logPanel; // Store reference for global logging
-          return logPanel;
-        }
-      }
-    ];
+    // 2. Load layout configuration (from localStorage or default)
+    const layout = layoutPersistence.load();
+    console.log('Loaded layout configuration:', layout);
 
-    // Register all components
-    let registeredCount = 0;
-    for (const registration of componentRegistrations) {
-      const containerElement = document.getElementById(componentContainerMap[registration.id]);
-      
-      if (containerElement) {
-        try {
-          const component = registration.factory(containerElement);
-          componentManager.registerComponent(component);
-          registeredCount++;
-          console.log(`Registered component: ${registration.id}`);
-        } catch (error) {
-          console.error(`Failed to create component ${registration.id}:`, error);
-          logMessage(`WARNING: Component ${registration.id} failed to initialize`);
+    // 2.5. Filter out pinned components from layout
+    const shortcutConfig = shortcutConfigManager.load();
+    const pinnedIds = Object.values(shortcutConfig.slots).filter((id): id is string => id !== null);
+    const filteredWidgets = layout.widgets.filter(widget => !pinnedIds.includes(widget.componentId));
+
+    console.log('Pinned components excluded from grid:', pinnedIds);
+    console.log('Filtered widgets for grid:', filteredWidgets.length, 'of', layout.widgets.length);
+
+    // 3. Initialize GridStack with grid options
+    gridStackManager.initialize(layout.gridOptions);
+
+    // 4. Create widgets from filtered layout
+    let widgetCount = 0;
+    for (const widgetConfig of filteredWidgets) {
+      try {
+        // Create the grid widget element
+        const widgetElement = createGridWidget(widgetConfig.componentId);
+
+        // Add widget to grid (this positions it)
+        const addedWidget = gridStackManager.addWidget(widgetConfig, widgetElement);
+
+        if (addedWidget) {
+          // Get the content container
+          const contentContainer = addedWidget.querySelector('.grid-stack-item-content') as HTMLElement;
+
+          if (contentContainer) {
+            // Create and register the component
+            const component = createComponentForGrid(widgetConfig.componentId, contentContainer);
+
+            if (component) {
+              componentManager.registerComponent(component);
+              await component.initialize();
+              if (component instanceof LogPanelComponent) {
+                await hydrateLogPanelWithHistory(component);
+              }
+              widgetCount++;
+              console.log(`GridStack: Added widget '${widgetConfig.componentId}'`);
+
+            }
+          }
         }
-      } else {
-        console.warn(`Container element not found for component: ${registration.id}`);
-        logMessage(`WARNING: Container missing for ${registration.id}`);
+      } catch (error) {
+        console.error(`GridStack: Failed to create widget '${widgetConfig.componentId}':`, error);
+        logMessage(`ERROR: Failed to create widget '${widgetConfig.componentId}'`);
       }
     }
 
-    console.log(`Registered ${registeredCount}/${componentRegistrations.length} components`);
-    
-    // Initialize all registered components
-    await componentManager.initializeAll();
-    
-    componentsInitialized = true;
-    console.log('Component system initialization complete');
-    logMessage(`Component system initialized: ${registeredCount} components`);
-    
+    console.log(`GridStack: Created ${widgetCount}/${layout.widgets.length} widgets`);
+
+    // 5. Setup GridStack event handlers for auto-save
+    gridStackManager.onChange(() => {
+      console.log('GridStack: Layout changed, auto-saving...');
+      const currentLayout = layoutPersistence.load();
+      const updatedWidgets = gridStackManager.serialize();
+      layoutPersistence.save({
+        ...currentLayout,
+        widgets: updatedWidgets,
+      });
+    });
+
+    // 6. Initialize edit mode controller (but keep editing disabled by default)
+    editModeController.initialize(gridStackManager, layoutPersistence);
+
+    // 7. Disable editing by default (grid should be static for normal use)
+    gridStackManager.disable();
+
+    // 8. Setup palette integration (drag-drop and communication)
+    setupPaletteIntegration();
+
+    // Ensure the component manager transitions into initialized state
+    if (!componentManager.isInitialized()) {
+      console.log('GridStack: Finalizing component manager initialization...');
+      await componentManager.initializeAll();
+    }
+
+    console.log('GridStack initialization complete');
+    logMessage(`GridStack layout system initialized: ${widgetCount} widgets loaded`);
+
   } catch (error) {
-    console.error('Component system initialization failed:', error);
-    logMessage(`ERROR: Component system initialization failed: ${error}`);
-    // Don't throw - allow fallback to continue
+    console.error('GridStack initialization failed:', error);
+    logMessage(`ERROR: GridStack initialization failed: ${error}`);
+    throw error;
   }
+}
+
+/**
+ * Setup palette integration for component drag-drop and status synchronization
+ */
+function setupPaletteIntegration(): void {
+  console.log('[GridStack] Setting up palette integration...');
+
+  // Helper function to update palette with current grid state
+  function updatePaletteStatus(): void {
+    const componentsInUse = gridStackManager.serialize().map(w => w.componentId || w.id || '');
+    const pinnedComponentIds = shortcutConfigManager.getPinnedComponentIds();
+
+    if (window.api?.send) {
+      window.api.send('palette:update-status', {
+        componentsInUse,
+        pinnedComponents: pinnedComponentIds
+      });
+      console.log(`[GridStack] Sent status update to palette: ${componentsInUse.length} in use, ${pinnedComponentIds.length} pinned`);
+    }
+  }
+
+  /**
+   * Add a component from the palette into the grid and component system
+   */
+  async function addComponentFromPalette(
+    componentId: string,
+    dropPosition?: { x: number; y: number }
+  ): Promise<void> {
+    console.log('[GridStack] Attempting to add component from palette:', componentId);
+
+    const definition = getComponentDefinition(componentId);
+    if (!definition) {
+      console.error('[GridStack] Unknown component:', componentId);
+      logMessage(`ERROR: Unknown component: ${componentId}`);
+      return;
+    }
+
+    if (componentManager.getComponent(componentId)) {
+      console.warn('[GridStack] Component already exists on grid:', componentId);
+      logMessage(`Component ${definition.name} is already on the grid`);
+      updatePaletteStatus();
+      return;
+    }
+
+    if (document.querySelector(`[data-component-id="${componentId}"]`)) {
+      console.warn('[GridStack] DOM already contains widget for component:', componentId);
+      updatePaletteStatus();
+      return;
+    }
+
+    const config: GridStackWidgetConfig = {
+      componentId,
+      x: dropPosition?.x,
+      y: dropPosition?.y,
+      w: definition.defaultSize.w,
+      h: definition.defaultSize.h,
+      minW: definition.minSize?.w,
+      minH: definition.minSize?.h,
+      maxW: definition.maxSize?.w,
+      maxH: definition.maxSize?.h,
+      id: `widget-${componentId}`,
+      autoPosition: dropPosition ? false : true
+    };
+
+    try {
+      const widgetElement = createGridWidget(componentId);
+      const addedWidget = gridStackManager.addWidget(config, widgetElement);
+
+      if (!addedWidget) {
+        throw new Error('GridStackManager.addWidget returned null');
+      }
+
+      const contentContainer = addedWidget.querySelector('.grid-stack-item-content') as HTMLElement | null;
+      if (!contentContainer) {
+        throw new Error('Grid widget missing content container');
+      }
+
+      const component = createComponentForGrid(componentId, contentContainer);
+      if (!component) {
+        throw new Error(`Unable to create component instance for ${componentId}`);
+      }
+
+      componentManager.registerComponent(component);
+      await component.initialize();
+      if (component instanceof LogPanelComponent) {
+        await hydrateLogPanelWithHistory(component);
+      }
+
+      if (lastPollingData) {
+        const updateData: ComponentUpdateData = {
+          pollingData: lastPollingData,
+          timestamp: new Date().toISOString(),
+          printerState: lastPollingData.printerStatus?.state,
+          connectionState: lastPollingData.isConnected
+        };
+        component.update(updateData);
+      }
+
+      const currentLayout = layoutPersistence.load();
+      const updatedWidgets = gridStackManager.serialize();
+      layoutPersistence.save({
+        ...currentLayout,
+        widgets: updatedWidgets,
+      });
+
+      updatePaletteStatus();
+
+      console.log('[GridStack] Component added from palette:', componentId);
+      logMessage(`Component ${definition.name} added to grid`);
+    } catch (error) {
+      console.error('[GridStack] Failed to add component from palette:', error);
+      logMessage(`ERROR: Failed to add component ${componentId}: ${error}`);
+    }
+  }
+
+  function removeComponentFromGrid(componentId: string): void {
+    const widgetElement = document.querySelector(`[data-component-id="${componentId}"]`) as HTMLElement | null;
+    if (!widgetElement) {
+      console.warn('[GridStack] Widget element not found:', componentId);
+      return;
+    }
+
+    const removed = componentManager.removeComponent(componentId);
+    if (!removed) {
+      console.warn('[GridStack] Component not found in ComponentManager:', componentId);
+    }
+
+    gridStackManager.removeWidget(widgetElement);
+
+    const currentLayout = layoutPersistence.load();
+    const updatedWidgets = gridStackManager.serialize();
+    layoutPersistence.save({
+      ...currentLayout,
+      widgets: updatedWidgets,
+    });
+
+    updatePaletteStatus();
+
+    console.log('[GridStack] Component removed successfully:', componentId);
+    logMessage(`Component ${componentId} removed from grid`);
+  }
+
+  // Listen for palette opened event
+  if (window.api) {
+    window.api.receive('palette:opened', () => {
+      console.log('[GridStack] Palette opened, sending current status');
+      updatePaletteStatus();
+    });
+
+    // Listen for edit mode toggle from palette window (CTRL+E)
+    window.api.receive('edit-mode:toggle', () => {
+      console.log('[GridStack] Edit mode toggle triggered from palette window');
+      editModeController.toggle();
+    });
+
+    window.api.receive('grid:add-component', async (componentId: unknown) => {
+      const id = typeof componentId === 'string' ? componentId : null;
+      if (!id) {
+        console.warn('[GridStack] Add request ignored - invalid component ID', componentId);
+        return;
+      }
+
+      if (!editModeController.isEnabled()) {
+        console.warn('[GridStack] Cannot add component while edit mode is disabled');
+        logMessage('Enable edit mode (CTRL+E) to add components.');
+        return;
+      }
+
+      await addComponentFromPalette(id);
+    });
+
+    // Listen for component remove requests
+    window.api.receive('grid:remove-component', (componentId: unknown) => {
+      const id = componentId as string;
+      removeComponentFromGrid(id);
+    });
+  }
+
+  console.log('[GridStack] Palette integration setup complete');
 }
 
 /**
@@ -356,12 +819,12 @@ async function initializePrinterTabs(): Promise<void> {
       // Clear printer-specific state from previous context
       // Note: filtrationAvailable will be updated by polling data
       filtrationAvailable = false;
-      ifsButtonVisible = false;
+      ifsMenuItemVisible = false;
       isLegacyPrinter = false;
 
       // Update button states to reflect cleared state
       // Note: Filtration buttons are managed by FiltrationControlsComponent
-      updateIFSButtonVisibility();
+      updateIFSMenuItemVisibility();
       updateLegacyPrinterButtonStates();
 
       //       // Request fresh printer data for the new context
@@ -432,6 +895,40 @@ function logMessage(message: string): void {
   } else {
     // Last resort - console only
     console.log(`[FALLBACK] ${message}`);
+  }
+}
+
+async function hydrateLogPanelWithHistory(logPanel: LogPanelComponent): Promise<void> {
+  if (!window.api?.invoke) {
+    return;
+  }
+
+  try {
+    const result = await window.api.invoke('log-dialog-request-logs');
+    if (!Array.isArray(result)) {
+      return;
+    }
+
+    const entries = result.filter(
+      (entry): entry is { timestamp: string; message: string } =>
+        typeof entry === 'object' &&
+        entry !== null &&
+        typeof (entry as { timestamp?: unknown }).timestamp === 'string' &&
+        typeof (entry as { message?: unknown }).message === 'string'
+    );
+
+    if (entries.length === 0 || logPanel.isDestroyed()) {
+      return;
+    }
+
+    logPanel.loadInitialEntries(
+      entries.map((entry) => ({
+        timestamp: entry.timestamp,
+        message: entry.message,
+      }))
+    );
+  } catch (error) {
+    console.error('Failed to hydrate log panel with history:', error);
   }
 }
 
@@ -680,10 +1177,372 @@ async function handleCameraToggle(button: HTMLElement): Promise<void> {
   }
 }
 
+// ============================================================================
+// SHORTCUT BUTTON SYSTEM
+// ============================================================================
+
+/**
+ * Initialize shortcut buttons in topbar
+ * Sets up shortcut slots and IPC listeners for config updates
+ */
+function initializeShortcutButtons(): void {
+  console.log('[ShortcutButtons] Initializing topbar shortcuts');
+
+  // Load and apply current configuration
+  const config = shortcutConfigManager.load();
+  updateShortcutButtons(config);
+
+  // Setup shortcut button click handlers
+  for (let i = 1; i <= 3; i++) {
+    const btn = document.getElementById(`btn-shortcut-${i}`);
+    if (btn) {
+      btn.addEventListener('click', () => {
+        const componentId = btn.getAttribute('data-component-id');
+        console.log(`[ShortcutButtons] Slot ${i} clicked, component: ${componentId}`);
+        if (componentId && window.api?.send) {
+          window.api.send('component-dialog:open', componentId);
+        }
+      });
+    }
+  }
+
+  // Listen for configuration updates from shortcut config dialog
+  if (window.api) {
+    window.api.receive('shortcut-config:updated', (data: unknown) => {
+      console.log('[ShortcutButtons] Configuration updated:', data);
+      const config = data as ShortcutButtonConfig;
+      updateShortcutButtons(config);
+
+      // Reload grid to reflect pinned/unpinned components
+      void reloadGridLayout();
+    });
+  }
+
+  // Setup IPC request handlers for shortcut config dialog
+  setupShortcutConfigRequestHandlers();
+
+  console.log('[ShortcutButtons] Initialization complete');
+}
+
+/**
+ * Setup IPC request handlers for shortcut configuration
+ * These handlers respond to requests from the shortcut config dialog
+ */
+function setupShortcutConfigRequestHandlers(): void {
+  if (!window.api) {
+    return;
+  }
+
+  // Handle get-current-request
+  window.api.receive('shortcut-config:get-current-request', (data: unknown) => {
+    const responseChannel = data as string;
+    const config = shortcutConfigManager.load();
+
+    if (window.api?.send) {
+      window.api.send(responseChannel, config);
+    }
+  });
+
+  // Handle save-request
+  window.api.receive('shortcut-config:save-request', (data: unknown) => {
+    const { config, responseChannel } = data as {
+      config: ShortcutButtonConfig;
+      responseChannel: string;
+    };
+
+    try {
+      shortcutConfigManager.save(config);
+      if (window.api?.send) {
+        window.api.send(responseChannel, { success: true });
+      }
+    } catch (error) {
+      if (window.api?.send) {
+        window.api.send(responseChannel, {
+          success: false,
+          error: String(error),
+        });
+      }
+    }
+  });
+
+  // Handle get-components-request
+  window.api.receive('shortcut-config:get-components-request', (data: unknown) => {
+    const responseChannel = data as string;
+
+    const componentsWithStatus = getAvailableComponentsForShortcutConfig();
+    if (window.api?.send) {
+      window.api.send(responseChannel, componentsWithStatus);
+    }
+  });
+}
+
+/**
+ * Get all components eligible for shortcut assignment.
+ * Only return components that are not currently present in the grid layout,
+ * while always including components that are already pinned to a shortcut slot.
+ */
+function getAvailableComponentsForShortcutConfig(): Array<{
+  id: string;
+  name: string;
+  icon: string;
+  category: string;
+  isPinned: boolean;
+}> {
+  const config = shortcutConfigManager.load();
+  const pinnedIds = new Set(
+    Object.values(config.slots).filter((id): id is string => id !== null)
+  );
+
+  const activeGridComponents = getActiveGridComponentIds();
+
+  const selectableComponents = getAllComponents()
+    .filter((component) => {
+      if (pinnedIds.has(component.id)) {
+        return true;
+      }
+
+      return !activeGridComponents.has(component.id);
+    })
+    .map((component) => ({
+      id: component.id,
+      name: component.name,
+      icon: component.icon ?? '',
+      category: component.category,
+      isPinned: pinnedIds.has(component.id),
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  return selectableComponents;
+}
+
+/**
+ * Collect component IDs currently rendered within the GridStack layout.
+ */
+function getActiveGridComponentIds(): Set<string> {
+  const ids = new Set<string>();
+  const grid = gridStackManager.getGrid();
+  if (!grid) {
+    return ids;
+  }
+
+  const gridItems = grid.getGridItems?.() ?? [];
+  gridItems.forEach((item) => {
+    const componentId = item.getAttribute('data-component-id');
+    if (componentId) {
+      ids.add(componentId);
+    }
+  });
+
+  return ids;
+}
+
+/**
+ * Update topbar shortcut buttons based on configuration
+ * Shows/hides buttons and updates their labels and icons
+ */
+function updateShortcutButtons(config: ShortcutButtonConfig): void {
+  console.log('[ShortcutButtons] Updating button visibility and content');
+
+  for (let i = 1; i <= 3; i++) {
+    const slotKey = `slot${i}` as keyof typeof config.slots;
+    const componentId = config.slots[slotKey];
+    const btn = document.getElementById(`btn-shortcut-${i}`);
+
+    if (!btn) {
+      console.warn(`[ShortcutButtons] Shortcut button ${i} not found in DOM`);
+      continue;
+    }
+
+    if (componentId) {
+      const componentDef = getComponentDefinition(componentId);
+      if (componentDef) {
+        btn.setAttribute('data-component-id', componentId);
+        btn.textContent = componentDef.name;
+        btn.classList.remove('hidden');
+        console.log(`[ShortcutButtons] Slot ${i} configured: ${componentDef.name}`);
+      } else {
+        console.warn(`[ShortcutButtons] Component definition not found for: ${componentId}`);
+        btn.setAttribute('data-component-id', '');
+        btn.classList.add('hidden');
+      }
+    } else {
+      btn.setAttribute('data-component-id', '');
+      btn.classList.add('hidden');
+    }
+  }
+}
+
+/**
+ * Reload grid layout excluding pinned components
+ * Called when shortcut configuration changes to update grid contents
+ */
+async function reloadGridLayout(): Promise<void> {
+  console.log('[ShortcutButtons] Reloading grid layout');
+
+  try {
+    const config = shortcutConfigManager.load();
+    const pinnedIds = Object.values(config.slots).filter((id): id is string => id !== null);
+
+    console.log('[ShortcutButtons] Pinned component IDs:', pinnedIds);
+
+    // Get current grid state
+    const grid = gridStackManager.getGrid();
+    if (!grid) {
+      console.warn('[ShortcutButtons] Grid not initialized yet');
+      return;
+    }
+
+    // Get all grid items
+    const gridItems = Array.from(grid.getGridItems() || []);
+
+    // Remove pinned components from grid
+    for (const item of gridItems) {
+      const componentId = item.getAttribute('data-component-id');
+      if (componentId && pinnedIds.includes(componentId)) {
+        console.log(`[ShortcutButtons] Removing pinned component from grid: ${componentId}`);
+
+        // Destroy component instance before removing widget
+        const component = componentManager.getComponent(componentId);
+        if (component) {
+          componentManager.removeComponent(componentId);
+          component.destroy();
+        }
+
+        // Remove widget from grid
+        gridStackManager.removeWidget(item as HTMLElement);
+
+        if (componentId === 'log-panel') {
+          logPanelComponent = null;
+        }
+      }
+    }
+
+    // Check if any unpinned components should be added back to grid
+    // (This handles the case where a component was unpinned)
+    const layout = layoutPersistence.load();
+    const currentGridComponentIds = gridItems
+      .map(item => item.getAttribute('data-component-id'))
+      .filter((id): id is string => id !== null);
+
+    for (const widgetConfig of layout.widgets) {
+      const componentId = widgetConfig.componentId;
+
+      // Skip if pinned or already in grid
+      if (pinnedIds.includes(componentId) || currentGridComponentIds.includes(componentId)) {
+        continue;
+      }
+
+      // Add back to grid
+      console.log(`[ShortcutButtons] Adding unpinned component back to grid: ${componentId}`);
+      await addComponentToGrid(componentId, widgetConfig);
+    }
+
+    // Save updated layout
+    const currentLayout = layoutPersistence.load();
+    const updatedLayout = gridStackManager.serialize();
+    layoutPersistence.save({
+      ...currentLayout,
+      widgets: updatedLayout
+    });
+
+    console.log('[ShortcutButtons] Grid reload complete');
+  } catch (error) {
+    console.error('[ShortcutButtons] Error reloading grid:', error);
+  }
+}
+
+/**
+ * Helper function to add a component to the grid
+ */
+async function addComponentToGrid(componentId: string, widgetConfig?: GridStackWidgetConfig): Promise<void> {
+  const componentDef = getComponentDefinition(componentId);
+  if (!componentDef) {
+    console.error(`[ShortcutButtons] Component definition not found: ${componentId}`);
+    return;
+  }
+
+  // Create widget element
+  const widgetElement = document.createElement('div');
+  widgetElement.className = 'grid-stack-item';
+  widgetElement.setAttribute('data-component-id', componentId);
+  widgetElement.setAttribute('gs-id', `widget-${componentId}`);
+
+  // Add content container
+  const contentContainer = document.createElement('div');
+  contentContainer.className = 'grid-stack-item-content';
+  widgetElement.appendChild(contentContainer);
+
+  // Use provided config or create default
+  const config: GridStackWidgetConfig = widgetConfig || {
+    componentId,
+    w: componentDef.defaultSize?.w || 4,
+    h: componentDef.defaultSize?.h || 3,
+    minW: componentDef.minSize?.w,
+    minH: componentDef.minSize?.h,
+    id: `widget-${componentId}`,
+    autoPosition: true
+  };
+
+  // Add to grid
+  const addedWidget = gridStackManager.addWidget(config, widgetElement);
+
+  if (addedWidget) {
+    // Create component instance
+    const component = createComponentInstance(componentId, contentContainer);
+
+    if (component) {
+      componentManager.registerComponent(component);
+      await component.initialize();
+
+      // Update with last polling data if available
+      if (lastPollingData) {
+        const updateData: ComponentUpdateData = {
+          pollingData: lastPollingData,
+          timestamp: new Date().toISOString(),
+          printerState: lastPollingData.printerStatus?.state,
+          connectionState: lastPollingData.isConnected
+        };
+        component.update(updateData);
+      }
+    }
+  }
+}
+
+/**
+ * Helper function to create component instance by ID
+ */
+function createComponentInstance(componentId: string, container: HTMLElement) {
+  switch (componentId) {
+    case 'camera-preview':
+      return new CameraPreviewComponent(container);
+    case 'temperature-controls':
+      return new TemperatureControlsComponent(container);
+    case 'job-stats':
+      return new JobStatsComponent(container);
+    case 'printer-status':
+      return new PrinterStatusComponent(container);
+    case 'model-preview':
+      return new ModelPreviewComponent(container);
+    case 'additional-info':
+      return new AdditionalInfoComponent(container);
+    case 'log-panel': {
+      const logPanel = new LogPanelComponent(container);
+      logPanelComponent = logPanel;
+      return logPanel;
+    }
+    case 'controls-grid':
+      return new ControlsGridComponent(container);
+    case 'filtration-controls':
+      return new FiltrationControlsComponent(container);
+    default:
+      console.error(`[ShortcutButtons] Unknown component ID: ${componentId}`);
+      return null;
+  }
+}
+
 function setupBasicButtons(): void {
   // Add click listeners to all buttons for visual feedback
   const buttons = [
-    'btn-connect', 'btn-settings', 'btn-status', 'btn-ifs', 'btn-logs',
     'btn-led-on', 'btn-led-off', 'btn-clear-status', 'btn-home-axes',
     'btn-pause', 'btn-resume', 'btn-stop', 'btn-upload-job',
     'btn-start-recent', 'btn-start-local', 'btn-swap-filament', 'btn-send-cmds',
@@ -714,11 +1573,6 @@ function setupBasicButtons(): void {
         if (window.api) {
           // Map button IDs to IPC channels (for dialogs and simple sends only)
           const channelMap: { [key: string]: string | { channel: string; data?: unknown } } = {
-            'btn-connect': 'open-printer-selection',
-            'btn-settings': 'open-settings-window',
-            'btn-status': 'open-status-dialog',
-            'btn-ifs': 'open-ifs-dialog',
-            'btn-logs': 'open-log-dialog',
             'btn-upload-job': 'open-job-uploader',
             'btn-start-recent': 'show-recent-files',
             'btn-start-local': 'show-local-files',
@@ -783,6 +1637,128 @@ function setupBasicButtons(): void {
   });
 }
 
+// ============================================================================
+// HAMBURGER MENU FUNCTIONALITY
+// ============================================================================
+
+/**
+ * Closes the hamburger menu with fade-out timing
+ */
+function closeMainMenu(): void {
+  if (!isMainMenuOpen || !mainMenuDropdown) {
+    return;
+  }
+
+  isMainMenuOpen = false;
+  mainMenuDropdown.classList.remove('show');
+  mainMenuButton?.setAttribute('aria-expanded', 'false');
+
+  if (mainMenuCloseTimeout !== null) {
+    window.clearTimeout(mainMenuCloseTimeout);
+    mainMenuCloseTimeout = null;
+  }
+
+  // Hide the dropdown after the fade-out animation completes
+  mainMenuCloseTimeout = window.setTimeout(() => {
+    if (!isMainMenuOpen && mainMenuDropdown) {
+      mainMenuDropdown.classList.add('hidden');
+    }
+    mainMenuCloseTimeout = null;
+  }, 150);
+}
+
+/**
+ * Opens the hamburger menu and prepares animation state
+ */
+function openMainMenu(): void {
+  if (isMainMenuOpen || !mainMenuDropdown) {
+    return;
+  }
+
+  if (mainMenuCloseTimeout !== null) {
+    window.clearTimeout(mainMenuCloseTimeout);
+    mainMenuCloseTimeout = null;
+  }
+
+  isMainMenuOpen = true;
+  mainMenuDropdown.classList.remove('hidden');
+
+  // Trigger reflow to ensure the transition runs
+  void mainMenuDropdown.offsetHeight;
+
+  mainMenuDropdown.classList.add('show');
+  mainMenuButton?.setAttribute('aria-expanded', 'true');
+}
+
+/**
+ * Toggles hamburger menu visibility
+ */
+function toggleMainMenu(): void {
+  if (isMainMenuOpen) {
+    closeMainMenu();
+  } else {
+    openMainMenu();
+  }
+}
+
+/**
+ * Initializes hamburger menu interactions and IPC wiring
+ */
+function initializeMainMenu(): void {
+  mainMenuButton = document.getElementById('btn-main-menu') as HTMLButtonElement | null;
+  mainMenuDropdown = document.getElementById('main-menu-dropdown') as HTMLDivElement | null;
+
+  if (!mainMenuButton || !mainMenuDropdown) {
+    console.warn('[MainMenu] Hamburger menu elements not found in DOM');
+    return;
+  }
+
+  mainMenuButton.setAttribute('aria-expanded', 'false');
+  mainMenuDropdown.classList.add('hidden');
+
+  mainMenuButton.addEventListener('click', (event: MouseEvent) => {
+    event.stopPropagation();
+    toggleMainMenu();
+  });
+
+  const menuItems = mainMenuDropdown.querySelectorAll<HTMLButtonElement>('.menu-item');
+  menuItems.forEach((item) => {
+    item.addEventListener('click', () => {
+      const action = item.getAttribute('data-action');
+      const channel = isMainMenuAction(action) ? MAIN_MENU_ACTION_CHANNELS[action] : undefined;
+      if (channel && window.api?.send) {
+        window.api.send(channel);
+      }
+      closeMainMenu();
+    });
+  });
+
+  // Close menu when clicking outside of it
+  document.addEventListener('click', (event: MouseEvent) => {
+    const target = event.target as Node | null;
+    const button = mainMenuButton;
+    const dropdown = mainMenuDropdown;
+    if (
+      isMainMenuOpen &&
+      target &&
+      button &&
+      dropdown &&
+      !button.contains(target) &&
+      !dropdown.contains(target)
+    ) {
+      closeMainMenu();
+    }
+  });
+
+  // Close menu on Escape and return focus to trigger
+  document.addEventListener('keydown', (event: KeyboardEvent) => {
+    if (event.key === 'Escape' && isMainMenuOpen) {
+      closeMainMenu();
+      mainMenuButton?.focus();
+    }
+  });
+}
+
 /**
  * Initialize UI with default state and prepare for component system
  * This function now serves as a bridge between legacy initialization and components
@@ -803,7 +1779,7 @@ function initializeUI(): void {
   // Initialize legacy printer button states (disabled by default until backend is initialized)
   updateLegacyPrinterButtonStates();
   
-  // Component initialization will be handled separately by initializeComponents()
+  // Component initialization occurs during GridStack setup
   logMessage('UI initialization complete - awaiting component system');
 }
 
@@ -927,17 +1903,21 @@ function updateFiltrationButtonStates(): void {
 }
 
 /**
- * Update IFS button visibility based on material station availability
+ * Update IFS menu item visibility based on material station availability
  */
-function updateIFSButtonVisibility(): void {
-  const ifsButton = document.getElementById('btn-ifs');
-  if (ifsButton) {
-    if (ifsButtonVisible) {
-      ifsButton.classList.remove('hidden');
-    } else {
-      ifsButton.classList.add('hidden');
-    }
+function updateIFSMenuItemVisibility(): void {
+  const ifsMenuItem = document.getElementById('menu-item-ifs');
+  if (!ifsMenuItem) {
+    return;
   }
+
+  if (ifsMenuItemVisible) {
+    ifsMenuItem.classList.remove('hidden');
+  } else {
+    ifsMenuItem.classList.add('hidden');
+  }
+
+  menuShortcutManager.setActionEnabled('ifs', ifsMenuItemVisible);
 }
 
 /**
@@ -1035,7 +2015,10 @@ function initializePollingListeners(): void {
   // Listen for polling updates from main process
   window.api.receive('polling-update', (data: unknown) => {
     const pollingData = data as PollingData;
-    
+
+    // Store for new components
+    lastPollingData = pollingData;
+
     try {
       // Update filtration availability from backend data (preserve existing logic)
       if (pollingData.printerStatus && pollingData.printerStatus.filtration) {
@@ -1047,17 +2030,17 @@ function initializePollingListeners(): void {
         }
       }
       
-      // Update IFS button visibility for AD5X printers with material station (preserve existing logic)
+      // Update IFS menu item visibility for AD5X printers with material station
       if (pollingData.materialStation && pollingData.isConnected) {
         const shouldShowIFS = pollingData.materialStation.connected;
-        if (shouldShowIFS !== ifsButtonVisible) {
-          ifsButtonVisible = shouldShowIFS;
-          updateIFSButtonVisibility();
+        if (shouldShowIFS !== ifsMenuItemVisible) {
+          ifsMenuItemVisible = shouldShowIFS;
+          updateIFSMenuItemVisibility();
         }
-      } else if (ifsButtonVisible) {
-        // Hide IFS button when disconnected or no material station
-        ifsButtonVisible = false;
-        updateIFSButtonVisibility();
+      } else if (ifsMenuItemVisible) {
+        // Hide IFS menu item when disconnected or no material station
+        ifsMenuItemVisible = false;
+        updateIFSMenuItemVisibility();
       }
       
       // COMPONENT SYSTEM INTEGRATION: Replace updateAllPanels with componentManager.updateAll
@@ -1131,9 +2114,9 @@ function initializeStateAndEventListeners(): void {
     filtrationAvailable = false;
     updateFiltrationButtonStates();
     
-    // Reset IFS button visibility on disconnect
-    ifsButtonVisible = false;
-    updateIFSButtonVisibility();
+    // Reset IFS menu visibility on disconnect
+    ifsMenuItemVisible = false;
+    updateIFSMenuItemVisibility();
     
     // Reset legacy printer flag on disconnect
     isLegacyPrinter = false;
@@ -1207,6 +2190,23 @@ function initializeStateAndEventListeners(): void {
 document.addEventListener('DOMContentLoaded', async () => {
   console.log('Renderer process started - DOM loaded');
 
+  initializeLucideIcons(
+    document,
+    getLucideIcons(
+      'menu',
+      'printer',
+      'settings',
+      'bar-chart-3',
+      'grid-3x3',
+      'pin',
+      'minus',
+      'square',
+      'x',
+      'check-circle',
+      'x-circle'
+    )
+  );
+
   // Check if window.api is available
   if (!window.api) {
     console.error('API is not available. Preload script might not be loaded correctly.');
@@ -1228,16 +2228,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupBasicButtons();
   setupLoadingEventListeners();
   initializeUI();
+  initializeMainMenu();
+  menuShortcutManager.initialize();
 
-  // Component system initialization
+  // Initialize shortcut button system
+  initializeShortcutButtons();
+
+  // GridStack + Component system initialization
   try {
-    await initializeComponents();
-    console.log('Component system ready');
-    logMessage('Component system initialized: ' + componentManager.getComponentCount() + ' components');
+    await initializeGridStack();
+    componentsInitialized = true;
+    console.log('GridStack and component system ready');
+    logMessage('GridStack layout system initialized: ' + componentManager.getComponentCount() + ' components');
   } catch (error) {
-    console.error('Component system initialization failed:', error);
-    logMessage(`ERROR: Component system failed to initialize: ${error}`);
+    console.error('GridStack initialization failed:', error);
+    logMessage(`ERROR: GridStack initialization failed: ${error}`);
   }
+
+  // Initialize enhanced polling update listeners AFTER components are ready
+  // This prevents "Components not initialized yet" warnings during startup
+  initializePollingListeners();
 
   // Initialize printer tabs for multi-printer support
   try {
@@ -1250,9 +2260,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize state tracking and event listeners
   initializeStateAndEventListeners();
-
-  // Initialize enhanced polling update listeners
-  initializePollingListeners();
 
   // Signal to main process that renderer is ready
   try {
@@ -1276,8 +2283,20 @@ document.addEventListener('DOMContentLoaded', async () => {
  * Ensures proper cleanup of both legacy resources and components
  */
 window.addEventListener('beforeunload', () => {
-  console.log('Cleaning up resources in enhanced renderer with component system');
-  
+  console.log('Cleaning up resources in enhanced renderer with GridStack and component system');
+  menuShortcutManager.dispose();
+
+  // Clean up GridStack system
+  try {
+    console.log('Destroying GridStack system...');
+    editModeController.dispose();
+    gridStackManager.destroy();
+    layoutPersistence.dispose();
+    console.log('GridStack system cleanup complete');
+  } catch (error) {
+    console.error('Error during GridStack cleanup:', error);
+  }
+
   // Clean up component system
   if (componentsInitialized) {
     try {
@@ -1290,7 +2309,7 @@ window.addEventListener('beforeunload', () => {
       console.error('Error during component cleanup:', error);
     }
   }
-  
+
   // Clean up state tracker (preserve existing functionality)
   try {
     const stateTracker = getGlobalStateTracker();
@@ -1299,7 +2318,7 @@ window.addEventListener('beforeunload', () => {
   } catch (error) {
     console.error('Error during state tracker cleanup:', error);
   }
-  
+
   // Clean up IPC listeners (preserve existing functionality)
   if (window.api) {
     try {
@@ -1309,7 +2328,7 @@ window.addEventListener('beforeunload', () => {
       console.error('Error during IPC cleanup:', error);
     }
   }
-  
+
   console.log('Enhanced renderer cleanup complete - all resources disposed');
 });
 

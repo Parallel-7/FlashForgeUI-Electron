@@ -35,6 +35,10 @@ import { registerControlHandlers } from './control-handlers';
 import { registerWebUIHandlers } from './webui-handlers';
 import { registerCameraHandlers } from './camera-handlers';
 import { initializePrinterSettingsHandlers } from './printer-settings-handlers';
+import { registerPaletteHandlers } from './palette-handlers';
+import { registerShortcutConfigHandlers } from './shortcut-config-handlers';
+import { registerComponentDialogHandlers } from './component-dialog-handlers';
+import { registerUpdateHandlers } from './update-handlers';
 
 /**
  * Application managers required by IPC handlers
@@ -63,5 +67,9 @@ export function registerAllIpcHandlers(managers: AppManagers): void {
   registerWebUIHandlers();
   registerCameraHandlers(managers);
   initializePrinterSettingsHandlers();
+  registerPaletteHandlers();
+  registerShortcutConfigHandlers();
+  registerComponentDialogHandlers();
+  registerUpdateHandlers(configManager, windowManager);
 }
 

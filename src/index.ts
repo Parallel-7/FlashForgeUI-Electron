@@ -35,6 +35,7 @@ import type { PollingData } from './types/polling';
 import { getMultiContextPollingCoordinator } from './services/MultiContextPollingCoordinator';
 import { getMultiContextNotificationCoordinator } from './services/MultiContextNotificationCoordinator';
 import { getCameraProxyService } from './services/CameraProxyService';
+import { getRtspStreamService } from './services/RtspStreamService';
 import { cameraIPCHandler } from './ipc/camera-ipc-handler';
 import { getWebUIManager } from './webui/server/WebUIManager';
 import { getEnvironmentDetectionService } from './services/EnvironmentDetectionService';
@@ -45,6 +46,7 @@ import { injectUIStyleVariables } from './utils/CSSVariables';
 import { parseHeadlessArguments, validateHeadlessConfig } from './utils/HeadlessArguments';
 import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection';
 import { getHeadlessManager } from './managers/HeadlessManager';
+import { getAutoUpdateService } from './services/AutoUpdateService';
 
 /**
  * Main Electron process entry point. Handles app lifecycle, creates the main window,
@@ -610,12 +612,26 @@ const initializeApp = async (): Promise<void> => {
   // Initialize camera service
   await initializeCameraService();
 
+  // Initialize RTSP stream service (for RTSP camera support)
+  // This must be initialized unconditionally, not just when WebUI is enabled
+  const rtspStreamService = getRtspStreamService();
+  await rtspStreamService.initialize();
+  console.log('RTSP stream service initialized');
+
   // Note: WebUI server initialization moved to non-blocking context
   // (will be initialized after renderer-ready signal to prevent startup crashes)
 
   // Initialize notification system (base system only, per-context coordinators created when polling starts)
   initializeNotificationSystem();
   console.log('Notification system initialized');
+
+  try {
+    const autoUpdateService = getAutoUpdateService();
+    await autoUpdateService.initialize();
+    console.log('Auto-update service initialized');
+  } catch (error) {
+    console.error('Failed to initialize auto-update service:', error);
+  }
 
   // Initialize multi-context notification coordinator
   const multiContextNotificationCoordinator = getMultiContextNotificationCoordinator();
@@ -657,6 +673,11 @@ async function initializeHeadless(): Promise<void> {
       configManager.once('config-loaded', () => resolve());
     }
   });
+
+  // Initialize RTSP stream service (for RTSP camera support in headless mode)
+  const rtspStreamService = getRtspStreamService();
+  await rtspStreamService.initialize();
+  console.log('[Headless] RTSP stream service initialized');
 
   // Initialize headless manager
   const headlessManager = getHeadlessManager();

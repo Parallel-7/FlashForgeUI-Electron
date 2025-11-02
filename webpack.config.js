@@ -12,8 +12,11 @@ const HtmlWebpackPlugin = require('html-webpack-plugin');
 module.exports = {
   mode: process.env.NODE_ENV || 'development',
   
-  // Entry point for renderer process
-  entry: './src/renderer.ts',
+  // Entry points for renderer and standalone dialog bundles
+  entry: {
+    renderer: './src/renderer.ts',
+    'component-dialog': './src/ui/component-dialog/component-dialog.ts',
+  },
   
   // Target electron renderer to enable Node.js module support
   target: 'electron-renderer',
@@ -21,7 +24,7 @@ module.exports = {
   // Output configuration
   output: {
     path: path.resolve(__dirname, 'dist/renderer'),
-    filename: 'renderer.bundle.js',
+    filename: '[name].bundle.js',
     // Only clean in development to prevent removing assets needed for production
     clean: process.env.NODE_ENV === 'development',
     // Ensure consistent path separators across platforms
@@ -68,7 +71,8 @@ module.exports = {
       template: './src/index.html',
       filename: 'index.html',
       inject: 'body',
-      scriptLoading: 'defer'
+      scriptLoading: 'defer',
+      chunks: ['renderer']
     })
   ],
   

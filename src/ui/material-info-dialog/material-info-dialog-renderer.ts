@@ -34,6 +34,7 @@ declare global {
 // Initialize dialog when DOM is loaded
 document.addEventListener('DOMContentLoaded', (): void => {
     console.log('Material Info Dialog renderer loaded');
+    window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
     
     // Check if material info dialog API is available
     if (!window.materialInfoDialogAPI) {
@@ -112,7 +113,17 @@ function updateFileStats(data: MaterialInfoDialogData): void {
 
     if (materialStationElement) {
         if (data.useMatlStation) {
-            materialStationElement.innerHTML = '<span class="material-station-indicator">Material Station</span>';
+            materialStationElement.innerHTML = '';
+            const indicator = document.createElement('span');
+            indicator.className = 'material-station-indicator';
+            const icon = document.createElement('i');
+            icon.setAttribute('data-lucide', 'factory');
+            indicator.appendChild(icon);
+            const label = document.createElement('span');
+            label.textContent = 'Material Station';
+            indicator.appendChild(label);
+            materialStationElement.appendChild(indicator);
+            window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['factory'], indicator);
         } else {
             materialStationElement.textContent = 'Direct Feed';
         }

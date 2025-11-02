@@ -32,7 +32,7 @@
  * server status, and resource usage. Primarily used for technical support and debugging.
  */
 
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
 
 // Ensure this file is treated as a module
 export {};
@@ -64,15 +64,23 @@ interface StatusStats {
 }
 
 // Type definition for the extended window interface
+const STATUS_PUSH_CHANNEL = 'status-push-stats';
+
 interface StatusWindow extends Window {
   _statusStatsCallback?: (stats: StatusStats) => void;
 }
+
+let statusPushListener: ((event: IpcRendererEvent, stats: StatusStats) => void) | null = null;
 
 // Expose status dialog API to renderer process
 contextBridge.exposeInMainWorld('statusAPI', {
   requestStats: async (): Promise<StatusStats | null> => {
     try {
       const stats = await ipcRenderer.invoke('status-request-stats') as StatusStats;
+      const callback = (window as StatusWindow)._statusStatsCallback;
+      if (callback) {
+        callback(stats);
+      }
       return stats;
     } catch (error) {
       console.error('Failed to request stats:', error);
@@ -81,11 +89,27 @@ contextBridge.exposeInMainWorld('statusAPI', {
   },
   closeWindow: (): void => ipcRenderer.send('status-close-window'),
   receiveStats: (callback: (stats: StatusStats) => void): void => {
-    // Store the callback for use with requestStats
-    (window as StatusWindow)._statusStatsCallback = callback;
+    const statusWindow = window as StatusWindow;
+    statusWindow._statusStatsCallback = callback;
+
+    if (statusPushListener) {
+      ipcRenderer.removeListener(STATUS_PUSH_CHANNEL, statusPushListener);
+    }
+
+    statusPushListener = (_event, stats: StatusStats) => {
+      callback(stats);
+    };
+
+    ipcRenderer.on(STATUS_PUSH_CHANNEL, statusPushListener);
   },
   removeListeners: (): void => {
-    delete (window as StatusWindow)._statusStatsCallback;
+    const statusWindow = window as StatusWindow;
+    delete statusWindow._statusStatsCallback;
+
+    if (statusPushListener) {
+      ipcRenderer.removeListener(STATUS_PUSH_CHANNEL, statusPushListener);
+      statusPushListener = null;
+    }
   }
 });
 

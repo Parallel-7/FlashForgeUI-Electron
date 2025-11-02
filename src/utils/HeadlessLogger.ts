@@ -69,9 +69,9 @@ export class HeadlessLogger {
     error?: string
   ): void {
     if (success) {
-      this.logInfo(`✓ Connected: ${contextId} - ${printerName} @ ${ipAddress}`);
+      this.logInfo(`[OK] Connected: ${contextId} - ${printerName} @ ${ipAddress}`);
     } else {
-      this.logError(`✗ Connection failed: ${printerName} @ ${ipAddress}${error ? ` - ${error}` : ''}`);
+      this.logError(`[FAIL] Connection failed: ${printerName} @ ${ipAddress}${error ? ` - ${error}` : ''}`);
     }
   }
 

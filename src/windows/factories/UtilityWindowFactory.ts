@@ -106,7 +106,7 @@ export const createJobUploaderWindow = (): void => {
     mainWindow,
     dimensions,
     preloadPath,
-    { resizable: false, frame: false, transparent: true }
+    { resizable: false, frame: false }
   );
 
   // Load HTML content
@@ -158,7 +158,7 @@ export const createJobPickerWindow = (isRecentFiles: boolean = false): void => {
     mainWindow,
     dimensions,
     preloadPath,
-    { resizable: true, frame: false, transparent: true }
+    { resizable: true, frame: false }
   );
 
   // Load HTML content
@@ -221,7 +221,7 @@ export const createPrinterSelectionWindow = (): void => {
     mainWindow,
     dimensions,
     preloadPath,
-    { resizable: true, frame: false, transparent: true }
+    { resizable: true, frame: false }
   );
 
   // Load HTML content
@@ -268,7 +268,7 @@ export const createSendCommandsWindow = (): void => {
     mainWindow,
     dimensions,
     preloadPath,
-    { resizable: true, frame: false, transparent: true }
+    { resizable: true, frame: false }
   );
 
   // Load HTML content

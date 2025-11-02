@@ -95,6 +95,7 @@ let startButton: HTMLButtonElement | null = null;
  * Initialize the dialog
  */
 function initializeDialog(): void {
+  window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
   // Get DOM elements
   fileNameElement = document.getElementById('file-name');
   slotLabelElement = document.getElementById('slot-label');

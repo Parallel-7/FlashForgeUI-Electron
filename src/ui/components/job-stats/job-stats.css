@@ -1,42 +1,126 @@
 /**
  * @fileoverview Job Statistics Component Styles
  *
- * Component-scoped CSS for the Job Statistics Component. These styles provide
- * layout structure for displaying real-time job information including layer
- * progress, ETA, timing, and material usage data.
- *
- * Key features:
- * - Fixed height design (180px) to accommodate all info rows
- * - No scrollbars - content fits within allocated space
- * - Consistent panel header styling
- * - Proper flex layout for info rows
- * - Dual UI mode support via CSS variables
+ * Compact pill-based presentation matching the Additional Info component to
+ * deliver a cohesive layout with reduced vertical space usage.
  */
 
 .component-job-stats {
-  border-top: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
-  height: 180px; /* Fixed height to accommodate all info rows */
-  flex-shrink: 0; /* Prevent shrinking below content size */
+  height: 100%;
+  min-height: 0;
+  background: transparent;
+}
+
+.component-job-stats .job-stats-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
   overflow: hidden;
+  background: transparent;
 }
 
 .component-job-stats .panel-header {
-  background-color: var(--header-bg);
-  padding: 4px 8px;
-  border-bottom: 1px solid var(--border-color);
+  background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(25, 25, 25, 0.95) 100%);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color-light);
   flex-shrink: 0;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  color: var(--text-color);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .component-job-stats .panel-content {
-  padding: 8px;
+  padding: 10px 8px;
   flex: 1;
-  overflow: hidden; /* No scrolling needed with fixed height */
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  min-width: 200px;
+  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: auto;
 }
 
-.component-job-stats .info-row {
+.component-job-stats .info-display-row {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  padding: 8px 10px;
+  background: linear-gradient(135deg, rgba(45, 45, 45, 0.8) 0%, rgba(35, 35, 35, 0.9) 100%);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), var(--shadow-sm);
+  transition: all var(--transition-normal);
+  min-height: 36px;
+  width: 100%;
+  backdrop-filter: blur(8px);
+}
+
+.component-job-stats .info-display-row:hover {
+  border-color: var(--border-color-light);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--shadow-md);
+  background: linear-gradient(135deg, rgba(50, 50, 50, 0.85) 0%, rgba(40, 40, 40, 0.95) 100%);
+  transform: translateY(-1px);
+}
+
+.component-job-stats .info-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-color-secondary);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+.component-job-stats .info-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-color);
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  letter-spacing: 0.2px;
+  text-align: right;
+  flex-grow: 1;
+  margin-left: 8px;
+  transition: color var(--transition-normal), text-shadow var(--transition-normal);
+}
+
+.component-job-stats .info-value:hover {
+  color: var(--accent-color);
+  text-shadow: 0 0 12px rgba(66, 133, 244, 0.3);
+}
+
+@media (max-width: 768px) {
+  .component-job-stats .panel-content {
+    padding: 12px 8px;
+    gap: 8px;
+  }
+
+  .component-job-stats .info-label {
+    font-size: 10px;
+    min-width: 60px;
+  }
+
+  .component-job-stats .info-value {
+    font-size: 13px;
+  }
+}
+
+@media (prefers-contrast: high) {
+  .component-job-stats .info-display-row {
+    border-color: var(--border-color-light);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .component-job-stats .info-display-row,
+  .component-job-stats .info-value {
+    transition: none;
+  }
 }

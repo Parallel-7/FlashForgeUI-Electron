@@ -657,6 +657,7 @@ const cleanup = (): void => {
 // DOM Content Loaded event handler
 document.addEventListener('DOMContentLoaded', () => {
     console.log('Printer selection renderer - DOM loaded');
+    window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
     initializeDialog();
 });
 

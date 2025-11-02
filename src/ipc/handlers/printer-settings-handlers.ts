@@ -82,10 +82,18 @@ export function initializePrinterSettingsHandlers(): void {
       // Get current printer details
       const currentDetails = activeContext.printerDetails;
 
+      // Apply defaults for RTSP settings if undefined
+      // This ensures undefined values don't get persisted to disk
+      const settingsWithDefaults = {
+        ...settings,
+        rtspFrameRate: settings.rtspFrameRate ?? 30,
+        rtspQuality: settings.rtspQuality ?? 3
+      };
+
       // Merge with new settings
       const updatedDetails = {
         ...currentDetails,
-        ...settings
+        ...settingsWithDefaults
       };
 
       console.log('[printer-settings:update] Updated details to save:', updatedDetails);

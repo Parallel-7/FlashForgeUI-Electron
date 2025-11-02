@@ -85,6 +85,7 @@ jobs:
             dist/**/*.dmg
             dist/**/*.AppImage
             dist/**/*.nupkg
+            dist/latest*.yml
             !dist/**/elevate.exe
             !dist/win-unpacked/**
           if-no-files-found: warn
@@ -114,7 +115,7 @@ jobs:
         shell: bash
         run: |
           mkdir release_assets
-          find artifacts/ -type f \( -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*Setup*.exe" -o -name "FlashForgeUI*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.nupkg" \) | grep -v "elevate.exe" | while IFS= read -r file; do
+          find artifacts/ -type f \( -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*Setup*.exe" -o -name "FlashForgeUI*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.nupkg" -o -name "latest*.yml" \) | grep -v "elevate.exe" | while IFS= read -r file; do
             filename=$(basename "$file")
             cp "$file" "release_assets/$filename"
             echo "Copied $file to release_assets/$filename"

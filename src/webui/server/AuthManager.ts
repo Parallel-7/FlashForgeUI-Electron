@@ -66,6 +66,13 @@ export class AuthManager {
    * Validate login credentials and generate token
    */
   public async validateLogin(request: WebUILoginRequest): Promise<WebUILoginResponse> {
+    if (!this.isAuthenticationRequired()) {
+      return {
+        success: false,
+        message: 'Authentication is currently disabled'
+      };
+    }
+
     const config = this.configManager.getConfig();
     const serverPassword = config.WebUIPassword;
     
@@ -135,6 +142,10 @@ export class AuthManager {
    * Validate token and return validation result
    */
   public validateToken(token: string): { isValid: boolean; sessionId?: string } {
+    if (!this.isAuthenticationRequired()) {
+      return { isValid: true };
+    }
+
     try {
       // Validate token format
       const validatedToken = validateAuthToken(token);
@@ -193,6 +204,10 @@ export class AuthManager {
    * Verify and decode a token
    */
   public verifyToken(token: string): boolean {
+    if (!this.isAuthenticationRequired()) {
+      return true;
+    }
+
     try {
       // Validate token format
       const validatedToken = validateAuthToken(token);
@@ -266,9 +281,9 @@ export class AuthManager {
     const config = this.configManager.getConfig();
     
     return {
-      hasPassword: !!config.WebUIPassword,
+      hasPassword: config.WebUIPasswordRequired && !!config.WebUIPassword,
       defaultPassword: config.WebUIPassword === 'changeme',
-      authRequired: true
+      authRequired: config.WebUIPasswordRequired
     };
   }
   
@@ -315,6 +330,14 @@ export class AuthManager {
       .update(config.WebUIPassword)
       .update('ffui-webui-2025')
       .digest('hex');
+  }
+
+  /**
+   * Check if authentication is required based on configuration
+   */
+  public isAuthenticationRequired(): boolean {
+    const config = this.configManager.getConfig();
+    return config.WebUIPasswordRequired;
   }
   
   /**

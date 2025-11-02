@@ -1,107 +1,138 @@
 /**
  * Printer Status Component Styles
  * Modern, professional status display with clean typography and intuitive layout
- * Matches temperature controls design language for visual consistency
+ * Unified design language matching all other components
  */
 
 .printer-status-container {
-  padding: 16px 12px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.printer-status-container .panel-header {
+  background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(25, 25, 25, 0.95) 100%);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color-light);
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  color: var(--text-color);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.printer-status-container .panel-content {
+  padding: 10px 8px;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 12px;
+  gap: 6px;
   min-width: 200px;
-  height: 100%;
-  width: 100%;
   box-sizing: border-box;
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: auto;
 }
 
-/* Status Display Row Layout - Clean and Centered */
+/* Status Display Row Layout - Compact and efficient */
 .printer-status-container .status-display-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 14px;
-  background: linear-gradient(135deg, #373737 0%, #404040 100%);
+  padding: 8px 10px;
+  background: linear-gradient(135deg, rgba(45, 45, 45, 0.8) 0%, rgba(35, 35, 35, 0.9) 100%);
   border-radius: 6px;
-  border: 1px solid #4a4a4a;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.05),
-              0 2px 4px rgba(0,0,0,0.15);
-  transition: all 0.2s ease;
-  min-height: 44px;
+  border: 1px solid var(--border-color);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), var(--shadow-sm);
+  transition: all var(--transition-normal);
+  min-height: 36px;
   width: 100%;
+  backdrop-filter: blur(8px);
 }
 
 .printer-status-container .status-display-row:hover {
-  border-color: #5a5a5a;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.08),
-              0 3px 6px rgba(0,0,0,0.2);
+  border-color: var(--border-color-light);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), var(--shadow-md);
+  background: linear-gradient(135deg, rgba(50, 50, 50, 0.85) 0%, rgba(40, 40, 40, 0.95) 100%);
+  transform: translateY(-1px);
 }
 
-/* Status Labels */
+/* Status Labels - Readable typography */
 .printer-status-container .status-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #e6e6e6;
-  letter-spacing: 0.3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-color-secondary);
+  letter-spacing: 0.5px;
   text-transform: uppercase;
-  min-width: 80px;
+  min-width: 70px;
   flex-shrink: 0;
 }
 
-/* Status Values - Clean Text Only */
+/* Status Values - Readable and clear */
 .printer-status-container .status-value {
-  font-size: 15px;
-  font-weight: 600;
-  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-color);
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
   letter-spacing: 0.2px;
-  text-align: center;
+  text-align: right;
   flex-grow: 1;
-  margin-left: 12px;
-  transition: color 0.2s ease;
+  margin-left: 8px;
+  transition: color var(--transition-normal), text-shadow var(--transition-normal);
 }
 
-/* Clean Hover Effect */
+/* Subtle interaction feedback */
 .printer-status-container .status-value:hover {
-  color: #4a90e2;
+  color: var(--accent-color);
+  text-shadow: 0 0 12px rgba(66, 133, 244, 0.3);
 }
 
-/* State-Based Status Colors - Simple Color Changes */
+/* State-Based Status Colors with Enhanced Visibility */
 .printer-status-container.printer-state-ready #printer-status-text {
-  color: #4a90e2;
+  color: var(--accent-color);
+  text-shadow: 0 0 10px rgba(66, 133, 244, 0.4);
 }
 
 .printer-status-container.printer-state-printing #printer-status-text {
-  color: #00e676;
+  color: var(--success-color);
+  text-shadow: 0 0 10px rgba(0, 230, 118, 0.4);
 }
 
 .printer-status-container.printer-state-paused #printer-status-text {
-  color: #ff9500;
+  color: var(--warning-color);
+  text-shadow: 0 0 10px rgba(255, 152, 0, 0.4);
 }
 
 .printer-status-container.printer-state-error #printer-status-text {
-  color: #e74c3c;
+  color: var(--error-color);
+  text-shadow: 0 0 10px rgba(244, 67, 54, 0.4);
 }
 
 .printer-status-container.printer-state-completed #printer-status-text {
-  color: #00e676;
+  color: var(--success-color);
+  text-shadow: 0 0 10px rgba(0, 230, 118, 0.4);
 }
 
 .printer-status-container.printer-state-busy #printer-status-text {
   color: #9c27b0;
+  text-shadow: 0 0 10px rgba(156, 39, 176, 0.4);
 }
 
 .printer-status-container.printer-state-heating #printer-status-text {
-  color: #ff9500;
+  color: var(--warning-color);
+  text-shadow: 0 0 10px rgba(255, 152, 0, 0.4);
 }
 
-/* Statistics Value State Enhancements - Simple Color Changes */
+/* Statistics Value State Enhancements */
 .printer-status-container.printer-state-printing #run-time-text,
 .printer-status-container.printer-state-printing #filament-used-text {
-  color: #00e676;
+  color: var(--success-color);
+  text-shadow: 0 0 8px rgba(0, 230, 118, 0.3);
 }
 
 /* Responsive Adjustments */

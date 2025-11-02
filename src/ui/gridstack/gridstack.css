@@ -1,0 +1,329 @@
+/**
+ * GridStack Theme for FlashForgeUI
+ *
+ * Custom styling for GridStack.js integration with dark theme
+ * Includes edit mode styles, resize handles, and animations
+ */
+
+/* Import GridStack base styles */
+@import 'gridstack/dist/gridstack.min.css';
+
+/* ============================================================================
+   GRID CONTAINER STYLING
+   ============================================================================ */
+
+.grid-stack {
+  flex: 1;
+  min-height: 0; /* Important for flex children to allow shrinking */
+  overflow: auto;
+  background-color: var(--darker-bg);
+  padding: 12px;
+  position: relative;
+  gap: 12px;
+}
+
+/* ============================================================================
+   GRID ITEM STYLING
+   ============================================================================ */
+
+.grid-stack-item {
+  position: relative;
+}
+
+.grid-stack-item-content {
+  /* Content container styling - Modern glass-morphic appearance */
+  background: linear-gradient(135deg, var(--card-bg) 0%, rgba(30, 30, 30, 0.95) 100%);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  overflow: hidden;
+  inset: 0;
+  position: absolute;
+  display: block;
+  box-shadow: var(--shadow-sm);
+  transition: box-shadow var(--transition-normal), border-color var(--transition-normal), transform var(--transition-fast);
+  backdrop-filter: blur(10px);
+}
+
+.grid-stack-item-content:hover {
+  border-color: var(--border-color-light);
+  box-shadow: var(--shadow-md);
+}
+
+.grid-stack-item-remove {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  border: none;
+  background: rgba(30, 30, 30, 0.85);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 18px;
+  line-height: 1;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+}
+
+.grid-stack-item-remove:hover {
+  background: rgba(244, 67, 54, 0.9);
+  transform: scale(1.05);
+  color: #fff;
+}
+
+.grid-stack-item-remove:active {
+  transform: scale(0.98);
+}
+
+/* ============================================================================
+   EDIT MODE STYLING
+   ============================================================================ */
+
+/* Edit mode indicator - Enhanced visual prominence */
+.edit-mode-indicator {
+  position: fixed;
+  top: 50px;
+  right: 20px;
+  z-index: 9999;
+  display: none; /* Hidden by default, shown when edit mode is active */
+  align-items: center;
+  gap: 10px;
+  padding: 14px 24px;
+  background: linear-gradient(135deg, var(--accent-color) 0%, var(--button-hover) 100%);
+  color: white;
+  border-radius: 8px;
+  box-shadow: var(--shadow-lg), 0 0 20px rgba(66, 133, 244, 0.4);
+  font-weight: 600;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  backdrop-filter: blur(10px);
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.edit-mode-icon {
+  font-size: 20px;
+}
+
+.edit-mode-text {
+  font-size: 14px;
+}
+
+/* Edit mode body class styling */
+body.edit-mode .grid-stack-item {
+  cursor: move;
+  cursor: grab;
+}
+
+body.edit-mode .grid-stack-item:active {
+  cursor: grabbing;
+}
+
+body.edit-mode .grid-stack-item-content {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.25), var(--shadow-md);
+}
+
+body.edit-mode .grid-stack-item-content:hover {
+  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.5), var(--shadow-lg);
+  border-color: var(--button-hover);
+}
+
+body.edit-mode .grid-stack-item-remove {
+  display: flex;
+}
+
+/* ============================================================================
+   RESIZE HANDLES
+   ============================================================================ */
+
+/* Hide resize handles by default */
+.grid-stack-item > .ui-resizable-handle {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  pointer-events: none;
+}
+
+/* Show resize handles in edit mode */
+body.edit-mode .grid-stack-item > .ui-resizable-handle {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Style the resize handles - Modern and prominent */
+.grid-stack-item > .ui-resizable-se,
+.grid-stack-item > .ui-resizable-sw {
+  width: 24px !important;
+  height: 24px !important;
+  background: linear-gradient(135deg, var(--accent-color) 0%, var(--button-hover) 100%);
+  border: 2px solid rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  box-shadow: var(--shadow-sm);
+  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.grid-stack-item > .ui-resizable-se:hover,
+.grid-stack-item > .ui-resizable-sw:hover {
+  transform: scale(1.1);
+  box-shadow: var(--shadow-md);
+}
+
+.grid-stack-item > .ui-resizable-se {
+  right: 4px !important;
+  bottom: 4px !important;
+}
+
+.grid-stack-item > .ui-resizable-sw {
+  left: 4px !important;
+  bottom: 4px !important;
+}
+
+.grid-stack-item > .ui-resizable-se::after,
+.grid-stack-item > .ui-resizable-sw::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid white;
+  border-bottom: 2px solid white;
+  right: 3px;
+  bottom: 3px;
+}
+
+.grid-stack-item > .ui-resizable-sw::after {
+  border-right: none;
+  border-left: 2px solid white;
+  right: auto;
+  left: 3px;
+}
+
+/* ============================================================================
+   DRAG PLACEHOLDER
+   ============================================================================ */
+
+.grid-stack-placeholder {
+  background-color: rgba(66, 133, 244, 0.2) !important;
+  border: 2px dashed var(--accent-color) !important;
+  border-radius: 4px !important;
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+.grid-stack.grid-stack-animate .grid-stack-item {
+  transition: left 0.3s ease, top 0.3s ease, width 0.3s ease, height 0.3s ease;
+}
+
+/* Disable animations during drag */
+.grid-stack-item.ui-draggable-dragging {
+  transition: none !important;
+  z-index: 100 !important;
+  opacity: 0.8;
+}
+
+/* Disable animations during resize */
+.grid-stack-item.ui-resizable-resizing {
+  transition: none !important;
+  z-index: 100 !important;
+}
+
+/* ============================================================================
+   COMPONENT-SPECIFIC OVERRIDES
+   ============================================================================ */
+
+/* Ensure component containers fill the grid item content */
+.grid-stack-item-content > [class*="-container"],
+.grid-stack-item-content > [data-component] {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Camera preview should fill entire space */
+.grid-stack-item[data-component-id="camera-preview"] .grid-stack-item-content {
+  padding: 0;
+}
+
+/* Status bar components get compact styling */
+.grid-stack-item[data-component-id="printer-status"] .grid-stack-item-content,
+.grid-stack-item[data-component-id="temperature-controls"] .grid-stack-item-content,
+.grid-stack-item[data-component-id="filtration-controls"] .grid-stack-item-content,
+.grid-stack-item[data-component-id="additional-info"] .grid-stack-item-content,
+.grid-stack-item[data-component-id="job-stats"] .grid-stack-item-content {
+  padding: 0;
+}
+
+/* Ensure status bar components have minimum viable height to prevent squishing */
+.grid-stack-item[data-component-id="printer-status"],
+.grid-stack-item[data-component-id="temperature-controls"],
+.grid-stack-item[data-component-id="filtration-controls"],
+.grid-stack-item[data-component-id="additional-info"] {
+  min-height: 160px !important; /* 2 grid units × 80px cellHeight */
+}
+
+/* ============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+@media (max-width: 800px) {
+  .grid-stack {
+    padding: 4px;
+  }
+
+  .edit-mode-indicator {
+    top: 40px;
+    right: 10px;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .edit-mode-icon {
+    font-size: 16px;
+  }
+}
+
+/* ============================================================================
+   DISABLED STATE
+   ============================================================================ */
+
+.grid-stack.grid-stack-static .grid-stack-item {
+  cursor: default;
+}
+
+.grid-stack.grid-stack-static .grid-stack-item-content {
+  pointer-events: auto; /* Allow interactions with component content */
+}
+
+/* ============================================================================
+   LOCKED ITEMS
+   ============================================================================ */
+
+.grid-stack-item.grid-stack-item-locked {
+  cursor: default !important;
+}
+
+.grid-stack-item.grid-stack-item-locked > .ui-resizable-handle {
+  display: none !important;
+}
+
+body.edit-mode .grid-stack-item.grid-stack-item-locked .grid-stack-item-content {
+  border-color: var(--warning-color);
+  box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2);
+}

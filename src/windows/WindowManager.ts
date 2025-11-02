@@ -93,7 +93,11 @@ export enum WindowType {
   MATERIAL_MATCHING_DIALOG = 'materialMatchingDialog',
   SINGLE_COLOR_CONFIRMATION_DIALOG = 'singleColorConfirmationDialog',
   AUTO_CONNECT_CHOICE_DIALOG = 'autoConnectChoiceDialog',
-  CONNECT_CHOICE_DIALOG = 'connectChoiceDialog'
+  CONNECT_CHOICE_DIALOG = 'connectChoiceDialog',
+  PALETTE = 'palette',
+  SHORTCUT_CONFIG_DIALOG = 'shortcutConfigDialog',
+  COMPONENT_DIALOG = 'componentDialog',
+  UPDATE_DIALOG = 'updateDialog'
 }
 
 class WindowManager {
@@ -343,6 +347,58 @@ class WindowManager {
 
   public hasConnectChoiceDialogWindow(): boolean {
     return this.hasWindow(WindowType.CONNECT_CHOICE_DIALOG);
+  }
+
+  // Convenience methods for palette window access
+  public getPaletteWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.PALETTE);
+  }
+
+  public setPaletteWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.PALETTE, window);
+  }
+
+  public hasPaletteWindow(): boolean {
+    return this.hasWindow(WindowType.PALETTE);
+  }
+
+  // Convenience methods for shortcut config dialog access
+  public getShortcutConfigDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.SHORTCUT_CONFIG_DIALOG);
+  }
+
+  public setShortcutConfigDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.SHORTCUT_CONFIG_DIALOG, window);
+  }
+
+  public hasShortcutConfigDialogWindow(): boolean {
+    return this.hasWindow(WindowType.SHORTCUT_CONFIG_DIALOG);
+  }
+
+  // Convenience methods for component dialog access
+  public getComponentDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.COMPONENT_DIALOG);
+  }
+
+  public setComponentDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.COMPONENT_DIALOG, window);
+  }
+
+  public hasComponentDialogWindow(): boolean {
+    return this.hasWindow(WindowType.COMPONENT_DIALOG);
+  }
+
+  // Convenience methods for update dialog access
+  public getUpdateDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.UPDATE_DIALOG);
+  }
+
+  public setUpdateDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.UPDATE_DIALOG, window);
+  }
+
+  public hasUpdateDialogWindow(): boolean {
+    return this.hasWindow(WindowType.UPDATE_DIALOG);
   }
 
   /**
