@@ -36,29 +36,33 @@ export class JobStatsComponent extends BaseComponent {
   public readonly componentId = 'job-stats';
 
   /** HTML template for the component */
-  public readonly templateHTML = `<div class="panel-header">Job Info</div>
-<div class="panel-content">
-  <div class="info-row">
-    <span class="info-label">Layer:</span>
-    <span class="info-value" id="layer-info">0 / 0</span>
-  </div>
-  <div class="info-row">
-    <span class="info-label">ETA:</span>
-    <span class="info-value" id="eta">--:--</span>
-  </div>
-  <div class="info-row">
-    <span class="info-label">Job Time:</span>
-    <span class="info-value" id="job-time">00:00</span>
-  </div>
-  <div class="info-row">
-    <span class="info-label">Weight:</span>
-    <span class="info-value" id="weight">0g</span>
-  </div>
-  <div class="info-row">
-    <span class="info-label">Length:</span>
-    <span class="info-value" id="length">0m</span>
-  </div>
-</div>`;
+  public readonly templateHTML = `
+    <div class="job-stats-container">
+      <div class="panel-header">Job Info</div>
+      <div class="panel-content">
+        <div class="info-display-row">
+          <span class="info-label">Layer:</span>
+          <span class="info-value" id="layer-info">0 / 0</span>
+        </div>
+        <div class="info-display-row">
+          <span class="info-label">ETA:</span>
+          <span class="info-value" id="eta">--:--</span>
+        </div>
+        <div class="info-display-row">
+          <span class="info-label">Job Time:</span>
+          <span class="info-value" id="job-time">00:00</span>
+        </div>
+        <div class="info-display-row">
+          <span class="info-label">Weight:</span>
+          <span class="info-value" id="weight">0g</span>
+        </div>
+        <div class="info-display-row">
+          <span class="info-label">Length:</span>
+          <span class="info-value" id="length">0m</span>
+        </div>
+      </div>
+    </div>
+  `;
 
   /**
    * Creates a new JobStatsComponent instance

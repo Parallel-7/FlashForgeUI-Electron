@@ -16,7 +16,15 @@
  * @module ui/shortcut-config-dialog/shortcut-config-dialog
  */
 
-import { initializeLucideIconsFromGlobal } from '../shared/lucide';
+import type { LucideHelpers } from '../shared/lucide';
+
+declare global {
+  interface Window {
+    lucideHelpers?: LucideHelpers;
+  }
+}
+
+export {};
 
 /**
  * Response channel for closing dialog
@@ -191,7 +199,7 @@ function updateComponentsList(): void {
     listContainer.appendChild(item);
 
     if (iconsToHydrate.length > 0) {
-      initializeLucideIconsFromGlobal(iconsToHydrate, item);
+      window.lucideHelpers?.initializeLucideIconsFromGlobal?.(iconsToHydrate, item);
     }
   });
 }

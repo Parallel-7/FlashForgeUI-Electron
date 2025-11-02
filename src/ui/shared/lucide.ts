@@ -17,7 +17,7 @@ type LucideGlobal = {
   readonly icons?: Record<string, unknown>;
 };
 
-interface LucideHelpers {
+export interface LucideHelpers {
   initializeLucideIconsFromGlobal(iconNames: string[], root?: Document | Element | DocumentFragment): void;
 }
 
