@@ -7,7 +7,14 @@
  * availability and dispatching add requests.
  */
 
-import { initializeLucideIconsFromGlobal } from '../shared/lucide';
+type LucideHelperWindow = Window & {
+  lucideHelpers?: {
+    initializeLucideIconsFromGlobal?(
+      iconNames: string[],
+      root?: Document | Element | DocumentFragment
+    ): void;
+  };
+};
 
 interface PaletteAPI {
   close: () => void;
@@ -31,7 +38,7 @@ type PaletteWindow = Window & {
   debugPaletteManager?: unknown;
 };
 
-const paletteWindow = window as unknown as PaletteWindow;
+const paletteWindow = window as unknown as PaletteWindow & LucideHelperWindow;
 
 interface PaletteState {
   componentsInUse: Set<string>;
@@ -182,7 +189,7 @@ class PaletteManager {
     item.appendChild(actionButton);
 
     if (iconsToHydrate.length > 0) {
-      initializeLucideIconsFromGlobal(iconsToHydrate, item);
+      paletteWindow.lucideHelpers?.initializeLucideIconsFromGlobal?.(iconsToHydrate, item);
     }
 
     return item;
@@ -247,6 +254,7 @@ paletteWindow.debugPaletteManager = paletteManager;
 
 document.addEventListener('DOMContentLoaded', async () => {
   await paletteManager.initialize();
+  paletteWindow.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x', 'pin', 'check']);
 });
 
 window.addEventListener('beforeunload', () => {

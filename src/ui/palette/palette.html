@@ -2,9 +2,16 @@
 <html>
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:">
   <title>Component Palette</title>
   <link rel="stylesheet" href="palette.css" />
+  <script src="../../../dist/webui/static/lucide.min.js"></script>
+  <script>
+    if (typeof exports === 'undefined') {
+      var exports = {};
+    }
+  </script>
+  <script src="../../../lib/ui/shared/lucide.js"></script>
 </head>
 <body>
   <div class="palette-window">
