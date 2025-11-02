@@ -52,6 +52,9 @@ export interface AppConfig {
   readonly AutoDownloadUpdates: boolean;
   readonly RtspFrameRate: number;        // Per-printer, not saved to config.json
   readonly RtspQuality: number;          // Per-printer, not saved to config.json
+  readonly WebPushEnabled: boolean;
+  readonly WebPushVapidPublicKey: string;
+  readonly WebPushVapidPrivateKey: string;
 }
 
 /**
@@ -84,6 +87,9 @@ export interface MutableAppConfig {
   AutoDownloadUpdates: boolean;
   RtspFrameRate: number;
   RtspQuality: number;
+  WebPushEnabled: boolean;
+  WebPushVapidPublicKey: string;
+  WebPushVapidPrivateKey: string;
 }
 
 /**
@@ -115,7 +121,10 @@ export const DEFAULT_CONFIG: AppConfig = {
   UpdateChannel: 'stable',
   AutoDownloadUpdates: false,
   RtspFrameRate: 30,           // Default 30 FPS
-  RtspQuality: 3               // Default quality 3
+  RtspQuality: 3,              // Default quality 3
+  WebPushEnabled: false,
+  WebPushVapidPublicKey: '',
+  WebPushVapidPrivateKey: ''
 } as const;
 
 /**

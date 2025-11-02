@@ -88,6 +88,12 @@ export class MainProcessPollingCoordinator extends EventEmitter {
       return;
     }
 
+    const context = this.contextManager.getContext(contextId);
+    this.notificationCoordinator.setContextMetadata({
+      contextId,
+      printerName: context?.printerDetails.Name ?? null
+    });
+
     console.log('[MainPolling] Starting polling service');
     this.isPolling = true;
 

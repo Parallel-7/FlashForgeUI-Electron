@@ -317,6 +317,20 @@ interface MaterialMatchingState {
 
 let materialMatchingState: MaterialMatchingState | null = null;
 
+interface PushNotificationClickPayload {
+  readonly contextId?: string;
+  readonly printerName?: string;
+  readonly url?: string;
+  readonly jobName?: string;
+  readonly fileName?: string;
+}
+
+const PUSH_CLIENT_STORAGE_KEY = 'webui-push-client-id';
+let pushClientId: string | null = null;
+let pushRegistration: ServiceWorkerRegistration | null = null;
+let pushInitialized = false;
+let swMessageListenerRegistered = false;
+
 // ============================================================================
 // DOM HELPERS
 // ============================================================================
@@ -349,6 +363,428 @@ function buildAuthHeaders(
     };
   }
   return { ...extra };
+}
+
+// ============================================================================
+// WEB PUSH NOTIFICATIONS
+// ============================================================================
+
+type PushUIStatus =
+  | 'checking'
+  | 'enabled'
+  | 'disabled'
+  | 'permission-denied'
+  | 'unsupported'
+  | 'error';
+
+function getOrCreatePushClientId(): string {
+  if (pushClientId) {
+    return pushClientId;
+  }
+
+  const existing = localStorage.getItem(PUSH_CLIENT_STORAGE_KEY);
+  if (existing) {
+    pushClientId = existing;
+    return existing;
+  }
+
+  const generated =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID()
+      : `ffui-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
+
+  pushClientId = generated;
+  localStorage.setItem(PUSH_CLIENT_STORAGE_KEY, generated);
+  return generated;
+}
+
+function isPushSupported(): { supported: boolean; reason?: string } {
+  if (!('serviceWorker' in navigator)) {
+    return { supported: false, reason: 'Service workers not supported' };
+  }
+  if (!('PushManager' in window)) {
+    return { supported: false, reason: 'Push API not supported' };
+  }
+  if (!('Notification' in window)) {
+    return { supported: false, reason: 'Notifications API not available' };
+  }
+  return { supported: true };
+}
+
+async function ensureServiceWorkerRegistration(): Promise<ServiceWorkerRegistration | null> {
+  if (!('serviceWorker' in navigator)) {
+    return null;
+  }
+
+  if (pushRegistration) {
+    return pushRegistration;
+  }
+
+  try {
+    pushRegistration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
+    await navigator.serviceWorker.ready;
+    console.log('[WebUI] Service worker registered for push notifications');
+    return pushRegistration;
+  } catch (error) {
+    console.error('[WebUI] Failed to register service worker:', error);
+    pushRegistration = null;
+    throw error;
+  }
+}
+
+function renderPushStatus(status: PushUIStatus, detail?: string): void {
+  const statusBadge = document.getElementById('notification-status');
+  const detailElement = document.getElementById('notification-status-detail');
+  const testButton = document.getElementById('test-notification') as HTMLButtonElement | null;
+
+  if (!statusBadge || !detailElement) {
+    return;
+  }
+
+  statusBadge.classList.remove('is-enabled', 'is-error', 'is-unsupported');
+
+  let badgeText = '';
+  let detailText = detail ?? '';
+  let enableTestButton = false;
+
+  switch (status) {
+    case 'checking':
+      badgeText = 'Checking status…';
+      detailText = detailText || 'Contacting desktop application…';
+      break;
+    case 'enabled':
+      badgeText = 'Enabled';
+      statusBadge.classList.add('is-enabled');
+      detailText = detailText || 'Browser push notifications are active.';
+      enableTestButton = true;
+      break;
+    case 'disabled':
+      badgeText = 'Disabled';
+      detailText = detailText || 'Enable push notifications from the desktop application settings.';
+      break;
+    case 'permission-denied':
+      badgeText = 'Permission denied';
+      statusBadge.classList.add('is-error');
+      detailText = detailText || 'Allow notifications in your browser settings to receive pushes.';
+      break;
+    case 'unsupported':
+      badgeText = 'Not supported';
+      statusBadge.classList.add('is-unsupported');
+      detailText = detailText || 'Push notifications require HTTPS or a secure context.';
+      break;
+    case 'error':
+      badgeText = 'Error';
+      statusBadge.classList.add('is-error');
+      detailText = detailText || 'Failed to update push notification status.';
+      break;
+    default:
+      badgeText = 'Unknown';
+      break;
+  }
+
+  statusBadge.textContent = badgeText;
+  detailElement.textContent = detailText;
+
+  if (testButton) {
+    testButton.disabled = !enableTestButton;
+  }
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+
+  for (let i = 0; i < rawData.length; i += 1) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+
+  return outputArray;
+}
+
+async function fetchVapidPublicKey(): Promise<string> {
+  const response = await fetch('/api/notifications/vapid-public-key', {
+    headers: buildAuthHeaders()
+  });
+
+  const data = await response.json() as { success: boolean; publicKey?: string; error?: string };
+
+  if (!response.ok || !data.success || !data.publicKey) {
+    throw new Error(data.error ?? `Failed to fetch VAPID public key (status ${response.status})`);
+  }
+
+  return data.publicKey;
+}
+
+async function syncSubscriptionWithServer(subscription: PushSubscription): Promise<void> {
+  const clientId = getOrCreatePushClientId();
+
+  const response = await fetch('/api/notifications/subscribe', {
+    method: 'POST',
+    headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify({
+      clientId,
+      subscription: subscription.toJSON()
+    })
+  });
+
+  const data = await response.json() as { success: boolean; error?: string };
+
+  if (!response.ok || !data.success) {
+    throw new Error(data.error ?? `Failed to register push subscription (status ${response.status})`);
+  }
+}
+
+async function subscribeToNotifications(): Promise<boolean> {
+  const support = isPushSupported();
+  if (!support.supported) {
+    return false;
+  }
+
+  try {
+    const registration = await ensureServiceWorkerRegistration();
+    if (!registration) {
+      return false;
+    }
+
+    const permission = await Notification.requestPermission();
+    if (permission !== 'granted') {
+      return false;
+    }
+
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      const publicKey = await fetchVapidPublicKey();
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey)
+      });
+    }
+
+    await syncSubscriptionWithServer(subscription);
+    return true;
+  } catch (error) {
+    console.error('[WebUI] Failed to subscribe to notifications:', error);
+    return false;
+  }
+}
+
+async function unsubscribeFromNotifications(): Promise<void> {
+  try {
+    const registration = await ensureServiceWorkerRegistration();
+    if (!registration) {
+      return;
+    }
+
+    const subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      return;
+    }
+
+    await subscription.unsubscribe();
+
+    const response = await fetch('/api/notifications/unsubscribe', {
+      method: 'POST',
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({
+        clientId: getOrCreatePushClientId(),
+        endpoint: subscription.endpoint
+      })
+    });
+
+    const data = await response.json() as { success: boolean; error?: string };
+    if (!response.ok || !data.success) {
+      throw new Error(data.error ?? `Failed to remove push subscription (status ${response.status})`);
+    }
+
+  } catch (error) {
+    console.error('[WebUI] Failed to unsubscribe from notifications:', error);
+  }
+}
+
+async function fetchPushServerStatus(): Promise<boolean | null> {
+  try {
+    const response = await fetch('/api/notifications/status', {
+      headers: buildAuthHeaders()
+    });
+
+    const data = await response.json() as { success: boolean; enabled?: boolean; error?: string };
+
+    if (!response.ok || !data.success || typeof data.enabled !== 'boolean') {
+      throw new Error(data.error ?? `Failed to fetch server push status (status ${response.status})`);
+    }
+
+    return data.enabled;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[WebUI] Failed to load push notification status:', error);
+    renderPushStatus('error', message);
+    return null;
+  }
+}
+
+let pushPermissionRequested = false;
+
+async function ensureUnsubscribed(): Promise<void> {
+  try {
+    await unsubscribeFromNotifications();
+  } catch (error) {
+    console.warn('[WebUI] Unable to unsubscribe from push notifications:', error);
+  }
+}
+
+async function refreshPushStatus(): Promise<void> {
+  const support = isPushSupported();
+  if (!support.supported) {
+    renderPushStatus('unsupported', support.reason);
+    await ensureUnsubscribed();
+    return;
+  }
+
+  renderPushStatus('checking');
+
+  const serverEnabled = await fetchPushServerStatus();
+  if (serverEnabled === null) {
+    return;
+  }
+
+  if (!serverEnabled) {
+    await ensureUnsubscribed();
+    renderPushStatus('disabled');
+    return;
+  }
+
+  const registration = await ensureServiceWorkerRegistration();
+  if (!registration) {
+    renderPushStatus('unsupported', 'Service workers unavailable in this browser.');
+    return;
+  }
+
+  if (Notification.permission === 'denied') {
+    await ensureUnsubscribed();
+    renderPushStatus('permission-denied');
+    return;
+  }
+
+  if (Notification.permission !== 'granted') {
+    if (!pushPermissionRequested) {
+      pushPermissionRequested = true;
+      const permission = await Notification.requestPermission();
+      if (permission !== 'granted') {
+        renderPushStatus('permission-denied', 'Enable notifications in the browser to receive push alerts.');
+        return;
+      }
+    } else {
+      renderPushStatus('permission-denied', 'Notifications remain blocked in browser settings.');
+      return;
+    }
+  }
+
+  try {
+    const subscribed = await subscribeToNotifications();
+    if (subscribed) {
+      renderPushStatus('enabled');
+    } else {
+      renderPushStatus('error', 'Failed to activate push notifications in this browser.');
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('[WebUI] Failed to subscribe to notifications:', error);
+    renderPushStatus('error', message);
+  }
+}
+
+async function initPushNotifications(): Promise<void> {
+  registerServiceWorkerMessageHandler();
+
+  if (!pushInitialized) {
+    pushInitialized = true;
+    window.addEventListener('focus', () => {
+      void refreshPushStatus();
+    });
+  }
+
+  await refreshPushStatus();
+}
+
+function handlePushNotificationClick(payload?: PushNotificationClickPayload): void {
+  if (!payload) {
+    return;
+  }
+
+  const { contextId, printerName } = payload;
+
+  if (!contextId) {
+    return;
+  }
+
+  const activeContextId = getActiveContextId();
+  if (activeContextId === contextId) {
+    if (printerName) {
+      showToast(`${printerName} is already active`, 'info');
+    }
+    return;
+  }
+
+  void (async () => {
+    try {
+      if (!contextById.has(contextId)) {
+        await fetchPrinterContexts();
+      }
+
+      if (contextById.has(contextId)) {
+        await switchPrinterContext(contextId);
+      } else {
+        showToast('Printer context not available', 'error');
+      }
+    } catch (error) {
+      console.error('[Push] Failed to handle notification click:', error);
+      showToast('Failed to open printer from notification', 'error');
+    }
+  })();
+}
+
+function registerServiceWorkerMessageHandler(): void {
+  if (swMessageListenerRegistered || !('serviceWorker' in navigator)) {
+    return;
+  }
+
+  navigator.serviceWorker.addEventListener('message', (event: MessageEvent) => {
+    const data = event.data as { type?: string; payload?: PushNotificationClickPayload } | null;
+    if (!data || typeof data !== 'object') {
+      return;
+    }
+
+    if (data.type === 'push-notification-clicked') {
+      handlePushNotificationClick(data.payload);
+    }
+  });
+
+  swMessageListenerRegistered = true;
+}
+
+function handleInitialPushContext(): void {
+  if (typeof window === 'undefined') {
+    return;
+  }
+
+  try {
+    const url = new URL(window.location.href);
+    const contextId = url.searchParams.get('pushContext');
+
+    if (!contextId) {
+      return;
+    }
+
+    url.searchParams.delete('pushContext');
+    const updatedUrl = `${url.pathname}${url.search}${url.hash}`;
+    window.history.replaceState({}, document.title, updatedUrl);
+
+    handlePushNotificationClick({ contextId });
+  } catch (error) {
+    console.error('[Push] Failed to process initial push context parameter:', error);
+  }
 }
 
 function isAD5XJobFile(job?: WebUIJobFile): job is WebUIJobFile & { metadataType: 'ad5x'; toolDatas: AD5XToolData[] } {
@@ -918,6 +1354,7 @@ async function logout(): Promise<void> {
     gridManager.disableEdit();
     updateEditModeToggle(false);
   }
+  renderPushStatus('disabled', 'Enable push notifications after logging in.');
   closeSettingsModal();
   
   if (state.authRequired) {
@@ -1276,6 +1713,15 @@ function updatePrinterStateCard(status: PrinterStatus | null): void {
 // ============================================================================
 // MULTI-PRINTER CONTEXT MANAGEMENT
 // ============================================================================
+
+function getActiveContextId(): string | null {
+  for (const context of contextById.values()) {
+    if (context.isActive) {
+      return context.id;
+    }
+  }
+  return null;
+}
 
 async function fetchPrinterContexts(): Promise<void> {
   if (state.authRequired && !state.authToken) {
@@ -2486,6 +2932,8 @@ function setupEventHandlers(): void{
         await loadPrinterFeatures();
         // Fetch printer contexts after successful login
         await fetchPrinterContexts();
+        await initPushNotifications();
+        handleInitialPushContext();
       }
       
       loginBtn.textContent = 'Login';
@@ -2765,6 +3213,8 @@ async function initialize(): Promise<void> {
       await loadPrinterFeatures();
       // Fetch printer contexts after features are loaded
       await fetchPrinterContexts();
+      await initPushNotifications();
+      handleInitialPushContext();
     } catch (error) {
       console.error('Failed to load features:', error);
       // If we get here, token might be invalid but we'll let WebSocket retry handle it

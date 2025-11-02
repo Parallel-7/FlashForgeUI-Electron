@@ -54,6 +54,7 @@
     "gridstack": "^12.3.3",
     "lucide": "^0.552.0",
     "node-rtsp-stream": "^0.0.9",
+    "web-push": "^3.6.7",
     "ws": "^8.18.3",
     "zod": "^4.0.5"
   },
@@ -64,6 +65,7 @@
     "@types/express": "^4.17.21",
     "@types/jest": "^29.5.14",
     "@types/node": "^20.17.9",
+    "@types/web-push": "^3.6.4",
     "@types/ws": "^8.5.13",
     "@typescript-eslint/eslint-plugin": "^8.14.0",
     "@typescript-eslint/parser": "^8.14.0",

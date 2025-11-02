@@ -4,6 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="theme-color" content="#1e1e1e">
+  <meta name="color-scheme" content="light dark">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="FlashForge UI">
+  <link rel="apple-touch-icon" href="/icon-512.png" sizes="180x180">
   <title>FlashForge Web UI</title>
   <link rel="stylesheet" href="gridstack.min.css">
   <link rel="stylesheet" href="gridstack-extra.min.css">
@@ -107,6 +113,28 @@
                 <span>Enable Edit Mode</span>
                 <span class="help-text">Allows dragging and resizing panels</span>
               </label>
+            </section>
+            <section class="settings-section">
+              <h3>Notifications</h3>
+              <div class="notification-settings">
+                <p class="notification-description">
+                  Push notifications follow the desktop setting. When enabled, the WebUI mirrors desktop alerts automatically.
+                </p>
+                <div class="notification-status-row">
+                  <span id="notification-status" class="notification-status">Checking status…</span>
+                </div>
+                <p id="notification-status-detail" class="notification-status-detail"></p>
+                <div class="notification-help">
+                  <details>
+                    <summary>Troubleshooting</summary>
+                    <ul>
+                      <li><strong>Desktop:</strong> Enable push in the app’s settings.</li>
+                      <li><strong>Browser:</strong> Allow notifications when prompted.</li>
+                      <li><strong>Mobile:</strong> Use HTTPS (or add to home screen on iOS).</li>
+                    </ul>
+                  </details>
+                </div>
+              </div>
             </section>
             <section class="settings-section">
               <h3>Reset</h3>

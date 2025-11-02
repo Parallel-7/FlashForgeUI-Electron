@@ -71,6 +71,9 @@ import {
   NotificationType,
   COOLED_TEMPERATURE_THRESHOLD
 } from '../../types/notification';
+import { getWebPushService, NotificationPayload } from '../../webui/server/WebPushService';
+
+const WEB_PUSH_ICON_PATH = '/icon-notification.png';
 
 // ============================================================================
 // COORDINATOR EVENTS
@@ -118,14 +121,20 @@ const DEFAULT_TEMP_MONITOR_CONFIG: TemperatureMonitorConfig = {
 export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEventMap> {
   private readonly notificationService: NotificationService;
   private readonly configManager: ConfigManager;
+  private readonly webPushService = getWebPushService();
   private pollingService: PrinterPollingService | null = null;
 
   // State management
   private notificationState: NotificationState;
   private currentSettings: NotificationSettings;
   private lastPrinterStatus: PrinterStatus | null = null;
-  
-
+  private contextMetadata: {
+    contextId: string | null;
+    printerName: string | null;
+  } = {
+    contextId: null,
+    printerName: null
+  };
   
   // Temperature monitoring
   private temperatureCheckTimer: NodeJS.Timeout | null = null;
@@ -173,6 +182,19 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     this.setupPollingServiceListeners();
     
     console.log('PrinterNotificationCoordinator: Polling service connected');
+  }
+
+  /**
+   * Update context metadata used for web push payloads.
+   */
+  public setContextMetadata(metadata: { contextId?: string | null; printerName?: string | null }): void {
+    if (Object.prototype.hasOwnProperty.call(metadata, 'contextId')) {
+      this.contextMetadata.contextId = metadata.contextId ?? null;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(metadata, 'printerName')) {
+      this.contextMetadata.printerName = metadata.printerName ?? null;
+    }
   }
 
   /**
@@ -440,6 +462,48 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     }
   }
 
+  private getDefaultWebPushData(): NotificationPayload['data'] | undefined {
+    const baseData: { contextId?: string; printerName?: string } = {};
+
+    if (this.contextMetadata.contextId) {
+      baseData.contextId = this.contextMetadata.contextId;
+    }
+
+    if (this.contextMetadata.printerName) {
+      baseData.printerName = this.contextMetadata.printerName;
+    }
+
+    return Object.keys(baseData).length > 0 ? baseData : undefined;
+  }
+
+  private buildWebPushPayload(payload: NotificationPayload): NotificationPayload {
+    const baseData = this.getDefaultWebPushData();
+    const mergedData = {
+      ...(baseData ?? {}),
+      ...(payload.data ?? {})
+    };
+
+    return {
+      ...payload,
+      icon: payload.icon ?? WEB_PUSH_ICON_PATH,
+      badge: payload.badge ?? WEB_PUSH_ICON_PATH,
+      data: Object.keys(mergedData).length > 0 ? mergedData : undefined
+    };
+  }
+
+  private async forwardToWebPush(payload: NotificationPayload): Promise<void> {
+    try {
+      if (!this.webPushService.isEnabled()) {
+        return;
+      }
+
+      const enrichedPayload = this.buildWebPushPayload(payload);
+      await this.webPushService.sendNotificationToAll(enrichedPayload);
+    } catch (error) {
+      console.error('Failed to forward to web push:', error);
+    }
+  }
+
   // ============================================================================
   // NOTIFICATION SENDING
   // ============================================================================
@@ -465,6 +529,16 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     } catch (error) {
       console.error('Failed to send print complete notification:', error);
     }
+
+    void this.forwardToWebPush({
+      type: 'print-complete',
+      title: 'Print Complete',
+      body: `Your print job "${jobName}" has finished.`,
+      data: {
+        url: '/',
+        jobName
+      }
+    });
   }
 
   /**
@@ -491,6 +565,16 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     } catch (error) {
       console.error('Failed to send printer cooled notification:', error);
     }
+
+    void this.forwardToWebPush({
+      type: 'printer-cooled',
+      title: 'Printer Cooled',
+      body: `${jobName} is ready for removal.`,
+      data: {
+        url: '/',
+        jobName
+      }
+    });
   }
 
   // ============================================================================
@@ -510,6 +594,16 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     } catch (error) {
       console.error('Failed to send upload complete notification:', error);
     }
+
+    void this.forwardToWebPush({
+      type: 'upload-complete',
+      title: 'Upload Complete',
+      body: `File "${fileName}" uploaded successfully.`,
+      data: {
+        url: '/',
+        fileName
+      }
+    });
   }
 
   /**
@@ -555,6 +649,17 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     } catch (error) {
       console.error('Failed to send connection lost notification:', error);
     }
+
+    const resolvedName = printerName || this.contextMetadata.printerName || 'printer';
+    void this.forwardToWebPush({
+      type: 'connection-lost',
+      title: 'Connection Lost',
+      body: `Lost connection to ${resolvedName}.`,
+      data: {
+        url: '/',
+        printerName: printerName ?? resolvedName
+      }
+    });
   }
 
   /**
@@ -653,6 +758,10 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     // Clear references
     this.pollingService = null;
     this.lastPrinterStatus = null;
+    this.contextMetadata = {
+      contextId: null,
+      printerName: null
+    };
     
     console.log('PrinterNotificationCoordinator disposed');
   }

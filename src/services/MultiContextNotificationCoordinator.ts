@@ -75,6 +75,23 @@ export class MultiContextNotificationCoordinator extends EventEmitter {
       this.removeCoordinatorForContext(removeEvent.contextId);
     });
 
+    contextManager.on('context-updated', (event: unknown) => {
+      const contextId = typeof event === 'string' ? event : (event as { contextId?: string }).contextId;
+      if (!contextId) {
+        return;
+      }
+
+      const coordinator = this.coordinators.get(contextId);
+      if (!coordinator) {
+        return;
+      }
+
+      const context = contextManager.getContext(contextId);
+      coordinator.setContextMetadata({
+        printerName: context?.printerDetails.Name ?? null
+      });
+    });
+
     this.isInitialized = true;
     console.log('[MultiContextNotificationCoordinator] Initialized');
   }
@@ -98,8 +115,16 @@ export class MultiContextNotificationCoordinator extends EventEmitter {
       return;
     }
 
+    const contextManager = getPrinterContextManager();
+
     // Create new coordinator for this context
     const coordinator = new PrinterNotificationCoordinator(this.notificationService);
+
+    const context = contextManager.getContext(contextId);
+    coordinator.setContextMetadata({
+      contextId,
+      printerName: context?.printerDetails.Name ?? null
+    });
 
     // Connect polling service to coordinator
     coordinator.setPollingService(pollingService);
@@ -108,7 +133,6 @@ export class MultiContextNotificationCoordinator extends EventEmitter {
     this.coordinators.set(contextId, coordinator);
 
     // Update context manager reference
-    const contextManager = getPrinterContextManager();
     contextManager.updateNotificationCoordinator(contextId, coordinator);
 
     console.log(`[MultiContextNotificationCoordinator] Created coordinator for context ${contextId}`);

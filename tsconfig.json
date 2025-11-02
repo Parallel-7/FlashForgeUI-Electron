@@ -20,7 +20,7 @@
     "noImplicitThis": true,
     "strictNullChecks": true,
     "strictFunctionTypes": true,
-    "types": ["node", "jest"]
+    "types": ["node", "jest", "web-push"]
   },
   "include": [
     "src/**/*"

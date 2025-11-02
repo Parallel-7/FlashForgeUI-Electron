@@ -13,7 +13,16 @@ const path = require('path');
 // Configuration
 const srcDir = 'src/webui/static';
 const destDir = 'dist/webui/static';
-const filesToCopy = ['index.html', 'webui.css', 'gridstack-extra.min.css'];
+const filesToCopy = [
+  'index.html',
+  'webui.css',
+  'gridstack-extra.min.css',
+  'manifest.json',
+  'sw.js',
+  'icon-notification.png',
+  'icon-192.png',
+  'icon-512.png'
+];
 
 // Vendor library to copy from node_modules
 const vendorLibraries = [

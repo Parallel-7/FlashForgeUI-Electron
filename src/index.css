@@ -107,7 +107,8 @@ body {
   -webkit-app-region: no-drag;
 }
 
-.main-menu-button {
+.main-menu-button,
+.notification-test-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -122,17 +123,20 @@ body {
   transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
-.main-menu-button:hover {
+.main-menu-button:hover,
+.notification-test-button:hover {
   background-color: var(--card-bg-hover);
   border-color: var(--border-color-light);
 }
 
-.main-menu-button:focus-visible {
+.main-menu-button:focus-visible,
+.notification-test-button:focus-visible {
   outline: 2px solid var(--accent-color);
   outline-offset: 2px;
 }
 
-.hamburger-icon {
+.hamburger-icon,
+.notification-test-icon {
   width: 20px;
   height: 20px;
   display: inline-flex;

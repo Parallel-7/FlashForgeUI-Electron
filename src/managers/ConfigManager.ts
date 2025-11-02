@@ -22,6 +22,7 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
 import { app } from 'electron';
+import webpush from 'web-push';
 import { AppConfig, MutableAppConfig, DEFAULT_CONFIG, ConfigUpdateEvent, sanitizeConfig, isValidConfig } from '../types/config';
 
 /**
@@ -98,10 +99,22 @@ export class ConfigManager extends EventEmitter {
    * Sets a specific configuration value and triggers save
    */
   public set<K extends keyof AppConfig>(key: K, value: AppConfig[K]): void {
+    if (this.currentConfig[key] === value) {
+      return;
+    }
+
     const previousConfig = { ...this.currentConfig };
-    this.currentConfig[key] = value;
-    
-    this.emitUpdateEvent(previousConfig, [key]);
+    this.assignConfigValue(key, value as MutableAppConfig[K]);
+
+    const changedKeys = new Set<keyof AppConfig>([key]);
+
+    if (key === 'WebPushEnabled' || key === 'WebUIEnabled') {
+      for (const extraKey of this.ensureWebPushConfiguration('update')) {
+        changedKeys.add(extraKey);
+      }
+    }
+
+    this.emitUpdateEvent(previousConfig, Array.from(changedKeys));
     this.scheduleSave();
   }
   
@@ -116,11 +129,64 @@ export class ConfigManager extends EventEmitter {
   }
 
   /**
+   * Ensures web push configuration is ready when enabled.
+   * Generates or loads VAPID keys when required.
+   */
+  private ensureWebPushConfiguration(source: 'startup' | 'update'): Array<keyof AppConfig> {
+    const changedKeys: Array<keyof AppConfig> = [];
+
+    if (!this.currentConfig.WebPushEnabled || !this.currentConfig.WebUIEnabled) {
+      return changedKeys;
+    }
+
+    const hasPublicKey = typeof this.currentConfig.WebPushVapidPublicKey === 'string' &&
+      this.currentConfig.WebPushVapidPublicKey.length > 0;
+    const hasPrivateKey = typeof this.currentConfig.WebPushVapidPrivateKey === 'string' &&
+      this.currentConfig.WebPushVapidPrivateKey.length > 0;
+
+    if (hasPublicKey && hasPrivateKey) {
+      return changedKeys;
+    }
+
+    const envPublic = process.env.WEBPUSH_VAPID_PUBLIC_KEY;
+    const envPrivate = process.env.WEBPUSH_VAPID_PRIVATE_KEY;
+
+    if (envPublic && envPrivate) {
+      if (this.currentConfig.WebPushVapidPublicKey !== envPublic) {
+        this.assignConfigValue('WebPushVapidPublicKey', envPublic);
+        changedKeys.push('WebPushVapidPublicKey');
+      }
+      if (this.currentConfig.WebPushVapidPrivateKey !== envPrivate) {
+        this.assignConfigValue('WebPushVapidPrivateKey', envPrivate);
+        changedKeys.push('WebPushVapidPrivateKey');
+      }
+
+      console.log(`[ConfigManager] Loaded Web Push VAPID keys from environment (${source})`);
+      return changedKeys;
+    }
+
+    try {
+      const vapidKeys = webpush.generateVAPIDKeys();
+      this.assignConfigValue('WebPushVapidPublicKey', vapidKeys.publicKey);
+      this.assignConfigValue('WebPushVapidPrivateKey', vapidKeys.privateKey);
+      changedKeys.push('WebPushVapidPublicKey');
+      changedKeys.push('WebPushVapidPrivateKey');
+
+      console.log(`[ConfigManager] Generated new Web Push VAPID key pair (${source})`);
+    } catch (error) {
+      console.error('Failed to generate Web Push VAPID keys:', error);
+    }
+
+    return changedKeys;
+  }
+
+  /**
    * Updates multiple configuration values at once
    */
   public updateConfig(updates: Partial<AppConfig>): void {
     const previousConfig = { ...this.currentConfig };
-    const changedKeys: Array<keyof AppConfig> = [];
+    const changedKeys = new Set<keyof AppConfig>();
+    let shouldEnsureWebPush = false;
     
     // Apply updates and track changed keys
     for (const [key, value] of Object.entries(updates)) {
@@ -128,13 +194,23 @@ export class ConfigManager extends EventEmitter {
         const configKey = key as keyof AppConfig;
         if (this.currentConfig[configKey] !== value) {
           this.assignConfigValue(configKey, value as MutableAppConfig[typeof configKey]);
-          changedKeys.push(configKey);
+          changedKeys.add(configKey);
+
+          if (configKey === 'WebPushEnabled' || configKey === 'WebUIEnabled') {
+            shouldEnsureWebPush = true;
+          }
         }
       }
     }
+
+    if (shouldEnsureWebPush) {
+      for (const extraKey of this.ensureWebPushConfiguration('update')) {
+        changedKeys.add(extraKey);
+      }
+    }
     
-    if (changedKeys.length > 0) {
-      this.emitUpdateEvent(previousConfig, changedKeys);
+    if (changedKeys.size > 0) {
+      this.emitUpdateEvent(previousConfig, Array.from(changedKeys));
       this.scheduleSave();
     }
   }
@@ -155,6 +231,12 @@ export class ConfigManager extends EventEmitter {
     }
     
     this.currentConfig = { ...sanitizedConfig };
+
+    for (const extraKey of this.ensureWebPushConfiguration('update')) {
+      if (!changedKeys.includes(extraKey)) {
+        changedKeys.push(extraKey);
+      }
+    }
     
     if (changedKeys.length > 0) {
       this.emitUpdateEvent(previousConfig, changedKeys);
@@ -225,6 +307,11 @@ export class ConfigManager extends EventEmitter {
         if (isValidConfig(loadedData)) {
           const previousConfig = { ...this.currentConfig };
           this.currentConfig = { ...loadedData };
+
+          const extraKeys = this.ensureWebPushConfiguration('startup');
+          if (extraKeys.length > 0) {
+            this.scheduleSave();
+          }
           
           // Emit update event for initialization
           const changedKeys = Object.keys(DEFAULT_CONFIG) as Array<keyof AppConfig>;
@@ -235,6 +322,11 @@ export class ConfigManager extends EventEmitter {
           const sanitizedConfig = sanitizeConfig(loadedData as Partial<AppConfig>);
           const previousConfig = { ...this.currentConfig };
           this.currentConfig = sanitizedConfig;
+
+          const extraKeys = this.ensureWebPushConfiguration('startup');
+          if (extraKeys.length > 0) {
+            this.scheduleSave();
+          }
           
           const changedKeys = Object.keys(DEFAULT_CONFIG) as Array<keyof AppConfig>;
           this.emitUpdateEvent(previousConfig, changedKeys);

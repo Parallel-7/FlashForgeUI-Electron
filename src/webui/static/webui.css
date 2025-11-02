@@ -954,6 +954,77 @@ body {
   color: var(--text-color);
 }
 
+.notification-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background-color: var(--card-bg);
+}
+
+.notification-description {
+  font-size: 14px;
+  color: var(--text-color-secondary);
+  margin: 0;
+}
+
+.notification-status-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.notification-status {
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background-color: var(--card-bg-hover);
+  color: var(--text-color-secondary);
+}
+
+.notification-status.is-enabled {
+  background-color: rgba(46, 204, 113, 0.15);
+  color: #27ae60;
+}
+
+.notification-status.is-error {
+  background-color: rgba(231, 76, 60, 0.15);
+  color: #c0392b;
+}
+
+.notification-status.is-unsupported {
+  background-color: rgba(241, 196, 15, 0.15);
+  color: #b88700;
+}
+
+.notification-status-detail {
+  font-size: 13px;
+  color: var(--text-color-secondary);
+  margin: 0;
+}
+
+.notification-help details {
+  font-size: 13px;
+  color: var(--text-color-secondary);
+}
+
+.notification-help summary {
+  cursor: pointer;
+  color: var(--accent-color);
+}
+
+.notification-help ul {
+  margin: 8px 0 0 16px;
+  padding: 0;
+  list-style: disc;
+}
+
+.notification-help li {
+  margin-bottom: 4px;
+}
+
 .toggle-edit-mode {
   display: flex;
   align-items: flex-start;
@@ -1285,7 +1356,7 @@ body {
   }
 
   .settings-button {
-    display: none;
+    display: inline-flex;
   }
 }
 

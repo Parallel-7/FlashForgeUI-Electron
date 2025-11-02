@@ -90,6 +90,7 @@ let isMainMenuOpen = false;
 let mainMenuButton: HTMLButtonElement | null = null;
 let mainMenuDropdown: HTMLDivElement | null = null;
 let mainMenuCloseTimeout: number | null = null;
+let testNotificationButton: HTMLButtonElement | null = null;
 
 const MAIN_MENU_ACTIONS = ['connect', 'settings', 'status', 'ifs', 'pin-config'] as const;
 type MainMenuAction = typeof MAIN_MENU_ACTIONS[number];
@@ -1759,6 +1760,37 @@ function initializeMainMenu(): void {
   });
 }
 
+function initializeTestNotificationButton(): void {
+  testNotificationButton = document.getElementById('btn-test-notification') as HTMLButtonElement | null;
+
+  if (!testNotificationButton) {
+    console.warn('[Notifications] Test notification button not found in DOM');
+    return;
+  }
+
+  testNotificationButton.addEventListener('click', async () => {
+    if (!window.api) {
+      console.error('[Notifications] API bridge unavailable; cannot send test notification');
+      return;
+    }
+
+    try {
+      const result = await window.api.invoke('notifications:test-desktop') as { success: boolean; error?: string } | undefined;
+
+      if (!result?.success) {
+        const message = result?.error ?? 'Desktop notifications not supported on this platform.';
+        logMessage(`ERROR: Test notification failed: ${message}`);
+      } else {
+        logMessage('Desktop test notification sent successfully');
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[Notifications] Failed to send test notification:', error);
+      logMessage(`ERROR: Failed to send test notification: ${message}`);
+    }
+  });
+}
+
 /**
  * Initialize UI with default state and prepare for component system
  * This function now serves as a bridge between legacy initialization and components
@@ -2194,6 +2226,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document,
     getLucideIcons(
       'menu',
+      'bell',
       'printer',
       'settings',
       'bar-chart-3',
@@ -2229,6 +2262,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupLoadingEventListeners();
   initializeUI();
   initializeMainMenu();
+  initializeTestNotificationButton();
   menuShortcutManager.initialize();
 
   // Initialize shortcut button system

@@ -349,7 +349,8 @@ contextBridge.exposeInMainWorld('api', {
       'open-installer',
       'open-release-page',
       'get-update-status',
-      'set-update-channel'
+      'set-update-channel',
+      'notifications:test-desktop'
     ];
     
     if (validInvokeChannels.includes(channel)) {

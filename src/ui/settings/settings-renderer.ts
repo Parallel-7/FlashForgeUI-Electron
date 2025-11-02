@@ -102,6 +102,7 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'alert-when-cooled': 'AlertWhenCooled',
   'audio-alerts': 'AudioAlerts',
   'visual-alerts': 'VisualAlerts',
+  'web-push-enabled': 'WebPushEnabled',
   'debug-mode': 'DebugMode',
   'webhook-url': 'WebhookUrl',
   'custom-camera': 'CustomCamera',
@@ -480,6 +481,7 @@ class SettingsRenderer {
     this.setInputEnabled('web-ui-port', webUIEnabled);
     this.setInputEnabled('web-ui-password-required', webUIEnabled);
     this.setInputEnabled('web-ui-password', webUIEnabled && passwordRequired);
+    this.setInputEnabled('web-push-enabled', webUIEnabled);
 
     // Filament Tracker Integration settings
     const filamentTrackerEnabled = this.inputs.get('filament-tracker-enabled')?.checked || false;

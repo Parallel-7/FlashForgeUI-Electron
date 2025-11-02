@@ -18,6 +18,7 @@
  */
 
 import { Router, Response } from 'express';
+import { getConfigManager } from '../../managers/ConfigManager';
 import { getPrinterBackendManager } from '../../managers/PrinterBackendManager';
 import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager';
@@ -37,6 +38,8 @@ import {
 import { toAppError } from '../../utils/error.utils';
 import { FiveMClient } from '@ghosttypes/ff-api';
 import { isAD5XJobInfo } from '../../printer-backends/ad5x/ad5x-utils';
+import { getWebPushService } from './WebPushService';
+import { getWebPushSubscriptionManager, PushSubscriptionPayload } from './WebPushSubscriptionManager';
 
 /**
  * Extended printer status interface for accessing additional properties
@@ -76,6 +79,24 @@ interface ExtendedPrinterStatus {
   readonly cumulativePrintTime?: number;
 }
 
+interface NotificationsPublicKeyResponse extends StandardAPIResponse {
+  readonly publicKey?: string;
+}
+
+interface NotificationsSubscribeRequest {
+  readonly clientId?: string;
+  readonly subscription?: PushSubscriptionPayload;
+}
+
+interface NotificationsUnsubscribeRequest {
+  readonly clientId?: string;
+  readonly endpoint?: string;
+}
+
+interface NotificationsTestRequest {
+  readonly clientId?: string;
+}
+
 /**
  * Type guard to check if status has extended properties
  */
@@ -91,6 +112,8 @@ export function createAPIRoutes(): Router {
   const backendManager = getPrinterBackendManager();
   const connectionManager = getPrinterConnectionManager();
   const contextManager = getPrinterContextManager();
+  const configManager = getConfigManager();
+  const webPushService = getWebPushService();
 
   // ============================================================================
   // HELPER FUNCTIONS
@@ -1615,6 +1638,162 @@ export function createAPIRoutes(): Router {
     }
   });
 
+  // ============================================================================
+  // WEB PUSH NOTIFICATIONS
+  // ============================================================================
+
+  /**
+   * GET /api/notifications/vapid-public-key
+   * Returns the public VAPID key for clients to subscribe.
+   */
+  router.get('/notifications/vapid-public-key', (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const config = configManager.getConfig();
+
+      if (!config.WebPushEnabled || !config.WebUIEnabled) {
+        const response: NotificationsPublicKeyResponse = {
+          success: false,
+          error: 'Web push notifications are disabled'
+        };
+        return res.status(503).json(response);
+      }
+
+      if (!webPushService.isEnabled()) {
+        const response: NotificationsPublicKeyResponse = {
+          success: false,
+          error: 'Web push notifications are not configured'
+        };
+        return res.status(503).json(response);
+      }
+
+      const response: NotificationsPublicKeyResponse = {
+        success: true,
+        publicKey: webPushService.getPublicKey()
+      };
+      return res.json(response);
+    } catch (error) {
+      const appError = toAppError(error);
+      const response: NotificationsPublicKeyResponse = {
+        success: false,
+        error: appError.message
+      };
+      return res.status(500).json(response);
+    }
+  });
+
+  /**
+   * POST /api/notifications/subscribe
+   * Registers a push subscription for the authenticated client.
+   */
+  router.post('/notifications/subscribe', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!webPushService.isEnabled()) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'Web push notifications are disabled'
+        };
+        return res.status(503).json(response);
+      }
+
+      const { clientId, subscription } = req.body as NotificationsSubscribeRequest;
+
+      if (!clientId || typeof clientId !== 'string') {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'clientId is required'
+        };
+        return res.status(400).json(response);
+      }
+
+      if (!subscription) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'subscription payload is required'
+        };
+        return res.status(400).json(response);
+      }
+
+      webPushService.addSubscription(clientId, subscription);
+
+      const response: StandardAPIResponse = {
+        success: true,
+        message: 'Subscribed to push notifications'
+      };
+      return res.json(response);
+    } catch (error) {
+      const appError = toAppError(error);
+      const response: StandardAPIResponse = {
+        success: false,
+        error: appError.message
+      };
+      return res.status(500).json(response);
+    }
+  });
+
+  /**
+   * POST /api/notifications/unsubscribe
+   * Removes a push subscription or all subscriptions for the client.
+   */
+  router.post('/notifications/unsubscribe', (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { clientId, endpoint } = req.body as NotificationsUnsubscribeRequest;
+
+      if (!clientId || typeof clientId !== 'string') {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'clientId is required'
+        };
+        return res.status(400).json(response);
+      }
+
+      webPushService.removeSubscription(clientId, endpoint);
+
+      const response: StandardAPIResponse = {
+        success: true,
+        message: endpoint ? 'Unsubscribed push endpoint' : 'Removed all push subscriptions'
+      };
+      return res.json(response);
+    } catch (error) {
+      const appError = toAppError(error);
+      const response: StandardAPIResponse = {
+        success: false,
+        error: appError.message
+      };
+      return res.status(500).json(response);
+    }
+  });
+
+  /**
+   * POST /api/notifications/test
+   * Sends a test notification to the requesting clientId or broadcasts when omitted.
+   */
+  router.post('/notifications/test', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      if (!webPushService.isEnabled()) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'Web push notifications are disabled'
+        };
+        return res.status(503).json(response);
+      }
+
+      const { clientId } = req.body as NotificationsTestRequest;
+      await webPushService.sendTestNotification(clientId);
+
+      const response: StandardAPIResponse = {
+        success: true,
+        message: 'Test notification sent'
+      };
+      return res.json(response);
+    } catch (error) {
+      const appError = toAppError(error);
+      const response: StandardAPIResponse = {
+        success: false,
+        error: appError.message
+      };
+      return res.status(500).json(response);
+    }
+  });
+
   return router;
 }
-
