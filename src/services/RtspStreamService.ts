@@ -188,6 +188,23 @@ export class RtspStreamService extends EventEmitter {
           version
         };
 
+        // Add ffmpeg directory to PATH so node-rtsp-stream can spawn it
+        // This is critical for macOS GUI launches where PATH doesn't include Homebrew paths
+        if (expandedPath !== 'ffmpeg') {  // Only for explicit paths, not PATH-based
+          const lastSlashIndex = expandedPath.lastIndexOf('/');
+          const lastBackslashIndex = expandedPath.lastIndexOf('\\');
+          const separatorIndex = Math.max(lastSlashIndex, lastBackslashIndex);
+
+          if (separatorIndex > 0) {
+            const ffmpegDir = expandedPath.substring(0, separatorIndex);
+            const pathSep = process.platform === 'win32' ? ';' : ':';
+
+            // Add to beginning of PATH so it takes precedence
+            process.env.PATH = `${ffmpegDir}${pathSep}${process.env.PATH || ''}`;
+            console.log(`[RtspStreamService] Added ${ffmpegDir} to PATH for node-rtsp-stream`);
+          }
+        }
+
         console.log(`[RtspStreamService] ffmpeg found at ${expandedPath}: version ${version}`);
         return; // Success! Exit the function
       } catch (error) {
