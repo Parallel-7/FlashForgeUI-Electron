@@ -114,7 +114,10 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'rtsp-quality': 'RtspQuality',
   'check-updates-on-launch': 'CheckForUpdatesOnLaunch',
   'update-channel': 'UpdateChannel',
-  'auto-download-updates': 'AutoDownloadUpdates'
+  'auto-download-updates': 'AutoDownloadUpdates',
+  'spoolman-enabled': 'SpoolmanEnabled',
+  'spoolman-server-url': 'SpoolmanServerUrl',
+  'spoolman-update-mode': 'SpoolmanUpdateMode'
 };
 
 /**
@@ -456,6 +459,12 @@ class SettingsRenderer {
           input.value = 'stable';
         }
       }
+      if (configKey === 'SpoolmanUpdateMode' && typeof value === 'string') {
+        if (value !== 'length' && value !== 'weight') {
+          value = 'weight';
+          input.value = 'weight';
+        }
+      }
     }
 
     // Update appropriate settings store
@@ -484,6 +493,11 @@ class SettingsRenderer {
     // Filament Tracker Integration settings
     const filamentTrackerEnabled = this.inputs.get('filament-tracker-enabled')?.checked || false;
     this.setInputEnabled('filament-tracker-api-key', filamentTrackerEnabled);
+
+    // Spoolman Integration settings
+    const spoolmanEnabled = this.inputs.get('spoolman-enabled')?.checked || false;
+    this.setInputEnabled('spoolman-server-url', spoolmanEnabled);
+    this.setInputEnabled('spoolman-update-mode', spoolmanEnabled);
 
     // Custom Camera settings
     if (this.perPrinterControlsEnabled) {

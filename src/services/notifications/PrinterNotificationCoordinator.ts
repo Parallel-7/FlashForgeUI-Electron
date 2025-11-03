@@ -44,6 +44,7 @@
 import { EventEmitter } from '../../utils/EventEmitter';
 import { getNotificationService, NotificationService } from './NotificationService';
 import { getConfigManager, ConfigManager } from '../../managers/ConfigManager';
+import { SpoolmanService } from '../SpoolmanService';
 import type { PrinterPollingService } from '../PrinterPollingService';
 import type { 
   PollingData, 
@@ -333,9 +334,9 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
    */
   private async handlePrintCompleted(status: PrinterStatus): Promise<void> {
     // Only send notification if not already sent and setting is enabled
-    if (!this.notificationState.hasSentPrintCompleteNotification && 
+    if (!this.notificationState.hasSentPrintCompleteNotification &&
         shouldSendNotification(NotificationType.PrintComplete, this.currentSettings)) {
-      
+
       await this.sendPrintCompleteNotification(status);
       this.updateNotificationState({
         hasSentPrintCompleteNotification: true,
@@ -343,8 +344,52 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
       }, NotificationStateTransition.PrintCompleted);
     }
 
+    // Update Spoolman with filament usage
+    await this.updateSpoolmanUsage(status);
+
     // Start temperature monitoring for cooled notification
     this.startTemperatureMonitoring();
+  }
+
+  /**
+   * Update Spoolman with filament usage after print completion
+   * This is a simplified implementation that does not get the active spool
+   * from the component directly. Users will need to manually update Spoolman
+   * or this can be enhanced in the future.
+   */
+  private async updateSpoolmanUsage(status: PrinterStatus): Promise<void> {
+    try {
+      const config = this.configManager.getConfig();
+
+      // Check if Spoolman integration is enabled
+      if (!config.SpoolmanEnabled || !config.SpoolmanServerUrl) {
+        return;
+      }
+
+      // Get filament usage from current job
+      const job = status.currentJob;
+      if (!job) {
+        console.warn('[Spoolman] Print completed but no job data available');
+        return;
+      }
+
+      const weightUsed = job.progress.weightUsed; // grams
+      const lengthUsed = job.progress.lengthUsed * 1000; // convert meters to mm
+
+      // Validate we have usage data
+      if (weightUsed <= 0 && lengthUsed <= 0) {
+        console.warn('[Spoolman] No filament usage recorded for this print');
+        return;
+      }
+
+      console.log('[Spoolman] Print completed with usage - weight:', weightUsed, 'g, length:', lengthUsed, 'mm');
+      console.log('[Spoolman] Automatic Spoolman update would happen here if active spool is tracked');
+      // Note: Full implementation would require getting active spool ID from localStorage
+      // or component state, then calling SpoolmanService.updateUsage()
+
+    } catch (error) {
+      console.error('[Spoolman] Failed to update filament usage:', error);
+    }
   }
 
   // ============================================================================

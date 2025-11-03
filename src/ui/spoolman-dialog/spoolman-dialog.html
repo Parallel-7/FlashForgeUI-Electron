@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Select Active Spool - Spoolman</title>
+    <link rel="stylesheet" href="spoolman-dialog.css">
+</head>
+<body>
+    <div class="dialog-container">
+        <!-- Dialog Header -->
+        <div class="dialog-header">
+            <div class="dialog-title">Select Active Spool</div>
+            <button id="btn-close" class="dialog-close">×</button>
+        </div>
+
+        <!-- Search Bar -->
+        <div class="search-container">
+            <input type="text"
+                   id="search-input"
+                   class="search-input"
+                   placeholder="Search spools by name, material, or vendor...">
+            <span class="search-icon">🔍</span>
+        </div>
+
+        <!-- Spool Grid -->
+        <div class="dialog-content">
+            <!-- Loading state -->
+            <div id="loading-state" class="state-view">
+                <div class="loading-spinner"></div>
+                <p>Loading spools...</p>
+            </div>
+
+            <!-- Error state -->
+            <div id="error-state" class="state-view" style="display: none;">
+                <div class="error-icon">⚠️</div>
+                <p class="error-message" id="error-message">Failed to load spools</p>
+                <button id="btn-retry" class="btn-retry">Retry</button>
+            </div>
+
+            <!-- Empty state -->
+            <div id="empty-state" class="state-view" style="display: none;">
+                <div class="empty-icon">🔍</div>
+                <p>No spools found matching your search.</p>
+                <p class="empty-hint">Try a different search term or add spools in Spoolman.</p>
+            </div>
+
+            <!-- Spool cards grid -->
+            <div id="spool-grid" class="spool-grid" style="display: none;">
+                <!-- Spool cards will be dynamically inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- CommonJS shim -->
+    <script>
+        if (typeof exports === 'undefined') {
+            var exports = {};
+        }
+    </script>
+    <script src="../../../lib/ui/spoolman-dialog/spoolman-dialog-renderer.js"></script>
+</body>
+</html>

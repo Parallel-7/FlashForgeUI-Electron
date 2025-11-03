@@ -19,7 +19,7 @@
  * - UI Behavior: AlwaysOnTop, RoundedUI, DebugMode
  * - Camera: CustomCamera, CustomCameraUrl, CameraProxyPort
  * - WebUI: WebUIEnabled, WebUIPort, WebUIPassword
- * - Integrations: DiscordSync, FilamentTrackerIntegrationEnabled
+ * - Integrations: DiscordSync, FilamentTrackerIntegrationEnabled, Spoolman
  * - Advanced: ForceLegacyAPI, CustomLeds
  * - Auto-Update: CheckForUpdatesOnLaunch, UpdateChannel, AutoDownloadUpdates
  *
@@ -52,6 +52,9 @@ export interface AppConfig {
   readonly AutoDownloadUpdates: boolean;
   readonly RtspFrameRate: number;        // Per-printer, not saved to config.json
   readonly RtspQuality: number;          // Per-printer, not saved to config.json
+  readonly SpoolmanEnabled: boolean;
+  readonly SpoolmanServerUrl: string;
+  readonly SpoolmanUpdateMode: 'length' | 'weight';
 }
 
 /**
@@ -84,6 +87,9 @@ export interface MutableAppConfig {
   AutoDownloadUpdates: boolean;
   RtspFrameRate: number;
   RtspQuality: number;
+  SpoolmanEnabled: boolean;
+  SpoolmanServerUrl: string;
+  SpoolmanUpdateMode: 'length' | 'weight';
 }
 
 /**
@@ -115,7 +121,10 @@ export const DEFAULT_CONFIG: AppConfig = {
   UpdateChannel: 'stable',
   AutoDownloadUpdates: false,
   RtspFrameRate: 30,           // Default 30 FPS
-  RtspQuality: 3               // Default quality 3
+  RtspQuality: 3,              // Default quality 3
+  SpoolmanEnabled: false,
+  SpoolmanServerUrl: '',
+  SpoolmanUpdateMode: 'weight' // Default to weight-based updates
 } as const;
 
 /**
@@ -207,6 +216,11 @@ export function sanitizeConfig(config: Partial<AppConfig>): AppConfig {
             const channel = value as string;
             if (channel === 'stable' || channel === 'alpha') {
               assignConfigValue(sanitized, key, channel);
+            }
+          } else if (key === 'SpoolmanUpdateMode') {
+            const mode = value as string;
+            if (mode === 'length' || mode === 'weight') {
+              assignConfigValue(sanitized, key, mode);
             }
           } else {
             assignConfigValue(sanitized, key, value as MutableAppConfig[typeof key]);

@@ -47,6 +47,7 @@ interface ElectronAPI {
   printerContexts: PrinterContextsAPI;
   connectionState: ConnectionStateAPI;
   printerSettings: PrinterSettingsAPI;
+  spoolman: SpoolmanAPI;
 }
 
 // Camera API interface
@@ -80,6 +81,16 @@ interface PrinterSettingsAPI {
   get: () => Promise<unknown>;
   update: (settings: unknown) => Promise<boolean>;
   getPrinterName: () => Promise<string | null>;
+}
+
+// Spoolman API interface
+interface SpoolmanAPI {
+  openSpoolSelection: () => Promise<void>;
+  onSpoolSelected: (callback: (spool: unknown) => void) => void;
+  onSpoolUpdated?: (callback: (spool: unknown) => void) => void;
+  onClearActiveSpool?: (callback: () => void) => void;
+  onGetActiveSpool?: (callback: () => void) => void;
+  sendActiveSpool?: (spool: unknown) => void;
 }
 
 // Input dialog options interface
@@ -175,7 +186,8 @@ const validSendChannels = [
   'palette:opened',
   'palette:toggle-edit-mode',
   'shortcut-config:open',
-  'component-dialog:open'
+  'component-dialog:open',
+  'spoolman:active-spool-response'
 ];
 
 const validReceiveChannels = [
@@ -217,7 +229,11 @@ const validReceiveChannels = [
   'shortcut-config:updated',
   'shortcut-config:get-current-request',
   'shortcut-config:save-request',
-  'shortcut-config:get-components-request'
+  'shortcut-config:get-components-request',
+  'spoolman:spool-selected',
+  'spoolman:spool-updated',
+  'spoolman:clear-active-spool',
+  'spoolman:get-active-spool'
 ];
 
 // Expose camera URL for renderer
@@ -349,7 +365,8 @@ contextBridge.exposeInMainWorld('api', {
       'open-installer',
       'open-release-page',
       'get-update-status',
-      'set-update-channel'
+      'set-update-channel',
+      'spoolman:open-dialog'
     ];
     
     if (validInvokeChannels.includes(channel)) {
@@ -507,6 +524,48 @@ contextBridge.exposeInMainWorld('api', {
     getPrinterName: async (): Promise<string | null> => {
       const result: unknown = await ipcRenderer.invoke('printer-settings:get-printer-name');
       return typeof result === 'string' ? result : null;
+    }
+  },
+
+  spoolman: {
+    openSpoolSelection: async (): Promise<void> => {
+      await ipcRenderer.invoke('spoolman:open-dialog');
+    },
+
+    onSpoolSelected: (callback: (spool: unknown) => void) => {
+      const wrappedCallback: IPCListener = (event: unknown, spool: unknown) => {
+        callback(spool);
+      };
+      listeners.set('spoolman:spool-selected', { original: callback as IPCListener, wrapped: wrappedCallback });
+      ipcRenderer.on('spoolman:spool-selected', wrappedCallback);
+    },
+
+    onSpoolUpdated: (callback: (spool: unknown) => void) => {
+      const wrappedCallback: IPCListener = (event: unknown, spool: unknown) => {
+        callback(spool);
+      };
+      listeners.set('spoolman:spool-updated', { original: callback as IPCListener, wrapped: wrappedCallback });
+      ipcRenderer.on('spoolman:spool-updated', wrappedCallback);
+    },
+
+    onClearActiveSpool: (callback: () => void) => {
+      const wrappedCallback: IPCListener = () => {
+        callback();
+      };
+      listeners.set('spoolman:clear-active-spool', { original: callback as IPCListener, wrapped: wrappedCallback });
+      ipcRenderer.on('spoolman:clear-active-spool', wrappedCallback);
+    },
+
+    onGetActiveSpool: (callback: () => void) => {
+      const wrappedCallback: IPCListener = () => {
+        callback();
+      };
+      listeners.set('spoolman:get-active-spool', { original: callback as IPCListener, wrapped: wrappedCallback });
+      ipcRenderer.on('spoolman:get-active-spool', wrappedCallback);
+    },
+
+    sendActiveSpool: (spool: unknown) => {
+      ipcRenderer.send('spoolman:active-spool-response', spool);
     }
   }
 } as ElectronAPI);

@@ -190,6 +190,21 @@ const COMPONENT_REGISTRY: ReadonlyMap<string, ComponentDefinition> = new Map([
       singleton: true,
     },
   ],
+
+  [
+    'spoolman-tracker',
+    {
+      id: 'spoolman-tracker',
+      name: 'Spoolman Tracker',
+      icon: 'package',
+      defaultSize: { w: 3, h: 2 },
+      minSize: { w: 2, h: 2 },
+      category: 'main',
+      description: 'Track active filament spool from Spoolman server',
+      required: false,
+      singleton: true,
+    },
+  ],
 ]);
 
 /**
