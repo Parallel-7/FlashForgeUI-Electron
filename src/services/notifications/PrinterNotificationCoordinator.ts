@@ -44,6 +44,7 @@
 import { EventEmitter } from '../../utils/EventEmitter';
 import { getNotificationService, NotificationService } from './NotificationService';
 import { getConfigManager, ConfigManager } from '../../managers/ConfigManager';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager';
 import { SpoolmanService } from '../SpoolmanService';
 import type { PrinterPollingService } from '../PrinterPollingService';
 import type { 
@@ -353,9 +354,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
 
   /**
    * Update Spoolman with filament usage after print completion
-   * This is a simplified implementation that does not get the active spool
-   * from the component directly. Users will need to manually update Spoolman
-   * or this can be enhanced in the future.
+   * Gets active spool from PrinterContextManager and updates via SpoolmanService
    */
   private async updateSpoolmanUsage(status: PrinterStatus): Promise<void> {
     try {
@@ -363,6 +362,15 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
 
       // Check if Spoolman integration is enabled
       if (!config.SpoolmanEnabled || !config.SpoolmanServerUrl) {
+        return;
+      }
+
+      // Get active spool from context manager
+      const contextManager = getPrinterContextManager();
+      const activeSpoolId = contextManager.getActiveSpoolId();
+
+      if (!activeSpoolId) {
+        console.log('[Spoolman] No active spool selected - skipping usage update');
         return;
       }
 
@@ -382,10 +390,28 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
         return;
       }
 
-      console.log('[Spoolman] Print completed with usage - weight:', weightUsed, 'g, length:', lengthUsed, 'mm');
-      console.log('[Spoolman] Automatic Spoolman update would happen here if active spool is tracked');
-      // Note: Full implementation would require getting active spool ID from localStorage
-      // or component state, then calling SpoolmanService.updateUsage()
+      // Create Spoolman service instance
+      const service = new SpoolmanService(config.SpoolmanServerUrl);
+
+      // Update based on configured mode
+      const updatePayload = config.SpoolmanUpdateMode === 'weight'
+        ? { use_weight: weightUsed }
+        : { use_length: lengthUsed };
+
+      console.log(`[Spoolman] Updating spool ${activeSpoolId} with ${config.SpoolmanUpdateMode}:`,
+                  config.SpoolmanUpdateMode === 'weight' ? `${weightUsed}g` : `${lengthUsed}mm`);
+
+      // Update the spool
+      const updatedSpool = await service.updateUsage(activeSpoolId, updatePayload);
+
+      // Update context manager with new remaining values
+      const activeSpoolData = contextManager.getActiveSpool();
+      if (activeSpoolData) {
+        activeSpoolData.remainingWeight = updatedSpool.remaining_weight || 0;
+        activeSpoolData.remainingLength = updatedSpool.remaining_length || 0;
+        contextManager.setActiveSpool(undefined, activeSpoolData);
+        console.log('[Spoolman] Successfully updated spool remaining values');
+      }
 
     } catch (error) {
       console.error('[Spoolman] Failed to update filament usage:', error);

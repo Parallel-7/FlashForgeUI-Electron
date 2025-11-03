@@ -59,6 +59,7 @@ import type {
   ContextCreatedEvent,
   ContextRemovedEvent
 } from '../types/PrinterContext';
+import type { ActiveSpoolData } from '../types/spoolman';
 
 /**
  * Complete printer context containing all state for a single printer connection
@@ -97,6 +98,12 @@ export interface PrinterContext {
 
   /** Last activity timestamp */
   lastActivity: Date;
+
+  /** Active Spoolman spool ID (null if no spool selected) */
+  activeSpoolId: number | null;
+
+  /** Active Spoolman spool data for UI display (null if no spool selected) */
+  activeSpoolData: ActiveSpoolData | null;
 }
 
 /**
@@ -166,7 +173,9 @@ export class PrinterContextManager extends EventEmitter {
       cameraProxyPort: null,
       isActive: false,
       createdAt: now,
-      lastActivity: now
+      lastActivity: now,
+      activeSpoolId: null,
+      activeSpoolData: null
     };
 
     this.contexts.set(contextId, context);
@@ -437,6 +446,64 @@ export class PrinterContextManager extends EventEmitter {
       createdAt: context.createdAt.toISOString(),
       lastActivity: context.lastActivity.toISOString()
     };
+  }
+
+  /**
+   * Set active spool for a context
+   *
+   * @param contextId - Context ID (defaults to active context if not provided)
+   * @param spoolData - Active spool data (null to clear)
+   */
+  public setActiveSpool(contextId: string | undefined, spoolData: ActiveSpoolData | null): void {
+    const targetContextId = contextId || this.activeContextId;
+    if (!targetContextId) {
+      console.warn('[PrinterContextManager] Cannot set active spool: no context specified or active');
+      return;
+    }
+
+    const context = this.contexts.get(targetContextId);
+    if (!context) {
+      console.warn(`[PrinterContextManager] Cannot set active spool: context ${targetContextId} not found`);
+      return;
+    }
+
+    context.activeSpoolId = spoolData?.id || null;
+    context.activeSpoolData = spoolData;
+    context.lastActivity = new Date();
+
+    console.log(`[PrinterContextManager] Active spool ${spoolData ? 'set' : 'cleared'} for context ${targetContextId}`, spoolData?.id);
+  }
+
+  /**
+   * Get active spool for a context
+   *
+   * @param contextId - Context ID (defaults to active context if not provided)
+   * @returns Active spool data or null if no spool selected
+   */
+  public getActiveSpool(contextId?: string): ActiveSpoolData | null {
+    const targetContextId = contextId || this.activeContextId;
+    if (!targetContextId) {
+      return null;
+    }
+
+    const context = this.contexts.get(targetContextId);
+    return context?.activeSpoolData || null;
+  }
+
+  /**
+   * Get active spool ID for a context
+   *
+   * @param contextId - Context ID (defaults to active context if not provided)
+   * @returns Active spool ID or null if no spool selected
+   */
+  public getActiveSpoolId(contextId?: string): number | null {
+    const targetContextId = contextId || this.activeContextId;
+    if (!targetContextId) {
+      return null;
+    }
+
+    const context = this.contexts.get(targetContextId);
+    return context?.activeSpoolId || null;
   }
 
   /**

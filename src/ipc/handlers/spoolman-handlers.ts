@@ -22,6 +22,7 @@
 import { ipcMain, BrowserWindow } from 'electron';
 import * as path from 'path';
 import { getConfigManager } from '../../managers/ConfigManager';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager';
 import { SpoolmanService } from '../../services/SpoolmanService';
 import type { SpoolSearchQuery, ActiveSpoolData } from '../../types/spoolman';
 import { createModalWindow, loadWindowHTML, setupDevTools, setupWindowLifecycle, createPreloadPath, validateParentWindow } from '../../windows/shared/WindowConfig';
@@ -92,11 +93,33 @@ export function registerSpoolmanHandlers(): void {
     return await service.searchSpools(query);
   });
 
-  // Select spool
-  ipcMain.handle('spoolman:select-spool', async (_event, spool: ActiveSpoolData) => {
+  // Select spool - save to context and broadcast
+  ipcMain.handle('spoolman:select-spool', async (_event, spool: ActiveSpoolData, contextId?: string) => {
+    const contextManager = getPrinterContextManager();
+
+    // Save to context (main process state)
+    contextManager.setActiveSpool(contextId, spool);
+
     // Broadcast selection to all renderer windows
     BrowserWindow.getAllWindows().forEach((win) => {
       win.webContents.send('spoolman:spool-selected', spool);
+    });
+  });
+
+  // Get active spool for a context
+  ipcMain.handle('spoolman:get-active-spool', async (_event, contextId?: string) => {
+    const contextManager = getPrinterContextManager();
+    return contextManager.getActiveSpool(contextId);
+  });
+
+  // Set active spool (used by component or external calls)
+  ipcMain.handle('spoolman:set-active-spool', async (_event, spool: ActiveSpoolData | null, contextId?: string) => {
+    const contextManager = getPrinterContextManager();
+    contextManager.setActiveSpool(contextId, spool);
+
+    // Broadcast update to all windows
+    BrowserWindow.getAllWindows().forEach((win) => {
+      win.webContents.send('spoolman:spool-updated', spool);
     });
   });
 }

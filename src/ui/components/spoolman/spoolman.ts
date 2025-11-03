@@ -3,15 +3,16 @@
  *
  * GridStack component for displaying active spool selection and integrating with Spoolman server.
  * Shows three states: disabled (integration off), no spool selected, and active spool display
- * with color visualization. Supports per-printer context with localStorage persistence.
+ * with color visualization. Supports per-printer context with main process state management.
  *
  * Key Features:
  * - Three visual states: disabled, no spool, active spool
  * - Color-coded spool visualization matching filament color
  * - Integration with Spoolman server for spool selection
- * - Per-context localStorage for multi-printer support
+ * - Per-context main process storage (no localStorage)
  * - Click-to-open spool selection dialog
  * - Real-time spool data updates from main process
+ * - Works even if component not on grid (state in main process)
  *
  * @module ui/components/spoolman
  */
@@ -20,7 +21,6 @@ import { BaseComponent } from '../base/component';
 import type { ComponentUpdateData } from '../base/types';
 import type { ActiveSpoolData } from './types';
 import type { AppConfig } from '../../../types/config';
-import type { SpoolResponse } from '../../../types/spoolman';
 import './spoolman.css';
 
 /**
@@ -119,28 +119,16 @@ export class SpoolmanComponent extends BaseComponent {
 
     // Listen for spool selection from dialog
     window.api.spoolman.onSpoolSelected((spool: ActiveSpoolData) => {
-      this.setActiveSpool(spool);
+      this.activeSpool = spool;
+      this.updateView();
+      console.log(`[SpoolmanComponent] Active spool selected: ${spool.name} (ID: ${spool.id})`);
     });
 
-    // Listen for spool updates from main process (after print completion)
-    window.api.spoolman.onSpoolUpdated?.((updatedSpool: SpoolResponse) => {
-      if (this.activeSpool && this.activeSpool.id === updatedSpool.id) {
-        // Update local data with new remaining values
-        this.activeSpool.remainingWeight = updatedSpool.remaining_weight || 0;
-        this.activeSpool.remainingLength = updatedSpool.remaining_length || 0;
-        this.saveState();
-        this.updateView();
-      }
-    });
-
-    // Listen for clear command (e.g., when spool is deleted)
-    window.api.spoolman.onClearActiveSpool?.(() => {
-      this.clearActiveSpool();
-    });
-
-    // Listen for active spool request from main process
-    window.api.spoolman.onGetActiveSpool?.(() => {
-      window.api.spoolman.sendActiveSpool?.(this.activeSpool);
+    // Listen for spool updates from main process (after operations)
+    window.api.spoolman.onSpoolUpdated?.((updatedSpool: ActiveSpoolData | null) => {
+      this.activeSpool = updatedSpool;
+      this.updateView();
+      console.log('[SpoolmanComponent] Active spool updated from main process');
     });
   }
 
@@ -230,71 +218,23 @@ export class SpoolmanComponent extends BaseComponent {
   }
 
   /**
-   * Load spool state from localStorage
+   * Load spool state from main process
    */
   private async loadState(): Promise<void> {
-    const storageKey = this.getStorageKey();
-    const stored = localStorage.getItem(storageKey);
-
-    if (stored) {
-      try {
-        this.activeSpool = JSON.parse(stored);
-        this.updateView();
-      } catch (error) {
-        console.error('[SpoolmanComponent] Failed to parse stored spool data:', error);
-        localStorage.removeItem(storageKey);
-      }
+    if (!window.api?.spoolman) {
+      console.warn('[SpoolmanComponent] Cannot load state: Spoolman API not available');
+      return;
     }
-  }
 
-  /**
-   * Save spool state to localStorage
-   */
-  private saveState(): void {
-    if (this.activeSpool) {
-      const storageKey = this.getStorageKey();
-      localStorage.setItem(storageKey, JSON.stringify(this.activeSpool));
+    try {
+      // Request active spool from main process for current context
+      const spool = await window.api.spoolman.getActiveSpool(this.contextId || undefined);
+      this.activeSpool = spool as ActiveSpoolData | null;
+      this.updateView();
+      console.log('[SpoolmanComponent] Loaded active spool from main process:', spool);
+    } catch (error) {
+      console.error('[SpoolmanComponent] Failed to load active spool:', error);
     }
-  }
-
-  /**
-   * Set active spool and persist to localStorage
-   * @param spool - Active spool data
-   */
-  public setActiveSpool(spool: ActiveSpoolData): void {
-    this.activeSpool = spool;
-    this.saveState();
-    this.updateView();
-    console.log(`[SpoolmanComponent] Active spool set: ${spool.name} (ID: ${spool.id})`);
-  }
-
-  /**
-   * Clear active spool and remove from localStorage
-   */
-  public clearActiveSpool(): void {
-    this.activeSpool = null;
-    const storageKey = this.getStorageKey();
-    localStorage.removeItem(storageKey);
-    this.updateView();
-    console.log('[SpoolmanComponent] Active spool cleared');
-  }
-
-  /**
-   * Get active spool data
-   * @returns Current active spool or null
-   */
-  public getActiveSpool(): ActiveSpoolData | null {
-    return this.activeSpool;
-  }
-
-  /**
-   * Get localStorage key for current context
-   * @returns Storage key string
-   */
-  private getStorageKey(): string {
-    // Per-context storage key for multi-printer support
-    const contextSuffix = this.contextId ? `-${this.contextId}` : '';
-    return `spoolman-active-spool${contextSuffix}`;
   }
 
   /**
