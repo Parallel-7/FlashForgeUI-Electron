@@ -136,28 +136,80 @@ export class RtspStreamService extends EventEmitter {
 
   /**
    * Check if ffmpeg is available on the system
+   * On macOS, Electron apps don't inherit user PATH, so check common install locations explicitly
+   * Also checks common paths on Linux (Snap, Flatpak, etc.) and Windows
    */
   private async checkFfmpegAvailability(): Promise<void> {
-    try {
-      const { stdout } = await execAsync('ffmpeg -version');
-      const versionMatch = stdout.match(/ffmpeg version ([^\s]+)/);
-      const version = versionMatch ? versionMatch[1] : 'unknown';
+    // Common ffmpeg installation paths across platforms
+    // Order matters: try PATH first, then check platform-specific locations
+    const ffmpegPaths = [
+      'ffmpeg', // Try PATH first (works if launched from terminal or properly configured)
 
-      this.ffmpegStatus = {
-        available: true,
-        version
-      };
+      // ===== macOS =====
+      // Homebrew (most common on macOS)
+      '/opt/homebrew/bin/ffmpeg',        // Homebrew on Apple Silicon (M1/M2/M3)
+      '/usr/local/bin/ffmpeg',           // Homebrew on Intel Mac
+      '/opt/local/bin/ffmpeg',           // MacPorts
 
-      console.log(`[RtspStreamService] ffmpeg found: version ${version}`);
-    } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      this.ffmpegStatus = {
-        available: false,
-        error: errorMessage
-      };
+      // ===== Linux =====
+      // Standard package manager locations (usually in PATH, but checking explicitly doesn't hurt)
+      '/usr/bin/ffmpeg',                 // apt (Debian/Ubuntu), yum/dnf (Fedora/RHEL), pacman (Arch)
 
-      console.warn('[RtspStreamService] ffmpeg not found:', errorMessage);
+      // Universal package managers (often not in Electron's PATH)
+      '/snap/bin/ffmpeg',                // Snap packages
+      '/var/lib/flatpak/exports/bin/ffmpeg',      // Flatpak system-wide
+      '~/.local/share/flatpak/exports/bin/ffmpeg', // Flatpak user install
+
+      // Manual/compiled installations
+      '/usr/local/bin/ffmpeg',           // Common manual install location
+      '~/bin/ffmpeg',                    // User home bin directory
+
+      // ===== Windows =====
+      'C:\\ffmpeg\\bin\\ffmpeg.exe',                    // Common manual install
+      'C:\\Program Files\\ffmpeg\\bin\\ffmpeg.exe',     // Program Files install
+      'C:\\Program Files (x86)\\ffmpeg\\bin\\ffmpeg.exe', // 32-bit on 64-bit system
+    ];
+
+    let lastError = '';
+
+    // Try each path in order
+    for (const ffmpegPath of ffmpegPaths) {
+      try {
+        // Expand ~ to home directory if present
+        const expandedPath = ffmpegPath.replace(/^~/, process.env.HOME || process.env.USERPROFILE || '');
+
+        // Quote the path to handle spaces
+        const { stdout } = await execAsync(`"${expandedPath}" -version`);
+        const versionMatch = stdout.match(/ffmpeg version ([^\s]+)/);
+        const version = versionMatch ? versionMatch[1] : 'unknown';
+
+        this.ffmpegStatus = {
+          available: true,
+          version
+        };
+
+        console.log(`[RtspStreamService] ffmpeg found at ${expandedPath}: version ${version}`);
+        return; // Success! Exit the function
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error);
+        // Continue to next path
+      }
     }
+
+    // If we get here, ffmpeg wasn't found in any location
+    this.ffmpegStatus = {
+      available: false,
+      error: `ffmpeg not found in any common location. Last error: ${lastError}`
+    };
+
+    console.warn('[RtspStreamService] ffmpeg not found in any location');
+    console.warn('[RtspStreamService] Searched paths:', ffmpegPaths);
+    console.warn('[RtspStreamService] Install ffmpeg to enable RTSP camera viewing:');
+    console.warn('[RtspStreamService]   - macOS: brew install ffmpeg');
+    console.warn('[RtspStreamService]   - Ubuntu/Debian: sudo apt install ffmpeg');
+    console.warn('[RtspStreamService]   - Fedora/RHEL: sudo dnf install ffmpeg');
+    console.warn('[RtspStreamService]   - Arch: sudo pacman -S ffmpeg');
+    console.warn('[RtspStreamService]   - Windows: Download from ffmpeg.org');
   }
 
   // ============================================================================
