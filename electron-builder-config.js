@@ -34,9 +34,6 @@ module.exports = {
         // Include UI files (HTML, CSS) for dialogs
         "src/ui/**/*",
 
-        // Include built web UI static assets
-        "dist/webui/**/*",
-
         "package.json",
 
         // Exclude (same as JS project)
