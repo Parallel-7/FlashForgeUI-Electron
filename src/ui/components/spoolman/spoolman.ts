@@ -118,15 +118,16 @@ export class SpoolmanComponent extends BaseComponent {
     }
 
     // Listen for spool selection from dialog
-    window.api.spoolman.onSpoolSelected((spool: ActiveSpoolData) => {
-      this.activeSpool = spool;
+    window.api.spoolman.onSpoolSelected((spool: unknown) => {
+      this.activeSpool = spool as ActiveSpoolData;
       this.updateView();
-      console.log(`[SpoolmanComponent] Active spool selected: ${spool.name} (ID: ${spool.id})`);
+      const spoolData = spool as ActiveSpoolData;
+      console.log(`[SpoolmanComponent] Active spool selected: ${spoolData.name} (ID: ${spoolData.id})`);
     });
 
     // Listen for spool updates from main process (after operations)
-    window.api.spoolman.onSpoolUpdated?.((updatedSpool: ActiveSpoolData | null) => {
-      this.activeSpool = updatedSpool;
+    window.api.spoolman.onSpoolUpdated?.((updatedSpool: unknown) => {
+      this.activeSpool = updatedSpool as ActiveSpoolData | null;
       this.updateView();
       console.log('[SpoolmanComponent] Active spool updated from main process');
     });
@@ -152,7 +153,7 @@ export class SpoolmanComponent extends BaseComponent {
       }
 
       // Store context ID for multi-printer support
-      if (data.contextId && data.contextId !== this.contextId) {
+      if (data.contextId && typeof data.contextId === 'string' && data.contextId !== this.contextId) {
         this.contextId = data.contextId;
         void this.loadState(); // Reload spool for new context
       }
@@ -189,8 +190,10 @@ export class SpoolmanComponent extends BaseComponent {
   private renderActiveSpool(): void {
     if (!this.activeSpool) return;
 
-    // Set spool color
-    const colorHex = this.activeSpool.colorHex || '#666666';
+    // Set spool color - ensure # prefix for CSS compatibility (defense in depth)
+    const colorHex = this.activeSpool.colorHex?.startsWith('#')
+      ? this.activeSpool.colorHex
+      : `#${this.activeSpool.colorHex || '666666'}`;
     if (this.spoolVisual) {
       this.spoolVisual.style.backgroundColor = colorHex;
     }

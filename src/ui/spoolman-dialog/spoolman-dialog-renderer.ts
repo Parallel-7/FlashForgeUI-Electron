@@ -17,7 +17,25 @@
 
 import type { SpoolResponse, ActiveSpoolData } from '../../types/spoolman';
 
-// State
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Ensure hex color has # prefix for CSS compatibility
+ * Spoolman API returns colors without # prefix (e.g., "DB2F2B" instead of "#DB2F2B")
+ * @param color - Hex color string from Spoolman API
+ * @returns Hex color with # prefix, or default gray if invalid
+ */
+function ensureHashPrefix(color: string | null | undefined): string {
+  if (!color) return '#666666'; // Default gray
+  return color.startsWith('#') ? color : `#${color}`;
+}
+
+// ============================================================================
+// STATE
+// ============================================================================
+
 let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let currentQuery = '';
 
@@ -133,8 +151,8 @@ function createSpoolCard(spool: SpoolResponse): HTMLElement {
   card.className = 'spool-card';
   card.dataset.spoolId = spool.id.toString();
 
-  // Get spool color (default to gray if not set)
-  const colorHex = spool.filament.color_hex || '#666666';
+  // Get spool color with # prefix for CSS
+  const colorHex = ensureHashPrefix(spool.filament.color_hex);
 
   // Build display text
   const vendor = spool.filament.vendor?.name || '';
@@ -174,7 +192,7 @@ async function handleSpoolSelect(spool: SpoolResponse): Promise<void> {
     name: spool.filament.name || 'Unknown',
     vendor: spool.filament.vendor?.name || null,
     material: spool.filament.material || null,
-    colorHex: spool.filament.color_hex || '#666666',
+    colorHex: ensureHashPrefix(spool.filament.color_hex),
     remainingWeight: spool.remaining_weight || 0,
     remainingLength: spool.remaining_length || 0,
   };

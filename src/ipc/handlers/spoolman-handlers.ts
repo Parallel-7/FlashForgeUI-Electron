@@ -25,16 +25,18 @@ import { getConfigManager } from '../../managers/ConfigManager';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager';
 import { SpoolmanService } from '../../services/SpoolmanService';
 import type { SpoolSearchQuery, ActiveSpoolData } from '../../types/spoolman';
-import { createModalWindow, loadWindowHTML, setupDevTools, setupWindowLifecycle, createPreloadPath, validateParentWindow } from '../../windows/shared/WindowConfig';
+import { createModalWindow, loadWindowHTML, setupDevTools, setupWindowLifecycle, validateParentWindow } from '../../windows/shared/WindowConfig';
+import { createPreloadPath, createWindowWidth, createWindowHeight, createWindowMinWidth, createWindowMinHeight } from '../../windows/shared/WindowTypes';
+import type { WindowDimensions } from '../../windows/shared/WindowTypes';
 
 let spoolmanDialogWindow: BrowserWindow | null = null;
 
 // Spoolman dialog window size
-const SPOOLMAN_DIALOG_SIZE = {
-  width: 700,
-  height: 800,
-  minWidth: 600,
-  minHeight: 700,
+const SPOOLMAN_DIALOG_SIZE: WindowDimensions = {
+  width: createWindowWidth(700),
+  height: createWindowHeight(800),
+  minWidth: createWindowMinWidth(600),
+  minHeight: createWindowMinHeight(700),
 };
 
 /**
@@ -121,5 +123,19 @@ export function registerSpoolmanHandlers(): void {
     BrowserWindow.getAllWindows().forEach((win) => {
       win.webContents.send('spoolman:spool-updated', spool);
     });
+  });
+
+  // Test connection to Spoolman server
+  ipcMain.handle('spoolman:test-connection', async (_event, serverUrl: string) => {
+    try {
+      const service = new SpoolmanService(serverUrl);
+      return await service.testConnection();
+    } catch (error) {
+      console.error('[SpoolmanHandlers] Test connection error:', error);
+      return {
+        connected: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
   });
 }

@@ -79,10 +79,21 @@ export function registerDialogHandlers(
     return configManager.getConfig();
   });
 
+  ipcMain.handle('request-config', async (): Promise<AppConfig> => {
+    return configManager.getConfig();
+  });
+
   ipcMain.handle('settings-save-config', async (_, config: Partial<AppConfig>): Promise<boolean> => {
     try {
       configManager.replaceConfig(config);
       await configManager.forceSave();
+
+      // Broadcast config update to main window so components can react
+      const mainWindow = windowManager.getMainWindow();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('config-updated', configManager.getConfig());
+      }
+
       return true;
     } catch (error) {
       console.error('Failed to save configuration:', error);

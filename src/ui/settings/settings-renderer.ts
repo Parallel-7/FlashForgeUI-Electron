@@ -39,6 +39,7 @@ interface ISettingsAPI {
   closeWindow: () => void;
   receiveConfig: (callback: (config: AppConfig) => void) => void;
   removeListeners: () => void;
+  testSpoolmanConnection: (url: string) => Promise<{ connected: boolean; error?: string }>;
 }
 
 interface IPrinterSettingsAPI {
@@ -135,6 +136,8 @@ class SettingsRenderer {
   private saveStatusElement: HTMLElement | null = null;
   private updateStatusElement: HTMLElement | null = null;
   private updateCheckButton: HTMLButtonElement | null = null;
+  private testSpoolmanButton: HTMLButtonElement | null = null;
+  private spoolmanTestResultElement: HTMLElement | null = null;
   private statusTimeout: NodeJS.Timeout | null = null;
   private readonly settings: MutableSettings = { global: {}, perPrinter: {} };
   private printerName: string | null = null;
@@ -182,6 +185,9 @@ class SettingsRenderer {
       this.updateCheckButton = checkButton;
     }
 
+    this.testSpoolmanButton = document.getElementById('btn-test-spoolman') as HTMLButtonElement | null;
+    this.spoolmanTestResultElement = document.getElementById('spoolman-test-result');
+
     this.initializeTabs();
   }
 
@@ -214,6 +220,12 @@ class SettingsRenderer {
     if (this.updateCheckButton) {
       this.updateCheckButton.addEventListener('click', () => {
         void this.handleCheckForUpdates();
+      });
+    }
+
+    if (this.testSpoolmanButton) {
+      this.testSpoolmanButton.addEventListener('click', () => {
+        void this.handleTestSpoolmanConnection();
       });
     }
   }
@@ -627,6 +639,59 @@ class SettingsRenderer {
         this.updateCheckButton.disabled = false;
       }
     }
+  }
+
+  private async handleTestSpoolmanConnection(): Promise<void> {
+    if (!window.settingsAPI) {
+      this.showSpoolmanTestResult('Settings API not available.', 'error');
+      return;
+    }
+
+    const serverUrlInput = this.inputs.get('spoolman-server-url');
+    if (!serverUrlInput) {
+      this.showSpoolmanTestResult('Server URL input not found.', 'error');
+      return;
+    }
+
+    const serverUrl = serverUrlInput.value.trim();
+    if (!serverUrl) {
+      this.showSpoolmanTestResult('Please enter a Spoolman server URL.', 'error');
+      return;
+    }
+
+    if (this.testSpoolmanButton) {
+      this.testSpoolmanButton.disabled = true;
+    }
+
+    this.showSpoolmanTestResult('Testing connection...', 'info');
+
+    try {
+      const result = await window.settingsAPI.testSpoolmanConnection(serverUrl);
+
+      if (result.connected) {
+        this.showSpoolmanTestResult('✓ Connection successful!', 'success');
+      } else {
+        this.showSpoolmanTestResult(`✗ Connection failed: ${result.error || 'Unknown error'}`, 'error');
+      }
+    } catch (error) {
+      console.error('[Settings] Spoolman connection test failed:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.showSpoolmanTestResult(`✗ Connection failed: ${errorMsg}`, 'error');
+    } finally {
+      if (this.testSpoolmanButton) {
+        this.testSpoolmanButton.disabled = false;
+      }
+    }
+  }
+
+  private showSpoolmanTestResult(message: string, type: 'success' | 'error' | 'info'): void {
+    if (!this.spoolmanTestResultElement) return;
+
+    this.spoolmanTestResultElement.textContent = message;
+    this.spoolmanTestResultElement.style.color =
+      type === 'success' ? '#4ade80' :
+      type === 'error' ? '#f87171' :
+      '#60a5fa';
   }
 
   private async handleSave(): Promise<void> {

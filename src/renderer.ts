@@ -39,6 +39,7 @@ import {
   FiltrationControlsComponent,
   AdditionalInfoComponent,
   PrinterTabsComponent,
+  SpoolmanComponent,
   type ComponentUpdateData,
   type BaseComponent
 } from './ui/components';
@@ -432,6 +433,8 @@ function createComponentForGrid(componentId: string, container: HTMLElement): Ba
       logPanelComponent = logPanel;
       return logPanel;
     }
+    case 'spoolman-tracker':
+      return new SpoolmanComponent(container);
     default:
       console.error(`Unknown component ID: ${componentId}`);
       return null;
@@ -541,6 +544,20 @@ async function initializeGridStack(): Promise<void> {
     }
 
     console.log(`GridStack: Created ${widgetCount}/${layout.widgets.length} widgets`);
+
+    // Send initial update with config to all components
+    if (lastPollingData) {
+      const config = await window.api.requestConfig();
+      const updateData: ComponentUpdateData = {
+        pollingData: lastPollingData,
+        config: config,
+        timestamp: new Date().toISOString(),
+        printerState: lastPollingData.printerStatus?.state,
+        connectionState: lastPollingData.isConnected
+      };
+      componentManager.updateAll(updateData);
+      console.log('GridStack: Sent initial config update to all components');
+    }
 
     // 5. Setup GridStack event handlers for auto-save
     gridStackManager.onChange(() => {
@@ -666,8 +683,10 @@ function setupPaletteIntegration(): void {
       }
 
       if (lastPollingData) {
+        const config = await window.api.requestConfig();
         const updateData: ComponentUpdateData = {
           pollingData: lastPollingData,
+          config: config,
           timestamp: new Date().toISOString(),
           printerState: lastPollingData.printerStatus?.state,
           connectionState: lastPollingData.isConnected
@@ -1534,6 +1553,8 @@ function createComponentInstance(componentId: string, container: HTMLElement) {
       return new ControlsGridComponent(container);
     case 'filtration-controls':
       return new FiltrationControlsComponent(container);
+    case 'spoolman-tracker':
+      return new SpoolmanComponent(container);
     default:
       console.error(`[ShortcutButtons] Unknown component ID: ${componentId}`);
       return null;
@@ -2083,7 +2104,7 @@ function initializePollingListeners(): void {
       handleUIError(error, 'polling update');
     }
   });
-  
+
   console.log('Enhanced polling listeners initialized - component system integration active');
 }
 

@@ -29,7 +29,7 @@ import type {
  * Service for interacting with Spoolman REST API
  */
 export class SpoolmanService {
-  private baseUrl: string;
+  private readonly baseUrl: string;
   private readonly timeout = 10000; // 10 second timeout
 
   /**

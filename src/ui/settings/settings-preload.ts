@@ -44,7 +44,8 @@ contextBridge.exposeInMainWorld('settingsAPI', {
   },
   removeListeners: () => {
     ipcRenderer.removeAllListeners('settings-config-data');
-  }
+  },
+  testSpoolmanConnection: (url: string) => ipcRenderer.invoke('spoolman:test-connection', url)
 });
 
 // Expose printer settings API (reusing same implementation as main preload)

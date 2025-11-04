@@ -72,6 +72,14 @@ interface DialogPrinterSettingsAPI {
   getPrinterName: () => Promise<string | null>;
 }
 
+interface DialogSpoolmanAPI {
+  openSpoolSelection: () => Promise<void>;
+  getActiveSpool: (contextId?: string) => Promise<unknown>;
+  setActiveSpool: (spool: unknown, contextId?: string) => Promise<void>;
+  onSpoolSelected: (callback: (spool: unknown) => void) => void;
+  onSpoolUpdated: (callback: (spool: unknown) => void) => void;
+}
+
 interface DialogLoadingAPI {
   show: (options: DialogLoadingOptions) => void;
   hide: () => void;
@@ -94,12 +102,14 @@ interface DialogElectronAPI {
   requestMaterialStationStatus: () => Promise<unknown>;
   requestModelPreview: () => Promise<string | null>;
   requestBackendStatus: () => Promise<unknown>;
+  requestConfig: () => Promise<unknown>;
   onPlatformInfo: (callback: (platform: string) => void) => void;
   readonly loading: DialogLoadingAPI;
   readonly camera: DialogCameraAPI;
   readonly printerContexts: DialogPrinterContextsAPI;
   readonly connectionState: DialogConnectionStateAPI;
   readonly printerSettings: DialogPrinterSettingsAPI;
+  readonly spoolman: DialogSpoolmanAPI;
 }
 
 const listeners = new Map<string, { original: DialogIPCListener; wrapped: DialogIPCListener }>();
@@ -210,7 +220,9 @@ const validReceiveChannels = [
   'shortcut-config:save-request',
   'shortcut-config:get-components-request',
   'log-dialog-new-message',
-  'log-dialog-cleared'
+  'log-dialog-cleared',
+  'spoolman:spool-selected',
+  'spoolman:spool-updated'
 ];
 
 const validInvokeChannels = [
@@ -232,6 +244,7 @@ const validInvokeChannels = [
   'request-material-station-status',
   'request-model-preview',
   'request-backend-status',
+  'request-config',
   'webui:start',
   'webui:stop',
   'webui:get-status',
@@ -253,7 +266,10 @@ const validInvokeChannels = [
   'shortcut-config:save',
   'shortcut-config:get-available-components',
   'log-dialog-request-logs',
-  'log-dialog-clear-logs'
+  'log-dialog-clear-logs',
+  'spoolman:open-dialog',
+  'spoolman:get-active-spool',
+  'spoolman:set-active-spool'
 ];
 
 // ---------------------------------------------------------------------------
@@ -328,6 +344,7 @@ contextBridge.exposeInMainWorld('api', {
     return typeof result === 'string' || result === null ? result : null;
   },
   requestBackendStatus: async (): Promise<unknown> => ipcRenderer.invoke('request-backend-status'),
+  requestConfig: async (): Promise<unknown> => ipcRenderer.invoke('request-config'),
 
   onPlatformInfo: (callback: (platform: string) => void) => {
     const wrapped: DialogIPCListener = (_event: unknown, platform: unknown) => {
@@ -410,6 +427,28 @@ contextBridge.exposeInMainWorld('api', {
     getPrinterName: async (): Promise<string | null> => {
       const result: unknown = await ipcRenderer.invoke('printer-settings:get-printer-name');
       return typeof result === 'string' ? result : null;
+    }
+  },
+
+  spoolman: {
+    openSpoolSelection: async (): Promise<void> => {
+      await ipcRenderer.invoke('spoolman:open-dialog');
+    },
+    getActiveSpool: async (contextId?: string): Promise<unknown> => {
+      return await ipcRenderer.invoke('spoolman:get-active-spool', contextId);
+    },
+    setActiveSpool: async (spool: unknown, contextId?: string): Promise<void> => {
+      await ipcRenderer.invoke('spoolman:set-active-spool', spool, contextId);
+    },
+    onSpoolSelected: (callback: (spool: unknown) => void) => {
+      const wrapped: DialogIPCListener = (_event: unknown, spool: unknown) => callback(spool);
+      listeners.set('spoolman:spool-selected', { original: callback as DialogIPCListener, wrapped });
+      ipcRenderer.on('spoolman:spool-selected', wrapped);
+    },
+    onSpoolUpdated: (callback: (spool: unknown) => void) => {
+      const wrapped: DialogIPCListener = (_event: unknown, spool: unknown) => callback(spool);
+      listeners.set('spoolman:spool-updated', { original: callback as DialogIPCListener, wrapped });
+      ipcRenderer.on('spoolman:spool-updated', wrapped);
     }
   }
 } as DialogElectronAPI);

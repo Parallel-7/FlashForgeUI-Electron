@@ -41,6 +41,7 @@ interface ElectronAPI {
   requestMaterialStationStatus: () => Promise<unknown>;
   requestModelPreview: () => Promise<string | null>;
   requestBackendStatus: () => Promise<unknown>;
+  requestConfig: () => Promise<unknown>;
   onPlatformInfo: (callback: (platform: string) => void) => void;
   loading: LoadingAPI;
   camera: CameraAPI;
@@ -229,7 +230,8 @@ const validReceiveChannels = [
   'shortcut-config:save-request',
   'shortcut-config:get-components-request',
   'spoolman:spool-selected',
-  'spoolman:spool-updated'
+  'spoolman:spool-updated',
+  'config-updated'
 ];
 
 // Expose camera URL for renderer
@@ -396,6 +398,10 @@ contextBridge.exposeInMainWorld('api', {
 
   requestBackendStatus: async (): Promise<unknown> => {
     return await ipcRenderer.invoke('request-backend-status');
+  },
+
+  requestConfig: async (): Promise<unknown> => {
+    return await ipcRenderer.invoke('request-config');
   },
 
   onPlatformInfo: (callback: (platform: string) => void) => {
