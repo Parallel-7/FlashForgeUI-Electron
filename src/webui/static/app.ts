@@ -2737,12 +2737,70 @@ async function checkAuthStatus(): Promise<boolean> {
   }
 }
 
+// ============================================================================
+// THEME MANAGEMENT
+// ============================================================================
+
+interface ThemeColors {
+  primary: string;
+  secondary: string;
+  background: string;
+  surface: string;
+  text: string;
+}
+
+async function loadWebUITheme(): Promise<void> {
+  try {
+    const response = await fetch('/api/webui/theme', {
+      headers: buildAuthHeaders()
+    });
+
+    if (response.ok) {
+      const theme = await response.json() as ThemeColors;
+      applyWebUITheme(theme);
+    } else {
+      console.warn('Failed to load WebUI theme, using defaults');
+    }
+  } catch (error) {
+    console.error('Error loading WebUI theme:', error);
+  }
+}
+
+function applyWebUITheme(theme: ThemeColors): void {
+  const root = document.documentElement;
+
+  root.style.setProperty('--theme-primary', theme.primary);
+  root.style.setProperty('--theme-secondary', theme.secondary);
+  root.style.setProperty('--theme-background', theme.background);
+  root.style.setProperty('--theme-surface', theme.surface);
+  root.style.setProperty('--theme-text', theme.text);
+
+  // Compute hover states (slightly lighter for dark theme)
+  const primaryHover = lightenColor(theme.primary, 15);
+  const secondaryHover = lightenColor(theme.secondary, 15);
+  root.style.setProperty('--theme-primary-hover', primaryHover);
+  root.style.setProperty('--theme-secondary-hover', secondaryHover);
+
+  console.log('WebUI theme applied:', theme);
+}
+
+function lightenColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * (percent / 100)));
+  const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * (percent / 100)));
+  const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * (percent / 100)));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
 async function initialize(): Promise<void> {
   console.log('Initializing Web UI...');
   initializeLucideIcons();
 
   // Setup event handlers
   setupEventHandlers();
+
+  // Load WebUI theme
+  await loadWebUITheme();
 
   // Setup viewport change detection
   setupViewportListener();

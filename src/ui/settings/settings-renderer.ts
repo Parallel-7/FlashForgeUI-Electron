@@ -31,7 +31,7 @@
 
 // src/ui/settings/settings-renderer.ts
 
-import { AppConfig } from '../../types/config';
+import { AppConfig, ThemeColors, DEFAULT_THEME } from '../../types/config';
 
 interface ISettingsAPI {
   requestConfig: () => Promise<AppConfig>;
@@ -138,6 +138,8 @@ class SettingsRenderer {
   private updateCheckButton: HTMLButtonElement | null = null;
   private testSpoolmanButton: HTMLButtonElement | null = null;
   private spoolmanTestResultElement: HTMLElement | null = null;
+  private resetDesktopThemeButton: HTMLButtonElement | null = null;
+  private desktopThemeInputs: Map<keyof ThemeColors, HTMLInputElement> = new Map();
   private statusTimeout: NodeJS.Timeout | null = null;
   private readonly settings: MutableSettings = { global: {}, perPrinter: {} };
   private printerName: string | null = null;
@@ -188,6 +190,26 @@ class SettingsRenderer {
     this.testSpoolmanButton = document.getElementById('btn-test-spoolman') as HTMLButtonElement | null;
     this.spoolmanTestResultElement = document.getElementById('spoolman-test-result');
 
+    // Initialize desktop theme inputs
+    const themeInputIds: Array<[keyof ThemeColors, string]> = [
+      ['primary', 'desktop-theme-primary'],
+      ['secondary', 'desktop-theme-secondary'],
+      ['background', 'desktop-theme-background'],
+      ['surface', 'desktop-theme-surface'],
+      ['text', 'desktop-theme-text']
+    ];
+
+    themeInputIds.forEach(([key, id]) => {
+      const input = document.getElementById(id) as HTMLInputElement | null;
+      if (input) {
+        this.desktopThemeInputs.set(key, input);
+      } else {
+        console.warn(`Theme input element not found: ${id}`);
+      }
+    });
+
+    this.resetDesktopThemeButton = document.getElementById('reset-desktop-theme') as HTMLButtonElement | null;
+
     this.initializeTabs();
   }
 
@@ -227,6 +249,16 @@ class SettingsRenderer {
       this.testSpoolmanButton.addEventListener('click', () => {
         void this.handleTestSpoolmanConnection();
       });
+    }
+
+    // Theme color input listeners
+    this.desktopThemeInputs.forEach((input) => {
+      input.addEventListener('input', () => this.handleDesktopThemeChange());
+    });
+
+    // Reset theme button
+    if (this.resetDesktopThemeButton) {
+      this.resetDesktopThemeButton.addEventListener('click', () => this.handleResetDesktopTheme());
     }
   }
 
@@ -314,6 +346,9 @@ class SettingsRenderer {
         }
       }
     });
+
+    // Load desktop theme values
+    this.loadDesktopTheme();
 
     // Update input states after loading
     this.updateInputStates();
@@ -565,7 +600,7 @@ class SettingsRenderer {
   private handleMacOSCompatibility(): void {
     // Check if running on macOS
     const isMacOS = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    
+
     if (isMacOS) {
       // Disable the rounded UI checkbox on macOS
       const roundedUIInput = this.inputs.get('rounded-ui');
@@ -574,13 +609,52 @@ class SettingsRenderer {
         roundedUIInput.checked = false;
         roundedUIInput.style.opacity = '0.5';
       }
-      
+
       // Show the macOS warning message
       const macosWarning = document.querySelector('.macos-warning');
       if (macosWarning) {
         (macosWarning as HTMLElement).style.display = 'block';
       }
     }
+  }
+
+  private loadDesktopTheme(): void {
+    const desktopTheme = this.settings.global['DesktopTheme'] as ThemeColors | undefined;
+    const theme = desktopTheme || DEFAULT_THEME;
+
+    this.desktopThemeInputs.forEach((input, key) => {
+      input.value = theme[key];
+    });
+
+    console.log('[Settings] Loaded desktop theme:', theme);
+  }
+
+  private handleDesktopThemeChange(): void {
+    const theme: ThemeColors = {
+      primary: this.desktopThemeInputs.get('primary')?.value || DEFAULT_THEME.primary,
+      secondary: this.desktopThemeInputs.get('secondary')?.value || DEFAULT_THEME.secondary,
+      background: this.desktopThemeInputs.get('background')?.value || DEFAULT_THEME.background,
+      surface: this.desktopThemeInputs.get('surface')?.value || DEFAULT_THEME.surface,
+      text: this.desktopThemeInputs.get('text')?.value || DEFAULT_THEME.text,
+    };
+
+    this.settings.global['DesktopTheme'] = theme;
+    this.hasUnsavedChanges = true;
+    this.updateSaveButtonState();
+
+    console.log('[Settings] Desktop theme changed:', theme);
+  }
+
+  private handleResetDesktopTheme(): void {
+    this.desktopThemeInputs.forEach((input, key) => {
+      input.value = DEFAULT_THEME[key];
+    });
+
+    this.settings.global['DesktopTheme'] = { ...DEFAULT_THEME };
+    this.hasUnsavedChanges = true;
+    this.updateSaveButtonState();
+
+    console.log('[Settings] Desktop theme reset to default');
   }
 
   private setInputEnabled(inputId: string, enabled: boolean): void {

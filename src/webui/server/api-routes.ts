@@ -37,6 +37,8 @@ import {
 import { toAppError } from '../../utils/error.utils';
 import { FiveMClient } from '@ghosttypes/ff-api';
 import { isAD5XJobInfo } from '../../printer-backends/ad5x/ad5x-utils';
+import { getConfigManager } from '../../managers/ConfigManager';
+import { sanitizeTheme } from '../../types/config';
 
 /**
  * Extended printer status interface for accessing additional properties
@@ -1602,6 +1604,62 @@ export function createAPIRoutes(): Router {
       const response: StandardAPIResponse = {
         success: true,
         message: `Switched to printer: ${context.printerDetails.Name}`
+      };
+
+      return res.json(response);
+    } catch (error) {
+      const appError = toAppError(error);
+      const response: StandardAPIResponse = {
+        success: false,
+        error: appError.message
+      };
+      return res.status(500).json(response);
+    }
+  });
+
+  // ============================================================================
+  // THEME MANAGEMENT ROUTES
+  // ============================================================================
+
+  /**
+   * GET /api/webui/theme - Get WebUI theme colors
+   */
+  router.get('/webui/theme', async (_req: AuthenticatedRequest, res: Response) => {
+    try {
+      const configManager = getConfigManager();
+      const config = configManager.getConfig();
+
+      return res.json(config.WebUITheme);
+    } catch (error) {
+      const appError = toAppError(error);
+      const response: StandardAPIResponse = {
+        success: false,
+        error: appError.message
+      };
+      return res.status(500).json(response);
+    }
+  });
+
+  /**
+   * POST /api/webui/theme - Update WebUI theme colors
+   */
+  router.post('/webui/theme', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const configManager = getConfigManager();
+
+      // Sanitize the incoming theme data
+      const sanitizedTheme = sanitizeTheme(req.body);
+
+      // Update config with new theme
+      const currentConfig = configManager.getConfig();
+      await configManager.updateConfig({
+        ...currentConfig,
+        WebUITheme: sanitizedTheme
+      });
+
+      const response: StandardAPIResponse = {
+        success: true,
+        message: 'WebUI theme updated successfully'
       };
 
       return res.json(response);

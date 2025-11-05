@@ -11,35 +11,40 @@
 }
 
 :root {
-  /* Core Backgrounds - Professional Dark Theme */
-  --dark-bg: #1e1e1e;
-  --darker-bg: #151515;
-  --header-bg: #1a1a1a;
+  /* Theme Variables (set by renderer.ts from config) */
+  /* --theme-primary: set dynamically */
+  /* --theme-secondary: set dynamically */
+  /* --theme-background: set dynamically */
+  /* --theme-surface: set dynamically */
+  /* --theme-text: set dynamically */
+  /* --theme-primary-hover: computed dynamically */
+  /* --theme-secondary-hover: computed dynamically */
 
-  /* Border and Dividers - Subtle and refined */
-  --border-color: #2d2d2d;
-  --border-color-light: #3a3a3a;
-  --border-color-focus: #4a4a4a;
+  /* Derived theme-based variables for compatibility */
+  --dark-bg: var(--theme-background, #1e1e1e);
+  --card-bg: var(--theme-surface, #252525);
+  --button-bg: var(--theme-primary, #4285f4);
+  --button-hover: var(--theme-primary-hover, #5a95f5);
+  --button-active: var(--theme-secondary, #357abd);
+  --text-color: var(--theme-text, #e8e8e8);
+  --accent-color: var(--theme-primary, #4285f4);
 
-  /* Primary Actions - Vibrant blue with accessibility */
-  --button-bg: #4285f4;
-  --button-hover: #5a95f5;
-  --button-active: #357abd;
-
-  /* Text Colors - High contrast for readability */
-  --text-color: #e8e8e8;
+  /* Secondary derived colors */
+  --darker-bg: var(--theme-background, #151515);
+  --header-bg: var(--theme-background, #1a1a1a);
   --text-color-secondary: #b0b0b0;
   --text-color-muted: #808080;
+  --card-bg-hover: #2a2a2a;
 
-  /* Accent and Status Colors */
-  --accent-color: #4285f4;
+  /* Border colors (derived from surface with transparency) */
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-color-light: rgba(255, 255, 255, 0.15);
+  --border-color-focus: rgba(255, 255, 255, 0.2);
+
+  /* Status Colors (independent of theme) */
   --error-color: #f44336;
   --warning-color: #ff9800;
   --success-color: #00e676;
-
-  /* Card and Panel Styling */
-  --card-bg: #252525;
-  --card-bg-hover: #2a2a2a;
 
   /* Shadows for depth */
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);

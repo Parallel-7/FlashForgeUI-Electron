@@ -60,6 +60,7 @@ import { getGlobalStateTracker, STATE_EVENTS, type StateChangeEvent } from './se
 import { initializeUIAnimations, resetUI, handleUIError } from './services/ui-updater';
 import type { PollingData } from './types/polling';
 import type { ResolvedCameraConfig } from './types/camera';
+import type { ThemeColors } from './types/config';
 
 
 // ============================================================================
@@ -2196,9 +2197,78 @@ function initializeStateAndEventListeners(): void {
       console.log('Printer connected event:', data);
       stateTracker.onConnected();
     });
+
+    // Listen for config updates to reapply theme
+    window.api.receive('config-updated', async (...args: unknown[]) => {
+      const updatedConfig = args[0] as { DesktopTheme?: ThemeColors };
+      if (updatedConfig.DesktopTheme) {
+        console.log('Config updated, reapplying desktop theme');
+        applyDesktopTheme(updatedConfig.DesktopTheme);
+      }
+    });
   }
-  
+
   console.log('State tracking and event listeners initialized');
+}
+
+// ============================================================================
+// THEME APPLICATION
+// ============================================================================
+
+/**
+ * Applies theme colors to the document root CSS variables
+ * @param theme The theme colors to apply
+ */
+function applyDesktopTheme(theme: ThemeColors): void {
+  const root = document.documentElement;
+
+  // Apply theme color variables
+  root.style.setProperty('--theme-primary', theme.primary);
+  root.style.setProperty('--theme-secondary', theme.secondary);
+  root.style.setProperty('--theme-background', theme.background);
+  root.style.setProperty('--theme-surface', theme.surface);
+  root.style.setProperty('--theme-text', theme.text);
+
+  // Compute hover states (slightly lighter for dark theme)
+  const primaryHover = lightenColor(theme.primary, 15);
+  const secondaryHover = lightenColor(theme.secondary, 15);
+  root.style.setProperty('--theme-primary-hover', primaryHover);
+  root.style.setProperty('--theme-secondary-hover', secondaryHover);
+
+  console.log('Desktop theme applied:', theme);
+}
+
+/**
+ * Lightens a hex color by a percentage
+ * @param hex Hex color string (e.g., '#4285f4')
+ * @param percent Percentage to lighten (0-100)
+ * @returns Lightened hex color
+ */
+function lightenColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+  const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * (percent / 100)));
+  const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * (percent / 100)));
+  const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * (percent / 100)));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+/**
+ * Loads and applies the desktop theme from config
+ */
+async function loadAndApplyDesktopTheme(): Promise<void> {
+  try {
+    if (!window.api?.requestConfig) {
+      console.warn('Cannot load theme: API not available');
+      return;
+    }
+
+    const config = await window.api.requestConfig();
+    if (config.DesktopTheme) {
+      applyDesktopTheme(config.DesktopTheme);
+    }
+  } catch (error) {
+    console.error('Failed to load desktop theme:', error);
+  }
 }
 
 // ============================================================================
@@ -2241,6 +2311,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log(`Platform-specific styling applied: platform-${window.PLATFORM}`);
     logMessage(`Platform detected: ${window.PLATFORM}`);
   }
+
+  // Load and apply desktop theme
+  await loadAndApplyDesktopTheme();
 
   console.log('IPC listeners configured for component system integration');
 

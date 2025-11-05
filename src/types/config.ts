@@ -20,11 +20,25 @@
  * - Camera: CustomCamera, CustomCameraUrl, CameraProxyPort
  * - WebUI: WebUIEnabled, WebUIPort, WebUIPassword
  * - Integrations: DiscordSync, FilamentTrackerIntegrationEnabled, Spoolman
+ * - Themes: DesktopTheme, WebUITheme
  * - Advanced: ForceLegacyAPI, CustomLeds
  * - Auto-Update: CheckForUpdatesOnLaunch, UpdateChannel, AutoDownloadUpdates
  *
  * @module types/config
  */
+
+/**
+ * Theme color configuration
+ * Defines the color palette for the application UI
+ */
+export interface ThemeColors {
+  primary: string;    // Main accent colour (used for buttons, highlights)
+  secondary: string;  // Secondary accent colour or gradient end
+  background: string; // Base background for content (not the window itself)
+  surface: string;    // Card/panel background inside windows
+  text: string;       // Primary text colour
+}
+
 export interface AppConfig {
   readonly DiscordSync: boolean;
   readonly AlwaysOnTop: boolean;
@@ -55,6 +69,8 @@ export interface AppConfig {
   readonly SpoolmanEnabled: boolean;
   readonly SpoolmanServerUrl: string;
   readonly SpoolmanUpdateMode: 'length' | 'weight';
+  readonly DesktopTheme: ThemeColors;
+  readonly WebUITheme: ThemeColors;
 }
 
 /**
@@ -90,7 +106,20 @@ export interface MutableAppConfig {
   SpoolmanEnabled: boolean;
   SpoolmanServerUrl: string;
   SpoolmanUpdateMode: 'length' | 'weight';
+  DesktopTheme: ThemeColors;
+  WebUITheme: ThemeColors;
 }
+
+/**
+ * Default theme colors - dark theme matching current UI
+ */
+export const DEFAULT_THEME: ThemeColors = {
+  primary: '#4285f4',     // accent blue
+  secondary: '#357abd',   // gradient end
+  background: '#121212',  // dark base for content
+  surface: '#1e1e1e',     // card background
+  text: '#e0e0e0',        // light text
+};
 
 /**
  * Default configuration values that match the legacy JS defaults
@@ -124,7 +153,9 @@ export const DEFAULT_CONFIG: AppConfig = {
   RtspQuality: 3,              // Default quality 3
   SpoolmanEnabled: false,
   SpoolmanServerUrl: '',
-  SpoolmanUpdateMode: 'weight' // Default to weight-based updates
+  SpoolmanUpdateMode: 'weight', // Default to weight-based updates
+  DesktopTheme: DEFAULT_THEME,
+  WebUITheme: DEFAULT_THEME,
 } as const;
 
 /**
@@ -187,16 +218,40 @@ function assignConfigValue<K extends keyof MutableAppConfig>(
 }
 
 /**
+ * Validates that a value is a valid 6-digit hex color code
+ */
+function isValidHexColour(value: unknown): value is string {
+  return typeof value === 'string' && /^#([0-9a-fA-F]{6})$/.test(value);
+}
+
+/**
+ * Sanitizes a theme object, ensuring all colors are valid hex codes
+ * Falls back to default theme values for invalid colors
+ */
+export function sanitizeTheme(theme: Partial<ThemeColors> | undefined): ThemeColors {
+  const result: ThemeColors = { ...DEFAULT_THEME };
+  if (!theme) return result;
+
+  if (isValidHexColour(theme.primary)) result.primary = theme.primary;
+  if (isValidHexColour(theme.secondary)) result.secondary = theme.secondary;
+  if (isValidHexColour(theme.background)) result.background = theme.background;
+  if (isValidHexColour(theme.surface)) result.surface = theme.surface;
+  if (isValidHexColour(theme.text)) result.text = theme.text;
+
+  return result;
+}
+
+/**
  * Sanitizes and ensures a config object contains only valid keys with correct types
  */
 export function sanitizeConfig(config: Partial<AppConfig>): AppConfig {
   const sanitized: MutableAppConfig = { ...DEFAULT_CONFIG };
-  
+
   for (const [key, value] of Object.entries(config)) {
     if (isValidConfigKey(key)) {
       const defaultValue = DEFAULT_CONFIG[key];
       const expectedType = typeof defaultValue;
-      
+
       if (typeof value === expectedType) {
         if (expectedType === 'number') {
           // Ensure numbers are valid and within reasonable bounds
@@ -231,7 +286,15 @@ export function sanitizeConfig(config: Partial<AppConfig>): AppConfig {
       }
     }
   }
-  
+
+  // Sanitize theme objects separately
+  if (config.DesktopTheme) {
+    sanitized.DesktopTheme = sanitizeTheme(config.DesktopTheme);
+  }
+  if (config.WebUITheme) {
+    sanitized.WebUITheme = sanitizeTheme(config.WebUITheme);
+  }
+
   return sanitized;
 }
 
