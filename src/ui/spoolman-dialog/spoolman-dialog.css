@@ -63,9 +63,16 @@ body {
   right: 32px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 18px;
   opacity: 0.5;
   pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.search-icon svg {
+  width: 18px;
+  height: 18px;
 }
 
 /* ============================================================================
@@ -98,9 +105,18 @@ body {
 
 .error-icon,
 .empty-icon {
-  font-size: 64px;
   margin-bottom: 16px;
   opacity: 0.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.error-icon svg,
+.empty-icon svg {
+  width: 64px;
+  height: 64px;
+  stroke-width: 1.5;
 }
 
 .error-message {

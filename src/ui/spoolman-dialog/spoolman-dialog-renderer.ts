@@ -42,6 +42,10 @@ let currentQuery = '';
 // Initialize on DOM load
 document.addEventListener('DOMContentLoaded', () => {
   console.log('[SpoolmanDialog] Renderer loaded');
+
+  // Initialize Lucide icons
+  window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x', 'search', 'alert-triangle']);
+
   setupEventHandlers();
   void loadInitialSpools();
 });
