@@ -741,6 +741,7 @@ function openSettingsModal(): void {
   const modal = $('settings-modal');
   if (!modal) return;
   refreshSettingsUI(currentSettings);
+  void loadCurrentThemeIntoSettings();
   modal.classList.remove('hidden');
 }
 
@@ -806,6 +807,22 @@ function setupSettingsUI(): void {
     resetButton.addEventListener('click', () => {
       resetLayoutForCurrentPrinter();
       refreshSettingsUI(currentSettings);
+    });
+  }
+
+  // Theme controls
+  const applyThemeButton = $('apply-webui-theme-btn') as HTMLButtonElement | null;
+  const resetThemeButton = $('reset-webui-theme-btn') as HTMLButtonElement | null;
+
+  if (applyThemeButton) {
+    applyThemeButton.addEventListener('click', () => {
+      void handleApplyWebUITheme();
+    });
+  }
+
+  if (resetThemeButton) {
+    resetThemeButton.addEventListener('click', () => {
+      loadDefaultThemeIntoSettings();
     });
   }
 
@@ -2790,6 +2807,95 @@ function lightenColor(hex: string, percent: number): string {
   const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * (percent / 100)));
   const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * (percent / 100)));
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
+const DEFAULT_THEME_COLORS: ThemeColors = {
+  primary: '#4285f4',
+  secondary: '#357abd',
+  background: '#121212',
+  surface: '#1e1e1e',
+  text: '#e0e0e0',
+};
+
+async function loadCurrentThemeIntoSettings(): Promise<void> {
+  try {
+    const response = await fetch('/api/webui/theme', {
+      headers: buildAuthHeaders()
+    });
+
+    if (response.ok) {
+      const theme = await response.json() as ThemeColors;
+      setThemeInputValues(theme);
+    } else {
+      setThemeInputValues(DEFAULT_THEME_COLORS);
+    }
+  } catch (error) {
+    console.error('Error loading theme into settings:', error);
+    setThemeInputValues(DEFAULT_THEME_COLORS);
+  }
+}
+
+function loadDefaultThemeIntoSettings(): void {
+  setThemeInputValues(DEFAULT_THEME_COLORS);
+  showToast('Theme reset to defaults. Click Apply to save.', 'info');
+}
+
+function setThemeInputValues(theme: ThemeColors): void {
+  const primaryInput = $('webui-theme-primary') as HTMLInputElement | null;
+  const secondaryInput = $('webui-theme-secondary') as HTMLInputElement | null;
+  const backgroundInput = $('webui-theme-background') as HTMLInputElement | null;
+  const surfaceInput = $('webui-theme-surface') as HTMLInputElement | null;
+  const textInput = $('webui-theme-text') as HTMLInputElement | null;
+
+  if (primaryInput) primaryInput.value = theme.primary;
+  if (secondaryInput) secondaryInput.value = theme.secondary;
+  if (backgroundInput) backgroundInput.value = theme.background;
+  if (surfaceInput) surfaceInput.value = theme.surface;
+  if (textInput) textInput.value = theme.text;
+}
+
+function getThemeFromInputs(): ThemeColors {
+  const primaryInput = $('webui-theme-primary') as HTMLInputElement | null;
+  const secondaryInput = $('webui-theme-secondary') as HTMLInputElement | null;
+  const backgroundInput = $('webui-theme-background') as HTMLInputElement | null;
+  const surfaceInput = $('webui-theme-surface') as HTMLInputElement | null;
+  const textInput = $('webui-theme-text') as HTMLInputElement | null;
+
+  return {
+    primary: primaryInput?.value || DEFAULT_THEME_COLORS.primary,
+    secondary: secondaryInput?.value || DEFAULT_THEME_COLORS.secondary,
+    background: backgroundInput?.value || DEFAULT_THEME_COLORS.background,
+    surface: surfaceInput?.value || DEFAULT_THEME_COLORS.surface,
+    text: textInput?.value || DEFAULT_THEME_COLORS.text,
+  };
+}
+
+async function handleApplyWebUITheme(): Promise<void> {
+  try {
+    const theme = getThemeFromInputs();
+
+    // Save to config.json via API
+    const response = await fetch('/api/webui/theme', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...buildAuthHeaders()
+      },
+      body: JSON.stringify(theme)
+    });
+
+    if (!response.ok) {
+      showToast('Failed to save theme', 'error');
+      return;
+    }
+
+    // Apply theme immediately without reload
+    applyWebUITheme(theme);
+    showToast('Theme applied successfully', 'success');
+  } catch (error) {
+    console.error('Error applying WebUI theme:', error);
+    showToast('Error applying theme', 'error');
+  }
 }
 
 async function initialize(): Promise<void> {
