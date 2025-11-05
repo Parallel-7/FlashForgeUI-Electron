@@ -2803,6 +2803,13 @@ function applyWebUITheme(theme: ThemeColors): void {
 
 function lightenColor(hex: string, percent: number): string {
   const num = parseInt(hex.replace('#', ''), 16);
+
+  // Guard against invalid hex values
+  if (isNaN(num)) {
+    console.warn(`Invalid hex color for lightening: ${hex}, returning original`);
+    return hex;
+  }
+
   const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * (percent / 100)));
   const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * (percent / 100)));
   const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * (percent / 100)));
@@ -2816,6 +2823,13 @@ const DEFAULT_THEME_COLORS: ThemeColors = {
   surface: '#1e1e1e',
   text: '#e0e0e0',
 };
+
+/**
+ * Validates that a value is a valid 6-digit hex color code
+ */
+function isValidHexColor(value: string): boolean {
+  return /^#([0-9a-fA-F]{6})$/.test(value);
+}
 
 async function loadCurrentThemeIntoSettings(): Promise<void> {
   try {
@@ -2861,12 +2875,19 @@ function getThemeFromInputs(): ThemeColors {
   const surfaceInput = $('webui-theme-surface') as HTMLInputElement | null;
   const textInput = $('webui-theme-text') as HTMLInputElement | null;
 
+  // Get values and validate, falling back to defaults for invalid colors
+  const primary = primaryInput?.value ?? DEFAULT_THEME_COLORS.primary;
+  const secondary = secondaryInput?.value ?? DEFAULT_THEME_COLORS.secondary;
+  const background = backgroundInput?.value ?? DEFAULT_THEME_COLORS.background;
+  const surface = surfaceInput?.value ?? DEFAULT_THEME_COLORS.surface;
+  const text = textInput?.value ?? DEFAULT_THEME_COLORS.text;
+
   return {
-    primary: primaryInput?.value || DEFAULT_THEME_COLORS.primary,
-    secondary: secondaryInput?.value || DEFAULT_THEME_COLORS.secondary,
-    background: backgroundInput?.value || DEFAULT_THEME_COLORS.background,
-    surface: surfaceInput?.value || DEFAULT_THEME_COLORS.surface,
-    text: textInput?.value || DEFAULT_THEME_COLORS.text,
+    primary: isValidHexColor(primary) ? primary : DEFAULT_THEME_COLORS.primary,
+    secondary: isValidHexColor(secondary) ? secondary : DEFAULT_THEME_COLORS.secondary,
+    background: isValidHexColor(background) ? background : DEFAULT_THEME_COLORS.background,
+    surface: isValidHexColor(surface) ? surface : DEFAULT_THEME_COLORS.surface,
+    text: isValidHexColor(text) ? text : DEFAULT_THEME_COLORS.text,
   };
 }
 

@@ -61,6 +61,7 @@ import { initializeUIAnimations, resetUI, handleUIError } from './services/ui-up
 import type { PollingData } from './types/polling';
 import type { ResolvedCameraConfig } from './types/camera';
 import type { ThemeColors } from './types/config';
+import { DEFAULT_THEME } from './types/config';
 
 
 // ============================================================================
@@ -2246,6 +2247,13 @@ function applyDesktopTheme(theme: ThemeColors): void {
  */
 function lightenColor(hex: string, percent: number): string {
   const num = parseInt(hex.replace('#', ''), 16);
+
+  // Guard against invalid hex values
+  if (isNaN(num)) {
+    console.warn(`Invalid hex color for lightening: ${hex}, returning original`);
+    return hex;
+  }
+
   const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * (percent / 100)));
   const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * (percent / 100)));
   const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * (percent / 100)));
@@ -2268,6 +2276,8 @@ async function loadAndApplyDesktopTheme(): Promise<void> {
     }
   } catch (error) {
     console.error('Failed to load desktop theme:', error);
+    // Apply default theme as fallback to ensure UI is styled
+    applyDesktopTheme(DEFAULT_THEME);
   }
 }
 
