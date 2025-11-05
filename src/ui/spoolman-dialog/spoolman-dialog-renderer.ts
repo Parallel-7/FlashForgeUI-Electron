@@ -92,6 +92,28 @@ function setupEventHandlers(): void {
 }
 
 /**
+ * Filter spools by query across multiple fields (name, vendor, material)
+ * Performs case-insensitive partial matching on filament name, vendor name, and material
+ * @param spools - Array of spools to filter
+ * @param query - Search query string
+ * @returns Filtered array of spools matching the query
+ */
+function filterSpoolsByQuery(spools: SpoolResponse[], query: string): SpoolResponse[] {
+  if (!query) return spools; // No filter if query is empty
+
+  const lowerQuery = query.toLowerCase();
+  return spools.filter(spool => {
+    const name = (spool.filament.name || '').toLowerCase();
+    const vendor = (spool.filament.vendor?.name || '').toLowerCase();
+    const material = (spool.filament.material || '').toLowerCase();
+
+    return name.includes(lowerQuery) ||
+           vendor.includes(lowerQuery) ||
+           material.includes(lowerQuery);
+  });
+}
+
+/**
  * Load initial spools (first 50)
  */
 async function loadInitialSpools(): Promise<void> {
@@ -100,6 +122,7 @@ async function loadInitialSpools(): Promise<void> {
 
 /**
  * Load spools with search query
+ * Uses client-side filtering to search across name, vendor, and material fields
  */
 async function loadSpools(query: string): Promise<void> {
   showLoadingState();
@@ -109,17 +132,22 @@ async function loadSpools(query: string): Promise<void> {
       throw new Error('Spoolman dialog API not available');
     }
 
-    // Request spools from main process
+    // Fetch spools from main process
+    // If query exists, fetch more spools (200) for better client-side filtering
+    // If no query, fetch initial 50 for performance
+    const limit = query ? 200 : 50;
     const spools = await window.spoolmanDialogAPI.searchSpools({
-      'filament.name': query || undefined,
-      limit: 50,
+      limit,
       allow_archived: false,
     });
 
-    if (spools.length === 0) {
+    // Apply client-side filtering across name, vendor, and material fields
+    const filteredSpools = filterSpoolsByQuery(spools, query);
+
+    if (filteredSpools.length === 0) {
       showEmptyState();
     } else {
-      renderSpoolCards(spools);
+      renderSpoolCards(filteredSpools);
     }
   } catch (error) {
     console.error('[SpoolmanDialog] Failed to load spools:', error);
