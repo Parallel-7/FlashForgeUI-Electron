@@ -97,6 +97,7 @@
               <label><input type="checkbox" id="toggle-printer-state" data-component-id="printer-state" checked> Printer State</label>
               <label><input type="checkbox" id="toggle-temp-control" data-component-id="temp-control" checked> Temperature Control</label>
               <label><input type="checkbox" id="toggle-filtration-tvoc" data-component-id="filtration-tvoc" checked> Filtration &amp; TVOC</label>
+              <label><input type="checkbox" id="toggle-spoolman-tracker" data-component-id="spoolman-tracker" checked> Spoolman Tracker</label>
               <label><input type="checkbox" id="toggle-job-progress" data-component-id="job-progress" checked> Job Progress</label>
               <label><input type="checkbox" id="toggle-job-details" data-component-id="job-details" checked> Job Details</label>
             </section>
@@ -174,6 +175,34 @@
           <div class="modal-footer">
             <button id="material-matching-cancel" class="secondary-btn" type="button">Cancel</button>
             <button id="material-matching-confirm" class="primary-btn" type="button" disabled>Start Print</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Spoolman Spool Selection Modal -->
+      <div id="spoolman-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="spoolman-modal-title">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 id="spoolman-modal-title">Select Spool</h2>
+            <button id="spoolman-modal-close" class="close-btn" aria-label="Close spool selection">&times;</button>
+          </div>
+          <div class="modal-body">
+            <input
+              type="text"
+              id="spoolman-search"
+              placeholder="Search spools by name, vendor, or material..."
+              class="spoolman-search-input"
+              aria-label="Search spools"
+            >
+            <div id="spoolman-spool-list" class="spoolman-spool-list" role="list">
+              <!-- Populated dynamically -->
+            </div>
+            <div id="spoolman-no-results" class="spoolman-no-results hidden">No spools found</div>
+            <div id="spoolman-loading" class="spoolman-loading hidden">Loading spools...</div>
+          </div>
+          <div class="modal-footer">
+            <button id="spoolman-clear-spool" class="secondary-btn" type="button">Clear Active Spool</button>
+            <button id="spoolman-modal-cancel" class="secondary-btn" type="button">Cancel</button>
           </div>
         </div>
       </div>

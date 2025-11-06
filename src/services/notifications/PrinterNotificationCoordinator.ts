@@ -45,6 +45,7 @@ import { EventEmitter } from '../../utils/EventEmitter';
 import { getNotificationService, NotificationService } from './NotificationService';
 import { getConfigManager, ConfigManager } from '../../managers/ConfigManager';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager';
+import { getSpoolmanIntegrationService } from '../SpoolmanIntegrationService';
 import { SpoolmanService } from '../SpoolmanService';
 import type { PrinterPollingService } from '../PrinterPollingService';
 import type { 
@@ -345,76 +346,92 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
       }, NotificationStateTransition.PrintCompleted);
     }
 
-    // Update Spoolman with filament usage
-    await this.updateSpoolmanUsage(status);
-
     // Start temperature monitoring for cooled notification
     this.startTemperatureMonitoring();
   }
 
   /**
-   * Update Spoolman with filament usage after print completion
-   * Gets active spool from PrinterContextManager and updates via SpoolmanService
+   * Update Spoolman filament usage when a print has cooled.
+   * Resolves the associated context, derives usage from polling data, and persists updates.
    */
   private async updateSpoolmanUsage(status: PrinterStatus): Promise<void> {
     try {
       const config = this.configManager.getConfig();
-
-      // Check if Spoolman integration is enabled
       if (!config.SpoolmanEnabled || !config.SpoolmanServerUrl) {
         return;
       }
 
-      // Get active spool from context manager
       const contextManager = getPrinterContextManager();
-      const activeSpoolId = contextManager.getActiveSpoolId();
+      const contextId =
+        contextManager.getContextIdForNotificationCoordinator(this) ||
+        contextManager.getActiveContextId();
 
-      if (!activeSpoolId) {
-        console.log('[Spoolman] No active spool selected - skipping usage update');
+      if (!contextId) {
+        console.warn('[Spoolman] Unable to resolve context for usage update');
         return;
       }
 
-      // Get filament usage from current job
+      let integrationService: ReturnType<typeof getSpoolmanIntegrationService>;
+      try {
+        integrationService = getSpoolmanIntegrationService();
+      } catch {
+        console.warn('[Spoolman] Integration service not initialized - skipping usage update');
+        return;
+      }
+
+      if (!integrationService.isGloballyEnabled() || !integrationService.isContextSupported(contextId)) {
+        console.log(`[Spoolman] Context ${contextId} is not eligible for usage updates`);
+        return;
+      }
+
+      const activeSpool = integrationService.getActiveSpool(contextId);
+      if (!activeSpool) {
+        console.log(`[Spoolman] No active spool for context ${contextId} - skipping usage update`);
+        return;
+      }
+
       const job = status.currentJob;
-      if (!job) {
-        console.warn('[Spoolman] Print completed but no job data available');
+      const progress = job?.progress;
+      if (!progress) {
+        console.warn('[Spoolman] Unable to determine job progress for usage update');
         return;
       }
 
-      const weightUsed = job.progress.weightUsed; // grams
-      const lengthUsed = job.progress.lengthUsed * 1000; // convert meters to mm
+      const weightUsed = progress.weightUsed ?? 0;
+      const lengthUsedMeters = progress.lengthUsed ?? 0;
+      const lengthUsedMillimeters = Number((lengthUsedMeters * 1000).toFixed(2));
 
-      // Validate we have usage data
-      if (weightUsed <= 0 && lengthUsed <= 0) {
+      let updatePayload: { use_weight?: number; use_length?: number } | null = null;
+      if (config.SpoolmanUpdateMode === 'weight') {
+        if (weightUsed > 0) {
+          updatePayload = { use_weight: weightUsed };
+        } else if (lengthUsedMillimeters > 0) {
+          updatePayload = { use_length: lengthUsedMillimeters };
+        }
+      } else {
+        if (lengthUsedMillimeters > 0) {
+          updatePayload = { use_length: lengthUsedMillimeters };
+        } else if (weightUsed > 0) {
+          updatePayload = { use_weight: weightUsed };
+        }
+      }
+
+      if (!updatePayload) {
         console.warn('[Spoolman] No filament usage recorded for this print');
         return;
       }
 
-      // Create Spoolman service instance
       const service = new SpoolmanService(config.SpoolmanServerUrl);
+      console.log(`[Spoolman] Updating spool ${activeSpool.id} for context ${contextId}`, updatePayload);
 
-      // Update based on configured mode
-      const updatePayload = config.SpoolmanUpdateMode === 'weight'
-        ? { use_weight: weightUsed }
-        : { use_length: lengthUsed };
+      const updatedSpool = await service.updateUsage(activeSpool.id, updatePayload);
+      const updatedActiveSpool = integrationService.convertToActiveSpoolData(updatedSpool);
+      await integrationService.setActiveSpool(contextId, updatedActiveSpool);
 
-      console.log(`[Spoolman] Updating spool ${activeSpoolId} with ${config.SpoolmanUpdateMode}:`,
-                  config.SpoolmanUpdateMode === 'weight' ? `${weightUsed}g` : `${lengthUsed}mm`);
-
-      // Update the spool
-      const updatedSpool = await service.updateUsage(activeSpoolId, updatePayload);
-
-      // Update context manager with new remaining values
-      const activeSpoolData = contextManager.getActiveSpool();
-      if (activeSpoolData) {
-        activeSpoolData.remainingWeight = updatedSpool.remaining_weight || 0;
-        activeSpoolData.remainingLength = updatedSpool.remaining_length || 0;
-        contextManager.setActiveSpool(undefined, activeSpoolData);
-        console.log('[Spoolman] Successfully updated spool remaining values');
-      }
-
+      console.log(`[Spoolman] Successfully updated spool usage for context ${contextId}`);
     } catch (error) {
-      console.error('[Spoolman] Failed to update filament usage:', error);
+      const message = error instanceof Error ? error.message : String(error);
+      console.error('[Spoolman] Failed to update filament usage:', message);
     }
   }
 
@@ -504,6 +521,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
         hasSentPrinterCooledNotification: true
       }, NotificationStateTransition.PrinterCooled);
 
+      await this.updateSpoolmanUsage(status);
       await this.sendPrinterCooledNotification(status);
 
       // Stop temperature monitoring
@@ -763,4 +781,3 @@ export function resetPrinterNotificationCoordinator(): void {
 // ============================================================================
 
 export type { TemperatureMonitorConfig, CoordinatorEventMap };
-

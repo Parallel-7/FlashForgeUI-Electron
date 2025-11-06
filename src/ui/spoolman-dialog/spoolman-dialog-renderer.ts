@@ -122,7 +122,7 @@ async function loadInitialSpools(): Promise<void> {
 
 /**
  * Load spools with search query
- * Uses client-side filtering to search across name, vendor, and material fields
+ * Uses server-side filtering to search across name, vendor, and material fields
  */
 async function loadSpools(query: string): Promise<void> {
   showLoadingState();
@@ -132,22 +132,37 @@ async function loadSpools(query: string): Promise<void> {
       throw new Error('Spoolman dialog API not available');
     }
 
-    // Fetch spools from main process
-    // If query exists, fetch more spools (200) for better client-side filtering
-    // If no query, fetch initial 50 for performance
-    const limit = query ? 200 : 50;
-    const spools = await window.spoolmanDialogAPI.searchSpools({
-      limit,
+    // Build search query with server-side filtering
+    const searchQuery: import('../../types/spoolman').SpoolSearchQuery = {
+      limit: 50,
       allow_archived: false,
-    });
+    };
 
-    // Apply client-side filtering across name, vendor, and material fields
-    const filteredSpools = filterSpoolsByQuery(spools, query);
+    // Add search parameter if query exists
+    // Spoolman supports partial matching on filament name
+    if (query && query.trim()) {
+      searchQuery['filament.name'] = query.trim();
+    }
 
-    if (filteredSpools.length === 0) {
+    // Fetch spools from main process (server-side filtering)
+    const spools = await window.spoolmanDialogAPI.searchSpools(searchQuery);
+
+    // If server-side search returned no results, try client-side filtering as fallback
+    // This helps find spools by vendor or material when user doesn't know exact name
+    let displaySpools = spools;
+    if (spools.length === 0 && query && query.trim()) {
+      // Fetch all spools and filter client-side
+      const allSpools = await window.spoolmanDialogAPI.searchSpools({
+        limit: 200,
+        allow_archived: false,
+      });
+      displaySpools = filterSpoolsByQuery(allSpools, query);
+    }
+
+    if (displaySpools.length === 0) {
       showEmptyState();
     } else {
-      renderSpoolCards(filteredSpools);
+      renderSpoolCards(displaySpools);
     }
   } catch (error) {
     console.error('[SpoolmanDialog] Failed to load spools:', error);
@@ -227,6 +242,7 @@ async function handleSpoolSelect(spool: SpoolResponse): Promise<void> {
     colorHex: ensureHashPrefix(spool.filament.color_hex),
     remainingWeight: spool.remaining_weight || 0,
     remainingLength: spool.remaining_length || 0,
+    lastUpdated: new Date().toISOString()
   };
 
   // Send selection to main process

@@ -33,7 +33,7 @@ export class SpoolmanComponent extends BaseComponent {
     <div class="spoolman-component">
       <!-- Disabled state -->
       <div class="spoolman-state spoolman-disabled">
-        <div class="spoolman-icon">🧵</div>
+        <i data-lucide="package" class="spoolman-icon"></i>
         <p class="spoolman-message">
           Spoolman integration is disabled.<br>
           Enable in Settings to track filament usage.
@@ -48,7 +48,9 @@ export class SpoolmanComponent extends BaseComponent {
 
       <!-- Active spool state -->
       <div class="spoolman-state spoolman-active">
-        <button class="btn-settings" title="Change Spool">⚙️</button>
+        <button class="btn-settings" title="Change Spool">
+          <i data-lucide="settings" class="icon-settings"></i>
+        </button>
         <div class="spool-visual">
           <div class="spool-center"></div>
         </div>
@@ -102,6 +104,11 @@ export class SpoolmanComponent extends BaseComponent {
 
     // Setup IPC event listeners
     this.setupIPCListeners();
+
+    // Initialize Lucide icons for this component
+    if (window.lucideHelpers?.initializeLucideIconsFromGlobal) {
+      window.lucideHelpers.initializeLucideIconsFromGlobal(['package', 'settings']);
+    }
 
     // Load initial state from localStorage
     await this.loadState();

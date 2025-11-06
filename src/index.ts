@@ -47,6 +47,7 @@ import { parseHeadlessArguments, validateHeadlessConfig } from './utils/Headless
 import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection';
 import { getHeadlessManager } from './managers/HeadlessManager';
 import { getAutoUpdateService } from './services/AutoUpdateService';
+import { initializeSpoolmanIntegrationService } from './services/SpoolmanIntegrationService';
 
 /**
  * Main Electron process entry point. Handles app lifecycle, creates the main window,
@@ -352,6 +353,40 @@ const createMainWindow = async (): Promise<void> => {
 /**
  * Set up printer context event forwarding to renderer process
  */
+/**
+ * Setup Spoolman event forwarding to renderer windows
+ */
+const setupSpoolmanEventForwarding = (): void => {
+  try {
+    const { getSpoolmanIntegrationService } = require('./services/SpoolmanIntegrationService');
+    const spoolmanService = getSpoolmanIntegrationService();
+    const windowManager = getWindowManager();
+
+    // Forward spoolman-changed events to all renderer windows
+    spoolmanService.on('spoolman-changed', (event: unknown) => {
+      const spoolmanEvent = event as import('./services/SpoolmanIntegrationService').SpoolmanChangedEvent;
+
+      // Forward to main window
+      const mainWindow = windowManager.getMainWindow();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('spoolman:spool-updated', spoolmanEvent.spool);
+      }
+
+      // Forward to component dialog if open
+      const componentDialog = windowManager.getComponentDialogWindow();
+      if (componentDialog && !componentDialog.isDestroyed()) {
+        componentDialog.webContents.send('spoolman:spool-updated', spoolmanEvent.spool);
+      }
+
+      console.log(`[Spoolman Event] Forwarded spool update for context ${spoolmanEvent.contextId}`);
+    });
+
+    console.log('Spoolman event forwarding setup complete');
+  } catch {
+    console.warn('Spoolman integration service not available - skipping event forwarding');
+  }
+};
+
 const setupPrinterContextEventForwarding = (): void => {
   const contextManager = getPrinterContextManager();
   const windowManager = getWindowManager();
@@ -595,6 +630,14 @@ const initializeApp = async (): Promise<void> => {
   setupCameraContextHandlers();
   console.log('Printer context IPC handlers registered');
 
+  // Initialize Spoolman integration service
+  initializeSpoolmanIntegrationService(
+    getConfigManager(),
+    getPrinterContextManager(),
+    getPrinterBackendManager()
+  );
+  console.log('Spoolman integration service initialized');
+
   // Setup legacy dialog handlers (printer selection enhancement, loading overlay)
   setupDialogHandlers();
   
@@ -608,6 +651,7 @@ const initializeApp = async (): Promise<void> => {
   // Setup event forwarding
   setupConnectionEventForwarding();
   setupPrinterContextEventForwarding();
+  setupSpoolmanEventForwarding();
 
   // Initialize camera service
   await initializeCameraService();
@@ -678,6 +722,14 @@ async function initializeHeadless(): Promise<void> {
   const rtspStreamService = getRtspStreamService();
   await rtspStreamService.initialize();
   console.log('[Headless] RTSP stream service initialized');
+
+  // Initialize Spoolman integration service
+  initializeSpoolmanIntegrationService(
+    getConfigManager(),
+    getPrinterContextManager(),
+    getPrinterBackendManager()
+  );
+  console.log('[Headless] Spoolman integration service initialized');
 
   // Initialize headless manager
   const headlessManager = getHeadlessManager();

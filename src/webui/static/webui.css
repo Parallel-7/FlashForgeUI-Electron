@@ -1325,3 +1325,210 @@ body {
 #control-grid .panel-content::-webkit-scrollbar-thumb:hover {
   background: var(--accent-color);
 }
+
+/* ============================================================================
+   SPOOLMAN TRACKER COMPONENT
+   ============================================================================ */
+
+/* Spoolman Panel States */
+.spoolman-state {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.spoolman-message {
+  padding: 12px;
+  border-radius: 10px;
+  background-color: var(--darker-bg);
+  border: 1px dashed var(--border-color);
+  color: var(--text-color-secondary);
+  text-align: center;
+  font-size: 14px;
+}
+
+/* Spool Info Display */
+.spool-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.spool-color-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+  /* Ensure color is visible even with dark colors on dark backgrounds */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.spool-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.spool-name {
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spool-meta {
+  font-size: 13px;
+  color: var(--text-color-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spool-stats {
+  margin-bottom: 12px;
+}
+
+.spool-stats .stat-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.spool-stats .stat-row span:first-child {
+  color: var(--text-color-secondary);
+}
+
+.spool-stats .stat-row span:last-child {
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+/* ============================================================================
+   SPOOLMAN MODAL
+   ============================================================================ */
+
+.spoolman-search-input {
+  width: 100%;
+  background-color: var(--darker-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 16px;
+  outline: none;
+  margin-bottom: 16px;
+  transition: border-color var(--transition-fast);
+}
+
+.spoolman-search-input:focus {
+  border-color: var(--accent-color);
+}
+
+.spoolman-search-input::placeholder {
+  color: var(--text-color-muted);
+}
+
+.spoolman-spool-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.spoolman-spool-item {
+  background-color: var(--darker-bg);
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background-color var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.spoolman-spool-item:hover {
+  background-color: var(--card-bg-hover);
+  transform: translateY(-1px);
+  border-color: var(--border-color-light);
+}
+
+.spoolman-spool-item:active {
+  transform: translateY(0);
+}
+
+.spoolman-spool-item .spool-color-indicator {
+  width: 24px;
+  height: 24px;
+  /* Slightly thicker border for better visibility in modal */
+  border-width: 2px;
+}
+
+.spoolman-spool-item .spool-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.spoolman-spool-item .spool-name {
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.spoolman-spool-item .spool-meta {
+  font-size: 13px;
+}
+
+.spoolman-spool-item .spool-remaining {
+  font-size: 13px;
+  color: var(--text-color-secondary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.spoolman-no-results,
+.spoolman-loading {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-color-secondary);
+  font-size: 14px;
+}
+
+.spoolman-loading {
+  color: var(--accent-color);
+}
+
+/* ============================================================================
+   SPOOLMAN RESPONSIVE (Mobile)
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .spool-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .spool-color-indicator {
+    margin-bottom: 4px;
+  }
+
+  .spoolman-spool-list {
+    max-height: 300px;
+  }
+
+  .spoolman-spool-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .spoolman-spool-item .spool-remaining {
+    text-align: left;
+  }
+}

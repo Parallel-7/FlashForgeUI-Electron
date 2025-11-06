@@ -22,7 +22,7 @@
 import { ipcMain, BrowserWindow } from 'electron';
 import * as path from 'path';
 import { getConfigManager } from '../../managers/ConfigManager';
-import { getPrinterContextManager } from '../../managers/PrinterContextManager';
+import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegrationService';
 import { SpoolmanService } from '../../services/SpoolmanService';
 import type { SpoolSearchQuery, ActiveSpoolData } from '../../types/spoolman';
 import { createModalWindow, loadWindowHTML, setupDevTools, setupWindowLifecycle, validateParentWindow } from '../../windows/shared/WindowConfig';
@@ -97,10 +97,10 @@ export function registerSpoolmanHandlers(): void {
 
   // Select spool - save to context and broadcast
   ipcMain.handle('spoolman:select-spool', async (_event, spool: ActiveSpoolData, contextId?: string) => {
-    const contextManager = getPrinterContextManager();
+    const service = getSpoolmanIntegrationService();
 
-    // Save to context (main process state)
-    contextManager.setActiveSpool(contextId, spool);
+    // Save to context (persisted via ConfigManager)
+    await service.setActiveSpool(contextId, spool);
 
     // Broadcast selection to all renderer windows
     BrowserWindow.getAllWindows().forEach((win) => {
@@ -110,14 +110,19 @@ export function registerSpoolmanHandlers(): void {
 
   // Get active spool for a context
   ipcMain.handle('spoolman:get-active-spool', async (_event, contextId?: string) => {
-    const contextManager = getPrinterContextManager();
-    return contextManager.getActiveSpool(contextId);
+    const service = getSpoolmanIntegrationService();
+    return service.getActiveSpool(contextId);
   });
 
   // Set active spool (used by component or external calls)
   ipcMain.handle('spoolman:set-active-spool', async (_event, spool: ActiveSpoolData | null, contextId?: string) => {
-    const contextManager = getPrinterContextManager();
-    contextManager.setActiveSpool(contextId, spool);
+    const service = getSpoolmanIntegrationService();
+
+    if (spool) {
+      await service.setActiveSpool(contextId, spool);
+    } else {
+      await service.clearActiveSpool(contextId);
+    }
 
     // Broadcast update to all windows
     BrowserWindow.getAllWindows().forEach((win) => {

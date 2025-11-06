@@ -83,6 +83,35 @@ export class SpoolmanService {
   }
 
   /**
+   * Get a single spool by ID
+   * @param spoolId - ID of the spool to fetch
+   * @returns Spool object
+   * @throws Error if spool not found or request fails
+   */
+  async getSpoolById(spoolId: number): Promise<SpoolResponse> {
+    const url = `${this.baseUrl}/spool/${spoolId}`;
+
+    try {
+      const response = await this.fetchWithTimeout(url, {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error(`Spool ${spoolId} not found`);
+        }
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      return (await response.json()) as SpoolResponse;
+    } catch (error) {
+      this.handleError('getSpoolById', error);
+      throw error;
+    }
+  }
+
+  /**
    * Update filament usage for a spool
    * @param spoolId - ID of the spool to update
    * @param usage - Usage update (either use_weight OR use_length, never both)

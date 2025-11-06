@@ -13,6 +13,7 @@ export class WebUIMobileLayoutManager {
     'controls',
     'printer-state',
     'temp-control',
+    'spoolman-tracker',
     'model-preview',
     'job-details',
     'filtration-tvoc',

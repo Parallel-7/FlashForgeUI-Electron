@@ -664,7 +664,8 @@ export class ConnectionFlowManager extends EventEmitter {
         customCameraEnabled: existingPrinter?.customCameraEnabled ?? false,
         customCameraUrl: existingPrinter?.customCameraUrl ?? '',
         customLedsEnabled: existingPrinter?.customLedsEnabled ?? false,
-        forceLegacyMode: existingPrinter?.forceLegacyMode ?? false
+        forceLegacyMode: existingPrinter?.forceLegacyMode ?? false,
+        activeSpoolData: existingPrinter?.activeSpoolData ?? null
       };
 
       console.log('[ConnectionFlow] Final printer details to save:', printerDetails);
