@@ -4,18 +4,17 @@
  *
  * This coordinator acts as the bridge between printer state monitoring (PrinterPollingService),
  * user notification preferences (ConfigManager), and notification delivery (NotificationService).
- * It implements intelligent notification logic including duplicate prevention, temperature
- * monitoring for cooled notifications, and state-based notification triggers tied to the
- * printer's operational lifecycle.
+ * It implements intelligent notification logic including duplicate prevention and state-based
+ * notification triggers tied to the printer's operational lifecycle.
  *
  * Key Features:
  * - Integration with PrinterPollingService for real-time printer state monitoring
  * - Configuration-driven notification behavior based on user preferences from ConfigManager
  * - Stateful notification tracking to prevent duplicate notifications during a print job
- * - Temperature monitoring system with configurable intervals and thresholds for cooled notifications
+ * - Temperature monitoring coordination via TemperatureMonitoringService for cooled notifications
  * - Automatic state reset on print start/cancel/error to ensure clean notification cycles
  * - Support for multiple notification types: print complete, printer cooled, upload complete/failed, connection events
- * - Event emitter pattern for notification triggers, state changes, and temperature checks
+ * - Event emitter pattern for notification triggers and state changes
  * - Singleton pattern with global instance management and test-friendly dependency injection
  *
  * Core Responsibilities:
@@ -23,33 +22,30 @@
  * - Check notification settings from ConfigManager to respect user preferences
  * - Manage notification state to prevent duplicate notifications within a print cycle
  * - Coordinate notification sending through NotificationService based on state and settings
- * - Handle temperature monitoring for cooled notifications with configurable intervals and thresholds
+ * - Delegate temperature monitoring to TemperatureMonitoringService for cooled notifications
  * - Reset state appropriately during print cycles (start, complete, cancel, error transitions)
  * - Handle connection changes and cleanup resources on disconnect
  *
- * Temperature Monitoring:
- * - Starts automatically after print completion if cooled notifications are enabled
- * - Checks bed temperature at configurable intervals (default: 30 seconds)
- * - Waits minimum cool time (2 minutes) before checking to avoid premature notifications
- * - Sends notification when bed temperature falls below threshold (default: 35°C)
- * - Automatically stops monitoring after sending cooled notification
+ * Temperature Monitoring Coordination:
+ * - Delegates to TemperatureMonitoringService for bed cooling detection
+ * - Listens for 'printer-cooled' events from temperature monitor
+ * - Sends cooled notifications when temperature threshold is met
+ * - Respects notification settings for cooled notifications
  *
  * @exports PrinterNotificationCoordinator - Main coordinator class for printer notifications
  * @exports getPrinterNotificationCoordinator - Singleton instance accessor
  * @exports resetPrinterNotificationCoordinator - Test helper for instance reset
- * @exports TemperatureMonitorConfig - Type for temperature monitoring configuration
  * @exports CoordinatorEventMap - Type for coordinator event emissions
  */
 
 import { EventEmitter } from '../../utils/EventEmitter';
 import { getNotificationService, NotificationService } from './NotificationService';
 import { getConfigManager, ConfigManager } from '../../managers/ConfigManager';
-import { getPrinterContextManager } from '../../managers/PrinterContextManager';
-import { getSpoolmanIntegrationService } from '../SpoolmanIntegrationService';
-import { SpoolmanService } from '../SpoolmanService';
+import type { TemperatureMonitoringService } from '../TemperatureMonitoringService';
+import type { PrinterCooledEvent } from '../MultiContextTemperatureMonitor';
 import type { PrinterPollingService } from '../PrinterPollingService';
-import type { 
-  PollingData, 
+import type {
+  PollingData,
   PrinterStatus,
   PrinterState
 } from '../../types/polling';
@@ -63,7 +59,6 @@ import {
   shouldSendNotification,
   shouldCheckForNotifications,
   shouldResetNotificationFlags,
-  isTemperatureCooled,
   createPrintCompleteNotification,
   createPrinterCooledNotification,
   createUploadCompleteNotification,
@@ -86,30 +81,7 @@ interface CoordinatorEventMap extends Record<string, unknown[]> {
   'notification-triggered': [NotificationEventPayloads['notification-sent']];
   'state-changed': [NotificationEventPayloads['state-updated']];
   'settings-updated': [NotificationEventPayloads['settings-changed']];
-  'temperature-checked': [{ temperature: number; coolingThreshold: number; shouldNotify: boolean }];
 }
-
-// ============================================================================
-// COOLED TEMPERATURE MONITORING
-// ============================================================================
-
-/**
- * Temperature monitoring configuration
- */
-interface TemperatureMonitorConfig {
-  readonly checkIntervalMs: number;
-  readonly temperatureThreshold: number;
-  readonly minimumCoolTime: number; // Minimum time after print complete before checking
-}
-
-/**
- * Default temperature monitoring settings
- */
-const DEFAULT_TEMP_MONITOR_CONFIG: TemperatureMonitorConfig = {
-  checkIntervalMs: 30 * 1000, // Check every 30 seconds
-  temperatureThreshold: COOLED_TEMPERATURE_THRESHOLD,
-  minimumCoolTime: 2 * 60 * 1000 // Wait 2 minutes after print complete
-};
 
 // ============================================================================
 // PRINTER NOTIFICATION COORDINATOR
@@ -122,40 +94,31 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   private readonly notificationService: NotificationService;
   private readonly configManager: ConfigManager;
   private pollingService: PrinterPollingService | null = null;
+  private temperatureMonitor: TemperatureMonitoringService | null = null;
 
   // State management
   private notificationState: NotificationState;
   private currentSettings: NotificationSettings;
   private lastPrinterStatus: PrinterStatus | null = null;
-  
-
-  
-  // Temperature monitoring
-  private temperatureCheckTimer: NodeJS.Timeout | null = null;
-  private readonly tempConfig: TemperatureMonitorConfig;
 
   constructor(
     notificationService?: NotificationService,
-    configManager?: ConfigManager,
-    tempConfig?: Partial<TemperatureMonitorConfig>
+    configManager?: ConfigManager
   ) {
     super();
-    
+
     // Use provided services or get global instances
     this.notificationService = notificationService ?? getNotificationService();
     this.configManager = configManager ?? getConfigManager();
-    
-    // Initialize configuration
-    this.tempConfig = { ...DEFAULT_TEMP_MONITOR_CONFIG, ...tempConfig };
-    
+
     // Initialize state
     this.notificationState = createInitialNotificationState();
     this.currentSettings = extractNotificationSettings(this.configManager.getConfig());
-    
+
     // Setup event handlers
     this.setupConfigurationListener();
     this.setupNotificationServiceListener();
-    
+
     console.log('PrinterNotificationCoordinator initialized');
   }
 
@@ -171,11 +134,26 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     if (this.pollingService) {
       this.removePollingServiceListeners();
     }
-    
+
     this.pollingService = pollingService;
     this.setupPollingServiceListeners();
-    
+
     console.log('PrinterNotificationCoordinator: Polling service connected');
+  }
+
+  /**
+   * Set the temperature monitoring service
+   */
+  public setTemperatureMonitor(monitor: TemperatureMonitoringService): void {
+    // Remove listeners from old monitor
+    if (this.temperatureMonitor) {
+      this.removeTemperatureMonitorListeners();
+    }
+
+    this.temperatureMonitor = monitor;
+    this.setupTemperatureMonitorListeners();
+
+    console.log('PrinterNotificationCoordinator: Temperature monitor connected');
   }
 
   /**
@@ -212,22 +190,43 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   }
 
   /**
+   * Setup temperature monitor event listeners
+   */
+  private setupTemperatureMonitorListeners(): void {
+    if (!this.temperatureMonitor) return;
+
+    // Listen for printer-cooled events
+    this.temperatureMonitor.on('printer-cooled', (event: PrinterCooledEvent) => {
+      void this.handlePrinterCooled(event);
+    });
+  }
+
+  /**
+   * Remove temperature monitor event listeners
+   */
+  private removeTemperatureMonitorListeners(): void {
+    if (!this.temperatureMonitor) return;
+
+    this.temperatureMonitor.removeAllListeners('printer-cooled');
+  }
+
+  /**
    * Setup configuration change listener
    */
   private setupConfigurationListener(): void {
     this.configManager.on('configUpdated', (_event) => {
       const newConfig = this.configManager.getConfig();
       const newSettings = extractNotificationSettings(newConfig);
-      
+
       if (this.hasSettingsChanged(newSettings)) {
         const previousSettings = this.currentSettings;
         this.currentSettings = newSettings;
-        
+
         this.emit('settings-updated', {
           previousSettings,
           currentSettings: newSettings
         });
-        
+
         console.log('Notification settings updated:', newSettings);
       }
     });
@@ -275,18 +274,11 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     const previousStatus = this.lastPrinterStatus;
     this.lastPrinterStatus = status;
 
-
-
     // Check for state transitions that require notification handling
     if (previousStatus?.state !== status.state) {
       await this.handlePrinterStateChange(previousStatus?.state ?? 'Busy', status.state, status);
     }
-
-    // Always update temperature monitoring if we have status
-    this.updateTemperatureMonitoring(status);
   }
-
-
 
   /**
    * Handle printer state changes
@@ -345,188 +337,29 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
         lastPrintCompleteTime: new Date()
       }, NotificationStateTransition.PrintCompleted);
     }
-
-    // Start temperature monitoring for cooled notification
-    this.startTemperatureMonitoring();
   }
 
   /**
-   * Update Spoolman filament usage when a print has cooled.
-   * Resolves the associated context, derives usage from polling data, and persists updates.
+   * Handle printer cooled event from temperature monitor
    */
-  private async updateSpoolmanUsage(status: PrinterStatus): Promise<void> {
-    try {
-      const config = this.configManager.getConfig();
-      if (!config.SpoolmanEnabled || !config.SpoolmanServerUrl) {
-        return;
-      }
-
-      const contextManager = getPrinterContextManager();
-      const contextId =
-        contextManager.getContextIdForNotificationCoordinator(this) ||
-        contextManager.getActiveContextId();
-
-      if (!contextId) {
-        console.warn('[Spoolman] Unable to resolve context for usage update');
-        return;
-      }
-
-      let integrationService: ReturnType<typeof getSpoolmanIntegrationService>;
-      try {
-        integrationService = getSpoolmanIntegrationService();
-      } catch {
-        console.warn('[Spoolman] Integration service not initialized - skipping usage update');
-        return;
-      }
-
-      if (!integrationService.isGloballyEnabled() || !integrationService.isContextSupported(contextId)) {
-        console.log(`[Spoolman] Context ${contextId} is not eligible for usage updates`);
-        return;
-      }
-
-      const activeSpool = integrationService.getActiveSpool(contextId);
-      if (!activeSpool) {
-        console.log(`[Spoolman] No active spool for context ${contextId} - skipping usage update`);
-        return;
-      }
-
-      const job = status.currentJob;
-      const progress = job?.progress;
-      if (!progress) {
-        console.warn('[Spoolman] Unable to determine job progress for usage update');
-        return;
-      }
-
-      const weightUsed = progress.weightUsed ?? 0;
-      const lengthUsedMeters = progress.lengthUsed ?? 0;
-      const lengthUsedMillimeters = Number((lengthUsedMeters * 1000).toFixed(2));
-
-      let updatePayload: { use_weight?: number; use_length?: number } | null = null;
-      if (config.SpoolmanUpdateMode === 'weight') {
-        if (weightUsed > 0) {
-          updatePayload = { use_weight: weightUsed };
-        } else if (lengthUsedMillimeters > 0) {
-          updatePayload = { use_length: lengthUsedMillimeters };
-        }
-      } else {
-        if (lengthUsedMillimeters > 0) {
-          updatePayload = { use_length: lengthUsedMillimeters };
-        } else if (weightUsed > 0) {
-          updatePayload = { use_weight: weightUsed };
-        }
-      }
-
-      if (!updatePayload) {
-        console.warn('[Spoolman] No filament usage recorded for this print');
-        return;
-      }
-
-      const service = new SpoolmanService(config.SpoolmanServerUrl);
-      console.log(`[Spoolman] Updating spool ${activeSpool.id} for context ${contextId}`, updatePayload);
-
-      const updatedSpool = await service.updateUsage(activeSpool.id, updatePayload);
-      const updatedActiveSpool = integrationService.convertToActiveSpoolData(updatedSpool);
-      await integrationService.setActiveSpool(contextId, updatedActiveSpool);
-
-      console.log(`[Spoolman] Successfully updated spool usage for context ${contextId}`);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error('[Spoolman] Failed to update filament usage:', message);
-    }
-  }
-
-  // ============================================================================
-  // TEMPERATURE MONITORING
-  // ============================================================================
-
-  /**
-   * Update temperature monitoring based on current status
-   */
-  private updateTemperatureMonitoring(status: PrinterStatus): void {
-    // Only monitor temperature if we've sent print complete notification
-    if (this.notificationState.hasSentPrintCompleteNotification && 
-        !this.notificationState.hasSentPrinterCooledNotification) {
-      
-      void this.checkTemperatureForCooledNotification(status);
-    }
-  }
-
-  /**
-   * Start temperature monitoring timer
-   */
-  private startTemperatureMonitoring(): void {
-    // Clear existing timer
-    this.stopTemperatureMonitoring();
-
-    // Only start if cooled notifications are enabled
-    if (!shouldSendNotification(NotificationType.PrinterCooled, this.currentSettings)) {
-      return;
-    }
-
-    console.log('Starting temperature monitoring for cooled notification');
-    
-    this.temperatureCheckTimer = setInterval(() => {
-      if (this.lastPrinterStatus) {
-        void this.checkTemperatureForCooledNotification(this.lastPrinterStatus);
-      }
-    }, this.tempConfig.checkIntervalMs);
-  }
-
-  /**
-   * Stop temperature monitoring timer
-   */
-  private stopTemperatureMonitoring(): void {
-    if (this.temperatureCheckTimer) {
-      clearInterval(this.temperatureCheckTimer);
-      this.temperatureCheckTimer = null;
-    }
-  }
-
-  /**
-   * Check if temperature qualifies for cooled notification
-   */
-  private async checkTemperatureForCooledNotification(status: PrinterStatus): Promise<void> {
+  private async handlePrinterCooled(event: PrinterCooledEvent): Promise<void> {
     // Skip if already sent cooled notification
     if (this.notificationState.hasSentPrinterCooledNotification) {
       return;
     }
 
-    // Skip if print complete notification not sent yet
-    if (!this.notificationState.hasSentPrintCompleteNotification) {
+    // Verify notification should be sent
+    if (!shouldSendNotification(NotificationType.PrinterCooled, this.currentSettings)) {
       return;
     }
 
-    // Check minimum cool time has passed
-    const timeSincePrintComplete = this.notificationState.lastPrintCompleteTime 
-      ? Date.now() - this.notificationState.lastPrintCompleteTime.getTime()
-      : 0;
+    // Update state BEFORE sending to prevent race condition
+    this.updateNotificationState({
+      hasSentPrinterCooledNotification: true
+    }, NotificationStateTransition.PrinterCooled);
 
-    if (timeSincePrintComplete < this.tempConfig.minimumCoolTime) {
-      return;
-    }
-
-    const bedTemp = status.temperatures.bed.current;
-    const shouldNotify = isTemperatureCooled(bedTemp);
-
-    // Emit temperature check event for monitoring
-    this.emit('temperature-checked', {
-      temperature: bedTemp,
-      coolingThreshold: this.tempConfig.temperatureThreshold,
-      shouldNotify
-    });
-
-    if (shouldNotify && shouldSendNotification(NotificationType.PrinterCooled, this.currentSettings)) {
-      // Update state BEFORE sending to prevent race condition from polling updates
-      this.updateNotificationState({
-        hasSentPrinterCooledNotification: true
-      }, NotificationStateTransition.PrinterCooled);
-
-      await this.updateSpoolmanUsage(status);
-      await this.sendPrinterCooledNotification(status);
-
-      // Stop temperature monitoring
-      this.stopTemperatureMonitoring();
-    }
+    // Send notification
+    await this.sendPrinterCooledNotification(event.status);
   }
 
   // ============================================================================
@@ -539,7 +372,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   private async sendPrintCompleteNotification(status: PrinterStatus): Promise<void> {
     // Use current job name directly, fallback to 'Unknown Job'
     const jobName = status.currentJob?.fileName ?? 'Unknown Job';
-    
+
     const printInfo = {
       fileName: jobName,
       duration: status.currentJob?.progress.elapsedTime,
@@ -547,7 +380,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     };
 
     const notification = createPrintCompleteNotification(printInfo);
-    
+
     try {
       await this.notificationService.sendNotification(notification);
       console.log(`Print complete notification sent for job: ${jobName}`);
@@ -562,18 +395,18 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   private async sendPrinterCooledNotification(status: PrinterStatus): Promise<void> {
     // Use current job name directly, fallback to 'Unknown Job'
     const jobName = status.currentJob?.fileName ?? 'Unknown Job';
-    
+
     const printInfo = {
       fileName: jobName,
       currentTemp: createNotificationTemperature(status.temperatures.bed.current),
-      threshold: createNotificationTemperature(this.tempConfig.temperatureThreshold),
-      timeSincePrintComplete: this.notificationState.lastPrintCompleteTime 
+      threshold: createNotificationTemperature(COOLED_TEMPERATURE_THRESHOLD),
+      timeSincePrintComplete: this.notificationState.lastPrintCompleteTime
         ? Date.now() - this.notificationState.lastPrintCompleteTime.getTime()
         : undefined
     };
 
     const notification = createPrinterCooledNotification(printInfo);
-    
+
     try {
       await this.notificationService.sendNotification(notification);
       console.log(`Printer cooled notification sent for job: ${jobName}`);
@@ -592,7 +425,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   public async sendUploadCompleteNotification(fileName: string, fileSize?: number, uploadDuration?: number): Promise<void> {
     const uploadInfo = { fileName, fileSize, uploadDuration };
     const notification = createUploadCompleteNotification(uploadInfo);
-    
+
     try {
       await this.notificationService.sendNotification(notification);
       console.log('Upload complete notification sent');
@@ -607,7 +440,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   public async sendUploadFailedNotification(fileName: string, errorMessage: string, errorCode?: string): Promise<void> {
     const errorInfo = { fileName, errorMessage, errorCode };
     const notification = createUploadFailedNotification(errorInfo);
-    
+
     try {
       await this.notificationService.sendNotification(notification);
       console.log('Upload failed notification sent');
@@ -627,7 +460,6 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     if (!connected) {
       // Reset all notification state when connection is lost
       this.resetNotificationState(NotificationStateTransition.ConnectionReset);
-      this.stopTemperatureMonitoring();
     }
   }
 
@@ -637,7 +469,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   public async sendConnectionLostNotification(printerName: string, ipAddress?: string): Promise<void> {
     const connectionInfo = { printerName, ipAddress, lastSeen: new Date() };
     const notification = createConnectionLostNotification(connectionInfo);
-    
+
     try {
       await this.notificationService.sendNotification(notification);
       console.log('Connection lost notification sent');
@@ -652,7 +484,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   public async sendConnectionErrorNotification(errorMessage: string, errorCode?: string, printerName?: string): Promise<void> {
     const errorInfo = { errorMessage, errorCode, printerName };
     const notification = createConnectionErrorNotification(errorInfo);
-    
+
     try {
       await this.notificationService.sendNotification(notification);
       console.log('Connection error notification sent');
@@ -670,18 +502,15 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
    */
   private resetNotificationState(transition: NotificationStateTransition): void {
     const previousState = { ...this.notificationState };
-    
+
     this.notificationState = createInitialNotificationState();
-    
+
     this.emit('state-changed', {
       previousState,
       currentState: this.notificationState,
       transition
     });
 
-    // Stop temperature monitoring when resetting
-    this.stopTemperatureMonitoring();
-    
     console.log(`Notification state reset: ${transition}`);
   }
 
@@ -689,16 +518,16 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
    * Update notification state partially
    */
   private updateNotificationState(
-    updates: Partial<NotificationState>, 
+    updates: Partial<NotificationState>,
     transition: NotificationStateTransition
   ): void {
     const previousState = { ...this.notificationState };
-    
+
     this.notificationState = {
       ...this.notificationState,
       ...updates
     };
-    
+
     this.emit('state-changed', {
       previousState,
       currentState: this.notificationState,
@@ -729,20 +558,21 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
    */
   public dispose(): void {
     console.log('PrinterNotificationCoordinator: Disposing...');
-    
-    // Stop temperature monitoring
-    this.stopTemperatureMonitoring();
-    
+
+    // Remove temperature monitor listeners
+    this.removeTemperatureMonitorListeners();
+    this.temperatureMonitor = null;
+
     // Remove polling service listeners
     this.removePollingServiceListeners();
-    
+
     // Remove all event listeners
     this.removeAllListeners();
-    
+
     // Clear references
     this.pollingService = null;
     this.lastPrinterStatus = null;
-    
+
     console.log('PrinterNotificationCoordinator disposed');
   }
 }
@@ -780,4 +610,4 @@ export function resetPrinterNotificationCoordinator(): void {
 // TYPE EXPORTS
 // ============================================================================
 
-export type { TemperatureMonitorConfig, CoordinatorEventMap };
+export type { CoordinatorEventMap };

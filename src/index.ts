@@ -34,6 +34,8 @@ import type { PollingData } from './types/polling';
 // import { getMainProcessPollingCoordinator } from './services/MainProcessPollingCoordinator';
 import { getMultiContextPollingCoordinator } from './services/MultiContextPollingCoordinator';
 import { getMultiContextNotificationCoordinator } from './services/MultiContextNotificationCoordinator';
+import { getMultiContextTemperatureMonitor } from './services/MultiContextTemperatureMonitor';
+import { getMultiContextSpoolmanTracker } from './services/MultiContextSpoolmanTracker';
 import { getCameraProxyService } from './services/CameraProxyService';
 import { getRtspStreamService } from './services/RtspStreamService';
 import { cameraIPCHandler } from './ipc/camera-ipc-handler';
@@ -420,6 +422,34 @@ const setupPrinterContextEventForwarding = (): void => {
     try {
       multiContextPollingCoordinator.startPollingForContext(backendEvent.contextId);
       console.log(`[MultiContext] Started polling for context ${backendEvent.contextId}`);
+
+      // Get the polling service from the context
+      const contextManager = getPrinterContextManager();
+      const context = contextManager.getContext(backendEvent.contextId);
+      const pollingService = context?.pollingService;
+
+      if (pollingService) {
+        // Create temperature monitor for this context
+        const tempMonitor = getMultiContextTemperatureMonitor();
+        tempMonitor.createMonitorForContext(backendEvent.contextId, pollingService);
+
+        // Create Spoolman tracker for this context (get the temperature monitor we just created)
+        const temperatureMonitor = tempMonitor.getMonitor(backendEvent.contextId);
+        if (temperatureMonitor) {
+          const spoolmanTracker = getMultiContextSpoolmanTracker();
+          spoolmanTracker.createTrackerForContext(backendEvent.contextId, temperatureMonitor);
+        }
+
+        // Create notification coordinator for this context
+        const notificationCoordinator = getMultiContextNotificationCoordinator();
+        notificationCoordinator.createCoordinatorForContext(backendEvent.contextId, pollingService);
+
+        // Connect temperature monitor to notification coordinator
+        const coordinator = notificationCoordinator.getCoordinator(backendEvent.contextId);
+        if (coordinator && temperatureMonitor) {
+          coordinator.setTemperatureMonitor(temperatureMonitor);
+        }
+      }
     } catch (error) {
       console.error(`[MultiContext] Failed to start polling for context ${backendEvent.contextId}:`, error);
     }
@@ -665,6 +695,16 @@ const initializeApp = async (): Promise<void> => {
   // Note: WebUI server initialization moved to non-blocking context
   // (will be initialized after renderer-ready signal to prevent startup crashes)
 
+  // Initialize temperature monitoring system
+  const multiContextTempMonitor = getMultiContextTemperatureMonitor();
+  multiContextTempMonitor.initialize();
+  console.log('Multi-context temperature monitor initialized');
+
+  // Initialize Spoolman usage tracking
+  const multiContextSpoolmanTracker = getMultiContextSpoolmanTracker();
+  multiContextSpoolmanTracker.initialize();
+  console.log('Multi-context Spoolman tracker initialized');
+
   // Initialize notification system (base system only, per-context coordinators created when polling starts)
   initializeNotificationSystem();
   console.log('Notification system initialized');
@@ -730,6 +770,25 @@ async function initializeHeadless(): Promise<void> {
     getPrinterBackendManager()
   );
   console.log('[Headless] Spoolman integration service initialized');
+
+  // Initialize temperature monitoring system
+  const multiContextTempMonitor = getMultiContextTemperatureMonitor();
+  multiContextTempMonitor.initialize();
+  console.log('[Headless] Multi-context temperature monitor initialized');
+
+  // Initialize Spoolman usage tracking
+  const multiContextSpoolmanTracker = getMultiContextSpoolmanTracker();
+  multiContextSpoolmanTracker.initialize();
+  console.log('[Headless] Multi-context Spoolman tracker initialized');
+
+  // Initialize notification system (now runs in headless too - platform detection handles compatibility)
+  initializeNotificationSystem();
+  console.log('[Headless] Notification system initialized');
+
+  // Initialize multi-context notification coordinator (now runs in headless too)
+  const multiContextNotificationCoordinator = getMultiContextNotificationCoordinator();
+  multiContextNotificationCoordinator.initialize();
+  console.log('[Headless] Multi-context notification coordinator initialized');
 
   // Initialize headless manager
   const headlessManager = getHeadlessManager();

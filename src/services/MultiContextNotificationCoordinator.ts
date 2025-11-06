@@ -34,7 +34,6 @@ import { EventEmitter } from 'events';
 import { getPrinterContextManager } from '../managers/PrinterContextManager';
 import { getNotificationService, NotificationService } from './notifications/NotificationService';
 import { PrinterNotificationCoordinator } from './notifications/PrinterNotificationCoordinator';
-import { isHeadlessMode } from '../utils/HeadlessDetection';
 import type { PrinterPollingService } from './PrinterPollingService';
 
 /**
@@ -60,13 +59,6 @@ export class MultiContextNotificationCoordinator extends EventEmitter {
       return;
     }
 
-    // Skip in headless mode
-    if (isHeadlessMode()) {
-      console.log('[MultiContextNotificationCoordinator] Skipping initialization in headless mode');
-      this.isInitialized = true;
-      return;
-    }
-
     const contextManager = getPrinterContextManager();
 
     // Listen for context removal to cleanup coordinators
@@ -87,11 +79,6 @@ export class MultiContextNotificationCoordinator extends EventEmitter {
    * @param pollingService - Polling service to attach to coordinator
    */
   public createCoordinatorForContext(contextId: string, pollingService: PrinterPollingService): void {
-    // Skip in headless mode
-    if (isHeadlessMode()) {
-      return;
-    }
-
     // Check if coordinator already exists
     if (this.coordinators.has(contextId)) {
       console.warn(`[MultiContextNotificationCoordinator] Coordinator already exists for context ${contextId}`);
