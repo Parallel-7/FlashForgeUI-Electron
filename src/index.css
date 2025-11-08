@@ -23,8 +23,8 @@
   /* Derived theme-based variables for compatibility */
   --dark-bg: var(--theme-background, #1e1e1e);
   --card-bg: var(--theme-surface, #252525);
-  --button-bg: var(--theme-primary, #4285f4);
-  --button-hover: var(--theme-primary-hover, #5a95f5);
+  --button-bg: var(--theme-secondary, #357abd);
+  --button-hover: var(--theme-secondary-hover, #4a8dd4);
   --button-active: var(--theme-secondary, #357abd);
   --text-color: var(--theme-text, #e8e8e8);
   --accent-color: var(--theme-primary, #4285f4);

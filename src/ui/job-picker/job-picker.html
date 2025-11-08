@@ -5,12 +5,7 @@
     <title>Select Job</title>
     <link rel="stylesheet" href="job-picker.css">
     <script src="../../../node_modules/lucide/dist/umd/lucide.min.js"></script>
-    <script>
-      if (typeof exports === 'undefined') {
-        var exports = {};
-      }
-    </script>
-    <script src="../../../lib/ui/shared/lucide.js"></script>
+    <script src="../../../dist/renderer/lucide.bundle.js"></script>
 </head>
 
 <body>
@@ -47,12 +42,6 @@
     </div>
 </div>
 
-<script>
-  // Shim for CommonJS exports in browser context
-  if (typeof exports === 'undefined') {
-    var exports = {};
-  }
-</script>
-<script src="../../../lib/ui/job-picker/job-picker-renderer.js"></script>
+<script src="../../../dist/renderer/job-picker-renderer.bundle.js"></script>
 </body>
 </html>

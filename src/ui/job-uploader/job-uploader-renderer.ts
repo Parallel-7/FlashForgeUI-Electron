@@ -50,29 +50,6 @@ type MetadataResult = ParseResult & {
     error?: string;
 };
 
-// Extend Window interface to include our job uploader API
-declare global {
-    interface Window {
-        uploaderAPI?: {
-            browseFile: () => void;
-            uploadJob: (payload: UploadJobPayload) => void;
-            cancelUpload: () => void;
-            receiveFile: (func: (filePath: string | null) => void) => void;
-            receiveMetadata: (func: (result: MetadataResult) => void) => void;
-            removeListeners: () => void;
-            // New methods for 3MF multi-color support
-            showMaterialMatchingDialog: (filePath: string, toolData: FFGcodeToolData[]) => Promise<AD5XMaterialMapping[] | null>;
-            showSingleColorDialog: (filePath: string, filament: FilamentInfo) => void;
-            uploadFileAD5X: (filePath: string, startNow: boolean, autoLevel: boolean, materialMappings?: AD5XMaterialMapping[]) => Promise<unknown>;
-            // Helper methods
-            isAD5XPrinter: () => Promise<boolean>;
-            // Progress reporting methods
-            receiveUploadProgress: (func: (progress: UploadProgress) => void) => void;
-            receiveUploadComplete: (func: (result: UploadCompletionResult) => void) => void;
-        };
-    }
-}
-
 // DOM element references with proper typing
 interface DialogElements {
     filePathDisplay: HTMLElement | null;

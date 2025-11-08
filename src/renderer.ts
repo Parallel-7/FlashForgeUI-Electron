@@ -60,7 +60,7 @@ import { getGlobalStateTracker, STATE_EVENTS, type StateChangeEvent } from './se
 import { initializeUIAnimations, resetUI, handleUIError } from './services/ui-updater';
 import type { PollingData } from './types/polling';
 import type { ResolvedCameraConfig } from './types/camera';
-import type { ThemeColors } from './types/config';
+import type { ThemeColors, AppConfig } from './types/config';
 import { DEFAULT_THEME } from './types/config';
 
 
@@ -2270,7 +2270,7 @@ async function loadAndApplyDesktopTheme(): Promise<void> {
       return;
     }
 
-    const config = await window.api.requestConfig();
+    const config = await window.api.requestConfig() as AppConfig;
     if (config.DesktopTheme) {
       applyDesktopTheme(config.DesktopTheme);
     }

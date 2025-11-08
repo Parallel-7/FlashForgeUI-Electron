@@ -5,12 +5,7 @@
     <title>Upload Job</title>
     <link rel="stylesheet" href="job-uploader.css" />
     <script src="../../../node_modules/lucide/dist/umd/lucide.min.js"></script>
-    <script>
-        if (typeof exports === 'undefined') {
-            var exports = {};
-        }
-    </script>
-    <script src="../../../lib/ui/shared/lucide.js"></script>
+    <script src="../../../dist/renderer/lucide.bundle.js"></script>
 </head>
 <body>
 <div class="dialog-container dialog-container--full">
@@ -120,12 +115,6 @@
     </div>
 </div>
 
-<!-- CommonJS shim -->
-<script>
-    if (typeof exports === 'undefined') {
-        var exports = {};
-    }
-</script>
-<script src="../../../lib/ui/job-uploader/job-uploader-renderer.js"></script>
+<script src="../../../dist/renderer/job-uploader-renderer.bundle.js"></script>
 </body>
 </html>
