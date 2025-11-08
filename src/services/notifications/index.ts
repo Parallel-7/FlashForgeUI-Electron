@@ -36,7 +36,7 @@ import { getPrinterNotificationCoordinator, resetPrinterNotificationCoordinator 
 
 // Type exports for external use
 export type { NotificationTrackingInfo } from './NotificationService';
-export type { TemperatureMonitorConfig, CoordinatorEventMap } from './PrinterNotificationCoordinator';
+export type { CoordinatorEventMap } from './PrinterNotificationCoordinator';
 
 // Re-export important types from notification types
 export type {

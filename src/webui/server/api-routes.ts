@@ -21,10 +21,13 @@ import { Router, Response } from 'express';
 import { getPrinterBackendManager } from '../../managers/PrinterBackendManager';
 import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager';
+import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegrationService';
 import { AuthenticatedRequest } from './auth-middleware';
 import {
   TemperatureSetRequestSchema,
   JobStartRequestSchema,
+  SpoolSelectRequestSchema,
+  SpoolClearRequestSchema,
   createValidationError
 } from '../schemas/web-api.schemas';
 import {
@@ -32,7 +35,12 @@ import {
   PrinterStatusResponse,
   PrinterFeatures,
   CameraStatusResponse,
-  MaterialStationStatusResponse
+  MaterialStationStatusResponse,
+  SpoolmanConfigResponse,
+  SpoolSearchResponse,
+  ActiveSpoolResponse,
+  SpoolSelectResponse,
+  SpoolSummary
 } from '../types/web-api.types';
 import { toAppError } from '../../utils/error.utils';
 import { FiveMClient } from '@ghosttypes/ff-api';
@@ -1660,6 +1668,300 @@ export function createAPIRoutes(): Router {
       const response: StandardAPIResponse = {
         success: true,
         message: 'WebUI theme updated successfully'
+      };
+
+      return res.json(response);
+    } catch (error) {
+      const appError = toAppError(error);
+      const response: StandardAPIResponse = {
+        success: false,
+        error: appError.message
+      };
+      return res.status(500).json(response);
+    }
+  });
+
+  // ============================================================================
+  // SPOOLMAN INTEGRATION
+  // ============================================================================
+
+  /**
+   * GET /api/spoolman/config - Get Spoolman configuration and support status
+   */
+  router.get('/spoolman/config', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const service = getSpoolmanIntegrationService();
+      const activeContextId = contextManager.getActiveContextId();
+
+      if (!activeContextId) {
+        const response: SpoolmanConfigResponse = {
+          success: false,
+          error: 'No active printer context',
+          enabled: false,
+          serverUrl: '',
+          updateMode: 'weight',
+          contextId: null
+        };
+        return res.status(503).json(response);
+      }
+
+      const enabled = service.isGloballyEnabled() && service.isContextSupported(activeContextId);
+      const disabledReason = service.getDisabledReason(activeContextId);
+
+      const response: SpoolmanConfigResponse = {
+        success: true,
+        enabled,
+        disabledReason,
+        serverUrl: service.getServerUrl(),
+        updateMode: service.getUpdateMode(),
+        contextId: activeContextId
+      };
+
+      return res.json(response);
+    } catch (error) {
+      const appError = toAppError(error);
+      const response: SpoolmanConfigResponse = {
+        success: false,
+        error: appError.message,
+        enabled: false,
+        serverUrl: '',
+        updateMode: 'weight',
+        contextId: null
+      };
+      return res.status(500).json(response);
+    }
+  });
+
+  /**
+   * GET /api/spoolman/spools - Search for spools
+   */
+  router.get('/spoolman/spools', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const service = getSpoolmanIntegrationService();
+
+      if (!service.isGloballyEnabled()) {
+        const response: SpoolSearchResponse = {
+          success: false,
+          error: 'Spoolman integration is not enabled',
+          spools: []
+        };
+        return res.status(400).json(response);
+      }
+
+      const search = (req.query.search as string) || '';
+
+      // Build search query with server-side filtering
+      const searchQuery: import('../../types/spoolman').SpoolSearchQuery = {
+        limit: 50,
+        allow_archived: false
+      };
+
+      // Add search parameter if query exists (server-side filtering)
+      if (search && search.trim()) {
+        searchQuery['filament.name'] = search.trim();
+      }
+
+      // Fetch spools from Spoolman API with server-side filtering
+      const spoolsData = await service.fetchSpools(searchQuery);
+
+      // Convert to simplified format for WebUI
+      const spools: SpoolSummary[] = spoolsData.map(spool => ({
+        id: spool.id,
+        name: spool.filament.name || `Spool #${spool.id}`,
+        vendor: spool.filament.vendor?.name || null,
+        material: spool.filament.material || null,
+        colorHex: spool.filament.color_hex || '#808080',
+        remainingWeight: spool.remaining_weight || 0,
+        remainingLength: spool.remaining_length || 0,
+        archived: spool.archived
+      }));
+
+      const response: SpoolSearchResponse = {
+        success: true,
+        spools: spools
+      };
+
+      return res.json(response);
+    } catch (error) {
+      const appError = toAppError(error);
+      const response: SpoolSearchResponse = {
+        success: false,
+        error: appError.message,
+        spools: []
+      };
+      return res.status(500).json(response);
+    }
+  });
+
+  /**
+   * GET /api/spoolman/active/:contextId - Get active spool for a context
+   */
+  router.get('/spoolman/active/:contextId', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const service = getSpoolmanIntegrationService();
+      const contextId = req.params.contextId;
+
+      // Verify context exists
+      const context = contextManager.getContext(contextId);
+      if (!context) {
+        const response: ActiveSpoolResponse = {
+          success: false,
+          error: `Context ${contextId} not found`,
+          spool: null
+        };
+        return res.status(404).json(response);
+      }
+
+      // Check if context is supported (reject AD5X)
+      if (!service.isContextSupported(contextId)) {
+        const response: ActiveSpoolResponse = {
+          success: false,
+          error: 'Spoolman integration is disabled for this printer (AD5X with material station)',
+          spool: null
+        };
+        return res.status(409).json(response);
+      }
+
+      const spool = service.getActiveSpool(contextId);
+
+      const response: ActiveSpoolResponse = {
+        success: true,
+        spool
+      };
+
+      return res.json(response);
+    } catch (error) {
+      const appError = toAppError(error);
+      const response: ActiveSpoolResponse = {
+        success: false,
+        error: appError.message,
+        spool: null
+      };
+      return res.status(500).json(response);
+    }
+  });
+
+  /**
+   * POST /api/spoolman/select - Select active spool for a context
+   */
+  router.post('/spoolman/select', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const service = getSpoolmanIntegrationService();
+
+      // Validate request body
+      const validation = SpoolSelectRequestSchema.safeParse(req.body);
+      if (!validation.success) {
+        const validationError = createValidationError(validation.error);
+        const response: StandardAPIResponse = {
+          success: false,
+          ...validationError
+        };
+        return res.status(400).json(response);
+      }
+
+      const { contextId, spoolId } = validation.data;
+      const targetContextId = contextId || contextManager.getActiveContextId();
+
+      if (!targetContextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
+      // Verify context exists
+      const context = contextManager.getContext(targetContextId);
+      if (!context) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: `Context ${targetContextId} not found`
+        };
+        return res.status(404).json(response);
+      }
+
+      // Check if context is supported (reject AD5X)
+      if (!service.isContextSupported(targetContextId)) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'Spoolman integration is disabled for this printer (AD5X with material station)'
+        };
+        return res.status(409).json(response);
+      }
+
+      // Fetch spool details and set as active
+      const spoolData = await service.getSpoolById(spoolId);
+      await service.setActiveSpool(targetContextId, spoolData);
+
+      const response: SpoolSelectResponse = {
+        success: true,
+        spool: spoolData
+      };
+
+      return res.json(response);
+    } catch (error) {
+      const appError = toAppError(error);
+      const response: StandardAPIResponse = {
+        success: false,
+        error: appError.message
+      };
+      return res.status(500).json(response);
+    }
+  });
+
+  /**
+   * DELETE /api/spoolman/select - Clear active spool for a context
+   */
+  router.delete('/spoolman/select', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const service = getSpoolmanIntegrationService();
+
+      // Validate request body
+      const validation = SpoolClearRequestSchema.safeParse(req.body);
+      if (!validation.success) {
+        const validationError = createValidationError(validation.error);
+        const response: StandardAPIResponse = {
+          success: false,
+          ...validationError
+        };
+        return res.status(400).json(response);
+      }
+
+      const { contextId } = validation.data;
+      const targetContextId = contextId || contextManager.getActiveContextId();
+
+      if (!targetContextId) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'No active printer context'
+        };
+        return res.status(503).json(response);
+      }
+
+      // Verify context exists
+      const context = contextManager.getContext(targetContextId);
+      if (!context) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: `Context ${targetContextId} not found`
+        };
+        return res.status(404).json(response);
+      }
+
+      // Check if context is supported (reject AD5X)
+      if (!service.isContextSupported(targetContextId)) {
+        const response: StandardAPIResponse = {
+          success: false,
+          error: 'Spoolman integration is disabled for this printer (AD5X with material station)'
+        };
+        return res.status(409).json(response);
+      }
+
+      await service.clearActiveSpool(targetContextId);
+
+      const response: StandardAPIResponse = {
+        success: true,
+        message: 'Active spool cleared'
       };
 
       return res.json(response);

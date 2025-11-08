@@ -409,6 +409,21 @@ export class PrinterContextManager extends EventEmitter {
   }
 
   /**
+   * Resolve the context ID for a notification coordinator instance.
+   *
+   * @param coordinator - Notification coordinator to locate
+   * @returns Context ID or null if coordinator is not registered
+   */
+  public getContextIdForNotificationCoordinator(coordinator: PrinterNotificationCoordinator): string | null {
+    for (const [contextId, context] of this.contexts.entries()) {
+      if (context.notificationCoordinator === coordinator) {
+        return contextId;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Update context camera proxy port
    *
    * @param contextId - Context to update
@@ -450,60 +465,59 @@ export class PrinterContextManager extends EventEmitter {
 
   /**
    * Set active spool for a context
+   * Delegates to SpoolmanIntegrationService for persistence
    *
    * @param contextId - Context ID (defaults to active context if not provided)
    * @param spoolData - Active spool data (null to clear)
+   * @deprecated Use SpoolmanIntegrationService.setActiveSpool() or clearActiveSpool() directly
    */
-  public setActiveSpool(contextId: string | undefined, spoolData: ActiveSpoolData | null): void {
-    const targetContextId = contextId || this.activeContextId;
-    if (!targetContextId) {
-      console.warn('[PrinterContextManager] Cannot set active spool: no context specified or active');
-      return;
+  public async setActiveSpool(contextId: string | undefined, spoolData: ActiveSpoolData | null): Promise<void> {
+    try {
+      const { getSpoolmanIntegrationService } = await import('../services/SpoolmanIntegrationService');
+      const service = getSpoolmanIntegrationService();
+
+      if (spoolData) {
+        await service.setActiveSpool(contextId, spoolData);
+      } else {
+        await service.clearActiveSpool(contextId);
+      }
+    } catch (error) {
+      console.error('[PrinterContextManager] Failed to set active spool:', error);
+      throw error;
     }
-
-    const context = this.contexts.get(targetContextId);
-    if (!context) {
-      console.warn(`[PrinterContextManager] Cannot set active spool: context ${targetContextId} not found`);
-      return;
-    }
-
-    context.activeSpoolId = spoolData?.id || null;
-    context.activeSpoolData = spoolData;
-    context.lastActivity = new Date();
-
-    console.log(`[PrinterContextManager] Active spool ${spoolData ? 'set' : 'cleared'} for context ${targetContextId}`, spoolData?.id);
   }
 
   /**
    * Get active spool for a context
+   * Delegates to SpoolmanIntegrationService for consistency
    *
    * @param contextId - Context ID (defaults to active context if not provided)
    * @returns Active spool data or null if no spool selected
+   * @deprecated Use SpoolmanIntegrationService.getActiveSpool() directly
    */
   public getActiveSpool(contextId?: string): ActiveSpoolData | null {
-    const targetContextId = contextId || this.activeContextId;
-    if (!targetContextId) {
+    try {
+      // Dynamic import to avoid circular dependencies
+      const { getSpoolmanIntegrationService } = require('../services/SpoolmanIntegrationService');
+      const service = getSpoolmanIntegrationService();
+      return service.getActiveSpool(contextId);
+    } catch {
+      // Service not initialized yet - return null during early initialization
       return null;
     }
-
-    const context = this.contexts.get(targetContextId);
-    return context?.activeSpoolData || null;
   }
 
   /**
    * Get active spool ID for a context
+   * Delegates to SpoolmanIntegrationService for consistency
    *
    * @param contextId - Context ID (defaults to active context if not provided)
    * @returns Active spool ID or null if no spool selected
+   * @deprecated Use SpoolmanIntegrationService.getActiveSpool() and access .id directly
    */
   public getActiveSpoolId(contextId?: string): number | null {
-    const targetContextId = contextId || this.activeContextId;
-    if (!targetContextId) {
-      return null;
-    }
-
-    const context = this.contexts.get(targetContextId);
-    return context?.activeSpoolId || null;
+    const spoolData = this.getActiveSpool(contextId);
+    return spoolData?.id || null;
   }
 
   /**

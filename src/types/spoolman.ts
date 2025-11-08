@@ -118,6 +118,7 @@ export interface ActiveSpoolData {
   colorHex: string;
   remainingWeight: number; // grams
   remainingLength: number; // mm
+  lastUpdated: string; // ISO 8601 timestamp
 }
 
 /**

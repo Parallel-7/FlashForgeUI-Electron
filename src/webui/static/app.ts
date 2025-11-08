@@ -106,13 +106,15 @@ interface AuthStatusResponse {
 }
 
 interface WebSocketMessage {
-  type: 'AUTH_SUCCESS' | 'STATUS_UPDATE' | 'ERROR' | 'COMMAND_RESULT' | 'PONG';
+  type: 'AUTH_SUCCESS' | 'STATUS_UPDATE' | 'ERROR' | 'COMMAND_RESULT' | 'PONG' | 'SPOOLMAN_UPDATE';
   timestamp: string;
   status?: PrinterStatus;
   error?: string;
   clientId?: string;
   command?: string;
   success?: boolean;
+  contextId?: string;
+  spool?: ActiveSpoolData | null;
 }
 
 interface WebSocketCommand {
@@ -257,8 +259,51 @@ interface PendingJobStart {
 
 type MaterialMessageType = 'error' | 'warning';
 
+// Spoolman types
+interface ActiveSpoolData {
+  id: number;
+  name: string;
+  vendor: string | null;
+  material: string | null;
+  colorHex: string;
+  remainingWeight: number;
+  remainingLength: number;
+  lastUpdated: string;
+}
+
+interface SpoolSummary {
+  readonly id: number;
+  readonly name: string;
+  readonly vendor: string | null;
+  readonly material: string | null;
+  readonly colorHex: string;
+  readonly remainingWeight: number;
+  readonly remainingLength: number;
+  readonly archived: boolean;
+}
+
+interface SpoolmanConfigResponse extends ApiResponse {
+  enabled: boolean;
+  disabledReason?: string | null;
+  serverUrl: string;
+  updateMode: 'length' | 'weight';
+  contextId: string | null;
+}
+
+interface ActiveSpoolResponse extends ApiResponse {
+  spool: ActiveSpoolData | null;
+}
+
+interface SpoolSearchResponse extends ApiResponse {
+  spools: SpoolSummary[];
+}
+
+interface SpoolSelectResponse extends ApiResponse {
+  spool: ActiveSpoolData;
+}
+
 function initializeLucideIcons(): void {
-  hydrateLucideIcons(['settings', 'lock'], document);
+  hydrateLucideIcons(['settings', 'lock', 'package', 'search', 'circle'], document);
 }
 
 // Extended HTMLElement for temperature dialog
@@ -286,6 +331,10 @@ class AppState {
   public authRequired: boolean = true;
   public defaultPassword: boolean = false;
   public hasPassword: boolean = true;
+  // Spoolman state
+  public spoolmanConfig: SpoolmanConfigResponse | null = null;
+  public activeSpool: ActiveSpoolData | null = null;
+  public availableSpools: SpoolSummary[] = [];
 }
 
 const state = new AppState();
@@ -582,7 +631,26 @@ function isComponentSupported(componentId: string, features: PrinterFeatures | n
     return Boolean(features.hasFiltration);
   }
 
+  if (componentId === 'spoolman-tracker') {
+    return Boolean(state.spoolmanConfig?.enabled);
+  }
+
   return true;
+}
+
+function ensureSpoolmanVisibilityIfEnabled(): void {
+  if (!state.spoolmanConfig?.enabled) return;
+  if (!gridInitialized) return;
+
+  // If Spoolman is enabled but not in visible components, add it automatically
+  if (!currentSettings.visibleComponents.includes('spoolman-tracker')) {
+    console.log('[Spoolman] Auto-enabling Spoolman component (enabled in config)');
+    currentSettings.visibleComponents.push('spoolman-tracker');
+    persistSettings();
+  }
+
+  // Make sure component is visible on grid
+  gridManager.showComponent('spoolman-tracker');
 }
 
 function shouldComponentBeVisible(
@@ -1042,6 +1110,17 @@ function handleWebSocketMessage(message: WebSocketMessage): void {
     case 'PONG':
       // Keep-alive response
       break;
+
+    case 'SPOOLMAN_UPDATE':
+      if (message.contextId && message.spool !== undefined) {
+        // Update UI if the update is for the current context
+        const currentContextId = getCurrentContextId();
+        if (message.contextId === currentContextId) {
+          state.activeSpool = message.spool;
+          updateSpoolmanPanelState();
+        }
+      }
+      break;
   }
 }
 
@@ -1294,6 +1373,14 @@ function updatePrinterStateCard(status: PrinterStatus | null): void {
 // MULTI-PRINTER CONTEXT MANAGEMENT
 // ============================================================================
 
+function getCurrentContextId(): string | null {
+  const select = $('printer-select') as HTMLSelectElement;
+  if (!select || !select.value) {
+    return null;
+  }
+  return select.value;
+}
+
 async function fetchPrinterContexts(): Promise<void> {
   if (state.authRequired && !state.authToken) {
     console.log('[Contexts] No auth token, skipping context fetch');
@@ -1398,6 +1485,12 @@ async function switchPrinterContext(contextId: string): Promise<void> {
       // Reload features for the new context (handles filtration visibility, etc.)
       await loadPrinterFeatures();
 
+      // Reload Spoolman config and active spool for the new context
+      await loadSpoolmanConfig();
+
+      // Auto-show Spoolman component if enabled
+      ensureSpoolmanVisibilityIfEnabled();
+
       // Request fresh status for the new context
       sendCommand({ command: 'REQUEST_STATUS' });
 
@@ -1480,6 +1573,340 @@ function updateFeatureVisibility(): void {
   const ledEnabled = state.printerFeatures.hasLED || state.printerFeatures.ledUsesLegacyAPI || false;
   if (ledOn) ledOn.disabled = !ledEnabled;
   if (ledOff) ledOff.disabled = !ledEnabled;
+}
+
+// ============================================================================
+// SPOOLMAN INTEGRATION
+// ============================================================================
+
+async function loadSpoolmanConfig(): Promise<void> {
+  if (state.authRequired && !state.authToken) return;
+
+  try {
+    const response = await fetch('/api/spoolman/config', {
+      headers: buildAuthHeaders()
+    });
+
+    const result = await response.json() as SpoolmanConfigResponse;
+
+    if (result.success) {
+      state.spoolmanConfig = result;
+      console.log('[Spoolman] Config loaded:', result);
+
+      // Load active spool using contextId from response
+      if (result.enabled && result.contextId) {
+        await fetchActiveSpoolForContext(result.contextId);
+      }
+    }
+  } catch (error) {
+    console.error('[Spoolman] Failed to load config:', error);
+  }
+}
+
+async function fetchActiveSpoolForContext(contextId?: string): Promise<void> {
+  if (!state.spoolmanConfig?.enabled) return;
+
+  const targetContextId = contextId ?? getCurrentContextId();
+  if (!targetContextId) {
+    console.warn('[Spoolman] Cannot fetch active spool: no context ID available');
+    return;
+  }
+
+  console.log(`[Spoolman] Fetching active spool for context: ${targetContextId}`);
+
+  try {
+    const response = await fetch(`/api/spoolman/active/${encodeURIComponent(targetContextId)}`, {
+      headers: buildAuthHeaders()
+    });
+
+    const result = await response.json() as ActiveSpoolResponse;
+
+    if (result.success) {
+      state.activeSpool = result.spool;
+      console.log('[Spoolman] Active spool loaded:', result.spool ? `${result.spool.name} (ID: ${result.spool.id})` : 'none');
+      updateSpoolmanPanelState();
+    } else {
+      console.warn('[Spoolman] No active spool or error:', result.error);
+    }
+  } catch (error) {
+    console.error('[Spoolman] Failed to fetch active spool:', error);
+  }
+}
+
+let spoolSearchDebounceTimer: number | null = null;
+
+async function fetchSpools(searchQuery: string = ''): Promise<void> {
+  if (!state.spoolmanConfig?.enabled) return;
+
+  try {
+    showElement('spoolman-loading');
+    hideElement('spoolman-no-results');
+
+    // Stage 1: Try server-side search with filament.name filter
+    const url = `/api/spoolman/spools${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`;
+    const response = await fetch(url, {
+      headers: buildAuthHeaders()
+    });
+
+    const result = await response.json() as SpoolSearchResponse;
+
+    if (result.success && result.spools) {
+      let displaySpools = result.spools;
+
+      // Stage 2: If server-side search returned no results and we have a query,
+      // fetch all spools and filter client-side for vendor/material matching
+      if (displaySpools.length === 0 && searchQuery && searchQuery.trim()) {
+        console.log('[Spoolman] Server search returned no results, trying client-side fallback');
+
+        // Fetch all spools without filter
+        const allSpoolsResponse = await fetch('/api/spoolman/spools', {
+          headers: buildAuthHeaders()
+        });
+
+        const allSpoolsResult = await allSpoolsResponse.json() as SpoolSearchResponse;
+
+        if (allSpoolsResult.success && allSpoolsResult.spools) {
+          // Filter client-side across name, vendor, and material
+          const query = searchQuery.toLowerCase();
+          displaySpools = allSpoolsResult.spools.filter((spool) => {
+            const name = spool.name?.toLowerCase() || '';
+            const vendor = spool.vendor?.toLowerCase() || '';
+            const material = spool.material?.toLowerCase() || '';
+            return name.includes(query) || vendor.includes(query) || material.includes(query);
+          });
+
+          console.log(`[Spoolman] Client-side filter found ${displaySpools.length} matches`);
+        }
+      }
+
+      // Update state with final filtered results
+      state.availableSpools = displaySpools;
+      renderSpoolList(displaySpools);
+    }
+  } catch (error) {
+    console.error('[Spoolman] Failed to fetch spools:', error);
+    showToast('Failed to load spools', 'error');
+  } finally {
+    hideElement('spoolman-loading');
+  }
+}
+
+async function selectSpool(spoolId: number): Promise<void> {
+  const contextId = getCurrentContextId();
+
+  try {
+    const response = await fetch('/api/spoolman/select', {
+      method: 'POST',
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ contextId, spoolId })
+    });
+
+    const result = await response.json() as SpoolSelectResponse;
+
+    if (result.success && result.spool) {
+      state.activeSpool = result.spool;
+      closeSpoolSelectionModal();
+      updateSpoolmanPanelState();
+      showToast('Spool selected successfully', 'success');
+    } else {
+      showToast(result.error || 'Failed to select spool', 'error');
+    }
+  } catch (error) {
+    console.error('[Spoolman] Failed to select spool:', error);
+    showToast('Failed to select spool', 'error');
+  }
+}
+
+async function clearActiveSpool(): Promise<void> {
+  const contextId = getCurrentContextId();
+
+  try {
+    const response = await fetch('/api/spoolman/select', {
+      method: 'DELETE',
+      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify({ contextId })
+    });
+
+    const result = await response.json() as ApiResponse;
+
+    if (result.success) {
+      state.activeSpool = null;
+      closeSpoolSelectionModal();
+      updateSpoolmanPanelState();
+      showToast('Active spool cleared', 'success');
+    } else {
+      showToast(result.error || 'Failed to clear spool', 'error');
+    }
+  } catch (error) {
+    console.error('[Spoolman] Failed to clear spool:', error);
+    showToast('Failed to clear spool', 'error');
+  }
+}
+
+function updateSpoolmanPanelState(): void {
+  const disabled = $('spoolman-disabled');
+  const noSpool = $('spoolman-no-spool');
+  const active = $('spoolman-active');
+
+  if (!disabled || !noSpool || !active) return;
+
+  // State 1: Disabled (not enabled or AD5X)
+  if (!state.spoolmanConfig?.enabled) {
+    showElement('spoolman-disabled');
+    hideElement('spoolman-no-spool');
+    hideElement('spoolman-active');
+
+    const disabledMessage = $('spoolman-disabled-message');
+    if (disabledMessage) {
+      disabledMessage.textContent = state.spoolmanConfig?.disabledReason || 'Spoolman integration is disabled';
+    }
+    return;
+  }
+
+  // State 2: No spool selected
+  if (!state.activeSpool) {
+    hideElement('spoolman-disabled');
+    showElement('spoolman-no-spool');
+    hideElement('spoolman-active');
+    return;
+  }
+
+  // State 3: Active spool
+  hideElement('spoolman-disabled');
+  hideElement('spoolman-no-spool');
+  showElement('spoolman-active');
+
+  // Update spool display
+  const colorIndicator = $('spool-color');
+  const spoolName = $('spool-name');
+  const spoolMeta = $('spool-meta');
+  const spoolRemaining = $('spool-remaining');
+
+  if (colorIndicator) {
+    colorIndicator.style.backgroundColor = state.activeSpool.colorHex;
+  }
+
+  if (spoolName) {
+    spoolName.textContent = state.activeSpool.name;
+  }
+
+  if (spoolMeta) {
+    const parts = [];
+    if (state.activeSpool.vendor) parts.push(state.activeSpool.vendor);
+    if (state.activeSpool.material) parts.push(state.activeSpool.material);
+    spoolMeta.textContent = parts.join(' • ') || '--';
+  }
+
+  if (spoolRemaining) {
+    const remaining = state.spoolmanConfig?.updateMode === 'weight'
+      ? `${state.activeSpool.remainingWeight.toFixed(0)}g`
+      : `${(state.activeSpool.remainingLength / 1000).toFixed(1)}m`;
+    spoolRemaining.textContent = remaining;
+  }
+}
+
+function openSpoolSelectionModal(): void {
+  if (!state.spoolmanConfig?.enabled) {
+    showToast('Spoolman integration is disabled', 'error');
+    return;
+  }
+
+  const modal = $('spoolman-modal');
+  if (!modal) return;
+
+  // Clear search input
+  const searchInput = $('spoolman-search') as HTMLInputElement;
+  if (searchInput) {
+    searchInput.value = '';
+  }
+
+  // Load all spools
+  void fetchSpools('');
+
+  showElement('spoolman-modal');
+}
+
+function closeSpoolSelectionModal(): void {
+  const modal = $('spoolman-modal');
+  if (!modal) return;
+
+  hideElement('spoolman-modal');
+
+  // Clear search and results
+  const searchInput = $('spoolman-search') as HTMLInputElement;
+  if (searchInput) {
+    searchInput.value = '';
+  }
+  state.availableSpools = [];
+  renderSpoolList([]);
+}
+
+function renderSpoolList(spools: SpoolSummary[]): void {
+  const listContainer = $('spoolman-spool-list');
+  const noResults = $('spoolman-no-results');
+
+  if (!listContainer || !noResults) return;
+
+  listContainer.innerHTML = '';
+
+  if (spools.length === 0) {
+    showElement('spoolman-no-results');
+    return;
+  }
+
+  hideElement('spoolman-no-results');
+
+  spools.forEach((spool) => {
+    const item = document.createElement('div');
+    item.className = 'spoolman-spool-item';
+    item.setAttribute('role', 'listitem');
+
+    // Ensure colorHex has # prefix (Spoolman API returns without it)
+    const colorHex = spool.colorHex
+      ? (spool.colorHex.startsWith('#') ? spool.colorHex : `#${spool.colorHex}`)
+      : '#808080';
+    const name = spool.name || `Spool #${spool.id}`;
+    const vendor = spool.vendor || '';
+    const material = spool.material || '';
+    const metaParts = [vendor, material].filter(Boolean);
+    const meta = metaParts.join(' • ') || 'Unknown';
+
+    const remainingWeight = spool.remainingWeight || 0;
+    const remainingLength = spool.remainingLength || 0;
+    const remaining = state.spoolmanConfig?.updateMode === 'weight'
+      ? `${remainingWeight.toFixed(0)}g`
+      : `${(remainingLength / 1000).toFixed(1)}m`;
+
+    item.innerHTML = `
+      <div class="spool-color-indicator" style="background-color: ${colorHex}"></div>
+      <div class="spool-details">
+        <div class="spool-name">${name}</div>
+        <div class="spool-meta">${meta}</div>
+      </div>
+      <div class="spool-remaining">${remaining}</div>
+    `;
+
+    item.addEventListener('click', () => {
+      void selectSpool(spool.id);
+    });
+
+    listContainer.appendChild(item);
+  });
+}
+
+function handleSpoolSearch(event: Event): void {
+  const input = event.target as HTMLInputElement;
+  const query = input.value.trim();
+
+  // Debounce search
+  if (spoolSearchDebounceTimer !== null) {
+    clearTimeout(spoolSearchDebounceTimer);
+  }
+
+  spoolSearchDebounceTimer = window.setTimeout(() => {
+    void fetchSpools(query);
+    spoolSearchDebounceTimer = null;
+  }, 300);
 }
 
 function updateFiltrationStatus(mode?: 'external' | 'internal' | 'none'): void {
@@ -2501,8 +2928,12 @@ function setupEventHandlers(): void{
         showElement('main-ui');
         connectWebSocket();
         await loadPrinterFeatures();
-        // Fetch printer contexts after successful login
+        // Fetch printer contexts first to populate dropdown
         await fetchPrinterContexts();
+        // Load Spoolman config after contexts (loads active spool automatically)
+        await loadSpoolmanConfig();
+        // Auto-show Spoolman component if enabled
+        ensureSpoolmanVisibilityIfEnabled();
       }
       
       loginBtn.textContent = 'Login';
@@ -2587,6 +3018,10 @@ function setupEventHandlers(): void{
         case 'btn-no-filtration':
           await sendPrinterCommand('filtration/off');
           break;
+        case 'btn-select-spool':
+        case 'btn-change-spool':
+          openSpoolSelectionModal();
+          break;
         default:
           handled = false;
           break;
@@ -2662,7 +3097,31 @@ function setupEventHandlers(): void{
       }
     });
   }
-  
+
+  // Spoolman modal handlers
+  const spoolmanModalClose = $('spoolman-modal-close');
+  const spoolmanModalCancel = $('spoolman-modal-cancel');
+  const spoolmanClearSpool = $('spoolman-clear-spool');
+  const spoolmanSearchInput = $('spoolman-search') as HTMLInputElement;
+
+  if (spoolmanModalClose) {
+    spoolmanModalClose.addEventListener('click', closeSpoolSelectionModal);
+  }
+
+  if (spoolmanModalCancel) {
+    spoolmanModalCancel.addEventListener('click', closeSpoolSelectionModal);
+  }
+
+  if (spoolmanClearSpool) {
+    spoolmanClearSpool.addEventListener('click', () => {
+      void clearActiveSpool();
+    });
+  }
+
+  if (spoolmanSearchInput) {
+    spoolmanSearchInput.addEventListener('input', handleSpoolSearch);
+  }
+
   // Printer selector dropdown
   const printerSelect = $('printer-select') as HTMLSelectElement;
   if (printerSelect) {
@@ -2944,12 +3403,16 @@ async function initialize(): Promise<void> {
     
     // Try to connect and load features
     connectWebSocket();
-    
+
     // Load features but handle auth failures gracefully
     try {
       await loadPrinterFeatures();
-      // Fetch printer contexts after features are loaded
+      // Fetch printer contexts first to populate dropdown
       await fetchPrinterContexts();
+      // Load Spoolman config after contexts (loads active spool automatically)
+      await loadSpoolmanConfig();
+      // Auto-show Spoolman component if enabled
+      ensureSpoolmanVisibilityIfEnabled();
     } catch (error) {
       console.error('Failed to load features:', error);
       // If we get here, token might be invalid but we'll let WebSocket retry handle it

@@ -75,6 +75,13 @@ const COMPONENT_DEFINITIONS: Record<string, WebUIComponentDefinition> = {
     minSize: { w: 4, h: 3 },
     defaultPosition: { x: 6, y: 8 },
   },
+  'spoolman-tracker': {
+    id: 'spoolman-tracker',
+    displayName: 'Spoolman Tracker',
+    defaultSize: { w: 3, h: 2 },
+    minSize: { w: 2, h: 2 },
+    defaultPosition: { x: 3, y: 8 },
+  },
 };
 
 const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
@@ -248,6 +255,39 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
       </div>
     `,
   },
+  'spoolman-tracker': {
+    id: 'spoolman-tracker',
+    html: `
+      <div class="panel" id="spoolman-panel">
+        <div class="panel-header">Spoolman Tracker</div>
+        <div class="panel-content">
+          <div id="spoolman-disabled" class="spoolman-state hidden">
+            <div class="spoolman-message" id="spoolman-disabled-message">Spoolman integration is disabled</div>
+          </div>
+          <div id="spoolman-no-spool" class="spoolman-state hidden">
+            <div class="spoolman-message">No spool selected</div>
+            <button id="btn-select-spool" class="control-btn">Select Spool</button>
+          </div>
+          <div id="spoolman-active" class="spoolman-state hidden">
+            <div class="spool-info">
+              <div class="spool-color-indicator" id="spool-color"></div>
+              <div class="spool-details">
+                <div class="spool-name" id="spool-name">--</div>
+                <div class="spool-meta" id="spool-meta">--</div>
+              </div>
+            </div>
+            <div class="spool-stats">
+              <div class="stat-row">
+                <span>Remaining:</span>
+                <span id="spool-remaining">--</span>
+              </div>
+            </div>
+            <button id="btn-change-spool" class="temp-btn">Change</button>
+          </div>
+        </div>
+      </div>
+    `,
+  },
 };
 
 const DEFAULT_LAYOUT_COMPONENTS: WebUIComponentLayoutMap = {
@@ -258,6 +298,7 @@ const DEFAULT_LAYOUT_COMPONENTS: WebUIComponentLayoutMap = {
   'temp-control': { x: 3, y: 6, w: 3, h: 2 },
   'job-progress': { x: 6, y: 6, w: 6, h: 2 },
   'filtration-tvoc': { x: 0, y: 8, w: 3, h: 2 },
+  'spoolman-tracker': { x: 3, y: 8, w: 3, h: 2 },
   'job-details': { x: 6, y: 8, w: 6, h: 3 },
 };
 
