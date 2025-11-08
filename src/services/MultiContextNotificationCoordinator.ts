@@ -34,6 +34,7 @@ import { EventEmitter } from 'events';
 import { getPrinterContextManager } from '../managers/PrinterContextManager';
 import { getNotificationService, NotificationService } from './notifications/NotificationService';
 import { PrinterNotificationCoordinator } from './notifications/PrinterNotificationCoordinator';
+import type { PrintStateMonitor } from './PrintStateMonitor';
 import type { PrinterPollingService } from './PrinterPollingService';
 
 /**
@@ -77,8 +78,13 @@ export class MultiContextNotificationCoordinator extends EventEmitter {
    *
    * @param contextId - Context ID to create coordinator for
    * @param pollingService - Polling service to attach to coordinator
+   * @param printStateMonitor - Print state monitor to listen to
    */
-  public createCoordinatorForContext(contextId: string, pollingService: PrinterPollingService): void {
+  public createCoordinatorForContext(
+    contextId: string,
+    pollingService: PrinterPollingService,
+    printStateMonitor: PrintStateMonitor
+  ): void {
     // Check if coordinator already exists
     if (this.coordinators.has(contextId)) {
       console.warn(`[MultiContextNotificationCoordinator] Coordinator already exists for context ${contextId}`);
@@ -88,8 +94,9 @@ export class MultiContextNotificationCoordinator extends EventEmitter {
     // Create new coordinator for this context
     const coordinator = new PrinterNotificationCoordinator(this.notificationService);
 
-    // Connect polling service to coordinator
+    // Wire dependencies
     coordinator.setPollingService(pollingService);
+    coordinator.setPrintStateMonitor(printStateMonitor);
 
     // Store coordinator
     this.coordinators.set(contextId, coordinator);
@@ -102,6 +109,13 @@ export class MultiContextNotificationCoordinator extends EventEmitter {
 
     // Emit event
     this.emit('coordinator-created', { contextId });
+  }
+
+  /**
+   * Destroy coordinator for a specific context
+   */
+  public destroyCoordinator(contextId: string): void {
+    this.removeCoordinatorForContext(contextId);
   }
 
   /**

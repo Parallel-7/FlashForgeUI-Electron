@@ -9,10 +9,11 @@
  * - State tracking for print completion and cooling status
  * - Event emissions when printer bed reaches cooling threshold
  * - Integration with PrinterPollingService for real-time temperature data
+ * - Integration with PrintStateMonitor for state transition detection
  * - Automatic state reset on new print start
  *
  * Core Responsibilities:
- * - Monitor printer state transitions to detect print completion
+ * - Listen to PrintStateMonitor for print lifecycle events
  * - Start temperature monitoring when print completes
  * - Check bed temperature at regular intervals (default: 10 seconds)
  * - Emit events when bed temperature falls below threshold (default: 35°C)
@@ -24,6 +25,7 @@
 
 import { EventEmitter } from '../utils/EventEmitter';
 import type { PrinterPollingService } from './PrinterPollingService';
+import type { PrintStateMonitor } from './PrintStateMonitor';
 import type { PrinterStatus, PollingData } from '../types/polling';
 
 // ============================================================================
@@ -96,6 +98,7 @@ export class TemperatureMonitoringService extends EventEmitter<TempMonitorEventM
   private readonly contextId: string;
   private readonly config: TemperatureMonitorConfig;
   private pollingService: PrinterPollingService | null = null;
+  private printStateMonitor: PrintStateMonitor | null = null;
 
   private state: TemperatureMonitorState = {
     printCompleteTime: null,
@@ -135,19 +138,34 @@ export class TemperatureMonitoringService extends EventEmitter<TempMonitorEventM
   }
 
   /**
+   * Set the print state monitor to listen to
+   */
+  public setPrintStateMonitor(monitor: PrintStateMonitor): void {
+    // Remove listeners from old monitor
+    if (this.printStateMonitor) {
+      this.removePrintStateMonitorListeners();
+    }
+
+    this.printStateMonitor = monitor;
+    this.setupPrintStateMonitorListeners();
+
+    console.log(`[TemperatureMonitor] Print state monitor connected for context ${this.contextId}`);
+  }
+
+  /**
    * Setup polling service event listeners
    */
   private setupPollingServiceListeners(): void {
     if (!this.pollingService) return;
 
-    // Listen for data updates
-    this.pollingService.on('data-updated', (data: PollingData) => {
-      void this.handlePollingDataUpdate(data);
-    });
-
-    // Listen for status updates
+    // Listen for status updates to track current temperature
     this.pollingService.on('status-updated', (status: PrinterStatus) => {
-      void this.handlePrinterStatusUpdate(status);
+      this.lastPrinterStatus = status;
+
+      // Update temperature monitoring if active
+      if (this.state.monitoringActive) {
+        void this.checkTemperature(status);
+      }
     });
   }
 
@@ -157,70 +175,60 @@ export class TemperatureMonitoringService extends EventEmitter<TempMonitorEventM
   private removePollingServiceListeners(): void {
     if (!this.pollingService) return;
 
-    this.pollingService.removeAllListeners('data-updated');
     this.pollingService.removeAllListeners('status-updated');
   }
 
-  // ============================================================================
-  // STATUS HANDLING
-  // ============================================================================
-
   /**
-   * Handle polling data update
+   * Setup print state monitor event listeners
    */
-  private async handlePollingDataUpdate(data: PollingData): Promise<void> {
-    if (data.printerStatus) {
-      await this.handlePrinterStatusUpdate(data.printerStatus);
-    }
-  }
-
-  /**
-   * Handle printer status update
-   */
-  private async handlePrinterStatusUpdate(status: PrinterStatus): Promise<void> {
-    const previousState = this.lastPrinterStatus?.state;
-    this.lastPrinterStatus = status;
-
-    // Check for state transitions
-    if (previousState !== status.state) {
-      await this.handlePrinterStateChange(previousState ?? 'Busy', status.state, status);
-    }
-
-    // Update temperature monitoring if active
-    if (this.state.monitoringActive) {
-      await this.checkTemperature(status);
-    }
-  }
-
-  /**
-   * Handle printer state changes
-   */
-  private async handlePrinterStateChange(
-    previousState: string,
-    currentState: string,
-    status: PrinterStatus
-  ): Promise<void> {
-    console.log(`[TemperatureMonitor] State change for ${this.contextId}: ${previousState} → ${currentState}`);
-
-    // Reset state when print starts or is cancelled/error
-    if (this.shouldResetState(currentState)) {
-      this.resetState();
-      return;
-    }
+  private setupPrintStateMonitorListeners(): void {
+    if (!this.printStateMonitor) return;
 
     // Start monitoring when print completes
-    if (currentState === 'Completed' && !this.state.hasCooled) {
-      this.startMonitoring();
-    }
+    this.printStateMonitor.on('print-completed', (event) => {
+      if (event.contextId === this.contextId) {
+        console.log(`[TemperatureMonitor] Print completed, starting temperature monitoring`);
+        this.startMonitoring();
+      }
+    });
+
+    // Reset state when print starts
+    this.printStateMonitor.on('print-started', (event) => {
+      if (event.contextId === this.contextId) {
+        console.log(`[TemperatureMonitor] Print started, resetting state`);
+        this.resetState();
+      }
+    });
+
+    // Reset state when print cancelled
+    this.printStateMonitor.on('print-cancelled', (event) => {
+      if (event.contextId === this.contextId) {
+        console.log(`[TemperatureMonitor] Print cancelled, resetting state`);
+        this.resetState();
+      }
+    });
+
+    // Reset state when print error
+    this.printStateMonitor.on('print-error', (event) => {
+      if (event.contextId === this.contextId) {
+        console.log(`[TemperatureMonitor] Print error, resetting state`);
+        this.resetState();
+      }
+    });
   }
 
   /**
-   * Check if state should be reset based on printer state
+   * Remove print state monitor event listeners
    */
-  private shouldResetState(state: string): boolean {
-    // Reset when print is active, cancelled, or in error
-    return state === 'Busy' || state === 'Cancelled' || state === 'Error';
+  private removePrintStateMonitorListeners(): void {
+    if (!this.printStateMonitor) return;
+
+    this.printStateMonitor.removeAllListeners('print-completed');
+    this.printStateMonitor.removeAllListeners('print-started');
+    this.printStateMonitor.removeAllListeners('print-cancelled');
+    this.printStateMonitor.removeAllListeners('print-error');
   }
+
 
   // ============================================================================
   // TEMPERATURE MONITORING
@@ -355,9 +363,11 @@ export class TemperatureMonitoringService extends EventEmitter<TempMonitorEventM
 
     this.stopMonitoring();
     this.removePollingServiceListeners();
+    this.removePrintStateMonitorListeners();
     this.removeAllListeners();
 
     this.pollingService = null;
+    this.printStateMonitor = null;
     this.lastPrinterStatus = null;
   }
 }

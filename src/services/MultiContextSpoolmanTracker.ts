@@ -33,7 +33,7 @@
 import { EventEmitter } from 'events';
 import { getPrinterContextManager } from '../managers/PrinterContextManager';
 import { SpoolmanUsageTracker } from './SpoolmanUsageTracker';
-import type { TemperatureMonitoringService } from './TemperatureMonitoringService';
+import type { PrintStateMonitor } from './PrintStateMonitor';
 
 // ============================================================================
 // MULTI-CONTEXT SPOOLMAN TRACKER
@@ -74,12 +74,12 @@ export class MultiContextSpoolmanTracker extends EventEmitter {
 
   /**
    * Create and configure Spoolman usage tracker for a context
-   * Called when temperature monitor is ready for a context
+   * Called when print state monitor is ready for a context
    *
    * @param contextId - Context ID to create tracker for
-   * @param temperatureMonitor - Temperature monitor to attach to tracker
+   * @param printStateMonitor - Print state monitor to attach to tracker
    */
-  public createTrackerForContext(contextId: string, temperatureMonitor: TemperatureMonitoringService): void {
+  public createTrackerForContext(contextId: string, printStateMonitor: PrintStateMonitor): void {
     // Check if tracker already exists
     if (this.trackers.has(contextId)) {
       console.warn(`[MultiContextSpoolmanTracker] Tracker already exists for context ${contextId}`);
@@ -89,8 +89,8 @@ export class MultiContextSpoolmanTracker extends EventEmitter {
     // Create new tracker for this context
     const tracker = new SpoolmanUsageTracker(contextId);
 
-    // Connect temperature monitor to tracker
-    tracker.setTemperatureMonitor(temperatureMonitor);
+    // Wire print state monitor
+    tracker.setPrintStateMonitor(printStateMonitor);
 
     // Forward events from this tracker
     this.setupTrackerEventForwarding(tracker);
@@ -121,6 +121,14 @@ export class MultiContextSpoolmanTracker extends EventEmitter {
     });
 
     console.log(`[MultiContextSpoolmanTracker] Event forwarding setup for context ${contextId}`);
+  }
+
+  /**
+   * Destroy tracker for a specific context (public API)
+   * @param contextId - Context ID to destroy tracker for
+   */
+  public destroyTracker(contextId: string): void {
+    this.removeTrackerForContext(contextId);
   }
 
   /**

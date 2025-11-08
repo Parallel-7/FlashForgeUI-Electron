@@ -43,6 +43,7 @@ import { getNotificationService, NotificationService } from './NotificationServi
 import { getConfigManager, ConfigManager } from '../../managers/ConfigManager';
 import type { TemperatureMonitoringService } from '../TemperatureMonitoringService';
 import type { PrinterCooledEvent } from '../MultiContextTemperatureMonitor';
+import type { PrintStateMonitor } from '../PrintStateMonitor';
 import type { PrinterPollingService } from '../PrinterPollingService';
 import type {
   PollingData,
@@ -94,12 +95,14 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   private readonly notificationService: NotificationService;
   private readonly configManager: ConfigManager;
   private pollingService: PrinterPollingService | null = null;
+  private printStateMonitor: PrintStateMonitor | null = null;
   private temperatureMonitor: TemperatureMonitoringService | null = null;
 
   // State management
   private notificationState: NotificationState;
   private currentSettings: NotificationSettings;
   private lastPrinterStatus: PrinterStatus | null = null;
+  private contextId: string | null = null;
 
   constructor(
     notificationService?: NotificationService,
@@ -139,6 +142,22 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     this.setupPollingServiceListeners();
 
     console.log('PrinterNotificationCoordinator: Polling service connected');
+  }
+
+  /**
+   * Set the print state monitor to listen to
+   */
+  public setPrintStateMonitor(monitor: PrintStateMonitor): void {
+    // Remove listeners from old monitor
+    if (this.printStateMonitor) {
+      this.removePrintStateMonitorListeners();
+    }
+
+    this.printStateMonitor = monitor;
+    this.contextId = monitor.getContextId();
+    this.setupPrintStateMonitorListeners();
+
+    console.log(`[NotificationCoordinator] Print state monitor connected for context ${this.contextId}`);
   }
 
   /**
@@ -187,6 +206,53 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     this.pollingService.removeAllListeners('data-updated');
     this.pollingService.removeAllListeners('status-updated');
     this.pollingService.removeAllListeners('connection-changed');
+  }
+
+  /**
+   * Setup print state monitor event listeners
+   */
+  private setupPrintStateMonitorListeners(): void {
+    if (!this.printStateMonitor) return;
+
+    // Listen for print started to reset notification flags
+    this.printStateMonitor.on('print-started', (event) => {
+      if (event.contextId === this.contextId) {
+        void this.handlePrintStarted(event);
+      }
+    });
+
+    // Listen for print completed to send notification
+    this.printStateMonitor.on('print-completed', (event) => {
+      if (event.contextId === this.contextId) {
+        void this.handlePrintCompletedEvent(event);
+      }
+    });
+
+    // Listen for print cancelled to reset state
+    this.printStateMonitor.on('print-cancelled', (event) => {
+      if (event.contextId === this.contextId) {
+        void this.handlePrintCancelled(event);
+      }
+    });
+
+    // Listen for print error to reset state
+    this.printStateMonitor.on('print-error', (event) => {
+      if (event.contextId === this.contextId) {
+        void this.handlePrintError(event);
+      }
+    });
+  }
+
+  /**
+   * Remove print state monitor event listeners
+   */
+  private removePrintStateMonitorListeners(): void {
+    if (!this.printStateMonitor) return;
+
+    this.printStateMonitor.removeAllListeners('print-started');
+    this.printStateMonitor.removeAllListeners('print-completed');
+    this.printStateMonitor.removeAllListeners('print-cancelled');
+    this.printStateMonitor.removeAllListeners('print-error');
   }
 
   /**
@@ -269,74 +335,59 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
 
   /**
    * Handle printer status update
+   *
+   * Note: This method only tracks the current status for reference.
+   * State change detection and notification logic is now handled by PrintStateMonitor.
    */
   private async handlePrinterStatusUpdate(status: PrinterStatus): Promise<void> {
-    const previousStatus = this.lastPrinterStatus;
+    // Only track status reference - used by notification templates and other consumers
     this.lastPrinterStatus = status;
 
-    // Check for state transitions that require notification handling
-    if (previousStatus?.state !== status.state) {
-      await this.handlePrinterStateChange(previousStatus?.state ?? 'Busy', status.state, status);
-    }
+    // PrintStateMonitor now handles all state transition detection and notification triggering
+    // This eliminates duplicate state detection logic and race conditions
   }
 
   /**
-   * Handle printer state changes
+   * Handle print started event from PrintStateMonitor
    */
-  private async handlePrinterStateChange(
-    previousState: string,
-    currentState: string,
-    status: PrinterStatus
-  ): Promise<void> {
-    console.log(`Printer state changed: ${previousState} → ${currentState}`);
+  private async handlePrintStarted(event: { contextId: string; jobName: string; status: PrinterStatus; timestamp: Date }): Promise<void> {
+    console.log(`[NotificationCoordinator] Print started: ${event.jobName}`);
 
-    // Reset notification flags for active states
-    if (shouldResetNotificationFlags(currentState as PrinterState)) {
-      this.resetNotificationState(NotificationStateTransition.PrintStarted);
-      return;
-    }
-
-    // Check for notification triggers
-    if (shouldCheckForNotifications(currentState as PrinterState)) {
-      await this.checkNotificationTriggers(currentState, status);
-    }
+    // Reset notification sent flags for active printing states
+    this.resetNotificationState(NotificationStateTransition.PrintStarted);
   }
 
   /**
-   * Check for notification triggers based on state
+   * Handle print completed event from PrintStateMonitor
    */
-  private async checkNotificationTriggers(
-    state: string,
-    status: PrinterStatus
-  ): Promise<void> {
-    switch (state) {
-      case 'Completed':
-        await this.handlePrintCompleted(status);
-        break;
-      case 'Cancelled':
-        this.resetNotificationState(NotificationStateTransition.PrintCancelled);
-        break;
-      case 'Error':
-        // Reset flags but don't send notifications for error states
-        this.resetNotificationState(NotificationStateTransition.PrintCancelled);
-        break;
-    }
-  }
+  private async handlePrintCompletedEvent(event: { contextId: string; jobName: string; status: PrinterStatus; completedAt: Date }): Promise<void> {
+    console.log(`[NotificationCoordinator] Print completed: ${event.jobName}`);
 
-  /**
-   * Handle print completion
-   */
-  private async handlePrintCompleted(status: PrinterStatus): Promise<void> {
-    // Only send notification if not already sent and setting is enabled
+    // Check if notification should be sent
     if (!this.notificationState.hasSentPrintCompleteNotification &&
         shouldSendNotification(NotificationType.PrintComplete, this.currentSettings)) {
-
-      await this.sendPrintCompleteNotification(status);
+      await this.sendPrintCompleteNotification(event.status);
       this.updateNotificationState({
         hasSentPrintCompleteNotification: true,
         lastPrintCompleteTime: new Date()
       }, NotificationStateTransition.PrintCompleted);
     }
+  }
+
+  /**
+   * Handle print cancelled event from PrintStateMonitor
+   */
+  private async handlePrintCancelled(event: { contextId: string; jobName: string | null; status: PrinterStatus; timestamp: Date }): Promise<void> {
+    console.log(`[NotificationCoordinator] Print cancelled`);
+    this.resetNotificationState(NotificationStateTransition.PrintCancelled);
+  }
+
+  /**
+   * Handle print error event from PrintStateMonitor
+   */
+  private async handlePrintError(event: { contextId: string; jobName: string | null; status: PrinterStatus; timestamp: Date }): Promise<void> {
+    console.log(`[NotificationCoordinator] Print error`);
+    this.resetNotificationState(NotificationStateTransition.PrintCancelled);
   }
 
   /**
@@ -559,6 +610,10 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   public dispose(): void {
     console.log('PrinterNotificationCoordinator: Disposing...');
 
+    // Remove print state monitor listeners
+    this.removePrintStateMonitorListeners();
+    this.printStateMonitor = null;
+
     // Remove temperature monitor listeners
     this.removeTemperatureMonitorListeners();
     this.temperatureMonitor = null;
@@ -572,6 +627,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     // Clear references
     this.pollingService = null;
     this.lastPrinterStatus = null;
+    this.contextId = null;
 
     console.log('PrinterNotificationCoordinator disposed');
   }

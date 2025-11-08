@@ -1,11 +1,11 @@
 /**
- * @fileoverview Spoolman usage tracker for updating filament usage when prints complete and cool.
+ * @fileoverview Spoolman usage tracker for updating filament usage when prints complete.
  *
- * This service tracks filament usage and updates Spoolman when prints cool down, extracted from
+ * This service tracks filament usage and updates Spoolman immediately when prints complete, extracted from
  * PrinterNotificationCoordinator to enable functionality in both GUI and headless modes.
  *
  * Key Features:
- * - Listens to TemperatureMonitoringService 'printer-cooled' events
+ * - Listens to PrintStateMonitor 'print-completed' events
  * - Extracts usage data from printer status (weight/length based on config)
  * - Updates Spoolman via SpoolmanService API
  * - Persists updated spool data via SpoolmanIntegrationService
@@ -13,7 +13,7 @@
  * - Works in both GUI and headless modes
  *
  * Core Responsibilities:
- * - Monitor temperature cooling events for print completion
+ * - Monitor print state for completion events
  * - Verify Spoolman is enabled and configured
  * - Resolve context ID and active spool assignment
  * - Extract filament usage from print job data
@@ -22,8 +22,8 @@
  * - Prevent duplicate updates for the same print
  *
  * Usage Flow:
- * 1. Print completes and bed starts cooling
- * 2. TemperatureMonitoringService emits 'printer-cooled' event
+ * 1. Print completes
+ * 2. PrintStateMonitor emits 'print-completed' event
  * 3. SpoolmanUsageTracker receives event
  * 4. Checks if usage already recorded for this print
  * 5. Verifies Spoolman configuration and active spool
@@ -40,22 +40,8 @@ import { getConfigManager } from '../managers/ConfigManager';
 import { getPrinterContextManager } from '../managers/PrinterContextManager';
 import { getSpoolmanIntegrationService } from './SpoolmanIntegrationService';
 import { SpoolmanService } from './SpoolmanService';
-import type { TemperatureMonitoringService } from './TemperatureMonitoringService';
-import type { PrinterCooledEvent } from './MultiContextTemperatureMonitor';
+import type { PrintStateMonitor } from './PrintStateMonitor';
 import type { PrinterStatus } from '../types/polling';
-
-// ============================================================================
-// TYPES
-// ============================================================================
-
-/**
- * Usage tracking state for a context
- */
-interface UsageTrackingState {
-  printCompleted: boolean;
-  usageRecorded: boolean;
-  lastRecordedJob: string | null;
-}
 
 // ============================================================================
 // SPOOLMAN USAGE TRACKER
@@ -67,13 +53,8 @@ interface UsageTrackingState {
 export class SpoolmanUsageTracker extends EventEmitter {
   private readonly contextId: string;
   private readonly configManager = getConfigManager();
-  private temperatureMonitor: TemperatureMonitoringService | null = null;
-
-  private state: UsageTrackingState = {
-    printCompleted: false,
-    usageRecorded: false,
-    lastRecordedJob: null
-  };
+  private printStateMonitor: PrintStateMonitor | null = null;
+  private usageRecordedForPrint: string | null = null;
 
   constructor(contextId: string) {
     super();
@@ -83,73 +64,90 @@ export class SpoolmanUsageTracker extends EventEmitter {
   }
 
   // ============================================================================
-  // TEMPERATURE MONITOR INTEGRATION
+  // PRINT STATE MONITOR INTEGRATION
   // ============================================================================
 
   /**
-   * Set the temperature monitoring service to listen to
+   * Set the print state monitor to listen to
    */
-  public setTemperatureMonitor(monitor: TemperatureMonitoringService): void {
+  public setPrintStateMonitor(monitor: PrintStateMonitor): void {
     // Remove listeners from old monitor
-    if (this.temperatureMonitor) {
-      this.removeTemperatureMonitorListeners();
+    if (this.printStateMonitor) {
+      this.removePrintStateMonitorListeners();
     }
 
-    this.temperatureMonitor = monitor;
-    this.setupTemperatureMonitorListeners();
+    this.printStateMonitor = monitor;
+    this.setupPrintStateMonitorListeners();
 
-    console.log(`[SpoolmanUsageTracker] Temperature monitor connected for context ${this.contextId}`);
+    console.log(`[SpoolmanTracker] Print state monitor connected for context ${this.contextId}`);
   }
 
   /**
-   * Setup temperature monitor event listeners
+   * Setup print state monitor event listeners
    */
-  private setupTemperatureMonitorListeners(): void {
-    if (!this.temperatureMonitor) return;
+  private setupPrintStateMonitorListeners(): void {
+    if (!this.printStateMonitor) return;
 
-    // Listen for printer-cooled events
-    this.temperatureMonitor.on('printer-cooled', (event: PrinterCooledEvent) => {
-      void this.handlePrinterCooled(event);
+    // Trigger Spoolman deduction immediately when print completes
+    this.printStateMonitor.on('print-completed', (event) => {
+      if (event.contextId === this.contextId) {
+        void this.handlePrintCompleted(event);
+      }
+    });
+
+    // Reset tracking when new print starts
+    this.printStateMonitor.on('print-started', (event) => {
+      if (event.contextId === this.contextId) {
+        this.resetTracking();
+      }
     });
   }
 
   /**
-   * Remove temperature monitor event listeners
+   * Remove print state monitor event listeners
    */
-  private removeTemperatureMonitorListeners(): void {
-    if (!this.temperatureMonitor) return;
+  private removePrintStateMonitorListeners(): void {
+    if (!this.printStateMonitor) return;
 
-    this.temperatureMonitor.removeAllListeners('printer-cooled');
+    this.printStateMonitor.removeAllListeners('print-completed');
+    this.printStateMonitor.removeAllListeners('print-started');
   }
 
   // ============================================================================
-  // PRINTER COOLED HANDLING
+  // PRINT COMPLETED HANDLING
   // ============================================================================
 
   /**
-   * Handle printer cooled event
+   * Handle print completed event
    */
-  private async handlePrinterCooled(event: PrinterCooledEvent): Promise<void> {
-    // Only handle events for our context
+  private async handlePrintCompleted(event: { contextId: string; jobName: string; status: PrinterStatus; completedAt: Date }): Promise<void> {
+    console.log(`[SpoolmanTracker] Print completed: ${event.jobName}`);
+
+    // Validate context
     if (event.contextId !== this.contextId) {
+      console.warn('[SpoolmanTracker] Context mismatch in print-completed event');
       return;
     }
 
-    console.log(`[SpoolmanUsageTracker] Printer cooled for context ${this.contextId}, checking for Spoolman update`);
-
-    // Check if usage already recorded for this print
-    const currentJob = event.status.currentJob?.fileName;
-    if (this.state.usageRecorded && this.state.lastRecordedJob === currentJob) {
-      console.log(`[SpoolmanUsageTracker] Usage already recorded for job: ${currentJob}`);
+    // Check if already recorded for this print
+    if (this.usageRecordedForPrint === event.jobName) {
+      console.log(`[SpoolmanTracker] Usage already recorded for: ${event.jobName}`);
       return;
     }
 
-    // Update Spoolman usage
+    // Update Spoolman with cached filament data from backend
     await this.updateSpoolmanUsage(event.status);
 
     // Mark as recorded
-    this.state.usageRecorded = true;
-    this.state.lastRecordedJob = currentJob ?? null;
+    this.usageRecordedForPrint = event.jobName;
+  }
+
+  /**
+   * Reset tracking state
+   */
+  private resetTracking(): void {
+    this.usageRecordedForPrint = null;
+    console.log('[SpoolmanTracker] Tracking state reset');
   }
 
   /**
@@ -248,27 +246,6 @@ export class SpoolmanUsageTracker extends EventEmitter {
   // ============================================================================
 
   /**
-   * Reset tracking state
-   * Called when new print starts
-   */
-  public resetState(): void {
-    this.state = {
-      printCompleted: false,
-      usageRecorded: false,
-      lastRecordedJob: null
-    };
-
-    console.log(`[SpoolmanUsageTracker] State reset for context ${this.contextId}`);
-  }
-
-  /**
-   * Get current tracking state
-   */
-  public getState(): Readonly<UsageTrackingState> {
-    return { ...this.state };
-  }
-
-  /**
    * Get context ID
    */
   public getContextId(): string {
@@ -285,9 +262,9 @@ export class SpoolmanUsageTracker extends EventEmitter {
   public dispose(): void {
     console.log(`[SpoolmanUsageTracker] Disposing for context ${this.contextId}`);
 
-    this.removeTemperatureMonitorListeners();
+    this.removePrintStateMonitorListeners();
     this.removeAllListeners();
 
-    this.temperatureMonitor = null;
+    this.printStateMonitor = null;
   }
 }

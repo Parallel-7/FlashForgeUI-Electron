@@ -33,6 +33,7 @@
 import { EventEmitter } from 'events';
 import { getPrinterContextManager } from '../managers/PrinterContextManager';
 import { TemperatureMonitoringService } from './TemperatureMonitoringService';
+import type { PrintStateMonitor } from './PrintStateMonitor';
 import type { PrinterPollingService } from './PrinterPollingService';
 import type { PrinterStatus } from '../types/polling';
 
@@ -93,8 +94,13 @@ export class MultiContextTemperatureMonitor extends EventEmitter {
    *
    * @param contextId - Context ID to create monitor for
    * @param pollingService - Polling service to attach to monitor
+   * @param printStateMonitor - Print state monitor to listen to
    */
-  public createMonitorForContext(contextId: string, pollingService: PrinterPollingService): void {
+  public createMonitorForContext(
+    contextId: string,
+    pollingService: PrinterPollingService,
+    printStateMonitor: PrintStateMonitor
+  ): void {
     // Check if monitor already exists
     if (this.monitors.has(contextId)) {
       console.warn(`[MultiContextTemperatureMonitor] Monitor already exists for context ${contextId}`);
@@ -104,8 +110,9 @@ export class MultiContextTemperatureMonitor extends EventEmitter {
     // Create new monitor for this context
     const monitor = new TemperatureMonitoringService(contextId);
 
-    // Connect polling service to monitor
+    // Wire dependencies
     monitor.setPollingService(pollingService);
+    monitor.setPrintStateMonitor(printStateMonitor);
 
     // Forward events from this monitor
     this.setupMonitorEventForwarding(monitor);
@@ -146,6 +153,14 @@ export class MultiContextTemperatureMonitor extends EventEmitter {
     });
 
     console.log(`[MultiContextTemperatureMonitor] Event forwarding setup for context ${contextId}`);
+  }
+
+  /**
+   * Destroy monitor for a specific context (public API)
+   * @param contextId - Context ID to destroy monitor for
+   */
+  public destroyMonitor(contextId: string): void {
+    this.removeMonitorForContext(contextId);
   }
 
   /**

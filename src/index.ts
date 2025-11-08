@@ -33,6 +33,7 @@ import { setupPrinterContextHandlers, setupConnectionStateHandlers, setupCameraC
 import type { PollingData } from './types/polling';
 // import { getMainProcessPollingCoordinator } from './services/MainProcessPollingCoordinator';
 import { getMultiContextPollingCoordinator } from './services/MultiContextPollingCoordinator';
+import { getMultiContextPrintStateMonitor } from './services/MultiContextPrintStateMonitor';
 import { getMultiContextNotificationCoordinator } from './services/MultiContextNotificationCoordinator';
 import { getMultiContextTemperatureMonitor } from './services/MultiContextTemperatureMonitor';
 import { getMultiContextSpoolmanTracker } from './services/MultiContextSpoolmanTracker';
@@ -415,47 +416,99 @@ const setupPrinterContextEventForwarding = (): void => {
   // Start polling and camera when backend is initialized for a context
   backendManager.on('backend-initialized', (event: unknown) => {
     const backendEvent = event as { contextId: string; modelType: string };
+    const contextId = backendEvent.contextId;
 
-    console.log(`[MultiContext] Backend initialized for context ${backendEvent.contextId}`);
+    console.log(`[Main] Backend initialized for context ${contextId}`);
 
     // Start polling for this context
     try {
-      multiContextPollingCoordinator.startPollingForContext(backendEvent.contextId);
-      console.log(`[MultiContext] Started polling for context ${backendEvent.contextId}`);
+      multiContextPollingCoordinator.startPollingForContext(contextId);
+      console.log(`[Main] Started polling for context ${contextId}`);
 
-      // Get the polling service from the context
+      // Get the backend and polling service from context
       const contextManager = getPrinterContextManager();
-      const context = contextManager.getContext(backendEvent.contextId);
+      const context = contextManager.getContext(contextId);
+      const backend = getPrinterBackendManager().getBackendForContext(contextId);
       const pollingService = context?.pollingService;
 
-      if (pollingService) {
-        // Create temperature monitor for this context
-        const tempMonitor = getMultiContextTemperatureMonitor();
-        tempMonitor.createMonitorForContext(backendEvent.contextId, pollingService);
-
-        // Create Spoolman tracker for this context (get the temperature monitor we just created)
-        const temperatureMonitor = tempMonitor.getMonitor(backendEvent.contextId);
-        if (temperatureMonitor) {
-          const spoolmanTracker = getMultiContextSpoolmanTracker();
-          spoolmanTracker.createTrackerForContext(backendEvent.contextId, temperatureMonitor);
-        }
-
-        // Create notification coordinator for this context
-        const notificationCoordinator = getMultiContextNotificationCoordinator();
-        notificationCoordinator.createCoordinatorForContext(backendEvent.contextId, pollingService);
-
-        // Connect temperature monitor to notification coordinator
-        const coordinator = notificationCoordinator.getCoordinator(backendEvent.contextId);
-        if (coordinator && temperatureMonitor) {
-          coordinator.setTemperatureMonitor(temperatureMonitor);
-        }
+      if (!backend || !pollingService) {
+        console.error('[Main] Missing backend or polling service for context initialization');
+        return;
       }
+
+      // ====================================================================
+      // STEP 1: Create PrintStateMonitor FIRST (foundation)
+      // ====================================================================
+      const printStateMonitor = getMultiContextPrintStateMonitor();
+      printStateMonitor.createMonitorForContext(contextId, pollingService);
+      const stateMonitor = printStateMonitor.getMonitor(contextId);
+
+      if (!stateMonitor) {
+        console.error('[Main] Failed to create print state monitor');
+        return;
+      }
+
+      console.log(`[Main] Created PrintStateMonitor for context ${contextId}`);
+
+      // ====================================================================
+      // STEP 2: Create TemperatureMonitor (depends on PrintStateMonitor)
+      // ====================================================================
+      const tempMonitor = getMultiContextTemperatureMonitor();
+      tempMonitor.createMonitorForContext(
+        contextId,
+        pollingService,
+        stateMonitor  // Pass state monitor
+      );
+      const temperatureMonitor = tempMonitor.getMonitor(contextId);
+
+      if (!temperatureMonitor) {
+        console.error('[Main] Failed to create temperature monitor');
+        return;
+      }
+
+      console.log(`[Main] Created TemperatureMonitor for context ${contextId}`);
+
+      // ====================================================================
+      // STEP 3: Create SpoolmanTracker (depends on PrintStateMonitor)
+      // ====================================================================
+      const spoolmanTracker = getMultiContextSpoolmanTracker();
+      spoolmanTracker.createTrackerForContext(
+        contextId,
+        stateMonitor  // Pass state monitor (not temperature monitor)
+      );
+
+      console.log(`[Main] Created SpoolmanTracker for context ${contextId}`);
+
+      // ====================================================================
+      // STEP 4: Create NotificationCoordinator (depends on both monitors)
+      // ====================================================================
+      const notificationCoordinator = getMultiContextNotificationCoordinator();
+      notificationCoordinator.createCoordinatorForContext(
+        contextId,
+        pollingService,
+        stateMonitor  // Pass state monitor
+      );
+
+      const coordinator = notificationCoordinator.getCoordinator(contextId);
+      if (coordinator) {
+        // Wire temperature monitor for cooled notifications
+        coordinator.setTemperatureMonitor(temperatureMonitor);
+        console.log(`[Main] Wired TemperatureMonitor to NotificationCoordinator`);
+      }
+
+      console.log(`[Main] Created NotificationCoordinator for context ${contextId}`);
+
+      // ====================================================================
+      // INITIALIZATION COMPLETE
+      // ====================================================================
+      console.log(`[Main] Context ${contextId} fully initialized with all monitors and coordinators`);
+
     } catch (error) {
-      console.error(`[MultiContext] Failed to start polling for context ${backendEvent.contextId}:`, error);
+      console.error(`[Main] Error initializing context ${contextId}:`, error);
     }
 
     // Setup camera for this context
-    void cameraIPCHandler.handlePrinterConnected(backendEvent.contextId);
+    void cameraIPCHandler.handlePrinterConnected(contextId);
   });
 
   // Forward polling data from active context to renderer
@@ -486,11 +539,40 @@ const setupPrinterContextEventForwarding = (): void => {
 
   // Forward context-removed events
   contextManager.on('context-removed', (event: unknown) => {
+    const contextEvent = event as { contextId: string };
+    const contextId = contextEvent.contextId;
+
+    console.log(`[Main] Cleaning up context ${contextId}`);
+
+    try {
+      // Destroy in reverse order of creation
+      const notificationCoordinator = getMultiContextNotificationCoordinator();
+      notificationCoordinator.destroyCoordinator(contextId);
+      console.log(`[Main] Destroyed NotificationCoordinator for context ${contextId}`);
+
+      const spoolmanTracker = getMultiContextSpoolmanTracker();
+      spoolmanTracker.destroyTracker(contextId);
+      console.log(`[Main] Destroyed SpoolmanTracker for context ${contextId}`);
+
+      const tempMonitor = getMultiContextTemperatureMonitor();
+      tempMonitor.destroyMonitor(contextId);
+      console.log(`[Main] Destroyed TemperatureMonitor for context ${contextId}`);
+
+      const printStateMonitor = getMultiContextPrintStateMonitor();
+      printStateMonitor.destroyMonitor(contextId);
+      console.log(`[Main] Destroyed PrintStateMonitor for context ${contextId}`);
+
+      console.log(`[Main] Context ${contextId} cleanup complete`);
+
+    } catch (error) {
+      console.error(`[Main] Error cleaning up context ${contextId}:`, error);
+    }
+
+    // Forward to renderer
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('printer-context-removed', event);
-      const contextEvent = event as { contextId: string };
-      console.log(`Forwarded context-removed event: ${contextEvent.contextId}`);
+      console.log(`Forwarded context-removed event: ${contextId}`);
     }
   });
 
