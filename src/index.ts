@@ -51,6 +51,8 @@ import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection';
 import { getHeadlessManager } from './managers/HeadlessManager';
 import { getAutoUpdateService } from './services/AutoUpdateService';
 import { initializeSpoolmanIntegrationService } from './services/SpoolmanIntegrationService';
+import { getDiscordNotificationService } from './services/discord';
+import type { PrinterCooledEvent } from './services/MultiContextTemperatureMonitor';
 
 /**
  * Main Electron process entry point. Handles app lifecycle, creates the main window,
@@ -493,10 +495,29 @@ const setupPrinterContextEventForwarding = (): void => {
       if (coordinator) {
         // Wire temperature monitor for cooled notifications
         coordinator.setTemperatureMonitor(temperatureMonitor);
-        console.log(`[Main] Wired TemperatureMonitor to NotificationCoordinator`);
+        console.log('[Main] Wired TemperatureMonitor to NotificationCoordinator');
       }
 
       console.log(`[Main] Created NotificationCoordinator for context ${contextId}`);
+
+      // ====================================================================
+      // STEP 5: Register context with Discord notification service and wire events
+      // ====================================================================
+      const discordService = getDiscordNotificationService();
+      discordService.registerContext(contextId);
+
+      // Wire Discord service to print state events for event-driven notifications
+      stateMonitor.on('print-completed', (event) => {
+        const duration = event.status.currentJob?.progress.elapsedTime;
+        void discordService.notifyPrintComplete(event.contextId, event.jobName, duration);
+      });
+
+      // Wire printer cooled events
+      if (temperatureMonitor) {
+        temperatureMonitor.on('printer-cooled', (event: PrinterCooledEvent) => {
+          void discordService.notifyPrinterCooled(event.contextId);
+        });
+      }
 
       // ====================================================================
       // INITIALIZATION COMPLETE
@@ -513,6 +534,14 @@ const setupPrinterContextEventForwarding = (): void => {
 
   // Forward polling data from active context to renderer
   multiContextPollingCoordinator.on('polling-data', (contextId: string, data: unknown) => {
+    const pollingData = data as PollingData;
+
+    // Update Discord service with current printer status
+    if (pollingData.printerStatus) {
+      const discordService = getDiscordNotificationService();
+      discordService.updatePrinterStatus(contextId, pollingData.printerStatus);
+    }
+
     // Only forward polling data from the active context to avoid flooding the renderer
     const activeContextId = contextManager.getActiveContextId();
     if (contextId === activeContextId) {
@@ -523,7 +552,7 @@ const setupPrinterContextEventForwarding = (): void => {
 
       // Forward to WebUI for WebSocket clients
       const webUIManager = getWebUIManager();
-      webUIManager.handlePollingUpdate(data as PollingData);
+      webUIManager.handlePollingUpdate(pollingData);
     }
   });
 
@@ -546,6 +575,9 @@ const setupPrinterContextEventForwarding = (): void => {
 
     try {
       // Destroy in reverse order of creation
+      const discordService = getDiscordNotificationService();
+      discordService.unregisterContext(contextId);
+
       const notificationCoordinator = getMultiContextNotificationCoordinator();
       notificationCoordinator.destroyCoordinator(contextId);
       console.log(`[Main] Destroyed NotificationCoordinator for context ${contextId}`);
@@ -804,6 +836,10 @@ const initializeApp = async (): Promise<void> => {
   multiContextNotificationCoordinator.initialize();
   console.log('Multi-context notification coordinator initialized');
 
+  // Initialize Discord notification service
+  const discordService = getDiscordNotificationService();
+  discordService.initialize();
+
   // Initialize thumbnail cache service
   const thumbnailCacheService = getThumbnailCacheService();
   await thumbnailCacheService.initialize();
@@ -871,6 +907,10 @@ async function initializeHeadless(): Promise<void> {
   const multiContextNotificationCoordinator = getMultiContextNotificationCoordinator();
   multiContextNotificationCoordinator.initialize();
   console.log('[Headless] Multi-context notification coordinator initialized');
+
+  // Initialize Discord notification service
+  const discordService = getDiscordNotificationService();
+  discordService.initialize();
 
   // Initialize headless manager
   const headlessManager = getHeadlessManager();
