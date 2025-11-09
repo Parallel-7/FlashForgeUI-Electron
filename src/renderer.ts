@@ -2098,7 +2098,7 @@ function initializePollingListeners(): void {
       const stateTracker = getGlobalStateTracker();
       if (pollingData.printerStatus && pollingData.isConnected) {
         stateTracker.setState(pollingData.printerStatus.state, 'polling update');
-      } else if (!pollingData.isConnected) {
+      } else if (!pollingData.isConnected && !pollingData.isInitializing) {
         stateTracker.onDisconnected();
       }
       

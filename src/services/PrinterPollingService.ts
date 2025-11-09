@@ -271,6 +271,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
       let hasChanges = false;
       const newData: PollingData = {
         ...this.currentData,
+        isInitializing: false,
         lastPolled: new Date()
       };
 

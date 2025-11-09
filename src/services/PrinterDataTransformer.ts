@@ -218,6 +218,7 @@ export class PrinterDataTransformer {
           totalLayers: null,
           timeRemaining: null,
           elapsedTime: 0,
+          elapsedTimeSeconds: 0,
           weightUsed: 0,
           lengthUsed: 0
         },
@@ -273,7 +274,8 @@ export class PrinterDataTransformer {
       currentLayer,
       totalLayers,
       timeRemaining: remainingTime > 0 ? remainingTime : null, // Already in minutes from backend
-      elapsedTime: secondsToMinutes(printDuration), // Convert seconds to minutes
+      elapsedTime: secondsToMinutes(printDuration), // Convert seconds to minutes (backward compatibility)
+      elapsedTimeSeconds: printDuration, // Store raw seconds for precise display
       weightUsed: filamentWeight,
       lengthUsed: filamentUsed,
       formattedEta: printEta || undefined
