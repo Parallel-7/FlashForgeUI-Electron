@@ -742,20 +742,20 @@ const initializeApp = async (): Promise<void> => {
   setupCameraContextHandlers();
   console.log('Printer context IPC handlers registered');
 
-  // Initialize Spoolman integration service
+  // Setup legacy dialog handlers (printer selection enhancement, loading overlay)
+  setupDialogHandlers();
+
+  // NOW create the window - renderer will find handlers already registered
+  await createMainWindow();
+  console.log('Main window created with all handlers ready');
+
+  // Initialize Spoolman integration service (after window creation to avoid timing issues)
   initializeSpoolmanIntegrationService(
     getConfigManager(),
     getPrinterContextManager(),
     getPrinterBackendManager()
   );
   console.log('Spoolman integration service initialized');
-
-  // Setup legacy dialog handlers (printer selection enhancement, loading overlay)
-  setupDialogHandlers();
-  
-  // NOW create the window - renderer will find handlers already registered
-  await createMainWindow();
-  console.log('Main window created with all handlers ready');
   
   // Continue with remaining initialization
   setupWindowControlHandlers();
