@@ -40,6 +40,7 @@ interface ISettingsAPI {
   receiveConfig: (callback: (config: AppConfig) => void) => void;
   removeListeners: () => void;
   testSpoolmanConnection: (url: string) => Promise<{ connected: boolean; error?: string }>;
+  testDiscordWebhook: (url: string) => Promise<{ success: boolean; error?: string }>;
 }
 
 interface IPrinterSettingsAPI {
@@ -138,6 +139,8 @@ class SettingsRenderer {
   private updateCheckButton: HTMLButtonElement | null = null;
   private testSpoolmanButton: HTMLButtonElement | null = null;
   private spoolmanTestResultElement: HTMLElement | null = null;
+  private testDiscordButton: HTMLButtonElement | null = null;
+  private discordTestResultElement: HTMLElement | null = null;
   private resetDesktopThemeButton: HTMLButtonElement | null = null;
   private desktopThemeInputs: Map<keyof ThemeColors, HTMLInputElement> = new Map();
   private hexInputs: Map<keyof ThemeColors, HTMLInputElement> = new Map();
@@ -206,6 +209,9 @@ class SettingsRenderer {
 
     this.testSpoolmanButton = document.getElementById('btn-test-spoolman') as HTMLButtonElement | null;
     this.spoolmanTestResultElement = document.getElementById('spoolman-test-result');
+
+    this.testDiscordButton = document.getElementById('btn-test-discord') as HTMLButtonElement | null;
+    this.discordTestResultElement = document.getElementById('discord-test-result');
 
     // Initialize desktop theme inputs
     const themeInputIds: Array<[keyof ThemeColors, string]> = [
@@ -290,6 +296,12 @@ class SettingsRenderer {
     if (this.testSpoolmanButton) {
       this.testSpoolmanButton.addEventListener('click', () => {
         void this.handleTestSpoolmanConnection();
+      });
+    }
+
+    if (this.testDiscordButton) {
+      this.testDiscordButton.addEventListener('click', () => {
+        void this.handleTestDiscordWebhook();
       });
     }
 
@@ -871,6 +883,59 @@ class SettingsRenderer {
 
     this.spoolmanTestResultElement.textContent = message;
     this.spoolmanTestResultElement.style.color =
+      type === 'success' ? '#4ade80' :
+      type === 'error' ? '#f87171' :
+      '#60a5fa';
+  }
+
+  private async handleTestDiscordWebhook(): Promise<void> {
+    if (!window.settingsAPI) {
+      this.showDiscordTestResult('Settings API not available.', 'error');
+      return;
+    }
+
+    const webhookUrlInput = this.inputs.get('webhook-url');
+    if (!webhookUrlInput) {
+      this.showDiscordTestResult('Webhook URL input not found.', 'error');
+      return;
+    }
+
+    const webhookUrl = webhookUrlInput.value.trim();
+    if (!webhookUrl) {
+      this.showDiscordTestResult('Please enter a Discord webhook URL.', 'error');
+      return;
+    }
+
+    if (this.testDiscordButton) {
+      this.testDiscordButton.disabled = true;
+    }
+
+    this.showDiscordTestResult('Testing webhook...', 'info');
+
+    try {
+      const result = await window.settingsAPI.testDiscordWebhook(webhookUrl);
+
+      if (result.success) {
+        this.showDiscordTestResult('✓ Webhook test successful!', 'success');
+      } else {
+        this.showDiscordTestResult(`✗ Webhook test failed: ${result.error || 'Unknown error'}`, 'error');
+      }
+    } catch (error) {
+      console.error('[Settings] Discord webhook test failed:', error);
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.showDiscordTestResult(`✗ Webhook test failed: ${errorMsg}`, 'error');
+    } finally {
+      if (this.testDiscordButton) {
+        this.testDiscordButton.disabled = false;
+      }
+    }
+  }
+
+  private showDiscordTestResult(message: string, type: 'success' | 'error' | 'info'): void {
+    if (!this.discordTestResultElement) return;
+
+    this.discordTestResultElement.textContent = message;
+    this.discordTestResultElement.style.color =
       type === 'success' ? '#4ade80' :
       type === 'error' ? '#f87171' :
       '#60a5fa';

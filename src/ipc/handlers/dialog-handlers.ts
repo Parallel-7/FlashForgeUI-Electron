@@ -101,6 +101,52 @@ export function registerDialogHandlers(
     }
   });
 
+  // Test Discord webhook
+  ipcMain.handle('discord:test-webhook', async (_event, webhookUrl: string) => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const testPayload = {
+        embeds: [{
+          title: '🧪 Test Webhook',
+          description: 'Test message from FlashForgeUI',
+          color: 0x4285f4,
+          timestamp: new Date().toISOString()
+        }]
+      };
+
+      try {
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(testPayload),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          return {
+            success: false,
+            error: `Discord webhook returned ${response.status}: ${response.statusText}`
+          };
+        }
+
+        return { success: true };
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        throw fetchError;
+      }
+    } catch (error) {
+      console.error('[DialogHandlers] Discord webhook test failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  });
+
   // Status dialog handlers
   ipcMain.on('open-status-dialog', () => {
     createStatusWindow();
