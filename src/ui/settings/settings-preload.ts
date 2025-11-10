@@ -46,7 +46,8 @@ contextBridge.exposeInMainWorld('settingsAPI', {
     ipcRenderer.removeAllListeners('settings-config-data');
   },
   testSpoolmanConnection: (url: string) => ipcRenderer.invoke('spoolman:test-connection', url),
-  testDiscordWebhook: (url: string) => ipcRenderer.invoke('discord:test-webhook', url)
+  testDiscordWebhook: (url: string) => ipcRenderer.invoke('discord:test-webhook', url),
+  getRoundedUISupportInfo: () => ipcRenderer.invoke('rounded-ui:get-support-info')
 });
 
 // Expose printer settings API (reusing same implementation as main preload)

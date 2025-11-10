@@ -11,7 +11,7 @@
  * - Dependent input state management (e.g., port fields enabled only when feature is enabled)
  * - Unsaved changes detection with confirmation prompts
  * - Per-printer context indicator showing which printer's settings are being edited
- * - macOS compatibility handling (rounded UI disabled on macOS)
+ * - Platform compatibility handling (Rounded UI disabled when unsupported)
  * - Port number validation with range checking (1-65535)
  *
  * Settings Categories:
@@ -41,6 +41,7 @@ interface ISettingsAPI {
   removeListeners: () => void;
   testSpoolmanConnection: (url: string) => Promise<{ connected: boolean; error?: string }>;
   testDiscordWebhook: (url: string) => Promise<{ success: boolean; error?: string }>;
+  getRoundedUISupportInfo: () => Promise<RoundedUISupportInfo>;
 }
 
 interface IPrinterSettingsAPI {
@@ -67,6 +68,11 @@ interface UpdateStatusResponse {
   readonly error: { readonly message: string } | null;
   readonly currentVersion: string;
   readonly supportsDownload: boolean;
+}
+
+interface RoundedUISupportInfo {
+  readonly supported: boolean;
+  readonly reason: 'macos' | 'windows11' | null;
 }
 
 interface IAutoUpdateAPI {
@@ -154,6 +160,7 @@ class SettingsRenderer {
   private readonly tabPanels: Map<string, HTMLElement> = new Map();
   private activeTabId: string = 'camera';
   private perPrinterControlsEnabled: boolean = true;
+  private roundedUISupportInfo: RoundedUISupportInfo = { supported: true, reason: null };
 
   // Custom color picker elements
   private colorPickerModal: HTMLElement | null = null;
@@ -179,6 +186,7 @@ class SettingsRenderer {
   private initialize(): void {
     document.addEventListener('DOMContentLoaded', () => {
       window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x', 'alert-triangle']);
+      void this.initializeRoundedUISupportInfo();
       this.initializeElements();
       this.setupEventListeners();
       void this.requestInitialConfig();
@@ -453,7 +461,7 @@ class SettingsRenderer {
 
     // Update input states after loading
     this.updateInputStates();
-    this.handleMacOSCompatibility();
+    this.applyRoundedUIRestrictions();
     this.hasUnsavedChanges = false;
     this.updateSaveButtonState();
   }
@@ -698,27 +706,6 @@ class SettingsRenderer {
     }
   }
 
-  private handleMacOSCompatibility(): void {
-    // Check if running on macOS
-    const isMacOS = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-
-    if (isMacOS) {
-      // Disable the rounded UI checkbox on macOS
-      const roundedUIInput = this.inputs.get('rounded-ui');
-      if (roundedUIInput) {
-        roundedUIInput.disabled = true;
-        roundedUIInput.checked = false;
-        roundedUIInput.style.opacity = '0.5';
-      }
-
-      // Show the macOS warning message
-      const macosWarning = document.querySelector('.macos-warning');
-      if (macosWarning) {
-        (macosWarning as HTMLElement).style.display = 'block';
-      }
-    }
-  }
-
   private loadDesktopTheme(): void {
     const desktopTheme = this.settings.global['DesktopTheme'] as ThemeColors | undefined;
     const theme = desktopTheme || DEFAULT_THEME;
@@ -737,6 +724,64 @@ class SettingsRenderer {
     });
 
     console.log('[Settings] Loaded desktop theme:', theme);
+  }
+
+  private async initializeRoundedUISupportInfo(): Promise<void> {
+    if (!window.settingsAPI?.getRoundedUISupportInfo) {
+      return;
+    }
+
+    try {
+      this.roundedUISupportInfo = await window.settingsAPI.getRoundedUISupportInfo();
+      this.applyRoundedUIRestrictions();
+    } catch (error) {
+      console.warn('[Settings] Unable to determine Rounded UI support:', error);
+    }
+  }
+
+  private getRoundedUIWarningMessage(): string {
+    switch (this.roundedUISupportInfo.reason) {
+      case 'macos':
+        return 'Disabled on macOS due to system compatibility issues.';
+      case 'windows11':
+        return 'Disabled on Windows 11 because native rounded chrome conflicts with this mode.';
+      default:
+        return 'Rounded UI is not available on this platform.';
+    }
+  }
+
+  private applyRoundedUIRestrictions(): void {
+    const roundedUIInput = this.inputs.get('rounded-ui');
+    const warningElement = document.querySelector('.rounded-ui-warning') as HTMLElement | null;
+
+    if (!roundedUIInput) {
+      return;
+    }
+
+    if (this.roundedUISupportInfo.supported) {
+      roundedUIInput.disabled = false;
+      roundedUIInput.style.opacity = '';
+      if (warningElement) {
+        warningElement.style.display = 'none';
+      }
+      return;
+    }
+
+    roundedUIInput.disabled = true;
+    roundedUIInput.checked = false;
+    roundedUIInput.style.opacity = '0.5';
+    this.settings.global['RoundedUI'] = false;
+
+    if (warningElement) {
+      const textElement = warningElement.querySelector('.rounded-ui-warning-text');
+      const message = this.getRoundedUIWarningMessage();
+      if (textElement) {
+        textElement.textContent = message;
+      } else {
+        warningElement.textContent = message;
+      }
+      warningElement.style.display = 'inline-flex';
+    }
   }
 
   private handleDesktopThemeChange(): void {

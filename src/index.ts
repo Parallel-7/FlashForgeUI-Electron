@@ -46,6 +46,7 @@ import { getStaticFileManager } from './services/StaticFileManager';
 import { initializeNotificationSystem, disposeNotificationSystem } from './services/notifications';
 import { getThumbnailCacheService } from './services/ThumbnailCacheService';
 import { injectUIStyleVariables } from './utils/CSSVariables';
+import { getRoundedUIUnsupportedReason, isRoundedUISupported, type RoundedUIUnsupportedReason } from './utils/RoundedUICompatibility';
 import { parseHeadlessArguments, validateHeadlessConfig } from './utils/HeadlessArguments';
 import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection';
 import { getHeadlessManager } from './managers/HeadlessManager';
@@ -177,40 +178,51 @@ Please check the installation and try restarting the application.`;
 };
 
 /**
- * Handle macOS rounded UI compatibility by disabling it and warning the user
+ * Handle Rounded UI compatibility by disabling it on unsupported platforms
  */
-const handleMacOSRoundedUICompatibility = async (): Promise<void> => {
-  // Check if running on macOS
-  if (process.platform !== 'darwin') {
-    return; // Not on macOS, no action needed
+const handleRoundedUICompatibilityIssues = async (): Promise<void> => {
+  const unsupportedReason = getRoundedUIUnsupportedReason();
+  if (!unsupportedReason) {
+    return;
   }
-  
+
   const configManager = getConfigManager();
   const config = configManager.getConfig();
-  
-  // Check if rounded UI is enabled on macOS
-  if (config.RoundedUI) {
-    console.log('macOS detected with rounded UI enabled - disabling for compatibility');
-    
-    // Disable rounded UI
-    configManager.updateConfig({ RoundedUI: false });
-    
-    // Show warning dialog
-    const result = await dialog.showMessageBox({
-      type: 'warning',
-      title: 'Rounded UI Disabled',
+
+  if (!config.RoundedUI) {
+    return;
+  }
+
+  console.log(`[RoundedUI] Unsupported on ${unsupportedReason} - disabling for compatibility`);
+  configManager.updateConfig({ RoundedUI: false });
+
+  const dialogCopy: Record<RoundedUIUnsupportedReason, { message: string; detail: string }> = {
+    macos: {
       message: 'Rounded UI has been automatically disabled on macOS',
-      detail: 'The rounded UI feature causes window control positioning issues on macOS. It has been disabled automatically to ensure proper functionality. Please restart the application to avoid any UI inconsistencies.',
-      buttons: ['Restart Now', 'Continue'],
-      defaultId: 0,
-      cancelId: 1
-    });
-    
-    if (result.response === 0) {
-      // User chose to restart
-      app.relaunch();
-      app.exit();
+      detail:
+        'The rounded UI feature causes window control positioning issues on macOS. It has been disabled automatically to ensure proper functionality. Please restart the application to avoid any UI inconsistencies.'
+    },
+    windows11: {
+      message: 'Rounded UI has been automatically disabled on Windows 11',
+      detail:
+        'Windows 11 already applies platform-rounded window chrome that conflicts with this experimental Rounded UI mode, causing duplicate titlebars and invisible controls. It has been disabled automatically to maintain a stable experience. Please restart the application to ensure consistent window visuals.'
     }
+  };
+
+  const copy = dialogCopy[unsupportedReason];
+  const result = await dialog.showMessageBox({
+    type: 'warning',
+    title: 'Rounded UI Disabled',
+    message: copy.message,
+    detail: copy.detail,
+    buttons: ['Restart Now', 'Continue'],
+    defaultId: 0,
+    cancelId: 1
+  });
+
+  if (result.response === 0) {
+    app.relaunch();
+    app.exit();
   }
 };
 
@@ -222,8 +234,8 @@ const createMainWindow = async (): Promise<void> => {
   const environmentService = getEnvironmentDetectionService();
   const staticFileManager = getStaticFileManager();
   
-  // Handle macOS rounded UI compatibility before creating windows
-  await handleMacOSRoundedUICompatibility();
+  // Handle rounded UI compatibility before creating windows
+  await handleRoundedUICompatibilityIssues();
   
   // Validate assets before creating window
   const assetValidation = await validateWebUIAssets();
@@ -244,7 +256,7 @@ const createMainWindow = async (): Promise<void> => {
   const configManager = getConfigManager();
   const config = configManager.getConfig();
   const roundedUI = config.RoundedUI;
-  const useRoundedUI = roundedUI && process.platform !== 'darwin';
+  const useRoundedUI = roundedUI && isRoundedUISupported();
   
   // Create the browser window - always frameless for custom titlebar
   const mainWindow = new BrowserWindow({

@@ -28,6 +28,7 @@ import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManage
 import { getWebUIManager } from '../../webui/server/WebUIManager';
 import { getCameraProxyService } from '../../services/CameraProxyService';
 import { getModelDisplayName } from '../../utils/PrinterUtils';
+import { getRoundedUISupportInfo } from '../../utils/RoundedUICompatibility';
 import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
 import { getLogService } from '../../services/LogService';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager';
@@ -99,6 +100,10 @@ export function registerDialogHandlers(
       console.error('Failed to save configuration:', error);
       return false;
     }
+  });
+
+  ipcMain.handle('rounded-ui:get-support-info', async () => {
+    return getRoundedUISupportInfo();
   });
 
   // Test Discord webhook
