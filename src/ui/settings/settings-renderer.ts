@@ -140,6 +140,8 @@ class SettingsRenderer {
   private spoolmanTestResultElement: HTMLElement | null = null;
   private resetDesktopThemeButton: HTMLButtonElement | null = null;
   private desktopThemeInputs: Map<keyof ThemeColors, HTMLInputElement> = new Map();
+  private hexInputs: Map<keyof ThemeColors, HTMLInputElement> = new Map();
+  private colorSwatches: Map<keyof ThemeColors, HTMLButtonElement> = new Map();
   private statusTimeout: NodeJS.Timeout | null = null;
   private readonly settings: MutableSettings = { global: {}, perPrinter: {} };
   private printerName: string | null = null;
@@ -149,6 +151,21 @@ class SettingsRenderer {
   private readonly tabPanels: Map<string, HTMLElement> = new Map();
   private activeTabId: string = 'camera';
   private perPrinterControlsEnabled: boolean = true;
+
+  // Custom color picker elements
+  private colorPickerModal: HTMLElement | null = null;
+  private colorPickerCanvas: HTMLCanvasElement | null = null;
+  private colorPickerCtx: CanvasRenderingContext2D | null = null;
+  private brightnessSlider: HTMLInputElement | null = null;
+  private pickerHexInput: HTMLInputElement | null = null;
+  private pickerPreviewSwatch: HTMLElement | null = null;
+  private colorPickerClose: HTMLButtonElement | null = null;
+  private currentPickerColorKey: keyof ThemeColors | null = null;
+
+  // Color picker state
+  private currentHue: number = 0;
+  private currentSaturation: number = 100;
+  private currentBrightness: number = 100;
 
   private static readonly TAB_STORAGE_KEY = 'settingsDialogActiveTab';
 
@@ -206,9 +223,34 @@ class SettingsRenderer {
       } else {
         console.warn(`Theme input element not found: ${id}`);
       }
+
+      // Initialize hex inputs
+      const hexInput = document.getElementById(`hex-${key}`) as HTMLInputElement | null;
+      if (hexInput) {
+        this.hexInputs.set(key, hexInput);
+      }
+
+      // Initialize color swatches
+      const swatch = document.getElementById(`swatch-${key}`) as HTMLButtonElement | null;
+      if (swatch) {
+        this.colorSwatches.set(key, swatch);
+      }
     });
 
     this.resetDesktopThemeButton = document.getElementById('reset-desktop-theme') as HTMLButtonElement | null;
+
+    // Initialize custom color picker elements
+    this.colorPickerModal = document.getElementById('custom-color-picker');
+    this.colorPickerCanvas = document.getElementById('color-picker-canvas') as HTMLCanvasElement | null;
+    this.brightnessSlider = document.getElementById('brightness-slider') as HTMLInputElement | null;
+    this.pickerHexInput = document.getElementById('picker-hex-input') as HTMLInputElement | null;
+    this.pickerPreviewSwatch = document.getElementById('picker-preview-swatch');
+    this.colorPickerClose = document.querySelector('.color-picker-close') as HTMLButtonElement | null;
+
+    if (this.colorPickerCanvas) {
+      this.colorPickerCtx = this.colorPickerCanvas.getContext('2d');
+      this.drawColorPickerCanvas();
+    }
 
     this.initializeTabs();
   }
@@ -251,10 +293,57 @@ class SettingsRenderer {
       });
     }
 
-    // Theme color input listeners
-    this.desktopThemeInputs.forEach((input) => {
-      input.addEventListener('input', () => this.handleDesktopThemeChange());
+    // Theme color input listeners (native color pickers - used as fallback)
+    this.desktopThemeInputs.forEach((input, key) => {
+      input.addEventListener('input', () => {
+        this.updateColorFromNativePicker(key);
+      });
     });
+
+    // Hex input listeners
+    this.hexInputs.forEach((hexInput, key) => {
+      hexInput.addEventListener('input', () => {
+        this.handleHexInput(key);
+      });
+    });
+
+    // Color swatch listeners (open custom picker)
+    this.colorSwatches.forEach((swatch, key) => {
+      swatch.addEventListener('click', () => {
+        this.openColorPicker(key);
+      });
+    });
+
+    // Custom color picker event listeners
+    if (this.colorPickerClose) {
+      this.colorPickerClose.addEventListener('click', () => this.closeColorPicker());
+    }
+
+    if (this.colorPickerModal) {
+      const overlay = this.colorPickerModal.querySelector('.color-picker-overlay');
+      if (overlay) {
+        overlay.addEventListener('click', () => this.closeColorPicker());
+      }
+
+      // ESC key to close
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && this.colorPickerModal && !this.colorPickerModal.hidden) {
+          this.closeColorPicker();
+        }
+      });
+    }
+
+    if (this.colorPickerCanvas) {
+      this.colorPickerCanvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+    }
+
+    if (this.brightnessSlider) {
+      this.brightnessSlider.addEventListener('input', () => this.handleBrightnessChange());
+    }
+
+    if (this.pickerHexInput) {
+      this.pickerHexInput.addEventListener('input', () => this.handlePickerHexInput());
+    }
 
     // Reset theme button
     if (this.resetDesktopThemeButton) {
@@ -626,6 +715,15 @@ class SettingsRenderer {
       input.value = theme[key];
     });
 
+    // Also update hex inputs and color swatches
+    this.hexInputs.forEach((hexInput, key) => {
+      hexInput.value = theme[key];
+    });
+
+    this.colorSwatches.forEach((swatch, key) => {
+      swatch.style.backgroundColor = theme[key];
+    });
+
     console.log('[Settings] Loaded desktop theme:', theme);
   }
 
@@ -648,6 +746,16 @@ class SettingsRenderer {
   private handleResetDesktopTheme(): void {
     this.desktopThemeInputs.forEach((input, key) => {
       input.value = DEFAULT_THEME[key];
+    });
+
+    // Also update hex inputs and color swatches
+    this.hexInputs.forEach((hexInput, key) => {
+      hexInput.value = DEFAULT_THEME[key];
+      hexInput.classList.remove('invalid');
+    });
+
+    this.colorSwatches.forEach((swatch, key) => {
+      swatch.style.backgroundColor = DEFAULT_THEME[key];
     });
 
     this.settings.global['DesktopTheme'] = { ...DEFAULT_THEME };
@@ -941,6 +1049,303 @@ class SettingsRenderer {
     }
 
     this.updateInputStates();
+  }
+
+  // ============================================================================
+  // Color Picker Methods
+  // ============================================================================
+
+  /**
+   * Validates and normalizes a hex color string
+   */
+  private validateHexColor(hex: string): { valid: boolean; normalized: string } {
+    // Remove whitespace
+    hex = hex.trim();
+
+    // Add # if missing
+    if (!hex.startsWith('#')) {
+      hex = '#' + hex;
+    }
+
+    // Check if valid hex color (#RGB or #RRGGBB)
+    const hexRegex = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
+    if (!hexRegex.test(hex)) {
+      return { valid: false, normalized: hex };
+    }
+
+    // Expand shorthand (#RGB to #RRGGBB)
+    if (hex.length === 4) {
+      hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
+    }
+
+    return { valid: true, normalized: hex.toUpperCase() };
+  }
+
+  /**
+   * Convert hex color to HSB
+   */
+  private hexToHSB(hex: string): { h: number; s: number; b: number } {
+    const r = parseInt(hex.substr(1, 2), 16) / 255;
+    const g = parseInt(hex.substr(3, 2), 16) / 255;
+    const b = parseInt(hex.substr(5, 2), 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    const delta = max - min;
+
+    let h = 0;
+    if (delta !== 0) {
+      if (max === r) {
+        h = ((g - b) / delta + (g < b ? 6 : 0)) / 6;
+      } else if (max === g) {
+        h = ((b - r) / delta + 2) / 6;
+      } else {
+        h = ((r - g) / delta + 4) / 6;
+      }
+    }
+
+    const s = max === 0 ? 0 : delta / max;
+    const brightness = max;
+
+    return { h: h * 360, s: s * 100, b: brightness * 100 };
+  }
+
+  /**
+   * Convert HSB to hex color
+   */
+  private hsbToHex(h: number, s: number, b: number): string {
+    h = h / 360;
+    s = s / 100;
+    b = b / 100;
+
+    const i = Math.floor(h * 6);
+    const f = h * 6 - i;
+    const p = b * (1 - s);
+    const q = b * (1 - f * s);
+    const t = b * (1 - (1 - f) * s);
+
+    let r: number, g: number, bl: number;
+    switch (i % 6) {
+      case 0: r = b; g = t; bl = p; break;
+      case 1: r = q; g = b; bl = p; break;
+      case 2: r = p; g = b; bl = t; break;
+      case 3: r = p; g = q; bl = b; break;
+      case 4: r = t; g = p; bl = b; break;
+      case 5: r = b; g = p; bl = q; break;
+      default: r = 0; g = 0; bl = 0;
+    }
+
+    const toHex = (n: number) => {
+      const hex = Math.round(n * 255).toString(16);
+      return hex.length === 1 ? '0' + hex : hex;
+    };
+
+    return `#${toHex(r)}${toHex(g)}${toHex(bl)}`.toUpperCase();
+  }
+
+  /**
+   * Draw the hue/saturation canvas
+   */
+  private drawColorPickerCanvas(): void {
+    if (!this.colorPickerCanvas || !this.colorPickerCtx) return;
+
+    const ctx = this.colorPickerCtx;
+    const width = this.colorPickerCanvas.width;
+    const height = this.colorPickerCanvas.height;
+
+    // Draw hue gradient horizontally
+    for (let x = 0; x < width; x++) {
+      const hue = (x / width) * 360;
+      const gradient = ctx.createLinearGradient(0, 0, 0, height);
+      gradient.addColorStop(0, `hsl(${hue}, 100%, 50%)`);
+      gradient.addColorStop(1, `hsl(${hue}, 0%, 50%)`);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(x, 0, 1, height);
+    }
+  }
+
+  /**
+   * Handle canvas click to select color
+   */
+  private handleCanvasClick(e: MouseEvent): void {
+    if (!this.colorPickerCanvas) return;
+
+    const rect = this.colorPickerCanvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    const width = this.colorPickerCanvas.width;
+    const height = this.colorPickerCanvas.height;
+
+    // Calculate hue and saturation from click position
+    this.currentHue = (x / width) * 360;
+    this.currentSaturation = 100 - (y / height) * 100;
+
+    this.updatePickerFromHSB();
+  }
+
+  /**
+   * Handle brightness slider change
+   */
+  private handleBrightnessChange(): void {
+    if (!this.brightnessSlider) return;
+    this.currentBrightness = parseInt(this.brightnessSlider.value);
+    this.updatePickerFromHSB();
+  }
+
+  /**
+   * Handle hex input in the picker modal
+   */
+  private handlePickerHexInput(): void {
+    if (!this.pickerHexInput) return;
+
+    const hexValue = this.pickerHexInput.value;
+    const validation = this.validateHexColor(hexValue);
+
+    if (validation.valid) {
+      this.pickerHexInput.classList.remove('invalid');
+      const hsb = this.hexToHSB(validation.normalized);
+      this.currentHue = hsb.h;
+      this.currentSaturation = hsb.s;
+      this.currentBrightness = hsb.b;
+
+      if (this.brightnessSlider) {
+        this.brightnessSlider.value = Math.round(hsb.b).toString();
+      }
+
+      if (this.pickerPreviewSwatch) {
+        this.pickerPreviewSwatch.style.backgroundColor = validation.normalized;
+      }
+
+      // Update the actual color if we have a current key
+      if (this.currentPickerColorKey) {
+        this.updateColorValue(this.currentPickerColorKey, validation.normalized);
+      }
+    } else {
+      this.pickerHexInput.classList.add('invalid');
+    }
+  }
+
+  /**
+   * Update picker UI from current HSB values
+   */
+  private updatePickerFromHSB(): void {
+    const hexColor = this.hsbToHex(this.currentHue, this.currentSaturation, this.currentBrightness);
+
+    if (this.pickerHexInput) {
+      this.pickerHexInput.value = hexColor;
+      this.pickerHexInput.classList.remove('invalid');
+    }
+
+    if (this.pickerPreviewSwatch) {
+      this.pickerPreviewSwatch.style.backgroundColor = hexColor;
+    }
+
+    // Update the actual color
+    if (this.currentPickerColorKey) {
+      this.updateColorValue(this.currentPickerColorKey, hexColor);
+    }
+  }
+
+  /**
+   * Open the custom color picker for a specific color key
+   */
+  private openColorPicker(key: keyof ThemeColors): void {
+    if (!this.colorPickerModal) return;
+
+    this.currentPickerColorKey = key;
+
+    // Get current color value
+    const currentColor = this.hexInputs.get(key)?.value || DEFAULT_THEME[key];
+    const validation = this.validateHexColor(currentColor);
+
+    if (validation.valid) {
+      const hsb = this.hexToHSB(validation.normalized);
+      this.currentHue = hsb.h;
+      this.currentSaturation = hsb.s;
+      this.currentBrightness = hsb.b;
+
+      if (this.brightnessSlider) {
+        this.brightnessSlider.value = Math.round(hsb.b).toString();
+      }
+
+      if (this.pickerHexInput) {
+        this.pickerHexInput.value = validation.normalized;
+        this.pickerHexInput.classList.remove('invalid');
+      }
+
+      if (this.pickerPreviewSwatch) {
+        this.pickerPreviewSwatch.style.backgroundColor = validation.normalized;
+      }
+    }
+
+    this.colorPickerModal.hidden = false;
+  }
+
+  /**
+   * Close the custom color picker
+   */
+  private closeColorPicker(): void {
+    if (this.colorPickerModal) {
+      this.colorPickerModal.hidden = true;
+    }
+    this.currentPickerColorKey = null;
+  }
+
+  /**
+   * Handle hex input field changes
+   */
+  private handleHexInput(key: keyof ThemeColors): void {
+    const hexInput = this.hexInputs.get(key);
+    if (!hexInput) return;
+
+    const hexValue = hexInput.value;
+    const validation = this.validateHexColor(hexValue);
+
+    if (validation.valid) {
+      hexInput.classList.remove('invalid');
+      this.updateColorValue(key, validation.normalized);
+    } else {
+      hexInput.classList.add('invalid');
+    }
+  }
+
+  /**
+   * Update color from native color picker
+   */
+  private updateColorFromNativePicker(key: keyof ThemeColors): void {
+    const nativePicker = this.desktopThemeInputs.get(key);
+    if (!nativePicker) return;
+
+    const hexColor = nativePicker.value.toUpperCase();
+    this.updateColorValue(key, hexColor);
+  }
+
+  /**
+   * Update a color value across all inputs and apply to theme
+   */
+  private updateColorValue(key: keyof ThemeColors, hexColor: string): void {
+    // Update native color picker
+    const nativePicker = this.desktopThemeInputs.get(key);
+    if (nativePicker) {
+      nativePicker.value = hexColor;
+    }
+
+    // Update hex input
+    const hexInput = this.hexInputs.get(key);
+    if (hexInput && hexInput.value.toUpperCase() !== hexColor) {
+      hexInput.value = hexColor;
+      hexInput.classList.remove('invalid');
+    }
+
+    // Update color swatch
+    const swatch = this.colorSwatches.get(key);
+    if (swatch) {
+      swatch.style.backgroundColor = hexColor;
+    }
+
+    // Update theme settings
+    this.handleDesktopThemeChange();
   }
 
   private cleanup(): void {

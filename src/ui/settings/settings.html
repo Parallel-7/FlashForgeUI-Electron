@@ -231,32 +231,91 @@
                         Customize the color scheme for the desktop application. Changes apply immediately.
                     </div>
 
-                    <div class="input-group">
-                        <label for="desktop-theme-primary">Primary Color:</label>
-                        <input type="color" id="desktop-theme-primary" class="settings-input color-input">
-                    </div>
+                    <div class="theme-colors-grid">
+                        <div class="theme-color-card" data-color-key="primary">
+                            <div class="color-card-header">
+                                <span class="color-label">Primary Color</span>
+                                <input type="text" class="hex-input" id="hex-primary" placeholder="#4285f4" maxlength="7">
+                            </div>
+                            <div class="color-preview-container">
+                                <button type="button" class="color-swatch" id="swatch-primary" aria-label="Pick primary color"></button>
+                                <input type="color" id="desktop-theme-primary" class="native-color-picker" tabindex="-1">
+                            </div>
+                        </div>
 
-                    <div class="input-group">
-                        <label for="desktop-theme-secondary">Secondary Color:</label>
-                        <input type="color" id="desktop-theme-secondary" class="settings-input color-input">
-                    </div>
+                        <div class="theme-color-card" data-color-key="secondary">
+                            <div class="color-card-header">
+                                <span class="color-label">Secondary Color</span>
+                                <input type="text" class="hex-input" id="hex-secondary" placeholder="#357abd" maxlength="7">
+                            </div>
+                            <div class="color-preview-container">
+                                <button type="button" class="color-swatch" id="swatch-secondary" aria-label="Pick secondary color"></button>
+                                <input type="color" id="desktop-theme-secondary" class="native-color-picker" tabindex="-1">
+                            </div>
+                        </div>
 
-                    <div class="input-group">
-                        <label for="desktop-theme-background">Background Color:</label>
-                        <input type="color" id="desktop-theme-background" class="settings-input color-input">
-                    </div>
+                        <div class="theme-color-card" data-color-key="background">
+                            <div class="color-card-header">
+                                <span class="color-label">Background Color</span>
+                                <input type="text" class="hex-input" id="hex-background" placeholder="#121212" maxlength="7">
+                            </div>
+                            <div class="color-preview-container">
+                                <button type="button" class="color-swatch" id="swatch-background" aria-label="Pick background color"></button>
+                                <input type="color" id="desktop-theme-background" class="native-color-picker" tabindex="-1">
+                            </div>
+                        </div>
 
-                    <div class="input-group">
-                        <label for="desktop-theme-surface">Surface Color:</label>
-                        <input type="color" id="desktop-theme-surface" class="settings-input color-input">
-                    </div>
+                        <div class="theme-color-card" data-color-key="surface">
+                            <div class="color-card-header">
+                                <span class="color-label">Surface Color</span>
+                                <input type="text" class="hex-input" id="hex-surface" placeholder="#1e1e1e" maxlength="7">
+                            </div>
+                            <div class="color-preview-container">
+                                <button type="button" class="color-swatch" id="swatch-surface" aria-label="Pick surface color"></button>
+                                <input type="color" id="desktop-theme-surface" class="native-color-picker" tabindex="-1">
+                            </div>
+                        </div>
 
-                    <div class="input-group">
-                        <label for="desktop-theme-text">Text Color:</label>
-                        <input type="color" id="desktop-theme-text" class="settings-input color-input">
+                        <div class="theme-color-card" data-color-key="text">
+                            <div class="color-card-header">
+                                <span class="color-label">Text Color</span>
+                                <input type="text" class="hex-input" id="hex-text" placeholder="#e0e0e0" maxlength="7">
+                            </div>
+                            <div class="color-preview-container">
+                                <button type="button" class="color-swatch" id="swatch-text" aria-label="Pick text color"></button>
+                                <input type="color" id="desktop-theme-text" class="native-color-picker" tabindex="-1">
+                            </div>
+                        </div>
                     </div>
 
                     <button id="reset-desktop-theme" class="settings-action-button">Reset to Default Theme</button>
+                </div>
+
+                <!-- Custom Color Picker Modal -->
+                <div id="custom-color-picker" class="color-picker-modal" hidden>
+                    <div class="color-picker-overlay"></div>
+                    <div class="color-picker-dialog">
+                        <div class="color-picker-header">
+                            <h5 class="color-picker-title">Choose Color</h5>
+                            <button type="button" class="color-picker-close" aria-label="Close color picker">&times;</button>
+                        </div>
+                        <div class="color-picker-body">
+                            <canvas id="color-picker-canvas" width="200" height="200"></canvas>
+                            <div class="color-picker-controls">
+                                <div class="brightness-slider-container">
+                                    <label for="brightness-slider">Brightness</label>
+                                    <input type="range" id="brightness-slider" min="0" max="100" value="100">
+                                </div>
+                                <div class="hex-input-container">
+                                    <label for="picker-hex-input">Hex</label>
+                                    <input type="text" id="picker-hex-input" class="hex-input" placeholder="#000000" maxlength="7">
+                                </div>
+                                <div class="color-preview-large">
+                                    <div id="picker-preview-swatch"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </section>
 
