@@ -68,7 +68,7 @@ export {};
 
 class UpdateDialogController {
   private state: UpdateStatusResponse | null = null;
-  private platform: NodeJS.Platform = window.platform || 'win32';
+  private readonly platform: NodeJS.Platform = window.platform || 'win32';
 
   private readonly statusBanner = document.getElementById('status-banner') as HTMLElement;
   private readonly currentVersionElement = document.getElementById('current-version') as HTMLElement;

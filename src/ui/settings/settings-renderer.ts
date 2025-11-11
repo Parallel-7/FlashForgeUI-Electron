@@ -148,9 +148,9 @@ class SettingsRenderer {
   private testDiscordButton: HTMLButtonElement | null = null;
   private discordTestResultElement: HTMLElement | null = null;
   private resetDesktopThemeButton: HTMLButtonElement | null = null;
-  private desktopThemeInputs: Map<keyof ThemeColors, HTMLInputElement> = new Map();
-  private hexInputs: Map<keyof ThemeColors, HTMLInputElement> = new Map();
-  private colorSwatches: Map<keyof ThemeColors, HTMLButtonElement> = new Map();
+  private readonly desktopThemeInputs: Map<keyof ThemeColors, HTMLInputElement> = new Map();
+  private readonly hexInputs: Map<keyof ThemeColors, HTMLInputElement> = new Map();
+  private readonly colorSwatches: Map<keyof ThemeColors, HTMLButtonElement> = new Map();
   private statusTimeout: NodeJS.Timeout | null = null;
   private readonly settings: MutableSettings = { global: {}, perPrinter: {} };
   private printerName: string | null = null;

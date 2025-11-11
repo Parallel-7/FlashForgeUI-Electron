@@ -69,13 +69,13 @@ contextBridge.exposeInMainWorld('printerSettingsAPI', {
 
 contextBridge.exposeInMainWorld('autoUpdateAPI', {
   checkForUpdates: async (): Promise<{ success: boolean; error?: string }> => {
-    return await ipcRenderer.invoke('check-for-updates');
+    return await ipcRenderer.invoke('check-for-updates') as Promise<{ success: boolean; error?: string }>;
   },
   getStatus: async (): Promise<unknown> => {
     return await ipcRenderer.invoke('get-update-status');
   },
   setUpdateChannel: async (channel: 'stable' | 'alpha'): Promise<{ success: boolean }> => {
-    return await ipcRenderer.invoke('set-update-channel', channel);
+    return await ipcRenderer.invoke('set-update-channel', channel) as Promise<{ success: boolean }>;
   }
 });
 

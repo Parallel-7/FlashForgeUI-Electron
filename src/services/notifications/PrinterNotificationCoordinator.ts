@@ -47,8 +47,7 @@ import type { PrintStateMonitor } from '../PrintStateMonitor';
 import type { PrinterPollingService } from '../PrinterPollingService';
 import type {
   PollingData,
-  PrinterStatus,
-  PrinterState
+  PrinterStatus
 } from '../../types/polling';
 import {
   NotificationState,
@@ -58,8 +57,6 @@ import {
   createInitialNotificationState,
   extractNotificationSettings,
   shouldSendNotification,
-  shouldCheckForNotifications,
-  shouldResetNotificationFlags,
   createPrintCompleteNotification,
   createPrinterCooledNotification,
   createUploadCompleteNotification,
@@ -377,16 +374,16 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   /**
    * Handle print cancelled event from PrintStateMonitor
    */
-  private async handlePrintCancelled(event: { contextId: string; jobName: string | null; status: PrinterStatus; timestamp: Date }): Promise<void> {
-    console.log(`[NotificationCoordinator] Print cancelled`);
+  private async handlePrintCancelled(_event: { contextId: string; jobName: string | null; status: PrinterStatus; timestamp: Date }): Promise<void> {
+    console.log('[NotificationCoordinator] Print cancelled');
     this.resetNotificationState(NotificationStateTransition.PrintCancelled);
   }
 
   /**
    * Handle print error event from PrintStateMonitor
    */
-  private async handlePrintError(event: { contextId: string; jobName: string | null; status: PrinterStatus; timestamp: Date }): Promise<void> {
-    console.log(`[NotificationCoordinator] Print error`);
+  private async handlePrintError(_event: { contextId: string; jobName: string | null; status: PrinterStatus; timestamp: Date }): Promise<void> {
+    console.log('[NotificationCoordinator] Print error');
     this.resetNotificationState(NotificationStateTransition.PrintCancelled);
   }
 

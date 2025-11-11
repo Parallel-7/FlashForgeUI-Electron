@@ -37,7 +37,6 @@
 
 import { EventEmitter } from 'events';
 import { getConfigManager } from '../managers/ConfigManager';
-import { getPrinterContextManager } from '../managers/PrinterContextManager';
 import { getSpoolmanIntegrationService } from './SpoolmanIntegrationService';
 import { SpoolmanService } from './SpoolmanService';
 import type { PrintStateMonitor } from './PrintStateMonitor';

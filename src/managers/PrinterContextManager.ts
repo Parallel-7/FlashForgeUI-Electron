@@ -60,6 +60,7 @@ import type {
   ContextRemovedEvent
 } from '../types/PrinterContext';
 import type { ActiveSpoolData } from '../types/spoolman';
+import { getSpoolmanIntegrationService } from '../services/SpoolmanIntegrationService';
 
 /**
  * Complete printer context containing all state for a single printer connection
@@ -497,8 +498,6 @@ export class PrinterContextManager extends EventEmitter {
    */
   public getActiveSpool(contextId?: string): ActiveSpoolData | null {
     try {
-      // Dynamic import to avoid circular dependencies
-      const { getSpoolmanIntegrationService } = require('../services/SpoolmanIntegrationService');
       const service = getSpoolmanIntegrationService();
       return service.getActiveSpool(contextId);
     } catch {

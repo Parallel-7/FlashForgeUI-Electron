@@ -65,7 +65,6 @@ import type {
 } from '../types/polling';
 import {
   formatTemperature,
-  formatTime,
   formatWeight,
   formatLength
 } from '../types/polling';

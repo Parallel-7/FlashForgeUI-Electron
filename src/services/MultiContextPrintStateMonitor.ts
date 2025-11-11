@@ -21,7 +21,7 @@ import type { PrinterPollingService } from './PrinterPollingService';
  * Manages per-context PrintStateMonitor instances
  */
 export class MultiContextPrintStateMonitor {
-  private monitors: Map<string, PrintStateMonitor> = new Map();
+  private readonly monitors: Map<string, PrintStateMonitor> = new Map();
 
   /**
    * Create a print state monitor for a specific context

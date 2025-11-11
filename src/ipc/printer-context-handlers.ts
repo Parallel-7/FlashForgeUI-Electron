@@ -10,6 +10,9 @@
 
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
 import { getPrinterContextManager } from '../managers/PrinterContextManager';
+import { getPrinterConnectionManager } from '../managers/ConnectionFlowManager';
+import { getConnectionStateManager } from '../services/ConnectionStateManager';
+import { getCameraProxyService } from '../services/CameraProxyService';
 import type { PrinterDetails } from '../types/printer';
 
 /**
@@ -69,8 +72,6 @@ export function setupPrinterContextHandlers(): void {
         throw new Error('Invalid context ID');
       }
 
-      // Import ConnectionFlowManager to properly disconnect
-      const { getPrinterConnectionManager } = require('../managers/ConnectionFlowManager') as typeof import('../managers/ConnectionFlowManager');
       const connectionManager = getPrinterConnectionManager();
 
       // Disconnect the printer (this will also remove the context)
@@ -108,8 +109,6 @@ export function setupPrinterContextHandlers(): void {
 export function setupConnectionStateHandlers(): void {
   console.log('Setting up connection state IPC handlers...');
 
-  // Import dynamically to avoid circular dependencies
-  const { getConnectionStateManager } = require('../services/ConnectionStateManager') as typeof import('../services/ConnectionStateManager');
   const contextManager = getPrinterContextManager();
 
   // Check if connected (with optional context ID)
@@ -144,9 +143,6 @@ export function setupConnectionStateHandlers(): void {
  */
 export function setupCameraContextHandlers(): void {
   console.log('Setting up camera context IPC handlers...');
-
-  // Import camera service getter
-  const { getCameraProxyService } = require('../services/CameraProxyService') as typeof import('../services/CameraProxyService');
 
   // Get camera stream URL (with optional context ID)
   ipcMain.handle('camera:get-stream-url', async (_event: IpcMainInvokeEvent, contextId?: string) => {

@@ -51,7 +51,7 @@ import { parseHeadlessArguments, validateHeadlessConfig } from './utils/Headless
 import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection';
 import { getHeadlessManager } from './managers/HeadlessManager';
 import { getAutoUpdateService } from './services/AutoUpdateService';
-import { initializeSpoolmanIntegrationService } from './services/SpoolmanIntegrationService';
+import { initializeSpoolmanIntegrationService, getSpoolmanIntegrationService } from './services/SpoolmanIntegrationService';
 import { getDiscordNotificationService } from './services/discord';
 import type { PrinterCooledEvent } from './services/MultiContextTemperatureMonitor';
 
@@ -374,34 +374,29 @@ const createMainWindow = async (): Promise<void> => {
  * Setup Spoolman event forwarding to renderer windows
  */
 const setupSpoolmanEventForwarding = (): void => {
-  try {
-    const { getSpoolmanIntegrationService } = require('./services/SpoolmanIntegrationService');
-    const spoolmanService = getSpoolmanIntegrationService();
-    const windowManager = getWindowManager();
+  const spoolmanService = getSpoolmanIntegrationService();
+  const windowManager = getWindowManager();
 
-    // Forward spoolman-changed events to all renderer windows
-    spoolmanService.on('spoolman-changed', (event: unknown) => {
-      const spoolmanEvent = event as import('./services/SpoolmanIntegrationService').SpoolmanChangedEvent;
+  // Forward spoolman-changed events to all renderer windows
+  spoolmanService.on('spoolman-changed', (event: unknown) => {
+    const spoolmanEvent = event as import('./services/SpoolmanIntegrationService').SpoolmanChangedEvent;
 
-      // Forward to main window
-      const mainWindow = windowManager.getMainWindow();
-      if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('spoolman:spool-updated', spoolmanEvent.spool);
-      }
+    // Forward to main window
+    const mainWindow = windowManager.getMainWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('spoolman:spool-updated', spoolmanEvent.spool);
+    }
 
-      // Forward to component dialog if open
-      const componentDialog = windowManager.getComponentDialogWindow();
-      if (componentDialog && !componentDialog.isDestroyed()) {
-        componentDialog.webContents.send('spoolman:spool-updated', spoolmanEvent.spool);
-      }
+    // Forward to component dialog if open
+    const componentDialog = windowManager.getComponentDialogWindow();
+    if (componentDialog && !componentDialog.isDestroyed()) {
+      componentDialog.webContents.send('spoolman:spool-updated', spoolmanEvent.spool);
+    }
 
-      console.log(`[Spoolman Event] Forwarded spool update for context ${spoolmanEvent.contextId}`);
-    });
+    console.log(`[Spoolman Event] Forwarded spool update for context ${spoolmanEvent.contextId}`);
+  });
 
-    console.log('Spoolman event forwarding setup complete');
-  } catch {
-    console.warn('Spoolman integration service not available - skipping event forwarding');
-  }
+  console.log('Spoolman event forwarding setup complete');
 };
 
 const setupPrinterContextEventForwarding = (): void => {

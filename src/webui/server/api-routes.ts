@@ -1660,7 +1660,7 @@ export function createAPIRoutes(): Router {
 
       // Update config with new theme
       const currentConfig = configManager.getConfig();
-      await configManager.updateConfig({
+      configManager.updateConfig({
         ...currentConfig,
         WebUITheme: sanitizedTheme
       });

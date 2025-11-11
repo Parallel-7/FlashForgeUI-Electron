@@ -26,7 +26,7 @@
 import { EventEmitter } from '../utils/EventEmitter';
 import type { PrinterPollingService } from './PrinterPollingService';
 import type { PrintStateMonitor } from './PrintStateMonitor';
-import type { PrinterStatus, PollingData } from '../types/polling';
+import type { PrinterStatus } from '../types/polling';
 
 // ============================================================================
 // CONSTANTS
@@ -187,7 +187,7 @@ export class TemperatureMonitoringService extends EventEmitter<TempMonitorEventM
     // Start monitoring when print completes
     this.printStateMonitor.on('print-completed', (event) => {
       if (event.contextId === this.contextId) {
-        console.log(`[TemperatureMonitor] Print completed, starting temperature monitoring`);
+        console.log('[TemperatureMonitor] Print completed, starting temperature monitoring');
         this.startMonitoring();
       }
     });
@@ -195,7 +195,7 @@ export class TemperatureMonitoringService extends EventEmitter<TempMonitorEventM
     // Reset state when print starts
     this.printStateMonitor.on('print-started', (event) => {
       if (event.contextId === this.contextId) {
-        console.log(`[TemperatureMonitor] Print started, resetting state`);
+        console.log('[TemperatureMonitor] Print started, resetting state');
         this.resetState();
       }
     });
@@ -203,7 +203,7 @@ export class TemperatureMonitoringService extends EventEmitter<TempMonitorEventM
     // Reset state when print cancelled
     this.printStateMonitor.on('print-cancelled', (event) => {
       if (event.contextId === this.contextId) {
-        console.log(`[TemperatureMonitor] Print cancelled, resetting state`);
+        console.log('[TemperatureMonitor] Print cancelled, resetting state');
         this.resetState();
       }
     });
@@ -211,7 +211,7 @@ export class TemperatureMonitoringService extends EventEmitter<TempMonitorEventM
     // Reset state when print error
     this.printStateMonitor.on('print-error', (event) => {
       if (event.contextId === this.contextId) {
-        console.log(`[TemperatureMonitor] Print error, resetting state`);
+        console.log('[TemperatureMonitor] Print error, resetting state');
         this.resetState();
       }
     });
