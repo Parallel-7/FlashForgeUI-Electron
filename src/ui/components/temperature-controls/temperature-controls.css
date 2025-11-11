@@ -17,6 +17,14 @@
   --temp-reading-size: clamp(16px, calc(18px * var(--layout-font-scale)), 22px);
 }
 
+.temperature-controls .panel-header {
+  background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(25, 25, 25, 0.95) 100%);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color-light);
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
 .temperature-controls__content {
   padding: var(--panel-padding);
   flex: 1;

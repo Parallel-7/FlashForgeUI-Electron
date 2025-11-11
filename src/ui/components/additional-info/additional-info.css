@@ -17,6 +17,14 @@
   --info-value-size: clamp(13px, calc(14px * var(--layout-font-scale)), 18px);
 }
 
+.additional-info-container .panel-header {
+  background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(25, 25, 25, 0.95) 100%);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color-light);
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
 .additional-info-container .panel-content {
   padding: var(--panel-padding);
   flex: 1;
