@@ -26,14 +26,6 @@
   background: transparent;
 }
 
-.component-job-stats .panel-header {
-  background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(25, 25, 25, 0.95) 100%);
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border-color-light);
-  flex-shrink: 0;
-  font-weight: 600;
-}
-
 .component-job-stats .panel-content {
   padding: var(--panel-padding);
   flex: 1;
