@@ -50,7 +50,6 @@ import { layoutPersistence } from './ui/gridstack/LayoutPersistence';
 import { editModeController } from './ui/gridstack/EditModeController';
 import { getComponentDefinition, getAllComponents } from './ui/gridstack/ComponentRegistry';
 import type { GridStackWidgetConfig } from './ui/gridstack/types';
-import { responsiveLayoutController } from './ui/layout/ResponsiveLayoutController';
 
 // Shortcut system imports
 import { shortcutConfigManager } from './ui/shortcuts/ShortcutConfigManager';
@@ -80,9 +79,6 @@ let componentsInitialized = false;
 
 /** Track last polling data for new components */
 let lastPollingData: PollingData | null = null;
-
-// Initialize responsive layout handling immediately
-responsiveLayoutController.initialize();
 
 // ============================================================================
 // EXISTING STATE TRACKING (preserved for compatibility)
@@ -512,7 +508,6 @@ async function initializeGridStack(): Promise<void> {
 
     // 3. Initialize GridStack with grid options
     gridStackManager.initialize(layout.gridOptions);
-    responsiveLayoutController.attachGridManager(gridStackManager);
 
     // 4. Create widgets from filtered layout
     let widgetCount = 0;
@@ -591,8 +586,6 @@ async function initializeGridStack(): Promise<void> {
       console.log('GridStack: Finalizing component manager initialization...');
       await componentManager.initializeAll();
     }
-
-    responsiveLayoutController.forceRecalculate();
 
     console.log('GridStack initialization complete');
     logMessage(`GridStack layout system initialized: ${widgetCount} widgets loaded`);

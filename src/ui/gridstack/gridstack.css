@@ -17,9 +17,9 @@
   min-height: 0; /* Important for flex children to allow shrinking */
   overflow: auto;
   background-color: var(--darker-bg);
-  padding: var(--grid-padding);
+  padding: 12px;
   position: relative;
-  gap: var(--grid-gap);
+  gap: 12px;
 }
 
 /* ============================================================================
@@ -34,7 +34,7 @@
   /* Content container styling - Modern glass-morphic appearance */
   background: linear-gradient(135deg, var(--card-bg) 0%, rgba(30, 30, 30, 0.95) 100%);
   border: 1px solid var(--border-color);
-  border-radius: var(--panel-radius);
+  border-radius: 8px;
   overflow: hidden;
   inset: 0;
   position: absolute;
@@ -53,9 +53,9 @@
   position: absolute;
   top: 6px;
   right: 6px;
-  width: clamp(24px, calc(var(--control-size) * 0.75), 36px);
-  height: clamp(24px, calc(var(--control-size) * 0.75), 36px);
-  border-radius: 999px;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
   border: none;
   background: rgba(30, 30, 30, 0.85);
   color: rgba(255, 255, 255, 0.85);
@@ -86,7 +86,7 @@
 /* Edit mode indicator - Enhanced visual prominence */
 .edit-mode-indicator {
   position: fixed;
-  top: calc(var(--header-height) + 18px);
+  top: 50px;
   right: 20px;
   z-index: 9999;
   display: none; /* Hidden by default, shown when edit mode is active */
@@ -168,8 +168,8 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
 /* Style the resize handles - Modern and prominent */
 .grid-stack-item > .ui-resizable-se,
 .grid-stack-item > .ui-resizable-sw {
-  width: clamp(16px, calc(20px * var(--layout-scale)), 28px) !important;
-  height: clamp(16px, calc(20px * var(--layout-scale)), 28px) !important;
+  width: 24px !important;
+  height: 24px !important;
   background: linear-gradient(135deg, var(--accent-color) 0%, var(--button-hover) 100%);
   border: 2px solid rgba(0, 0, 0, 0.3);
   border-radius: 6px;
@@ -254,6 +254,49 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+/* Camera preview should fill entire space */
+.grid-stack-item[data-component-id="camera-preview"] .grid-stack-item-content {
+  padding: 0;
+}
+
+/* Status bar components get compact styling */
+.grid-stack-item[data-component-id="printer-status"] .grid-stack-item-content,
+.grid-stack-item[data-component-id="temperature-controls"] .grid-stack-item-content,
+.grid-stack-item[data-component-id="filtration-controls"] .grid-stack-item-content,
+.grid-stack-item[data-component-id="additional-info"] .grid-stack-item-content,
+.grid-stack-item[data-component-id="job-stats"] .grid-stack-item-content {
+  padding: 0;
+}
+
+/* Ensure status bar components have minimum viable height to prevent squishing */
+.grid-stack-item[data-component-id="printer-status"],
+.grid-stack-item[data-component-id="temperature-controls"],
+.grid-stack-item[data-component-id="filtration-controls"],
+.grid-stack-item[data-component-id="additional-info"] {
+  min-height: 160px !important; /* 2 grid units × 80px cellHeight */
+}
+
+/* ============================================================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================================================ */
+
+@media (max-width: 800px) {
+  .grid-stack {
+    padding: 4px;
+  }
+
+  .edit-mode-indicator {
+    top: 40px;
+    right: 10px;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .edit-mode-icon {
+    font-size: 16px;
+  }
 }
 
 /* ============================================================================

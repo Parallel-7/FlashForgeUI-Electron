@@ -55,27 +55,6 @@
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
   --transition-slow: 0.4s ease;
-
-  /* Responsive scaling (overwritten by ResponsiveLayoutController) */
-  --layout-scale: 1;
-  --layout-font-scale: 1;
-  --layout-density-scale: 1;
-  --grid-cell-height: 80px;
-  --layout-available-height: 900px;
-
-  /* Derived responsive tokens */
-  --panel-radius: clamp(6px, calc(8px * var(--layout-density-scale)), 14px);
-  --panel-padding: clamp(10px, calc(14px * var(--layout-density-scale)), 22px);
-  --panel-gap: clamp(6px, calc(10px * var(--layout-density-scale)), 18px);
-  --panel-header-height: clamp(32px, calc(38px * var(--layout-scale)), 54px);
-  --grid-padding: clamp(8px, calc(12px * var(--layout-density-scale)), 18px);
-  --grid-gap: clamp(6px, calc(10px * var(--layout-density-scale)), 18px);
-  --status-bar-height: clamp(200px, calc(280px * var(--layout-scale)), 340px);
-  --header-height: clamp(30px, calc(34px * var(--layout-scale)), 44px);
-  --control-size: clamp(30px, calc(34px * var(--layout-scale)), 46px);
-  --font-size-base: clamp(12px, calc(13px * var(--layout-font-scale)), 16px);
-  --font-size-sm: clamp(11px, calc(12px * var(--layout-font-scale)), 14px);
-  --font-size-xs: clamp(10px, calc(11px * var(--layout-font-scale)), 13px);
 }
 
 body {
@@ -86,7 +65,6 @@ body {
   padding: 0;
   height: 100vh;
   width: 100vw;
-  font-size: var(--font-size-base);
 }
 
 .lucide-icon {
@@ -109,13 +87,13 @@ body {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  gap: clamp(6px, calc(10px * var(--layout-density-scale)), 18px);
+  gap: 10px;
   background-color: var(--header-bg);
-  height: var(--header-height);
-  padding: 0 clamp(8px, calc(12px * var(--layout-density-scale)), 20px);
+  height: 32px;
+  padding: 0 10px;
   -webkit-app-region: drag;
   border-bottom: 1px solid var(--border-color);
-  flex: 0 0 var(--header-height); /* Fixed height for header */
+  flex: 0 0 32px; /* Fixed height for header */
 }
 
 .title {
@@ -128,8 +106,8 @@ body {
   position: relative;
   display: flex;
   align-items: center;
-  gap: clamp(4px, calc(6px * var(--layout-density-scale)), 12px);
-  margin-left: clamp(8px, calc(12px * var(--layout-density-scale)), 20px);
+  gap: 6px;
+  margin-left: 12px;
   flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
@@ -138,13 +116,13 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: var(--control-size);
-  height: var(--control-size);
+  width: 32px;
+  height: 32px;
   padding: 0;
   background-color: var(--dark-bg);
   color: var(--text-color);
   border: 1px solid var(--border-color);
-  border-radius: calc(var(--panel-radius) * 0.6);
+  border-radius: 4px;
   cursor: pointer;
   transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
@@ -160,8 +138,8 @@ body {
 }
 
 .hamburger-icon {
-  width: clamp(18px, calc(20px * var(--layout-scale)), 26px);
-  height: clamp(18px, calc(20px * var(--layout-scale)), 26px);
+  width: 20px;
+  height: 20px;
   display: inline-flex;
   color: var(--text-color);
 }
@@ -265,9 +243,9 @@ body {
 /* Shortcut Buttons */
 .shortcut-button {
   display: none;
-  padding: 4px clamp(10px, calc(12px * var(--layout-density-scale)), 18px);
+  padding: 4px 12px;
   margin-left: 2px;
-  font-size: var(--font-size-sm);
+  font-size: 13px;
   background-color: var(--card-bg);
   color: var(--text-color);
   border: 1px solid var(--border-color-light);
@@ -275,7 +253,6 @@ body {
   transition: all var(--transition-fast);
   align-items: center;
   font-weight: 500;
-  border-radius: calc(var(--panel-radius) * 0.55);
 }
 
 .shortcut-button:not(.hidden) {
@@ -306,7 +283,7 @@ body {
   color: var(--text-color);
   font-size: 16px;
   cursor: pointer;
-  width: calc(var(--control-size) - 4px);
+  width: 30px;
   height: 100%;
   display: flex;
   align-items: center;
@@ -441,18 +418,6 @@ body.platform-darwin .traffic-lights {
   overflow: hidden;
 }
 
-:where(.panel-header) {
-  padding: calc(var(--panel-padding) * 0.7) var(--panel-padding);
-  min-height: var(--panel-header-height);
-  font-size: var(--font-size-sm);
-  line-height: 1.3;
-}
-
-:where(.panel-content) {
-  padding: var(--panel-padding);
-  gap: clamp(6px, calc(8px * var(--layout-density-scale)), 16px);
-}
-
 /* Left Side */
 .left-side {
   width: 60%;
@@ -480,13 +445,13 @@ body.platform-darwin .traffic-lights {
 
 /* Status Bar */
 .status-bar {
-  height: var(--status-bar-height); /* Responsive height */
+  height: 300px; /* Set to 300px for perfect spacing */
   display: flex;
   background-color: var(--dark-bg);
   border-top: 1px solid var(--border-color);
   overflow: hidden;
   flex-shrink: 0;
-  gap: var(--panel-gap);
+  gap: 0;
   position: relative;
   align-items: stretch;
 }
@@ -494,7 +459,7 @@ body.platform-darwin .traffic-lights {
 
 .status-bar > div {
   flex: 1;
-  min-width: clamp(110px, calc(140px * var(--layout-scale)), 220px);
+  min-width: 120px;
   max-width: none;
   border-right: 1px solid var(--border-color);
   background-color: var(--dark-bg);
@@ -507,6 +472,27 @@ body.platform-darwin .traffic-lights {
   border-right: none;
 }
 
+
+/* Responsive status bar adjustments */
+@media (max-width: 800px) {
+  .status-bar {
+    height: 160px; /* Increased from 120px */
+  }
+  
+  .status-bar > div {
+    min-width: 100px;
+  }
+}
+
+@media (max-width: 600px) {
+  .status-bar {
+    height: 140px; /* Increased from 100px */
+  }
+  
+  .status-bar > div {
+    min-width: 80px;
+  }
+}
 
 /* Status section styles are now in individual status bar component CSS files */
 

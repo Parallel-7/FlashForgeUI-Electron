@@ -11,19 +11,28 @@
   min-height: 0;
   overflow: hidden;
   background: transparent;
-  --info-row-padding: clamp(6px, calc(8px * var(--layout-density-scale)), 14px);
-  --info-row-radius: calc(var(--panel-radius) * 0.75);
-  --info-label-size: var(--font-size-xs);
-  --info-value-size: clamp(13px, calc(14px * var(--layout-font-scale)), 18px);
+}
+
+.additional-info-container .panel-header {
+  background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(25, 25, 25, 0.95) 100%);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color-light);
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  color: var(--text-color);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .additional-info-container .panel-content {
-  padding: var(--panel-padding);
+  padding: 10px 8px;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: clamp(6px, calc(8px * var(--layout-density-scale)), 16px);
+  gap: 6px;
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow: auto;
 }
@@ -33,13 +42,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: var(--info-row-padding);
+  padding: 8px 10px;
   background: linear-gradient(135deg, rgba(45, 45, 45, 0.8) 0%, rgba(35, 35, 35, 0.9) 100%);
-  border-radius: var(--info-row-radius);
+  border-radius: 6px;
   border: 1px solid var(--border-color);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), var(--shadow-sm);
   transition: all var(--transition-normal);
-  min-height: clamp(32px, calc(38px * var(--layout-scale)), 52px);
+  min-height: 36px;
   width: 100%;
   backdrop-filter: blur(8px);
 }
@@ -53,7 +62,7 @@
 
 /* Info Labels - Readable typography */
 .additional-info-container .info-label {
-  font-size: var(--info-label-size);
+  font-size: 11px;
   font-weight: 700;
   color: var(--text-color-secondary);
   letter-spacing: 0.5px;
@@ -64,7 +73,7 @@
 
 /* Info Values - Readable and clear */
 .additional-info-container .info-value {
-  font-size: var(--info-value-size);
+  font-size: 14px;
   font-weight: 700;
   color: var(--text-color);
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
@@ -144,3 +153,21 @@
   text-shadow: 0 0 10px rgba(66, 133, 244, 0.3);
 }
 
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .additional-info-container {
+    padding: 12px 8px;
+    gap: 8px;
+    min-width: 180px;
+  }
+
+  .additional-info-container .info-display-row {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .additional-info-container .info-value {
+    font-size: 14px;
+    min-width: 50px;
+  }
+}

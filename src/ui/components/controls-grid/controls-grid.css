@@ -11,18 +11,15 @@
   min-height: 0;
   overflow: hidden;
   background: transparent;
-  gap: clamp(4px, calc(6px * var(--layout-density-scale)), 12px);
-  font-size: var(--font-size-sm);
-  --controls-row-gap: clamp(4px, calc(6px * var(--layout-density-scale)), 12px);
-  --controls-button-height: clamp(32px, calc(38px * var(--layout-scale)), 56px);
-  --controls-button-radius: calc(var(--panel-radius) * 0.7);
 }
 
 .controls-grid-container .panel-header {
   background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(25, 25, 25, 0.95) 100%);
+  padding: 10px 14px;
   border-bottom: 1px solid var(--border-color-light);
   flex-shrink: 0;
   font-weight: 600;
+  font-size: 13px;
   letter-spacing: 0.5px;
   color: var(--text-color);
   backdrop-filter: blur(8px);
@@ -30,39 +27,34 @@
 }
 
 .controls-grid-container .panel-content {
-  padding: var(--panel-padding);
+  padding: 10px 8px;
   display: flex;
   flex-direction: column;
-  gap: var(--controls-row-gap);
+  gap: 6px;
   flex: 1;
   overflow: auto;
 }
 
 .controls-grid-container .btn-row {
   display: flex;
-  gap: var(--controls-row-gap);
+  gap: 6px;
 }
 
 .controls-grid-container .btn-row button {
   flex: 1;
-  min-width: 0;
-  min-height: var(--controls-button-height);
   background: linear-gradient(135deg, var(--button-bg) 0%, var(--button-active) 100%);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: calc(var(--controls-button-height) * 0.25)
-    clamp(10px, calc(12px * var(--layout-density-scale)), 18px);
-  border-radius: var(--controls-button-radius);
+  padding: 7px 10px;
+  border-radius: 5px;
   cursor: pointer;
-  font-size: var(--font-size-sm);
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.3px;
   transition: all var(--transition-fast);
   box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(8px);
-  white-space: normal;
-  line-height: 1.25;
-  text-align: center;
+  white-space: nowrap;
 }
 
 .controls-grid-container .btn-row button:hover:not(:disabled) {

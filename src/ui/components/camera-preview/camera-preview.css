@@ -15,9 +15,6 @@
   flex-direction: column;
   overflow: hidden;
   background-color: var(--darker-bg);
-  --camera-overlay-padding: clamp(10px, calc(14px * var(--layout-density-scale)), 22px);
-  --camera-overlay-gap: clamp(6px, calc(8px * var(--layout-density-scale)), 16px);
-  --camera-overlay-font: clamp(12px, calc(13px * var(--layout-font-scale)), 16px);
 }
 
 /* Camera stream area - takes ALL available space above job info */
@@ -76,11 +73,11 @@
 .component-camera-preview .job-info-overlay {
   flex: 0 0 auto;
   background: linear-gradient(180deg, rgba(30, 30, 30, 0.95) 0%, rgba(25, 25, 25, 0.98) 100%);
-  padding: var(--camera-overlay-padding);
+  padding: 12px 14px;
   border-top: 1px solid var(--border-color-light);
   display: flex;
   flex-direction: column;
-  gap: var(--camera-overlay-gap);
+  gap: 8px;
   backdrop-filter: blur(10px);
   box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.3);
 }
@@ -92,9 +89,8 @@
   justify-content: space-between;
   align-items: center;
   color: var(--text-color);
-  font-size: var(--camera-overlay-font);
-  margin-bottom: 2px;
-  gap: clamp(6px, calc(8px * var(--layout-density-scale)), 16px);
+  font-size: 14px;
+  margin-bottom: 4px;
 }
 
 .component-camera-preview .job-row span:first-child,
@@ -114,7 +110,7 @@
 /* Progress bar styling - Modern and smooth */
 .component-camera-preview progress {
   width: 100%;
-  height: clamp(6px, calc(8px * var(--layout-density-scale)), 10px);
+  height: 8px;
   border: none;
   border-radius: 6px;
   background-color: rgba(0, 0, 0, 0.4);
@@ -191,19 +187,17 @@
 .component-camera-preview .camera-controls {
   display: flex;
   justify-content: flex-end;
-  gap: clamp(6px, calc(8px * var(--layout-density-scale)), 14px);
-  margin-top: 4px;
+  gap: 8px;
+  margin-top: 6px;
 }
 
 .component-camera-preview .camera-controls button {
   background: linear-gradient(135deg, var(--button-bg) 0%, var(--button-active) 100%);
   color: white;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: clamp(6px, calc(8px * var(--layout-density-scale)), 12px)
-    clamp(10px, calc(14px * var(--layout-density-scale)), 22px);
-  border-radius: calc(var(--panel-radius) * 0.75);
+  padding: 6px 12px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: var(--font-size-sm);
   font-size: 12px;
   font-weight: 600;
   transition: all var(--transition-fast);
