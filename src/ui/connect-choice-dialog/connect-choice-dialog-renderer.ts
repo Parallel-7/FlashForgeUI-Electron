@@ -63,14 +63,6 @@ function setupEventListeners(): void {
   window.addEventListener('beforeunload', () => {
     window.connectChoiceAPI.removeAllListeners();
   });
-
-  // Set focus to first button by default
-  setTimeout(() => {
-    const firstButton = document.getElementById('btn-enter-ip');
-    if (firstButton) {
-      firstButton.focus();
-    }
-  }, 100);
 }
 
 /**
