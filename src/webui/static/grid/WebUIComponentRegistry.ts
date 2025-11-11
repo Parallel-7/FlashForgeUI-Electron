@@ -357,7 +357,14 @@ export function getComponentTemplate(
   return COMPONENT_TEMPLATES[componentId];
 }
 
+const componentInstanceCache = new Map<string, HTMLElement>();
+
 export function createComponentElement(componentId: string): HTMLElement {
+  const cached = componentInstanceCache.get(componentId);
+  if (cached) {
+    return cached;
+  }
+
   const template = COMPONENT_TEMPLATES[componentId];
   if (!template) {
     throw new Error(`Unknown component: ${componentId}`);
@@ -365,11 +372,14 @@ export function createComponentElement(componentId: string): HTMLElement {
 
   const wrapper = document.createElement('template');
   wrapper.innerHTML = template.html.trim();
-  const element = wrapper.content.firstElementChild;
+  const element = wrapper.content.firstElementChild as HTMLElement | null;
   if (!element) {
     throw new Error(`Template missing root element for ${componentId}`);
   }
-  return element as HTMLElement;
+
+  element.dataset.componentId = componentId;
+  componentInstanceCache.set(componentId, element);
+  return element;
 }
 
 export const componentRegistry = {

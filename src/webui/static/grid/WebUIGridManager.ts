@@ -73,9 +73,20 @@ export class WebUIGridManager {
   }
 
   public clear(): void {
-    if (!this.grid) return;
-    this.grid.removeAll(false);
+    const grid = this.grid;
+    const container = this.container;
+    if (!grid || !container) {
+      this.hiddenComponents.clear();
+      return;
+    }
+
+    grid.removeAll(true);
     this.hiddenComponents.clear();
+
+    // Ensure no orphaned nodes remain in the DOM after GridStack cleanup
+    while (container.firstChild) {
+      container.removeChild(container.firstChild);
+    }
   }
 
   public addComponent(

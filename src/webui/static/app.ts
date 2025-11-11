@@ -350,6 +350,7 @@ const DEFAULT_SETTINGS: WebUISettings = {
 
 const MOBILE_BREAKPOINT = 768;
 let currentPrinterSerial: string | null = null;
+let currentContextId: string | null = null;
 const DEMO_SERIAL = 'demo-layout'; // Fallback when no printer connected
 let currentSettings: WebUISettings = { ...DEFAULT_SETTINGS };
 let gridInitialized = false;
@@ -512,6 +513,65 @@ function ensureGridInitialized(): void {
   gridInitialized = true;
 }
 
+function teardownDesktopLayout(): void {
+  if (!gridInitialized) {
+    return;
+  }
+
+  if (gridChangeUnsubscribe) {
+    gridChangeUnsubscribe();
+    gridChangeUnsubscribe = null;
+  }
+
+  gridManager.disableEdit();
+  gridManager.clear();
+}
+
+function teardownMobileLayout(): void {
+  mobileLayoutManager.clear();
+}
+
+function teardownCameraStreamElements(): void {
+  const cameraPlaceholder = $('camera-placeholder');
+  if (cameraPlaceholder) {
+    cameraPlaceholder.classList.remove('hidden');
+    cameraPlaceholder.textContent = 'Camera Unavailable';
+  }
+
+  const cameraStream = $('camera-stream') as HTMLImageElement | null;
+  if (cameraStream) {
+    cameraStream.src = '';
+    cameraStream.onload = null;
+    cameraStream.onerror = null;
+  }
+
+  const cameraCanvas = $('camera-canvas') as HTMLCanvasElement | null;
+  if (cameraCanvas) {
+    const ctx = cameraCanvas.getContext('2d');
+    if (ctx) {
+      ctx.clearRect(0, 0, cameraCanvas.width, cameraCanvas.height);
+    }
+  }
+}
+
+function resetLayoutContainers(): void {
+  teardownCameraStreamElements();
+  teardownDesktopLayout();
+  teardownMobileLayout();
+}
+
+function rehydrateLayoutState(): void {
+  updateConnectionStatus(state.isConnected);
+
+  if (state.printerStatus) {
+    updatePrinterStatus(state.printerStatus);
+  } else {
+    updatePrinterStatus(null);
+  }
+
+  updateSpoolmanPanelState();
+}
+
 function ensureCompleteLayout(baseLayout: WebUIGridLayout | null): WebUIGridLayout {
   const defaults = componentRegistry.getDefaultLayout();
   const incoming = baseLayout ?? defaults;
@@ -622,6 +682,19 @@ function persistSettings(): void {
   layoutPersistence.saveSettings(currentPrinterSerial, currentSettings);
 }
 
+function isSpoolmanAvailableForCurrentContext(): boolean {
+  if (!state.spoolmanConfig?.enabled) {
+    return false;
+  }
+
+  if (!state.spoolmanConfig.contextId) {
+    return true;
+  }
+
+  const activeContextId = getCurrentContextId();
+  return activeContextId === state.spoolmanConfig.contextId;
+}
+
 function isComponentSupported(componentId: string, features: PrinterFeatures | null): boolean {
   if (!features) {
     return true;
@@ -632,14 +705,14 @@ function isComponentSupported(componentId: string, features: PrinterFeatures | n
   }
 
   if (componentId === 'spoolman-tracker') {
-    return Boolean(state.spoolmanConfig?.enabled);
+    return isSpoolmanAvailableForCurrentContext();
   }
 
   return true;
 }
 
 function ensureSpoolmanVisibilityIfEnabled(): void {
-  if (!state.spoolmanConfig?.enabled) return;
+  if (!isSpoolmanAvailableForCurrentContext()) return;
   if (!gridInitialized) return;
 
   // If Spoolman is enabled but not in visible components, add it automatically
@@ -773,6 +846,8 @@ function loadLayoutForCurrentPrinter(): void {
 
   const isMobile = isMobileViewport();
 
+  resetLayoutContainers();
+
   if (isMobile) {
     // Mobile: Use static layout
     mobileLayoutManager.initialize();
@@ -799,6 +874,7 @@ function loadLayoutForCurrentPrinter(): void {
   refreshSettingsUI(currentSettings);
 
   updateFeatureVisibility();
+  rehydrateLayoutState();
 
   if (state.printerFeatures?.hasCamera) {
     void loadCameraStream();
@@ -1374,11 +1450,17 @@ function updatePrinterStateCard(status: PrinterStatus | null): void {
 // ============================================================================
 
 function getCurrentContextId(): string | null {
-  const select = $('printer-select') as HTMLSelectElement;
+  if (currentContextId) {
+    return currentContextId;
+  }
+
+  const select = $('printer-select') as HTMLSelectElement | null;
   if (!select || !select.value) {
     return null;
   }
-  return select.value;
+
+  currentContextId = select.value;
+  return currentContextId;
 }
 
 async function fetchPrinterContexts(): Promise<void> {
@@ -1403,11 +1485,16 @@ async function fetchPrinterContexts(): Promise<void> {
 
       const fallbackContext =
         result.contexts.find((context) => context.isActive) ?? result.contexts[0] ?? null;
-      const selectedContextId = result.activeContextId || fallbackContext?.id || '';
+
+      const selectedContextId =
+        currentContextId && contextById.has(currentContextId)
+          ? currentContextId
+          : result.activeContextId || fallbackContext?.id || '';
 
       updatePrinterSelector(result.contexts, selectedContextId);
 
       const activeContext = selectedContextId ? contextById.get(selectedContextId) : fallbackContext;
+      currentContextId = activeContext?.id ?? null;
       const resolvedSerial = resolveSerialForContext(activeContext);
       if (resolvedSerial) {
         currentPrinterSerial = resolvedSerial;
@@ -1464,6 +1551,8 @@ async function switchPrinterContext(contextId: string): Promise<void> {
     showToast('Not authenticated', 'error');
     return;
   }
+
+  currentContextId = contextId;
 
   saveCurrentLayoutSnapshot();
 
@@ -1597,6 +1686,11 @@ async function loadSpoolmanConfig(): Promise<void> {
       if (result.enabled && result.contextId) {
         await fetchActiveSpoolForContext(result.contextId);
       }
+
+      // Re-apply component visibility and UI state since availability may have changed
+      applySettings(currentSettings);
+      refreshSettingsUI(currentSettings);
+      updateSpoolmanPanelState();
     }
   } catch (error) {
     console.error('[Spoolman] Failed to load config:', error);
@@ -1750,15 +1844,20 @@ function updateSpoolmanPanelState(): void {
 
   if (!disabled || !noSpool || !active) return;
 
-  // State 1: Disabled (not enabled or AD5X)
-  if (!state.spoolmanConfig?.enabled) {
+  // State 1: Disabled or unavailable for this context
+  if (!isSpoolmanAvailableForCurrentContext()) {
     showElement('spoolman-disabled');
     hideElement('spoolman-no-spool');
     hideElement('spoolman-active');
 
     const disabledMessage = $('spoolman-disabled-message');
     if (disabledMessage) {
-      disabledMessage.textContent = state.spoolmanConfig?.disabledReason || 'Spoolman integration is disabled';
+      const reason =
+        state.spoolmanConfig?.disabledReason ||
+        (state.spoolmanConfig?.enabled
+          ? 'Spoolman is not available for this printer'
+          : 'Spoolman integration is disabled');
+      disabledMessage.textContent = reason;
     }
     return;
   }
@@ -2852,25 +2951,6 @@ function handleViewportChange(): void {
     loadLayoutForCurrentPrinter();
 
     isMobileLayout = isMobile;
-
-    // CRITICAL FIX: Clear old camera stream elements before reloading
-    const oldCameraStream = $('camera-stream') as HTMLImageElement | null;
-    const oldCameraCanvas = $('camera-canvas') as HTMLCanvasElement | null;
-    if (oldCameraStream) {
-      oldCameraStream.src = '';
-      oldCameraStream.onload = null;
-      oldCameraStream.onerror = null;
-    }
-    if (oldCameraCanvas) {
-      const ctx = oldCameraCanvas.getContext('2d');
-      if (ctx) ctx.clearRect(0, 0, oldCameraCanvas.width, oldCameraCanvas.height);
-    }
-
-    // Reload camera stream after layout switch
-    if (state.printerFeatures?.hasCamera) {
-      console.log('[Layout] Reloading camera stream for new layout elements');
-      void loadCameraStream();
-    }
   }
 }
 
@@ -3128,6 +3208,7 @@ function setupEventHandlers(): void{
     printerSelect.addEventListener('change', (e) => {
       const selectedContextId = (e.target as HTMLSelectElement).value;
       console.log('[Contexts] Printer selector changed to:', selectedContextId);
+      currentContextId = selectedContextId;
       void switchPrinterContext(selectedContextId);
     });
   }
