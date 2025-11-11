@@ -331,38 +331,32 @@ async function handleMetadataResult(elements: DialogElements, result: MetadataRe
         if (currentFilePath && await shouldUseEnhanced3MFFlow(currentFilePath)) {
             try {
                 const filaments = result.threeMf?.filaments || [];
-                
-                if (filaments.length > 1) {
-                    // Multi-color file - route to material matching dialog
-                    console.log(`3MF multi-color file detected with ${filaments.length} filaments`);
-                    const toolData = convertFilamentsToToolData(filaments);
-                    
-                    if (window.uploaderAPI?.showMaterialMatchingDialog) {
-                        const mappings = await window.uploaderAPI.showMaterialMatchingDialog(currentFilePath, toolData);
-                        if (mappings && Array.isArray(mappings)) {
-                            // Save material mappings for later use
-                            savedMaterialMappings = mappings;
-                            console.log('Material mappings saved:', mappings);
-                            // Enable OK button now that mappings are confirmed
-                            setOKButtonState(elements, true);
-                        } else {
-                            // User cancelled - disable OK button
-                            console.log('Material matching cancelled by user');
-                            setOKButtonState(elements, false);
-                        }
-                        return; // Don't enable OK button here, handled above
-                    }
-                } else if (filaments.length === 1) {
-                    // Single-color file - just save the filament info and continue to main dialog
-                    // The user will see the metadata and can choose auto level/start now options
-                    console.log('3MF single-color file detected');
-                    // No need to show single-color dialog, just enable OK button
-                    // The upload will use AD5X path when OK is clicked
-                } else {
+
+                if (filaments.length === 0) {
                     // No filament data - show warning and fall back to regular upload
                     console.log('3MF file has no filament data, falling back to regular upload');
                     showNoFilamentDataWarning(currentFilePath);
                     return; // Warning function handles enabling OK button
+                }
+
+                // Always show material matching dialog for AD5X 3MF files (single or multi-color)
+                console.log(`3MF file detected with ${filaments.length} filament(s)`);
+                const toolData = convertFilamentsToToolData(filaments);
+
+                if (window.uploaderAPI?.showMaterialMatchingDialog) {
+                    const mappings = await window.uploaderAPI.showMaterialMatchingDialog(currentFilePath, toolData);
+                    if (mappings && Array.isArray(mappings)) {
+                        // Save material mappings for later use
+                        savedMaterialMappings = mappings;
+                        console.log('Material mappings saved:', mappings);
+                        // Enable OK button now that mappings are confirmed
+                        setOKButtonState(elements, true);
+                    } else {
+                        // User cancelled - disable OK button
+                        console.log('Material matching cancelled by user');
+                        setOKButtonState(elements, false);
+                    }
+                    return; // Don't enable OK button here, handled above
                 }
             } catch (error) {
                 console.warn('Error processing 3MF file for enhanced upload:', error);
