@@ -11,28 +11,19 @@
   min-height: 0;
   overflow: hidden;
   background: transparent;
-}
-
-.filtration-controls-container .panel-header {
-  background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(25, 25, 25, 0.95) 100%);
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border-color-light);
-  flex-shrink: 0;
-  font-weight: 600;
-  font-size: 13px;
-  letter-spacing: 0.5px;
-  color: var(--text-color);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --filtration-row-padding: clamp(6px, calc(8px * var(--layout-density-scale)), 14px);
+  --filtration-row-radius: calc(var(--panel-radius) * 0.75);
+  --filtration-label-size: var(--font-size-xs);
+  --filtration-value-size: clamp(13px, calc(14px * var(--layout-font-scale)), 18px);
 }
 
 .filtration-controls-container .panel-content {
-  padding: 10px 8px;
+  padding: var(--panel-padding);
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
+  gap: clamp(6px, calc(8px * var(--layout-density-scale)), 16px);
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow: auto;
 }
@@ -42,13 +33,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: var(--filtration-row-padding);
   background: linear-gradient(135deg, rgba(45, 45, 45, 0.8) 0%, rgba(35, 35, 35, 0.9) 100%);
-  border-radius: 6px;
+  border-radius: var(--filtration-row-radius);
   border: 1px solid var(--border-color);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), var(--shadow-sm);
   transition: all var(--transition-normal);
-  min-height: 36px;
+  min-height: clamp(32px, calc(38px * var(--layout-scale)), 52px);
   width: 100%;
   backdrop-filter: blur(8px);
 }
@@ -62,7 +53,7 @@
 
 /* Filtration Labels - Readable typography */
 .filtration-controls-container .filtration-label {
-  font-size: 11px;
+  font-size: var(--filtration-label-size);
   font-weight: 700;
   color: var(--text-color-secondary);
   letter-spacing: 0.5px;
@@ -73,7 +64,7 @@
 
 /* Filtration Values - Readable and clear */
 .filtration-controls-container .filtration-value {
-  font-size: 14px;
+  font-size: var(--filtration-value-size);
   font-weight: 700;
   color: var(--text-color);
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
@@ -110,7 +101,7 @@
 .filtration-controls-container .filtration-controls-buttons {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: clamp(4px, calc(6px * var(--layout-density-scale)), 12px);
   margin-top: 2px;
   width: 100%;
   align-items: stretch;
@@ -121,9 +112,10 @@
   background: linear-gradient(135deg, var(--button-bg) 0%, var(--button-active) 100%);
   color: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.15);
-  padding: 6px 10px;
-  border-radius: 5px;
-  font-size: 10px;
+  padding: clamp(6px, calc(8px * var(--layout-density-scale)), 12px)
+    clamp(10px, calc(12px * var(--layout-density-scale)), 18px);
+  border-radius: calc(var(--panel-radius) * 0.65);
+  font-size: var(--font-size-xs);
   font-weight: 700;
   cursor: pointer;
   text-transform: uppercase;

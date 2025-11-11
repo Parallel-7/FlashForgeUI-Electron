@@ -11,47 +11,38 @@
   min-height: 0;
   overflow: hidden;
   background: transparent;
-}
-
-.temperature-controls .panel-header {
-  background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(25, 25, 25, 0.95) 100%);
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border-color-light);
-  flex-shrink: 0;
-  font-weight: 600;
-  font-size: 13px;
-  letter-spacing: 0.5px;
-  color: var(--text-color);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --temp-card-gap: clamp(6px, calc(8px * var(--layout-density-scale)), 16px);
+  --temp-card-radius: calc(var(--panel-radius) * 0.75);
+  --temp-label-size: var(--font-size-xs);
+  --temp-reading-size: clamp(16px, calc(18px * var(--layout-font-scale)), 22px);
 }
 
 .temperature-controls__content {
-  padding: 10px 8px;
+  padding: var(--panel-padding);
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--temp-card-gap);
   overflow-y: auto;
 }
 
 .temperature-controls__grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fit, minmax(clamp(130px, 18vw, 200px), 1fr));
+  gap: var(--temp-card-gap);
 }
 
 .temp-card {
   position: relative;
   background: linear-gradient(135deg, rgba(45, 45, 45, 0.8) 0%, rgba(35, 35, 35, 0.9) 100%);
-  border-radius: 6px;
+  border-radius: var(--temp-card-radius);
   border: 1px solid var(--border-color);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), var(--shadow-sm);
-  padding: 10px 12px;
+  padding: clamp(10px, calc(12px * var(--layout-density-scale)), 20px);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: clamp(6px, calc(8px * var(--layout-density-scale)), 14px);
   min-height: 0;
   transition: all var(--transition-normal);
   backdrop-filter: blur(8px);
@@ -68,12 +59,12 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 6px;
+  gap: clamp(4px, calc(6px * var(--layout-density-scale)), 12px);
   flex-wrap: nowrap;
 }
 
 .temp-card__label {
-  font-size: 10px;
+  font-size: var(--temp-label-size);
   font-weight: 700;
   color: var(--text-color-secondary);
   text-transform: uppercase;
@@ -82,7 +73,7 @@
 }
 
 .temp-card__reading {
-  font-size: clamp(15px, 2vw, 18px);
+  font-size: var(--temp-reading-size);
   font-weight: 700;
   color: var(--text-color);
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
@@ -94,7 +85,7 @@
 .temp-card__actions {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: clamp(4px, calc(6px * var(--layout-density-scale)), 12px);
   flex-wrap: wrap;
 }
 
@@ -104,9 +95,10 @@
   align-items: center;
   justify-content: center;
   gap: 4px;
-  padding: 6px 10px;
-  border-radius: 4px;
-  font-size: 10px;
+  padding: clamp(6px, calc(8px * var(--layout-density-scale)), 12px)
+    clamp(10px, calc(12px * var(--layout-density-scale)), 18px);
+  border-radius: calc(var(--panel-radius) * 0.6);
+  font-size: var(--font-size-xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -151,13 +143,13 @@
 .temperature-controls__status {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 8px;
+  gap: var(--temp-card-gap);
 }
 
 .fan-card {
   position: relative;
-  padding: 10px 12px;
-  border-radius: 6px;
+  padding: clamp(10px, calc(12px * var(--layout-density-scale)), 18px);
+  border-radius: var(--temp-card-radius);
   border: 1px solid var(--border-color);
   background: linear-gradient(135deg, rgba(45, 45, 45, 0.8) 0%, rgba(35, 35, 35, 0.9) 100%);
   display: flex;
@@ -178,7 +170,7 @@
 }
 
 .fan-card__label {
-  font-size: 10px;
+  font-size: var(--temp-label-size);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -187,7 +179,7 @@
 }
 
 .fan-card__value {
-  font-size: clamp(13px, 1.8vw, 15px);
+  font-size: clamp(13px, calc(14px * var(--layout-font-scale)), 18px);
   font-weight: 700;
   color: var(--text-color);
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;

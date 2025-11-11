@@ -11,28 +11,19 @@
   min-height: 0;
   overflow: hidden;
   background: transparent;
-}
-
-.printer-status-container .panel-header {
-  background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(25, 25, 25, 0.95) 100%);
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border-color-light);
-  flex-shrink: 0;
-  font-weight: 600;
-  font-size: 13px;
-  letter-spacing: 0.5px;
-  color: var(--text-color);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  --status-row-padding: clamp(6px, calc(8px * var(--layout-density-scale)), 14px);
+  --status-row-radius: calc(var(--panel-radius) * 0.75);
+  --status-label-size: var(--font-size-xs);
+  --status-value-size: clamp(13px, calc(14px * var(--layout-font-scale)), 18px);
 }
 
 .printer-status-container .panel-content {
-  padding: 10px 8px;
+  padding: var(--panel-padding);
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
+  gap: clamp(6px, calc(8px * var(--layout-density-scale)), 16px);
   box-sizing: border-box;
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow: auto;
@@ -43,13 +34,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: var(--status-row-padding);
   background: linear-gradient(135deg, rgba(45, 45, 45, 0.8) 0%, rgba(35, 35, 35, 0.9) 100%);
-  border-radius: 6px;
+  border-radius: var(--status-row-radius);
   border: 1px solid var(--border-color);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), var(--shadow-sm);
   transition: all var(--transition-normal);
-  min-height: 36px;
+  min-height: clamp(32px, calc(38px * var(--layout-scale)), 52px);
   width: 100%;
   backdrop-filter: blur(8px);
 }
@@ -63,7 +54,7 @@
 
 /* Status Labels - Readable typography */
 .printer-status-container .status-label {
-  font-size: 11px;
+  font-size: var(--status-label-size);
   font-weight: 700;
   color: var(--text-color-secondary);
   letter-spacing: 0.5px;
@@ -74,7 +65,7 @@
 
 /* Status Values - Readable and clear */
 .printer-status-container .status-value {
-  font-size: 14px;
+  font-size: var(--status-value-size);
   font-weight: 700;
   color: var(--text-color);
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
@@ -134,19 +125,3 @@
   text-shadow: 0 0 8px rgba(0, 230, 118, 0.3);
 }
 
-/* Responsive Adjustments */
-@media (max-width: 768px) {
-  .printer-status-container {
-    padding: 12px 8px;
-    gap: 8px;
-    min-width: 180px;
-  }
-
-  .printer-status-container .status-display-row {
-    padding: 10px 12px;
-  }
-
-  .printer-status-container .status-value {
-    font-size: 11px;
-  }
-}

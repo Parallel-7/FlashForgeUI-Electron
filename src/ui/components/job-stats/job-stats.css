@@ -11,6 +11,10 @@
   height: 100%;
   min-height: 0;
   background: transparent;
+  --stats-row-padding: clamp(6px, calc(8px * var(--layout-density-scale)), 14px);
+  --stats-row-radius: calc(var(--panel-radius) * 0.75);
+  --stats-label-size: var(--font-size-xs);
+  --stats-value-size: clamp(13px, calc(14px * var(--layout-font-scale)), 18px);
 }
 
 .component-job-stats .job-stats-container {
@@ -22,26 +26,13 @@
   background: transparent;
 }
 
-.component-job-stats .panel-header {
-  background: linear-gradient(135deg, rgba(30, 30, 30, 0.9) 0%, rgba(25, 25, 25, 0.95) 100%);
-  padding: 10px 14px;
-  border-bottom: 1px solid var(--border-color-light);
-  flex-shrink: 0;
-  font-weight: 600;
-  font-size: 13px;
-  letter-spacing: 0.5px;
-  color: var(--text-color);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
 .component-job-stats .panel-content {
-  padding: 10px 8px;
+  padding: var(--panel-padding);
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
-  gap: 6px;
+  gap: clamp(6px, calc(8px * var(--layout-density-scale)), 16px);
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow: auto;
 }
@@ -50,13 +41,13 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 10px;
+  padding: var(--stats-row-padding);
   background: linear-gradient(135deg, rgba(45, 45, 45, 0.8) 0%, rgba(35, 35, 35, 0.9) 100%);
-  border-radius: 6px;
+  border-radius: var(--stats-row-radius);
   border: 1px solid var(--border-color);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), var(--shadow-sm);
   transition: all var(--transition-normal);
-  min-height: 36px;
+  min-height: clamp(32px, calc(38px * var(--layout-scale)), 52px);
   width: 100%;
   backdrop-filter: blur(8px);
 }
@@ -69,7 +60,7 @@
 }
 
 .component-job-stats .info-label {
-  font-size: 11px;
+  font-size: var(--stats-label-size);
   font-weight: 700;
   color: var(--text-color-secondary);
   letter-spacing: 0.5px;
@@ -79,7 +70,7 @@
 }
 
 .component-job-stats .info-value {
-  font-size: 14px;
+  font-size: var(--stats-value-size);
   font-weight: 700;
   color: var(--text-color);
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
@@ -93,22 +84,6 @@
 .component-job-stats .info-value:hover {
   color: var(--accent-color);
   text-shadow: 0 0 12px rgba(66, 133, 244, 0.3);
-}
-
-@media (max-width: 768px) {
-  .component-job-stats .panel-content {
-    padding: 12px 8px;
-    gap: 8px;
-  }
-
-  .component-job-stats .info-label {
-    font-size: 10px;
-    min-width: 60px;
-  }
-
-  .component-job-stats .info-value {
-    font-size: 13px;
-  }
 }
 
 @media (prefers-contrast: high) {

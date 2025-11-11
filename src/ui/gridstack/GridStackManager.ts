@@ -474,6 +474,42 @@ export class GridStackManager {
   }
 
   /**
+   * Update the grid cell height at runtime for responsive scaling.
+   * @param value - New cell height (px string or number)
+   */
+  setCellHeight(value: number | string): void {
+    if (!this.grid) {
+      console.warn('GridStackManager: Grid not initialized – cannot set cell height');
+      return;
+    }
+
+    try {
+      this.grid.cellHeight(value);
+      console.log(`[GridStackManager] Cell height set to ${value}`);
+    } catch (error) {
+      console.error('[GridStackManager] Failed to set cell height:', error);
+    }
+  }
+
+  /**
+   * Update grid margins at runtime to keep spacing proportional.
+   * @param value - Margin value (number or CSS string understood by GridStack)
+   */
+  setMargin(value: number | string): void {
+    if (!this.grid) {
+      console.warn('GridStackManager: Grid not initialized – cannot set margin');
+      return;
+    }
+
+    try {
+      this.grid.margin(value);
+      console.log(`[GridStackManager] Margin set to ${value}`);
+    } catch (error) {
+      console.error('[GridStackManager] Failed to set margin:', error);
+    }
+  }
+
+  /**
    * Compact the grid (move widgets up to fill empty space)
    */
   compact(): void {
