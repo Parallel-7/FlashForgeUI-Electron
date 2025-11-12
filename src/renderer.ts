@@ -2304,7 +2304,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       'square',
       'x',
       'check-circle',
-      'x-circle'
+      'x-circle',
+      'pencil',
+      'rotate-ccw'
     )
   );
 

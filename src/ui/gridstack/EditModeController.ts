@@ -50,7 +50,7 @@
 import type { GridStackManager } from './GridStackManager';
 import type { LayoutPersistence } from './LayoutPersistence';
 import type { EditModeState } from './types';
-import { initializeLucideIconsFromGlobal } from '../shared/lucide';
+import { initializeLucideIcons, getLucideIcons } from '../../utils/icons';
 
 /**
  * Edit mode controller
@@ -137,8 +137,25 @@ export class EditModeController {
       textElement.className = 'edit-mode-text';
       textElement.textContent = 'Edit Mode - CTRL+E to exit';
 
-      indicator.append(iconWrapper, textElement);
-      initializeLucideIconsFromGlobal(['pencil'], indicator);
+      // Create reset button
+      const resetButton = document.createElement('button');
+      resetButton.className = 'edit-mode-reset-btn';
+      resetButton.title = 'Reset to default layout';
+      resetButton.type = 'button';
+      const resetIcon = document.createElement('i');
+      resetIcon.setAttribute('data-lucide', 'rotate-ccw');
+      resetButton.appendChild(resetIcon);
+
+      // Add click handler for reset button
+      resetButton.addEventListener('click', () => {
+        void this.resetToDefault();
+      });
+
+      indicator.append(iconWrapper, textElement, resetButton);
+      initializeLucideIcons(
+        indicator,
+        getLucideIcons('pencil', 'rotate-ccw')
+      );
       document.body.appendChild(indicator);
     }
 
@@ -375,9 +392,10 @@ export class EditModeController {
       return false;
     }
 
-    // TODO: Add confirmation dialog (Phase 2)
-    // For now, just reset without confirmation
-    const confirmed = true; // In Phase 2: await confirmDialog()
+    // Confirm with user before resetting
+    const confirmed = window.confirm(
+      'Reset layout to default? This will reload the page and discard any unsaved changes.'
+    );
 
     if (confirmed) {
       try {
