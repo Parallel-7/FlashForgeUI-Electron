@@ -90,7 +90,8 @@ body {
   gap: 10px;
   background-color: var(--header-bg);
   height: 32px;
-  padding: 0 10px;
+  padding-left: 10px;
+  padding-right: 0;
   -webkit-app-region: drag;
   border-bottom: 1px solid var(--border-color);
   flex: 0 0 32px; /* Fixed height for header */
@@ -274,6 +275,7 @@ body {
   display: flex;
   -webkit-app-region: no-drag;
   margin-left: auto;
+  height: 100%;
 }
 
 .window-controls button {
@@ -304,6 +306,11 @@ body {
 
 #btn-close:hover {
   background-color: #e81123;
+}
+
+#btn-close {
+  padding-right: 6px;
+  padding-left: 0;
 }
 
 /* =========================== */
