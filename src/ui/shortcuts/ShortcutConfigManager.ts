@@ -25,7 +25,7 @@ import type {
 import { DEFAULT_SHORTCUT_CONFIG } from './types';
 
 /**
- * Storage key for shortcut button configuration in localStorage
+ * Base storage key for shortcut button configuration in localStorage
  */
 const STORAGE_KEY = 'shortcut-buttons-config';
 
@@ -63,13 +63,27 @@ export class ShortcutConfigManager {
    * If no configuration exists or it's invalid, returns default configuration.
    * Performs validation and migration if needed.
    *
+   * @param serialNumber - Optional printer serial number for per-printer config
    * @returns Current shortcut configuration
    */
-  load(): ShortcutButtonConfig {
+  load(serialNumber?: string | null): ShortcutButtonConfig {
     try {
-      const stored = localStorage.getItem(STORAGE_KEY);
+      const storageKey = this.getStorageKey(serialNumber);
+      const stored = localStorage.getItem(storageKey);
 
       if (!stored) {
+        // If no per-printer config and a serial was provided, try fallback to global
+        if (serialNumber) {
+          console.log(`[ShortcutConfig] No config for serial ${serialNumber}, trying global fallback`);
+          const globalStored = localStorage.getItem(STORAGE_KEY);
+          if (globalStored) {
+            const parsed = JSON.parse(globalStored) as unknown;
+            if (this.isValidConfig(parsed)) {
+              return parsed as ShortcutButtonConfig;
+            }
+          }
+        }
+
         console.log('[ShortcutConfig] No configuration found, using defaults');
         return { ...DEFAULT_SHORTCUT_CONFIG };
       }
@@ -107,8 +121,9 @@ export class ShortcutConfigManager {
    * Updates lastModified timestamp before saving.
    *
    * @param config - Configuration to save
+   * @param serialNumber - Optional printer serial number for per-printer config
    */
-  save(config: ShortcutButtonConfig): void {
+  save(config: ShortcutButtonConfig, serialNumber?: string | null): void {
     try {
       // Update timestamp
       const configToSave: ShortcutButtonConfig = {
@@ -116,8 +131,9 @@ export class ShortcutConfigManager {
         lastModified: new Date().toISOString(),
       };
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(configToSave));
-      console.log('[ShortcutConfig] Configuration saved successfully');
+      const storageKey = this.getStorageKey(serialNumber);
+      localStorage.setItem(storageKey, JSON.stringify(configToSave));
+      console.log(`[ShortcutConfig] Configuration saved successfully to ${storageKey}`);
     } catch (error) {
       console.error('[ShortcutConfig] Error saving configuration:', error);
       throw error;
@@ -134,12 +150,12 @@ export class ShortcutConfigManager {
    * @param componentId - Component ID to assign, or null to clear slot
    * @throws Error if component is already assigned to a different slot
    */
-  setSlot(slot: SlotNumber, componentId: string | null): void {
-    const config = this.load();
+  setSlot(slot: SlotNumber, componentId: string | null, serialNumber?: string | null): void {
+    const config = this.load(serialNumber);
 
     // If setting to a component, check it's not already pinned elsewhere
     if (componentId !== null) {
-      const existingSlot = this.findSlotForComponent(componentId);
+      const existingSlot = this.findSlotForComponent(componentId, serialNumber);
       if (existingSlot !== null && existingSlot !== slot) {
         throw new Error(
           `Component ${componentId} is already assigned to slot ${existingSlot}`,
@@ -150,7 +166,7 @@ export class ShortcutConfigManager {
     const slotKey = `slot${slot}` as keyof typeof config.slots;
     config.slots[slotKey] = componentId;
 
-    this.save(config);
+    this.save(config, serialNumber);
   }
 
   /**
@@ -159,8 +175,8 @@ export class ShortcutConfigManager {
    * @param slot - Slot number (1, 2, or 3)
    * @returns Component ID assigned to slot, or null if empty
    */
-  getSlot(slot: SlotNumber): string | null {
-    const config = this.load();
+  getSlot(slot: SlotNumber, serialNumber?: string | null): string | null {
+    const config = this.load(serialNumber);
     const slotKey = `slot${slot}` as keyof typeof config.slots;
     return config.slots[slotKey];
   }
@@ -170,8 +186,8 @@ export class ShortcutConfigManager {
    *
    * @param slot - Slot number to clear
    */
-  clearSlot(slot: SlotNumber): void {
-    this.setSlot(slot, null);
+  clearSlot(slot: SlotNumber, serialNumber?: string | null): void {
+    this.setSlot(slot, null, serialNumber);
   }
 
   /**
@@ -182,8 +198,8 @@ export class ShortcutConfigManager {
    *
    * @returns Array of slot assignments
    */
-  getAllAssignments(): SlotAssignment[] {
-    const config = this.load();
+  getAllAssignments(serialNumber?: string | null): SlotAssignment[] {
+    const config = this.load(serialNumber);
     const assignments: SlotAssignment[] = [];
 
     for (let i = 1; i <= 3; i++) {
@@ -208,8 +224,8 @@ export class ShortcutConfigManager {
    * @param componentId - Component ID to check
    * @returns true if component is pinned to a slot
    */
-  isComponentPinned(componentId: string): boolean {
-    return this.findSlotForComponent(componentId) !== null;
+  isComponentPinned(componentId: string, serialNumber?: string | null): boolean {
+    return this.findSlotForComponent(componentId, serialNumber) !== null;
   }
 
   /**
@@ -217,11 +233,22 @@ export class ShortcutConfigManager {
    *
    * @returns Array of pinned component IDs (excludes null/empty slots)
    */
-  getPinnedComponentIds(): string[] {
-    const config = this.load();
+  getPinnedComponentIds(serialNumber?: string | null): string[] {
+    const config = this.load(serialNumber);
     return Object.values(config.slots).filter(
       (id): id is string => id !== null,
     );
+  }
+
+  /**
+   * Get storage key for configuration
+   * Uses per-printer key if serial provided, otherwise global key
+   *
+   * @param serialNumber - Optional printer serial number
+   * @returns Storage key for localStorage
+   */
+  private getStorageKey(serialNumber?: string | null): string {
+    return serialNumber ? `${STORAGE_KEY}-${serialNumber}` : STORAGE_KEY;
   }
 
   /**
@@ -230,8 +257,8 @@ export class ShortcutConfigManager {
    * @param componentId - Component ID to search for
    * @returns Slot number if found, null if not pinned
    */
-  private findSlotForComponent(componentId: string): SlotNumber | null {
-    const config = this.load();
+  private findSlotForComponent(componentId: string, serialNumber?: string | null): SlotNumber | null {
+    const config = this.load(serialNumber);
 
     for (let i = 1; i <= 3; i++) {
       const slotNumber = i as SlotNumber;

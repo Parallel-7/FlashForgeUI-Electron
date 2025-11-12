@@ -82,6 +82,91 @@ body {
   overflow: hidden;
 }
 
+.grid-stack.hidden {
+  display: none;
+}
+
+.grid-placeholder {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.04), transparent 55%);
+}
+
+.grid-placeholder.hidden {
+  display: none;
+}
+
+.placeholder-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 480px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+
+.placeholder-icon {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 16px;
+  border-radius: 16px;
+  background-color: rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-icon i {
+  width: 36px;
+  height: 36px;
+  color: var(--accent-color);
+}
+
+.placeholder-card h2 {
+  margin: 12px 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.placeholder-card p {
+  margin: 8px 0 24px;
+  color: var(--text-color-secondary);
+  line-height: 1.4;
+}
+
+#placeholder-connect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: none;
+  background-color: var(--accent-color);
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+#placeholder-connect-btn:hover {
+  background-color: var(--button-hover);
+  transform: translateY(-1px);
+}
+
+#placeholder-connect-btn:active {
+  transform: translateY(0);
+}
+
+#placeholder-connect-btn i {
+  width: 18px;
+  height: 18px;
+}
+
 /* Header */
 .header {
   display: flex;

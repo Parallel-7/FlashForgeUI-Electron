@@ -49,11 +49,11 @@ import { gridStackManager } from './ui/gridstack/GridStackManager';
 import { layoutPersistence } from './ui/gridstack/LayoutPersistence';
 import { editModeController } from './ui/gridstack/EditModeController';
 import { getComponentDefinition, getAllComponents } from './ui/gridstack/ComponentRegistry';
-import type { GridStackWidgetConfig } from './ui/gridstack/types';
+import type { GridStackWidgetConfig, LayoutConfig } from './ui/gridstack/types';
 
 // Shortcut system imports
 import { shortcutConfigManager } from './ui/shortcuts/ShortcutConfigManager';
-import type { ShortcutButtonConfig } from './ui/shortcuts/types';
+import { DEFAULT_SHORTCUT_CONFIG, type ShortcutButtonConfig } from './ui/shortcuts/types';
 
 // Existing service imports
 import { getGlobalStateTracker, STATE_EVENTS, type StateChangeEvent } from './services/printer-state';
@@ -79,6 +79,119 @@ let componentsInitialized = false;
 
 /** Track last polling data for new components */
 let lastPollingData: PollingData | null = null;
+
+// ============================================================================
+// PER-PRINTER LAYOUT & SHORTCUTS STATE
+// ============================================================================
+
+/** Map of context IDs to printer serial numbers (for stable storage keys) */
+const printerSerialMap = new Map<string, string>();
+
+/** Current active context ID */
+let activeContextId: string | null = null;
+
+/** Current active printer serial number (stable identifier for layouts/shortcuts) */
+let activeContextSerial: string | null = null;
+
+/**
+ * Helpers for per-printer persistence keys and data access
+ */
+function toStorageKey(serial?: string | null): string | undefined {
+  return serial ?? undefined;
+}
+
+function loadLayoutForSerial(serial?: string | null): LayoutConfig {
+  return layoutPersistence.load(toStorageKey(serial));
+}
+
+function saveLayoutForSerial(
+  layout: LayoutConfig,
+  serial?: string | null,
+  immediate = false
+): void {
+  layoutPersistence.save(layout, toStorageKey(serial), immediate);
+}
+
+function loadShortcutsForSerial(serial?: string | null): ShortcutButtonConfig {
+  return shortcutConfigManager.load(serial);
+}
+
+function saveShortcutsForSerial(config: ShortcutButtonConfig, serial?: string | null): void {
+  shortcutConfigManager.save(config, serial);
+}
+
+function getPinnedComponentIdsForSerial(serial?: string | null): string[] {
+  return shortcutConfigManager.getPinnedComponentIds(serial);
+}
+
+function showConnectPlaceholder(): void {
+  const grid = document.querySelector('.grid-stack');
+  const placeholder = document.getElementById('grid-placeholder');
+  if (grid) {
+    grid.classList.add('hidden');
+  }
+  if (placeholder) {
+    placeholder.classList.remove('hidden');
+  }
+  editModeController.setAvailability(false);
+}
+
+function hideConnectPlaceholder(): void {
+  const grid = document.querySelector('.grid-stack');
+  const placeholder = document.getElementById('grid-placeholder');
+  if (grid) {
+    grid.classList.remove('hidden');
+  }
+  if (placeholder) {
+    placeholder.classList.add('hidden');
+  }
+  editModeController.setAvailability(true);
+}
+
+function initializePlaceholderUI(): void {
+  const button = document.getElementById('placeholder-connect-btn');
+  if (button && !button.hasAttribute('data-initialized')) {
+    button.setAttribute('data-initialized', 'true');
+    button.addEventListener('click', () => {
+      window.api?.send('open-printer-selection');
+    });
+  }
+  showConnectPlaceholder();
+}
+
+function handleAllContextsRemoved(): void {
+  console.log('[PerPrinter] No active printer contexts; showing placeholder');
+
+  activeContextId = null;
+  activeContextSerial = null;
+  editModeController.setActiveSerial(null);
+  filtrationAvailable = false;
+  ifsMenuItemVisible = false;
+  isLegacyPrinter = false;
+  updateIFSMenuItemVisibility();
+  updateLegacyPrinterButtonStates();
+
+  if (componentsInitialized) {
+    const componentIds = componentManager.getComponentIds();
+    for (const id of componentIds) {
+      const component = componentManager.getComponent(id);
+      if (component) {
+        componentManager.removeComponent(id);
+        try {
+          component.destroy();
+        } catch (error) {
+          console.error(`[PerPrinter] Failed to destroy component ${id}:`, error);
+        }
+      }
+    }
+
+    logPanelComponent = null;
+    gridStackManager.clear(true);
+  }
+
+  updateShortcutButtons(DEFAULT_SHORTCUT_CONFIG);
+  showConnectPlaceholder();
+}
 
 // ============================================================================
 // EXISTING STATE TRACKING (preserved for compatibility)
@@ -487,19 +600,26 @@ function createGridWidget(componentId: string): HTMLElement {
  * Initialize GridStack layout system
  * Sets up grid, loads layout, creates widgets, and initializes edit mode
  */
-async function initializeGridStack(): Promise<void> {
+async function initializeGridStack(initialSerial?: string | null): Promise<void> {
+  if (componentsInitialized) {
+    console.log('GridStack already initialized, skipping base setup');
+    return;
+  }
+
   console.log('Initializing GridStack layout system...');
 
   try {
     // 1. Initialize layout persistence
     layoutPersistence.initialize();
 
+    const serialForLoad = initialSerial ?? activeContextSerial;
+
     // 2. Load layout configuration (from localStorage or default)
-    const layout = layoutPersistence.load();
+    const layout = loadLayoutForSerial(serialForLoad);
     console.log('Loaded layout configuration:', layout);
 
-    // 2.5. Filter out pinned components from layout
-    const shortcutConfig = shortcutConfigManager.load();
+    // 2.5. Filter out pinned components based on shortcut configuration
+    const shortcutConfig = loadShortcutsForSerial(serialForLoad);
     const pinnedIds = Object.values(shortcutConfig.slots).filter((id): id is string => id !== null);
     const filteredWidgets = layout.widgets.filter(widget => !pinnedIds.includes(widget.componentId));
 
@@ -564,12 +684,13 @@ async function initializeGridStack(): Promise<void> {
     // 5. Setup GridStack event handlers for auto-save
     gridStackManager.onChange(() => {
       console.log('GridStack: Layout changed, auto-saving...');
-      const currentLayout = layoutPersistence.load();
+      const currentLayout = loadLayoutForSerial(activeContextSerial);
       const updatedWidgets = gridStackManager.serialize();
-      layoutPersistence.save({
+      saveLayoutForSerial({
         ...currentLayout,
         widgets: updatedWidgets,
-      });
+      }, activeContextSerial);
+      console.log(`[PerPrinter] Saved layout for serial: ${activeContextSerial || 'global'}`);
     });
 
     // 6. Initialize edit mode controller (but keep editing disabled by default)
@@ -586,6 +707,10 @@ async function initializeGridStack(): Promise<void> {
       console.log('GridStack: Finalizing component manager initialization...');
       await componentManager.initializeAll();
     }
+
+    componentsInitialized = true;
+    hideConnectPlaceholder();
+    updateShortcutButtons(shortcutConfig);
 
     console.log('GridStack initialization complete');
     logMessage(`GridStack layout system initialized: ${widgetCount} widgets loaded`);
@@ -606,7 +731,7 @@ function setupPaletteIntegration(): void {
   // Helper function to update palette with current grid state
   function updatePaletteStatus(): void {
     const componentsInUse = gridStackManager.serialize().map(w => w.componentId || w.id || '');
-    const pinnedComponentIds = shortcutConfigManager.getPinnedComponentIds();
+    const pinnedComponentIds = getPinnedComponentIdsForSerial(activeContextSerial);
 
     if (window.api?.send) {
       window.api.send('palette:update-status', {
@@ -696,13 +821,14 @@ function setupPaletteIntegration(): void {
         component.update(updateData);
       }
 
-      const currentLayout = layoutPersistence.load();
+      const currentLayout = loadLayoutForSerial(activeContextSerial);
       const updatedWidgets = gridStackManager.serialize();
-      layoutPersistence.save({
+      saveLayoutForSerial({
         ...currentLayout,
         widgets: updatedWidgets,
-      });
+      }, activeContextSerial);
 
+      console.log(`[PerPrinter] Saved layout after adding component for serial: ${activeContextSerial || 'global'}`);
       updatePaletteStatus();
 
       console.log('[GridStack] Component added from palette:', componentId);
@@ -727,12 +853,12 @@ function setupPaletteIntegration(): void {
 
     gridStackManager.removeWidget(widgetElement);
 
-    const currentLayout = layoutPersistence.load();
+    const currentLayout = loadLayoutForSerial(activeContextSerial);
     const updatedWidgets = gridStackManager.serialize();
-    layoutPersistence.save({
+    saveLayoutForSerial({
       ...currentLayout,
       widgets: updatedWidgets,
-    });
+    }, activeContextSerial);
 
     updatePaletteStatus();
 
@@ -815,12 +941,125 @@ async function initializePrinterTabs(): Promise<void> {
       window.api.send('open-printer-selection');
     });
 
+    // ========================================================================
+    // PER-PRINTER LAYOUT & SHORTCUT HELPERS
+    // ========================================================================
+
+    /**
+     * Reload grid and shortcuts for a specific printer context
+     * This is the comprehensive routine that handles context switching
+     *
+     * @param layout - Layout configuration to load
+     * @param serial - Printer serial number for this layout
+     * @param shortcutConfig - Shortcut configuration for this printer
+     */
+    async function reloadGridForLayout(
+      layout: LayoutConfig,
+      serial: string,
+      shortcutConfig: ShortcutButtonConfig
+    ): Promise<void> {
+      console.log(`[PerPrinter] Reloading grid for serial: ${serial}`);
+
+      try {
+        const grid = gridStackManager.getGrid();
+        if (!grid) {
+          console.error('[PerPrinter] Grid not initialized');
+          return;
+        }
+
+        console.log('[PerPrinter] Destroying existing components');
+        const componentIds = componentManager.getComponentIds();
+        for (const id of componentIds) {
+          const component = componentManager.getComponent(id);
+          if (component) {
+            componentManager.removeComponent(id);
+            try {
+              component.destroy();
+            } catch (error) {
+              console.error(`[PerPrinter] Failed to destroy component ${id}:`, error);
+            }
+          }
+        }
+        logPanelComponent = null;
+
+        console.log('[PerPrinter] Clearing grid');
+        gridStackManager.clear(true);
+
+        const pinnedIds = Object.values(shortcutConfig.slots).filter((id): id is string => id !== null);
+        const filteredWidgets = layout.widgets.filter((w) => !pinnedIds.includes(w.componentId));
+
+        console.log(`[PerPrinter] Loading ${filteredWidgets.length} widgets (${pinnedIds.length} pinned excluded)`);
+
+        let printerConfig: AppConfig | null = null;
+        try {
+          printerConfig = (await window.api.requestConfig()) as AppConfig;
+        } catch (error) {
+          console.warn('[PerPrinter] Failed to load printer config for context reload:', error);
+        }
+
+        for (const widgetConfig of filteredWidgets) {
+          await addComponentToGrid(widgetConfig.componentId, widgetConfig, printerConfig);
+        }
+
+        updateShortcutButtons(shortcutConfig);
+        hideConnectPlaceholder();
+
+        console.log(`[PerPrinter] Grid reload complete for serial: ${serial}`);
+      } catch (error) {
+        console.error('[PerPrinter] Failed to reload grid:', error);
+        throw error;
+      }
+    }
+
+    /**
+     * Helper to create component instance by ID
+     * Extracted from initializeGridComponents for reuse
+     */
+    function createComponentInstance(componentId: string, container: HTMLElement): BaseComponent | null {
+      switch (componentId) {
+        case 'job-stats':
+          return new JobStatsComponent(container);
+        case 'camera-preview':
+          return new CameraPreviewComponent(container);
+        case 'controls-grid':
+          return new ControlsGridComponent(container);
+        case 'model-preview':
+          return new ModelPreviewComponent(container);
+        case 'log-panel':
+          return new LogPanelComponent(container);
+        case 'printer-status':
+          return new PrinterStatusComponent(container);
+        case 'temperature-controls':
+          return new TemperatureControlsComponent(container);
+        case 'filtration-controls':
+          return new FiltrationControlsComponent(container);
+        case 'additional-info':
+          return new AdditionalInfoComponent(container);
+        case 'spoolman':
+          return new SpoolmanComponent(container);
+        default:
+          console.warn(`Unknown component ID: ${componentId}`);
+          return null;
+      }
+    }
+
+    // ========================================================================
+    // CONTEXT EVENT LISTENERS
+    // ========================================================================
+
     // Listen for context events from main process
     window.api.receive('printer-context-created', (...args: unknown[]) => {
       const event = args[0] as import('./types/PrinterContext').ContextCreatedEvent;
       console.log('Renderer received context-created event:', event);
       console.log('Event contextId:', event?.contextId);
       console.log('Event contextInfo:', event?.contextInfo);
+
+      // Track serial number for this context
+      if (event?.contextInfo?.serialNumber) {
+        printerSerialMap.set(event.contextId, event.contextInfo.serialNumber);
+        console.log(`[PerPrinter] Mapped context ${event.contextId} to serial ${event.contextInfo.serialNumber}`);
+      }
+
       if (printerTabsComponent && event?.contextInfo) {
         printerTabsComponent.addTab(event.contextInfo);
       } else {
@@ -828,41 +1067,69 @@ async function initializePrinterTabs(): Promise<void> {
       }
     });
 
-    window.api.receive('printer-context-switched', (...args: unknown[]) => {
-      const event = args[0] as { contextId: string };
+    window.api.receive('printer-context-switched', async (...args: unknown[]) => {
+      const event = args[0] as import('./types/PrinterContext').ContextSwitchEvent;
       console.log('Renderer received context-switched event:', event);
 
-      // Update active tab
-      if (printerTabsComponent) {
-        printerTabsComponent.setActiveTab(event.contextId);
+      try {
+        if (activeContextId && activeContextSerial) {
+          console.log(`[PerPrinter] Saving layout for context ${activeContextId} (serial: ${activeContextSerial})`);
+          const currentLayout = loadLayoutForSerial(activeContextSerial);
+          const serializedWidgets = gridStackManager.serialize();
+          saveLayoutForSerial({ ...currentLayout, widgets: serializedWidgets }, activeContextSerial);
+
+          const currentShortcutConfig = loadShortcutsForSerial(activeContextSerial);
+          saveShortcutsForSerial(currentShortcutConfig, activeContextSerial);
+        }
+
+        activeContextId = event.contextId;
+        activeContextSerial = event.contextInfo?.serialNumber || printerSerialMap.get(event.contextId) || null;
+        editModeController.setActiveSerial(activeContextSerial);
+
+        if (printerTabsComponent) {
+          printerTabsComponent.setActiveTab(event.contextId);
+        }
+
+        filtrationAvailable = false;
+        ifsMenuItemVisible = false;
+        isLegacyPrinter = false;
+        updateIFSMenuItemVisibility();
+        updateLegacyPrinterButtonStates();
+
+        const serialLabel = activeContextSerial ?? 'default';
+        console.log(`[PerPrinter] Switching UI to context ${event.contextId} (serial: ${serialLabel})`);
+
+        if (!componentsInitialized) {
+          await initializeGridStack(activeContextSerial);
+        } else {
+          const newLayout = loadLayoutForSerial(activeContextSerial);
+          const newShortcutConfig = loadShortcutsForSerial(activeContextSerial);
+          await reloadGridForLayout(newLayout, serialLabel, newShortcutConfig);
+        }
+      } catch (error) {
+        console.error('[PerPrinter] Failed to switch context:', error);
+        handleUIError(error, 'context switch');
       }
-
-      // Clear printer-specific state from previous context
-      // Note: filtrationAvailable will be updated by polling data
-      filtrationAvailable = false;
-      ifsMenuItemVisible = false;
-      isLegacyPrinter = false;
-
-      // Update button states to reflect cleared state
-      // Note: Filtration buttons are managed by FiltrationControlsComponent
-      updateIFSMenuItemVisibility();
-      updateLegacyPrinterButtonStates();
-
-      //       // Request fresh printer data for the new context
-      //       // The polling-update event will automatically update the UI when data arrives
-      //       void window.api.requestPrinterStatus().then(() => {
-      //         console.log('Requested printer status for new context');
-      //       }).catch((error: unknown) => {
-      //         console.error('Failed to request printer status for new context:', error);
-      //       });
     });
 
     window.api.receive('printer-context-removed', (...args: unknown[]) => {
       const event = args[0] as { contextId: string };
       console.log('Renderer received context-removed event:', event);
+      printerSerialMap.delete(event.contextId);
       if (printerTabsComponent) {
         printerTabsComponent.removeTab(event.contextId);
       }
+
+      void (async () => {
+        try {
+          const contexts = (await window.api.printerContexts.getAll()) as unknown[];
+          if (!Array.isArray(contexts) || contexts.length === 0) {
+            handleAllContextsRemoved();
+          }
+        } catch (error) {
+          console.error('[PerPrinter] Failed to evaluate remaining contexts:', error);
+        }
+      })();
     });
 
     window.api.receive('printer-context-updated', (...args: unknown[]) => {
@@ -1209,9 +1476,8 @@ async function handleCameraToggle(button: HTMLElement): Promise<void> {
 function initializeShortcutButtons(): void {
   console.log('[ShortcutButtons] Initializing topbar shortcuts');
 
-  // Load and apply current configuration
-  const config = shortcutConfigManager.load();
-  updateShortcutButtons(config);
+  // Start with empty configuration until a printer connects
+  updateShortcutButtons(DEFAULT_SHORTCUT_CONFIG);
 
   // Setup shortcut button click handlers
   for (let i = 1; i <= 3; i++) {
@@ -1257,7 +1523,7 @@ function setupShortcutConfigRequestHandlers(): void {
   // Handle get-current-request
   window.api.receive('shortcut-config:get-current-request', (data: unknown) => {
     const responseChannel = data as string;
-    const config = shortcutConfigManager.load();
+    const config = loadShortcutsForSerial(activeContextSerial);
 
     if (window.api?.send) {
       window.api.send(responseChannel, config);
@@ -1272,7 +1538,8 @@ function setupShortcutConfigRequestHandlers(): void {
     };
 
     try {
-      shortcutConfigManager.save(config);
+      saveShortcutsForSerial(config, activeContextSerial);
+      console.log(`[PerPrinter] Saved shortcuts for serial: ${activeContextSerial || 'global'}`);
       if (window.api?.send) {
         window.api.send(responseChannel, { success: true });
       }
@@ -1309,7 +1576,7 @@ function getAvailableComponentsForShortcutConfig(): Array<{
   category: string;
   isPinned: boolean;
 }> {
-  const config = shortcutConfigManager.load();
+  const config = loadShortcutsForSerial(activeContextSerial);
   const pinnedIds = new Set(
     Object.values(config.slots).filter((id): id is string => id !== null)
   );
@@ -1401,7 +1668,7 @@ async function reloadGridLayout(): Promise<void> {
   console.log('[ShortcutButtons] Reloading grid layout');
 
   try {
-    const config = shortcutConfigManager.load();
+    const config = loadShortcutsForSerial(activeContextSerial);
     const pinnedIds = Object.values(config.slots).filter((id): id is string => id !== null);
 
     console.log('[ShortcutButtons] Pinned component IDs:', pinnedIds);
@@ -1440,7 +1707,7 @@ async function reloadGridLayout(): Promise<void> {
 
     // Check if any unpinned components should be added back to grid
     // (This handles the case where a component was unpinned)
-    const layout = layoutPersistence.load();
+    const layout = loadLayoutForSerial(activeContextSerial);
     const currentGridComponentIds = gridItems
       .map(item => item.getAttribute('data-component-id'))
       .filter((id): id is string => id !== null);
@@ -1459,12 +1726,12 @@ async function reloadGridLayout(): Promise<void> {
     }
 
     // Save updated layout
-    const currentLayout = layoutPersistence.load();
+    const currentLayout = loadLayoutForSerial(activeContextSerial);
     const updatedLayout = gridStackManager.serialize();
-    layoutPersistence.save({
+    saveLayoutForSerial({
       ...currentLayout,
       widgets: updatedLayout
-    });
+    }, activeContextSerial);
 
     console.log('[ShortcutButtons] Grid reload complete');
   } catch (error) {
@@ -1475,7 +1742,11 @@ async function reloadGridLayout(): Promise<void> {
 /**
  * Helper function to add a component to the grid
  */
-async function addComponentToGrid(componentId: string, widgetConfig?: GridStackWidgetConfig): Promise<void> {
+async function addComponentToGrid(
+  componentId: string,
+  widgetConfig?: GridStackWidgetConfig,
+  configData?: AppConfig | null
+): Promise<void> {
   const componentDef = getComponentDefinition(componentId);
   if (!componentDef) {
     console.error(`[ShortcutButtons] Component definition not found: ${componentId}`);
@@ -1523,6 +1794,9 @@ async function addComponentToGrid(componentId: string, widgetConfig?: GridStackW
           printerState: lastPollingData.printerStatus?.state,
           connectionState: lastPollingData.isConnected
         };
+        if (configData) {
+          updateData.config = configData;
+        }
         component.update(updateData);
       }
     }
@@ -2306,7 +2580,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       'check-circle',
       'x-circle',
       'pencil',
-      'rotate-ccw'
+      'rotate-ccw',
+      'plug'
     )
   );
 
@@ -2339,17 +2614,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Initialize shortcut button system
   initializeShortcutButtons();
-
-  // GridStack + Component system initialization
-  try {
-    await initializeGridStack();
-    componentsInitialized = true;
-    console.log('GridStack and component system ready');
-    logMessage('GridStack layout system initialized: ' + componentManager.getComponentCount() + ' components');
-  } catch (error) {
-    console.error('GridStack initialization failed:', error);
-    logMessage(`ERROR: GridStack initialization failed: ${error}`);
-  }
+  initializePlaceholderUI();
 
   // Initialize enhanced polling update listeners AFTER components are ready
   // This prevents "Components not initialized yet" warnings during startup

@@ -94,6 +94,21 @@
   <!-- GridStack Container -->
   <div class="grid-stack"></div>
 
+  <!-- Placeholder when no printer is connected -->
+  <div id="grid-placeholder" class="grid-placeholder">
+    <div class="placeholder-card" role="status" aria-live="polite">
+      <div class="placeholder-icon">
+        <i data-lucide="printer"></i>
+      </div>
+      <h2>Connect a Printer</h2>
+      <p>Layouts load automatically once a printer is connected. Click “Connect” or use Ctrl+K to get started.</p>
+      <button id="placeholder-connect-btn" type="button">
+        <i data-lucide="plug"></i>
+        <span>Connect to Printer</span>
+      </button>
+    </div>
+  </div>
+
   <!-- Edit Mode Indicator (hidden by default, managed by EditModeController) -->
   <!-- Indicator will be created dynamically by EditModeController -->
 

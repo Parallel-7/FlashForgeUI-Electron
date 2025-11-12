@@ -63,6 +63,12 @@ export class EditModeController {
   /** Layout persistence manager instance */
   private layoutPersistence: LayoutPersistence | null = null;
 
+  /** Whether edit mode can be enabled (requires active printer) */
+  private editingAvailable = true;
+
+  /** Current printer serial for per-printer layout saves */
+  private activeSerial: string | null = null;
+
   /** Edit mode indicator element */
   private indicator: HTMLElement | null = null;
 
@@ -201,6 +207,11 @@ export class EditModeController {
    * Toggle edit mode on/off
    */
   toggle(): void {
+    if (!this.editingAvailable && !this.state.enabled) {
+      console.warn('EditModeController: Edit mode unavailable without an active printer');
+      return;
+    }
+
     if (this.state.enabled) {
       this.exitEditMode();
     } else {
@@ -214,6 +225,11 @@ export class EditModeController {
   enterEditMode(): void {
     if (!this.gridManager || !this.layoutPersistence) {
       console.error('EditModeController: Not initialized');
+      return;
+    }
+
+    if (!this.editingAvailable) {
+      console.warn('EditModeController: Edit mode unavailable without an active printer');
       return;
     }
 
@@ -322,7 +338,7 @@ export class EditModeController {
       const widgets = this.gridManager.serialize();
 
       // Get current layout config
-      const currentLayout = this.layoutPersistence.load();
+      const currentLayout = this.layoutPersistence.load(this.activeSerial ?? undefined);
 
       // Create updated layout
       const updatedLayout = {
@@ -332,7 +348,7 @@ export class EditModeController {
       };
 
       // Save immediately (no debouncing on manual save)
-      this.layoutPersistence.save(updatedLayout, undefined, true);
+      this.layoutPersistence.save(updatedLayout, this.activeSerial ?? undefined, true);
 
       console.log('EditModeController: Layout saved successfully');
     } catch (error) {
@@ -400,7 +416,7 @@ export class EditModeController {
     if (confirmed) {
       try {
         // Reset to default layout
-        this.layoutPersistence.reset();
+        this.layoutPersistence.reset(this.activeSerial ?? undefined);
 
         // Reload the page to apply default layout
         // In Phase 2, we'll implement hot-reload without page refresh
@@ -444,6 +460,23 @@ export class EditModeController {
     this.initialized = false;
 
     console.log('EditModeController: Disposed');
+  }
+
+  /**
+   * Set whether edit mode can be enabled (based on printer availability)
+   */
+  setAvailability(available: boolean): void {
+    this.editingAvailable = available;
+    if (!available && this.state.enabled) {
+      this.exitEditMode();
+    }
+  }
+
+  /**
+   * Update the active printer serial used for layout persistence
+   */
+  setActiveSerial(serial: string | null): void {
+    this.activeSerial = serial;
   }
 }
 
