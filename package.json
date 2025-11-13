@@ -47,7 +47,7 @@
   "dependencies": {
     "@cycjimmy/jsmpeg-player": "^6.1.2",
     "@ghosttypes/ff-api": "*",
-    "@parallel-7/slicer-meta": "*",
+    "@parallel-7/slicer-meta": "^1.1.0-20251112234641",
     "electron-log": "^5.2.4",
     "electron-updater": "^6.6.2",
     "express": "^5.1.0",

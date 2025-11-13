@@ -59,7 +59,6 @@ interface DialogElements {
     printerModel: HTMLElement | null;
     filamentType: HTMLElement | null;
     filamentLen: HTMLElement | null;
-    filamentWt: HTMLElement | null;
     supportUsed: HTMLElement | null;
     slicerName: HTMLElement | null;
     slicerVer: HTMLElement | null;
@@ -147,7 +146,6 @@ document.addEventListener('DOMContentLoaded', (): void => {
         printerModel: document.getElementById('meta-printer'),
         filamentType: document.getElementById('meta-filament-type'),
         filamentLen: document.getElementById('meta-filament-len'),
-        filamentWt: document.getElementById('meta-filament-wt'),
         supportUsed: document.getElementById('meta-support'),
         slicerName: document.getElementById('meta-slicer-name'),
         slicerVer: document.getElementById('meta-slicer-ver'),
@@ -330,7 +328,8 @@ async function handleMetadataResult(elements: DialogElements, result: MetadataRe
         // Check if this is a 3MF file for AD5X that should use enhanced upload flow
         if (currentFilePath && await shouldUseEnhanced3MFFlow(currentFilePath)) {
             try {
-                const filaments = result.threeMf?.filaments || [];
+                // ✅ NEW: Check both threeMf.filaments and file.filaments as fallback
+                const filaments = result.threeMf?.filaments || result.file?.filaments || [];
 
                 if (filaments.length === 0) {
                     // No filament data - show warning and fall back to regular upload
@@ -461,24 +460,37 @@ function populateMetadata(elements: DialogElements, data: MetadataResult): void 
 
     if (elements.filamentLen) {
         let lengthText = '-';
-        if (data.file?.filamentUsedMM) {
-            lengthText = `${data.file.filamentUsedMM.toFixed(2)} mm`;
-        } else if (data.threeMf?.filaments?.[0]?.usedM) {
-            const usedM = parseFloat(data.threeMf.filaments[0].usedM);
-            lengthText = `${usedM.toFixed(2)} mm`;
-        }
-        elements.filamentLen.textContent = lengthText;
-    }
+        let weightText = '';
 
-    if (elements.filamentWt) {
-        let weightText = '-';
-        if (data.file?.filamentUsedG) {
-            weightText = `${data.file.filamentUsedG.toFixed(2)} g`;
-        } else if (data.threeMf?.filaments?.[0]?.usedG) {
-            const usedG = parseFloat(data.threeMf.filaments[0].usedG);
-            weightText = `${usedG.toFixed(2)} g`;
+        // Get length
+        if (data.file?.filaments?.[0]?.usedM) {
+            // NEW: Use file.filaments (works for both .gcode and .3mf)
+            const usedM = parseFloat(data.file.filaments[0].usedM);
+            lengthText = `${usedM.toFixed(2)} m`;
+        } else if (data.threeMf?.filaments?.[0]?.usedM) {
+            // FALLBACK: Use threeMf.filaments for .3mf files
+            const usedM = parseFloat(data.threeMf.filaments[0].usedM);
+            lengthText = `${usedM.toFixed(2)} m`;
+        } else if (data.file?.filamentUsedMM) {
+            // LEGACY: Convert millimeters to meters for display
+            lengthText = `${(data.file.filamentUsedMM / 1000).toFixed(2)} m`;
         }
-        elements.filamentWt.textContent = weightText;
+
+        // Get weight (only if length is available)
+        if (lengthText !== '-') {
+            if (data.file?.filamentUsedG) {
+                weightText = ` • ${data.file.filamentUsedG.toFixed(2)} g`;
+            } else if (data.threeMf?.filaments?.[0]?.usedG) {
+                const usedG = parseFloat(data.threeMf.filaments[0].usedG);
+                weightText = ` • ${usedG.toFixed(2)} g`;
+            } else if (data.file?.filaments?.[0]?.usedG) {
+                const usedG = parseFloat(data.file.filaments[0].usedG);
+                weightText = ` • ${usedG.toFixed(2)} g`;
+            }
+        }
+
+        // Combine: "17.42 m • 51.95 g" or just "17.42 m" if no weight data
+        elements.filamentLen.textContent = lengthText + weightText;
     }
 
     if (elements.supportUsed) {
@@ -555,7 +567,6 @@ function resetMetadata(elements: DialogElements): void {
         elements.printerModel,
         elements.filamentType,
         elements.filamentLen,
-        elements.filamentWt,
         elements.supportUsed,
         elements.slicerName,
         elements.slicerVer,
