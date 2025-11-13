@@ -164,13 +164,19 @@ class SettingsRenderer {
 
   // Custom color picker elements
   private colorPickerModal: HTMLElement | null = null;
-  private colorPickerCanvas: HTMLCanvasElement | null = null;
-  private colorPickerCtx: CanvasRenderingContext2D | null = null;
-  private brightnessSlider: HTMLInputElement | null = null;
+  private colorFieldCanvas: HTMLCanvasElement | null = null;
+  private colorFieldCtx: CanvasRenderingContext2D | null = null;
+  private colorFieldThumb: HTMLElement | null = null;
+  private hueSlider: HTMLInputElement | null = null;
   private pickerHexInput: HTMLInputElement | null = null;
   private pickerPreviewSwatch: HTMLElement | null = null;
+  private pickerPreviewLabel: HTMLElement | null = null;
   private colorPickerClose: HTMLButtonElement | null = null;
   private currentPickerColorKey: keyof ThemeColors | null = null;
+  private colorFieldPointerMoveHandler: ((event: PointerEvent) => void) | null = null;
+  private colorFieldPointerUpHandler: ((event: PointerEvent) => void) | null = null;
+  private pendingPickerFrame: number | null = null;
+  private updatingPickerInputs: boolean = false;
 
   // Color picker state
   private currentHue: number = 0;
@@ -255,16 +261,24 @@ class SettingsRenderer {
 
     // Initialize custom color picker elements
     this.colorPickerModal = document.getElementById('custom-color-picker');
-    this.colorPickerCanvas = document.getElementById('color-picker-canvas') as HTMLCanvasElement | null;
-    this.brightnessSlider = document.getElementById('brightness-slider') as HTMLInputElement | null;
+    this.colorFieldCanvas = document.getElementById('color-picker-field') as HTMLCanvasElement | null;
+    this.colorFieldThumb = document.getElementById('color-picker-thumb');
+    this.hueSlider = document.getElementById('color-picker-hue') as HTMLInputElement | null;
     this.pickerHexInput = document.getElementById('picker-hex-input') as HTMLInputElement | null;
     this.pickerPreviewSwatch = document.getElementById('picker-preview-swatch');
+    this.pickerPreviewLabel = document.getElementById('picker-preview-label');
     this.colorPickerClose = document.querySelector('.color-picker-close') as HTMLButtonElement | null;
 
-    if (this.colorPickerCanvas) {
-      this.colorPickerCtx = this.colorPickerCanvas.getContext('2d');
-      this.drawColorPickerCanvas();
+    if (this.colorFieldCanvas) {
+      this.colorFieldCtx = this.colorFieldCanvas.getContext('2d');
+      this.drawColorField();
+      this.positionColorFieldThumb();
     }
+
+    window.addEventListener('resize', () => {
+      this.drawColorField();
+      this.positionColorFieldThumb();
+    });
 
     this.initializeTabs();
   }
@@ -340,10 +354,11 @@ class SettingsRenderer {
     }
 
     if (this.colorPickerModal) {
-      const overlay = this.colorPickerModal.querySelector('.color-picker-overlay');
-      if (overlay) {
-        overlay.addEventListener('click', () => this.closeColorPicker());
-      }
+      this.colorPickerModal.addEventListener('mousedown', (event) => {
+        if (event.target === this.colorPickerModal) {
+          this.closeColorPicker();
+        }
+      });
 
       // ESC key to close
       document.addEventListener('keydown', (e) => {
@@ -353,12 +368,12 @@ class SettingsRenderer {
       });
     }
 
-    if (this.colorPickerCanvas) {
-      this.colorPickerCanvas.addEventListener('click', (e) => this.handleCanvasClick(e));
+    if (this.colorFieldCanvas) {
+      this.colorFieldCanvas.addEventListener('pointerdown', (event) => this.handleColorFieldPointerDown(event));
     }
 
-    if (this.brightnessSlider) {
-      this.brightnessSlider.addEventListener('input', () => this.handleBrightnessChange());
+    if (this.hueSlider) {
+      this.hueSlider.addEventListener('input', () => this.handleHueChange());
     }
 
     if (this.pickerHexInput) {
@@ -1192,6 +1207,18 @@ class SettingsRenderer {
   }
 
   /**
+   * Convert RGB numeric components into a hex string
+   */
+  private rgbToHex(r: number, g: number, b: number): string {
+    const toHex = (component: number) => {
+      const clamped = this.clamp(component, 0, 255);
+      return clamped.toString(16).padStart(2, '0');
+    };
+
+    return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
+  }
+
+  /**
    * Convert hex color to HSB
    */
   private hexToHSB(hex: string): { h: number; s: number; b: number } {
@@ -1254,106 +1281,233 @@ class SettingsRenderer {
   }
 
   /**
-   * Draw the hue/saturation canvas
+   * Clamp a numeric value between a min and max
    */
-  private drawColorPickerCanvas(): void {
-    if (!this.colorPickerCanvas || !this.colorPickerCtx) return;
+  private clamp(value: number, min: number, max: number): number {
+    return Math.min(Math.max(value, min), max);
+  }
 
-    const ctx = this.colorPickerCtx;
-    const width = this.colorPickerCanvas.width;
-    const height = this.colorPickerCanvas.height;
+  /**
+   * Draw the saturation/value field for the selected hue
+   */
+  private drawColorField(): void {
+    if (!this.colorFieldCanvas || !this.colorFieldCtx) return;
 
-    // Draw hue gradient horizontally
-    for (let x = 0; x < width; x++) {
-      const hue = (x / width) * 360;
-      const gradient = ctx.createLinearGradient(0, 0, 0, height);
-      gradient.addColorStop(0, `hsl(${hue}, 100%, 50%)`);
-      gradient.addColorStop(1, `hsl(${hue}, 0%, 50%)`);
-      ctx.fillStyle = gradient;
-      ctx.fillRect(x, 0, 1, height);
+    const rect = this.colorFieldCanvas.getBoundingClientRect();
+    const width = Math.max(1, Math.floor(rect.width));
+    const height = Math.max(1, Math.floor(rect.height));
+    if (width === 0 || height === 0) {
+      return;
     }
+
+    if (this.colorFieldCanvas.width !== width || this.colorFieldCanvas.height !== height) {
+      this.colorFieldCanvas.width = width;
+      this.colorFieldCanvas.height = height;
+    }
+
+    const ctx = this.colorFieldCtx;
+
+    ctx.clearRect(0, 0, width, height);
+
+    ctx.fillStyle = `hsl(${this.currentHue}, 100%, 50%)`;
+    ctx.fillRect(0, 0, width, height);
+
+    const whiteGradient = ctx.createLinearGradient(0, 0, width, 0);
+    whiteGradient.addColorStop(0, '#ffffff');
+    whiteGradient.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = whiteGradient;
+    ctx.fillRect(0, 0, width, height);
+
+    const blackGradient = ctx.createLinearGradient(0, 0, 0, height);
+    blackGradient.addColorStop(0, 'rgba(0,0,0,0)');
+    blackGradient.addColorStop(1, '#000000');
+    ctx.fillStyle = blackGradient;
+    ctx.fillRect(0, 0, width, height);
   }
 
   /**
-   * Handle canvas click to select color
+   * Begin tracking pointer movement in the color field
    */
-  private handleCanvasClick(e: MouseEvent): void {
-    if (!this.colorPickerCanvas) return;
+  private handleColorFieldPointerDown(event: PointerEvent): void {
+    if (!this.colorFieldCanvas) return;
 
-    const rect = this.colorPickerCanvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
+    event.preventDefault();
+    this.colorFieldCanvas.setPointerCapture(event.pointerId);
+    this.updateColorFieldFromEvent(event);
 
-    const width = this.colorPickerCanvas.width;
-    const height = this.colorPickerCanvas.height;
+    this.colorFieldPointerMoveHandler = (moveEvent: PointerEvent) => {
+      if (moveEvent.pointerId === event.pointerId) {
+        this.updateColorFieldFromEvent(moveEvent);
+      }
+    };
 
-    // Calculate hue and saturation from click position
-    this.currentHue = (x / width) * 360;
-    this.currentSaturation = 100 - (y / height) * 100;
+    this.colorFieldPointerUpHandler = (upEvent: PointerEvent) => {
+      if (upEvent.pointerId === event.pointerId) {
+        this.colorFieldCanvas?.releasePointerCapture(event.pointerId);
 
-    this.updatePickerFromHSB();
+        if (this.colorFieldPointerMoveHandler) {
+          document.removeEventListener('pointermove', this.colorFieldPointerMoveHandler);
+        }
+        if (this.colorFieldPointerUpHandler) {
+          document.removeEventListener('pointerup', this.colorFieldPointerUpHandler);
+        }
+
+        this.colorFieldPointerMoveHandler = null;
+        this.colorFieldPointerUpHandler = null;
+      }
+    };
+
+    document.addEventListener('pointermove', this.colorFieldPointerMoveHandler);
+    document.addEventListener('pointerup', this.colorFieldPointerUpHandler);
   }
 
   /**
-   * Handle brightness slider change
+   * Update hue/saturation/value from pointer position
    */
-  private handleBrightnessChange(): void {
-    if (!this.brightnessSlider) return;
-    this.currentBrightness = parseInt(this.brightnessSlider.value);
-    this.updatePickerFromHSB();
+  private updateColorFieldFromEvent(event: PointerEvent): void {
+    if (!this.colorFieldCanvas) return;
+
+    const rect = this.colorFieldCanvas.getBoundingClientRect();
+    const x = this.clamp(event.clientX - rect.left, 0, rect.width);
+    const y = this.clamp(event.clientY - rect.top, 0, rect.height);
+
+    this.currentSaturation = (x / rect.width) * 100;
+    this.currentBrightness = 100 - (y / rect.height) * 100;
+
+    this.positionColorFieldThumb(rect, x, y);
+    this.requestPickerRender();
   }
 
   /**
-   * Handle hex input in the picker modal
+   * Keep the draggable thumb aligned with the current SV values
+   */
+  private positionColorFieldThumb(rect?: DOMRect, x?: number, y?: number): void {
+    if (!this.colorFieldThumb || !this.colorFieldCanvas) return;
+
+    const bounds = rect ?? this.colorFieldCanvas.getBoundingClientRect();
+    const left = typeof x === 'number' ? x : (this.currentSaturation / 100) * bounds.width;
+    const top = typeof y === 'number' ? y : ((100 - this.currentBrightness) / 100) * bounds.height;
+
+    this.colorFieldThumb.style.left = `${left}px`;
+    this.colorFieldThumb.style.top = `${top}px`;
+  }
+
+  /**
+   * Handle hue slider adjustments
+   */
+  private handleHueChange(): void {
+    if (!this.hueSlider) return;
+    this.currentHue = parseFloat(this.hueSlider.value);
+    this.drawColorField();
+    this.requestPickerRender();
+  }
+
+  /**
+   * Handle hex or rgb input in the picker modal
    */
   private handlePickerHexInput(): void {
-    if (!this.pickerHexInput) return;
+    if (!this.pickerHexInput || this.updatingPickerInputs) return;
 
-    const hexValue = this.pickerHexInput.value;
-    const validation = this.validateHexColor(hexValue);
-
-    if (validation.valid) {
+    const parsedHex = this.parseColorInput(this.pickerHexInput.value);
+    if (parsedHex) {
       this.pickerHexInput.classList.remove('invalid');
-      const hsb = this.hexToHSB(validation.normalized);
-      this.currentHue = hsb.h;
-      this.currentSaturation = hsb.s;
-      this.currentBrightness = hsb.b;
-
-      if (this.brightnessSlider) {
-        this.brightnessSlider.value = Math.round(hsb.b).toString();
-      }
-
-      if (this.pickerPreviewSwatch) {
-        this.pickerPreviewSwatch.style.backgroundColor = validation.normalized;
-      }
-
-      // Update the actual color if we have a current key
-      if (this.currentPickerColorKey) {
-        this.updateColorValue(this.currentPickerColorKey, validation.normalized);
-      }
+      this.applyHexToPicker(parsedHex);
     } else {
       this.pickerHexInput.classList.add('invalid');
     }
   }
 
   /**
+   * Normalize arbitrary color input into #RRGGBB when possible
+   */
+  private parseColorInput(input: string): string | null {
+    const value = input.trim();
+    if (!value) {
+      return null;
+    }
+
+    if (value.toLowerCase().startsWith('rgb')) {
+      const rgbMatch = value.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+))?\s*\)$/i);
+      if (!rgbMatch) {
+        return null;
+      }
+
+      const r = this.clamp(parseInt(rgbMatch[1], 10), 0, 255);
+      const g = this.clamp(parseInt(rgbMatch[2], 10), 0, 255);
+      const b = this.clamp(parseInt(rgbMatch[3], 10), 0, 255);
+      return this.rgbToHex(r, g, b);
+    }
+
+    const validation = this.validateHexColor(value);
+    return validation.valid ? validation.normalized : null;
+  }
+
+  /**
+   * Apply a hex color to the picker state
+   */
+  private applyHexToPicker(hexColor: string, applyToTheme: boolean = true): void {
+    const validation = this.validateHexColor(hexColor);
+    if (!validation.valid) {
+      return;
+    }
+
+    const hsb = this.hexToHSB(validation.normalized);
+    this.currentHue = hsb.h;
+    this.currentSaturation = hsb.s;
+    this.currentBrightness = hsb.b;
+
+    if (this.hueSlider) {
+      this.hueSlider.value = Math.round(this.currentHue).toString();
+    }
+
+    this.drawColorField();
+    this.positionColorFieldThumb();
+    this.updatePickerFromHSB(applyToTheme);
+  }
+
+  /**
+   * Request a single animation frame update for picker changes
+   */
+  private requestPickerRender(): void {
+    if (this.pendingPickerFrame !== null) {
+      cancelAnimationFrame(this.pendingPickerFrame);
+    }
+
+    this.pendingPickerFrame = window.requestAnimationFrame(() => {
+      this.pendingPickerFrame = null;
+      this.updatePickerFromHSB();
+    });
+  }
+
+  /**
    * Update picker UI from current HSB values
    */
-  private updatePickerFromHSB(): void {
+  private updatePickerFromHSB(applyToTheme: boolean = true): void {
     const hexColor = this.hsbToHex(this.currentHue, this.currentSaturation, this.currentBrightness);
 
+    this.updatingPickerInputs = true;
     if (this.pickerHexInput) {
       this.pickerHexInput.value = hexColor;
       this.pickerHexInput.classList.remove('invalid');
     }
+    this.updatingPickerInputs = false;
 
+    this.updatePickerPreview(hexColor);
+
+    if (applyToTheme && this.currentPickerColorKey) {
+      this.updateColorValue(this.currentPickerColorKey, hexColor);
+    }
+  }
+
+  /**
+   * Update the preview swatch and label
+   */
+  private updatePickerPreview(hexColor: string): void {
     if (this.pickerPreviewSwatch) {
       this.pickerPreviewSwatch.style.backgroundColor = hexColor;
     }
-
-    // Update the actual color
-    if (this.currentPickerColorKey) {
-      this.updateColorValue(this.currentPickerColorKey, hexColor);
+    if (this.pickerPreviewLabel) {
+      this.pickerPreviewLabel.textContent = hexColor;
     }
   }
 
@@ -1370,23 +1524,7 @@ class SettingsRenderer {
     const validation = this.validateHexColor(currentColor);
 
     if (validation.valid) {
-      const hsb = this.hexToHSB(validation.normalized);
-      this.currentHue = hsb.h;
-      this.currentSaturation = hsb.s;
-      this.currentBrightness = hsb.b;
-
-      if (this.brightnessSlider) {
-        this.brightnessSlider.value = Math.round(hsb.b).toString();
-      }
-
-      if (this.pickerHexInput) {
-        this.pickerHexInput.value = validation.normalized;
-        this.pickerHexInput.classList.remove('invalid');
-      }
-
-      if (this.pickerPreviewSwatch) {
-        this.pickerPreviewSwatch.style.backgroundColor = validation.normalized;
-      }
+      this.applyHexToPicker(validation.normalized, false);
     }
 
     this.colorPickerModal.hidden = false;

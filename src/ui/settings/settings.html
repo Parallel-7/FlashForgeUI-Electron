@@ -295,25 +295,34 @@
 
                 <!-- Custom Color Picker Modal -->
                 <div id="custom-color-picker" class="color-picker-modal" hidden>
-                    <div class="color-picker-overlay"></div>
                     <div class="color-picker-dialog">
                         <div class="color-picker-header">
                             <h5 class="color-picker-title">Choose Color</h5>
                             <button type="button" class="color-picker-close" aria-label="Close color picker">&times;</button>
                         </div>
                         <div class="color-picker-body">
-                            <canvas id="color-picker-canvas" width="200" height="200"></canvas>
-                            <div class="color-picker-controls">
-                                <div class="brightness-slider-container">
-                                    <label for="brightness-slider">Brightness</label>
-                                    <input type="range" id="brightness-slider" min="0" max="100" value="100">
+                            <div class="color-picker-layout">
+                                <div class="color-picker-main">
+                                    <div class="color-field-wrapper">
+                                        <canvas id="color-picker-field" width="240" height="240"></canvas>
+                                        <div id="color-picker-thumb" class="color-picker-thumb" role="presentation"></div>
+                                    </div>
+                                    <div class="slider-field">
+                                        <label for="color-picker-hue">Hue</label>
+                                        <input type="range" id="color-picker-hue" min="0" max="360" value="0">
+                                    </div>
                                 </div>
-                                <div class="hex-input-container">
-                                    <label for="picker-hex-input">Hex</label>
-                                    <input type="text" id="picker-hex-input" class="hex-input" placeholder="#000000" maxlength="7">
-                                </div>
-                                <div class="color-preview-large">
-                                    <div id="picker-preview-swatch"></div>
+                                <div class="color-picker-side">
+                                    <div class="color-preview-large">
+                                        <div class="checkerboard">
+                                            <div id="picker-preview-swatch"></div>
+                                        </div>
+                                        <span id="picker-preview-label">#000000</span>
+                                    </div>
+                                    <div class="hex-input-container">
+                                        <label for="picker-hex-input">Hex or RGB</label>
+                                        <input type="text" id="picker-hex-input" class="hex-input" placeholder="#000000 or rgb(0,0,0)" maxlength="32">
+                                    </div>
                                 </div>
                             </div>
                         </div>
