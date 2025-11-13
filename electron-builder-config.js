@@ -144,6 +144,9 @@ module.exports = {
         // Ensure shortcuts are created for Windows notification support
         createDesktopShortcut: true,
         createStartMenuShortcut: true,
+
+        // Force standard hyphen-based naming for electron-updater compatibility
+        artifactName: "${productName}-Setup-${version}.${ext}",
     },
 
     // DMG configuration
