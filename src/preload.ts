@@ -231,7 +231,8 @@ const validReceiveChannels = [
   'shortcut-config:get-components-request',
   'spoolman:spool-selected',
   'spoolman:spool-updated',
-  'config-updated'
+  'config-updated',
+  'config-loaded'
 ];
 
 // Expose camera URL for renderer

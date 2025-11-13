@@ -43,6 +43,8 @@ export interface PrinterDetails {
   customCameraUrl?: string; // Supports http://, https://, and rtsp:// URLs
   customLedsEnabled?: boolean;
   forceLegacyMode?: boolean;
+  // WebUI settings (per-printer overrides)
+  webUIEnabled?: boolean;
 
   // RTSP streaming settings (per-printer)
   rtspFrameRate?: number;    // 1-60 fps, default: 30

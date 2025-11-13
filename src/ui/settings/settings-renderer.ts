@@ -177,6 +177,7 @@ class SettingsRenderer {
   private colorFieldPointerUpHandler: ((event: PointerEvent) => void) | null = null;
   private pendingPickerFrame: number | null = null;
   private updatingPickerInputs: boolean = false;
+  private webUIEnabledToggle: HTMLInputElement | null = null;
 
   // Color picker state
   private currentHue: number = 0;
@@ -258,6 +259,7 @@ class SettingsRenderer {
     });
 
     this.resetDesktopThemeButton = document.getElementById('reset-desktop-theme') as HTMLButtonElement | null;
+    this.webUIEnabledToggle = document.getElementById('webui-enabled-toggle') as HTMLInputElement | null;
 
     // Initialize custom color picker elements
     this.colorPickerModal = document.getElementById('custom-color-picker');
@@ -325,6 +327,10 @@ class SettingsRenderer {
       this.testDiscordButton.addEventListener('click', () => {
         void this.handleTestDiscordWebhook();
       });
+    }
+
+    if (this.webUIEnabledToggle) {
+      this.webUIEnabledToggle.addEventListener('change', () => this.handleWebUIEnabledToggle());
     }
 
     // Theme color input listeners (native color pickers - used as fallback)
@@ -473,6 +479,7 @@ class SettingsRenderer {
 
     // Load desktop theme values
     this.loadDesktopTheme();
+    this.applyWebUIEnabledSetting();
 
     // Update input states after loading
     this.updateInputStates();
@@ -686,6 +693,10 @@ class SettingsRenderer {
       this.setInputEnabled('force-legacy-api', false);
       this.setInputEnabled('rtsp-frame-rate', false);
       this.setInputEnabled('rtsp-quality', false);
+    }
+
+    if (this.webUIEnabledToggle) {
+      this.webUIEnabledToggle.disabled = !this.perPrinterControlsEnabled;
     }
 
     // Discord settings
@@ -1174,6 +1185,27 @@ class SettingsRenderer {
     }
 
     this.updateInputStates();
+  }
+
+  private applyWebUIEnabledSetting(): void {
+    if (!this.webUIEnabledToggle) {
+      return;
+    }
+
+    const storedValue = this.settings.perPrinter.webUIEnabled;
+    const isEnabled = storedValue !== false;
+    this.webUIEnabledToggle.checked = isEnabled;
+  }
+
+  private handleWebUIEnabledToggle(): void {
+    if (!this.webUIEnabledToggle) {
+      return;
+    }
+
+    this.settings.perPrinter.webUIEnabled = this.webUIEnabledToggle.checked;
+    console.log('[Settings] Updated per-printer webUIEnabled:', this.webUIEnabledToggle.checked);
+    this.hasUnsavedChanges = true;
+    this.updateSaveButtonState();
   }
 
   // ============================================================================

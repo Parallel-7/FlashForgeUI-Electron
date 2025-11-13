@@ -108,6 +108,9 @@ export class PrinterDetailsManager {
     if ('forceLegacyMode' in detailsObj && typeof detailsObj.forceLegacyMode !== 'boolean') {
       return false;
     }
+    if ('webUIEnabled' in detailsObj && typeof detailsObj.webUIEnabled !== 'boolean') {
+      return false;
+    }
     if ('activeSpoolData' in detailsObj) {
       // activeSpoolData can be null or an object with specific shape
       if (detailsObj.activeSpoolData !== null && typeof detailsObj.activeSpoolData !== 'object') {

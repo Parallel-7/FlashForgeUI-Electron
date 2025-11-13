@@ -315,6 +315,13 @@ const createMainWindow = async (): Promise<void> => {
       console.log('Power save blocker started to prevent app suspension');
     }
   });
+
+  mainWindow.webContents.once('did-finish-load', () => {
+    if (configManager.isConfigLoaded()) {
+      console.log('Config already loaded - notifying renderer window');
+      mainWindow.webContents.send('config-loaded');
+    }
+  });
   
 
 
@@ -641,8 +648,11 @@ const setupConnectionEventForwarding = (): void => {
   // Backend initialization notification
   // NOTE: In multi-context mode, polling and camera setup happen in context-created events
   connectionManager.on('backend-initialized', (data: unknown) => {
-    // Send only serializable data, not the backend instance
-    const eventData = data as { printerDetails?: { Name?: string; IPAddress?: string }; modelType?: string };
+    const eventData = data as {
+      contextId?: string;
+      printerDetails?: { Name?: string; IPAddress?: string; SerialNumber?: string; webUIEnabled?: boolean };
+      modelType?: string;
+    };
 
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -650,6 +660,8 @@ const setupConnectionEventForwarding = (): void => {
         success: true,
         printerName: eventData.printerDetails?.Name || 'Unknown',
         modelType: eventData.modelType || 'unknown',
+        contextId: eventData.contextId,
+        serialNumber: eventData.printerDetails?.SerialNumber,
         timestamp: new Date().toISOString()
       });
     }
@@ -658,7 +670,16 @@ const setupConnectionEventForwarding = (): void => {
     console.log('Backend initialized - polling and camera will start when context is created');
 
     // Start WebUI server now that printer is connected
-    void webUIManager.startForPrinter(eventData.printerDetails?.Name || 'Unknown');
+    const printerName = eventData.printerDetails?.Name || 'Unknown';
+    const serialNumber = eventData.printerDetails?.SerialNumber || '';
+    const contextId = eventData.contextId || '';
+    const webUIEnabled = eventData.printerDetails?.webUIEnabled;
+
+    if (contextId && serialNumber) {
+      void webUIManager.startForPrinter(printerName, contextId, serialNumber, webUIEnabled);
+    } else {
+      console.warn('[WebUI] Missing contextId or serialNumber, cannot start WebUI for this printer');
+    }
   });
   
   connectionManager.on('backend-initialization-failed', (data: unknown) => {
@@ -674,17 +695,23 @@ const setupConnectionEventForwarding = (): void => {
     }
   });
   
-  connectionManager.on('backend-disposed', () => {
+  connectionManager.on('backend-disposed', (data: unknown) => {
+    const eventData = data as { contextId?: string };
     // In multi-context mode, polling is stopped automatically when contexts are removed
     console.log('Backend disposed');
     // Polling cleanup is handled by context-removed events in MultiContextPollingCoordinator
 
     // Stop WebUI server when printer disconnects
-    void webUIManager.stopForPrinter();
+    if (eventData?.contextId) {
+      void webUIManager.stopForPrinter(eventData.contextId);
+    } else {
+      console.warn('[WebUI] backend-disposed event missing contextId');
+    }
 
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('backend-disposed', {
+        contextId: eventData?.contextId,
         timestamp: new Date().toISOString()
       });
     }
@@ -719,6 +746,37 @@ const performAutoConnect = async (): Promise<void> => {
 };
 
 /**
+ * Broadcast config-loaded event to all active renderer windows
+ */
+const broadcastConfigLoadedEvent = (): void => {
+  const windowManager = getWindowManager();
+  const windows = windowManager.getActiveWindows();
+
+  windows.forEach((window) => {
+    if (!window.isDestroyed()) {
+      window.webContents.send('config-loaded');
+    }
+  });
+
+  if (windows.length === 0) {
+    console.log('[Config] No renderer windows available to receive config-loaded event');
+  } else {
+    console.log(`[Config] Broadcasted config-loaded event to ${windows.length} window(s)`);
+  }
+};
+
+/**
+ * Forward ConfigManager config-loaded events to renderer windows
+ */
+const setupConfigLoadedForwarding = (): void => {
+  const configManager = getConfigManager();
+  configManager.on('config-loaded', () => {
+    console.log('[Config] Config loaded - forwarding to renderer windows');
+    broadcastConfigLoadedEvent();
+  });
+};
+
+/**
  * Setup event-driven services triggered by renderer ready signal
  */
 const setupEventDrivenServices = (): void => {
@@ -741,11 +799,13 @@ const setupEventDrivenServices = (): void => {
     // Check if config is already loaded
     if (configManager.isConfigLoaded()) {
       console.log('Config already loaded - starting auto-connect immediately');
+      broadcastConfigLoadedEvent();
       void performAutoConnect();
     } else {
       console.log('Config not yet loaded - waiting for config-loaded event');
       configManager.once('config-loaded', () => {
         console.log('Config loaded - starting auto-connect');
+        broadcastConfigLoadedEvent();
         void performAutoConnect();
       });
     }
@@ -764,6 +824,8 @@ const initializeApp = async (): Promise<void> => {
   // Setup event-driven auto-connect FIRST (before window creation)
   setupEventDrivenServices();
   console.log('Event-driven services handlers registered (WebUI starts on printer connection)');
+  setupConfigLoadedForwarding();
+  console.log('Config-loaded forwarding initialized');
   
   // Register all IPC handlers using the modular system
   const managers = {

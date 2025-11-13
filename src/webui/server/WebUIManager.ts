@@ -100,6 +100,9 @@ export class WebUIManager extends EventEmitter {
   
   // Client tracking
   private connectedClients: number = 0;
+  // Track which contexts have WebUI enabled
+  private registeredContexts: Set<string> = new Set();
+  private contextSerialNumbers: Map<string, string> = new Map();
   
   // WebSocket manager
   private readonly webSocketManager = getWebSocketManager();
@@ -281,9 +284,13 @@ export class WebUIManager extends EventEmitter {
       return;
     }
     
-    // If server shouldn't be running but is, stop it
+    // If server shouldn't be running but is, stop it (unless contexts still require it)
     if (!options.enabled && this.isRunning) {
-      await this.stop();
+      if (this.registeredContexts.size === 0) {
+        await this.stop();
+      } else {
+        console.log('[WebUIManager] WebUI disabled globally but contexts still registered - waiting for disconnect');
+      }
       return;
     }
     
@@ -566,45 +573,78 @@ export class WebUIManager extends EventEmitter {
   
   /**
    * Start WebUI server when printer connects
+   * Registers the context and respects per-printer enablement
    */
-  public async startForPrinter(printerName: string): Promise<void> {
+  public async startForPrinter(
+    printerName: string,
+    contextId: string,
+    serialNumber: string,
+    webUIEnabled?: boolean
+  ): Promise<void> {
     try {
-      // Check if WebUI is enabled in settings first
       const config = this.configManager.getConfig();
       if (!config.WebUIEnabled) {
         this.logToUI('WebUI server disabled in settings - enable in preferences to use remote access');
         return;
       }
-      
-      this.logToUI(`Starting WebUI server for ${printerName}...`);
-      const success = await this.start();
-      
-      if (success) {
-        this.logToUI('WebUI server started successfully - remote access now available');
+
+      const isPrinterEnabled = webUIEnabled ?? true;
+      if (!isPrinterEnabled) {
+        this.logToUI(`WebUI disabled for ${printerName} - enable in printer settings to use remote access`);
+        return;
+      }
+
+      this.registeredContexts.add(contextId);
+      this.contextSerialNumbers.set(contextId, serialNumber);
+      console.log(`[WebUIManager] Registered context ${contextId} for printer ${serialNumber || 'unknown'}`);
+
+      if (!this.isRunning) {
+        this.logToUI(`Starting WebUI server for ${printerName}...`);
+        const success = await this.start();
+
+        if (success) {
+          this.logToUI('WebUI server started successfully - remote access now available');
+        } else {
+          this.registeredContexts.delete(contextId);
+          this.contextSerialNumbers.delete(contextId);
+          this.logToUI('WebUI server failed to start - technical error occurred');
+          this.logToUI('Check that the configured port is available and restart as administrator if needed');
+        }
       } else {
-        // If settings are enabled but start() returns false, it's a technical error
-        this.logToUI('WebUI server failed to start - technical error occurred');
-        this.logToUI('Check that the configured port is available and restart as administrator if needed');
+        this.logToUI(`WebUI server already running - ${printerName} now accessible`);
       }
     } catch (error) {
+      this.registeredContexts.delete(contextId);
+      this.contextSerialNumbers.delete(contextId);
       console.error('WebUI server startup error:', error);
       await this.handleStartupError(error);
     }
   }
   
   /**
-   * Stop WebUI server when printer disconnects
+   * Stop WebUI server for a context when printer disconnects
+   * Only stops the server if no registered contexts remain
    */
-  public async stopForPrinter(): Promise<void> {
+  public async stopForPrinter(contextId: string): Promise<void> {
     try {
-      if (this.isRunning) {
-        this.logToUI('Stopping WebUI server - printer disconnected');
-        await this.stop();
-        this.logToUI('WebUI server stopped');
+      const serialNumber = this.contextSerialNumbers.get(contextId);
+      this.registeredContexts.delete(contextId);
+      this.contextSerialNumbers.delete(contextId);
+
+      const printerLabel = serialNumber ? `printer ${serialNumber}` : 'printer';
+      console.log(`[WebUIManager] Unregistered context ${contextId} (${printerLabel})`);
+
+      if (this.registeredContexts.size === 0) {
+        if (this.isRunning) {
+          this.logToUI('Stopping WebUI server - no printers with WebUI enabled connected');
+          await this.stop();
+          this.logToUI('WebUI server stopped');
+        }
+      } else {
+        console.log(`[WebUIManager] Server still required by ${this.registeredContexts.size} context(s)`);
       }
     } catch (error) {
-      console.error('Error stopping WebUI server:', error);
-      this.logToUI('WebUI server stop failed (this may be normal)');
+      console.error('Error during WebUI context cleanup:', error);
     }
   }
   
@@ -670,6 +710,8 @@ export class WebUIManager extends EventEmitter {
     await this.stop();
     this.authManager.dispose();
     this.webSocketManager.dispose();
+    this.registeredContexts.clear();
+    this.contextSerialNumbers.clear();
     this.removeAllListeners();
     WebUIManager.instance = null;
   }

@@ -77,6 +77,15 @@ let printerTabsComponent: PrinterTabsComponent | null = null;
 /** Whether components have been initialized */
 let componentsInitialized = false;
 
+/** Tracks if configuration has completed loading */
+let configLoaded = false;
+let resolveConfigLoaded: (() => void) | null = null;
+const configReadyPromise = new Promise<void>((resolve) => {
+  resolveConfigLoaded = resolve;
+});
+let gridInitializationPromise: Promise<void> | null = null;
+let pendingGridInitializationSerial: string | null = null;
+
 /** Track last polling data for new components */
 let lastPollingData: PollingData | null = null;
 
@@ -92,6 +101,31 @@ let activeContextId: string | null = null;
 
 /** Current active printer serial number (stable identifier for layouts/shortcuts) */
 let activeContextSerial: string | null = null;
+
+const handleConfigLoadedEvent = (): void => {
+  if (configLoaded) {
+    return;
+  }
+  configLoaded = true;
+  resolveConfigLoaded?.();
+  console.log('[Config] Renderer marked configuration as loaded');
+};
+
+if (window.api?.receive) {
+  window.api.receive('config-loaded', () => {
+    console.log('[Config] Renderer received config-loaded IPC event');
+    handleConfigLoadedEvent();
+  });
+} else {
+  console.warn('[Config] Unable to register config-loaded listener (api unavailable)');
+}
+
+const waitForConfigLoaded = async (): Promise<void> => {
+  if (configLoaded) {
+    return;
+  }
+  await configReadyPromise;
+};
 
 /**
  * Helpers for per-printer persistence keys and data access
@@ -597,10 +631,41 @@ function createGridWidget(componentId: string): HTMLElement {
 }
 
 /**
+ * Ensure GridStack initializes only after configuration loads
+ */
+async function initializeGridStack(initialSerial?: string | null): Promise<void> {
+  if (componentsInitialized) {
+    return;
+  }
+
+  if (initialSerial !== undefined) {
+    pendingGridInitializationSerial = initialSerial;
+  }
+
+  if (!gridInitializationPromise) {
+    if (!configLoaded) {
+      console.log('[Config] GridStack initialization deferred until configuration is loaded');
+    }
+    gridInitializationPromise = (async () => {
+      try {
+        await waitForConfigLoaded();
+        const serialForInitialization = pendingGridInitializationSerial;
+        pendingGridInitializationSerial = null;
+        await performGridStackInitialization(serialForInitialization ?? undefined);
+      } finally {
+        gridInitializationPromise = null;
+      }
+    })();
+  }
+
+  await gridInitializationPromise;
+}
+
+/**
  * Initialize GridStack layout system
  * Sets up grid, loads layout, creates widgets, and initializes edit mode
  */
-async function initializeGridStack(initialSerial?: string | null): Promise<void> {
+async function performGridStackInitialization(initialSerial?: string | null): Promise<void> {
   if (componentsInitialized) {
     console.log('GridStack already initialized, skipping base setup');
     return;
