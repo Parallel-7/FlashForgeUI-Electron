@@ -21,6 +21,7 @@ import { BaseComponent } from '../base/component';
 import type { ComponentUpdateData } from '../base/types';
 import type { ActiveSpoolData } from './types';
 import type { AppConfig } from '../../../types/config';
+import { initializeUniversalLucideIcons } from '../../../utils/icons';
 import './spoolman.css';
 
 /**
@@ -105,10 +106,8 @@ export class SpoolmanComponent extends BaseComponent {
     // Setup IPC event listeners
     this.setupIPCListeners();
 
-    // Initialize Lucide icons for this component
-    if (window.lucideHelpers?.initializeLucideIconsFromGlobal) {
-      window.lucideHelpers.initializeLucideIconsFromGlobal(['package', 'settings']);
-    }
+    // Initialize Lucide icons for this component and the dialog
+    initializeUniversalLucideIcons(['package', 'settings', 'x', 'search', 'alert-triangle'], this.container ?? document);
 
     // Load initial state from localStorage
     await this.loadState();

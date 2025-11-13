@@ -248,6 +248,42 @@ export function createIcon(icon: IconNode, config: IconConfig = {}): SVGElement 
   return element;
 }
 
+interface WindowLucideHelpers {
+  initializeLucideIconsFromGlobal(iconNames: string[], root?: Document | Element | DocumentFragment): void;
+}
+
+declare global {
+  interface Window {
+    lucideHelpers?: WindowLucideHelpers;
+  }
+}
+
+export function initializeUniversalLucideIcons(
+  iconNames: string[],
+  root: Document | Element | DocumentFragment = document
+): void {
+  if (typeof window !== 'undefined' && window.lucideHelpers?.initializeLucideIconsFromGlobal) {
+    const globalLucide = (window as typeof window & { lucide?: { createIcons?: (...args: unknown[]) => void } }).lucide;
+    const hasGlobalRuntime = typeof globalLucide?.createIcons === 'function';
+    if (hasGlobalRuntime) {
+      try {
+        window.lucideHelpers.initializeLucideIconsFromGlobal(iconNames, root);
+        return;
+      } catch (error) {
+        console.warn('[Lucide] Global helper initialization failed, falling back to module runtime:', error);
+      }
+    }
+  }
+
+  const icons = getLucideIcons(...iconNames);
+  if (Object.keys(icons).length === 0) {
+    console.warn('[Lucide] No icons resolved for initialization', iconNames);
+    return;
+  }
+
+  initializeLucideIcons(root, icons);
+}
+
 export function createNumberedBadge(
   number: 1 | 2 | 3,
   config: IconConfig = {}

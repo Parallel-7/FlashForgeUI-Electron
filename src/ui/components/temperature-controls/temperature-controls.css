@@ -70,6 +70,7 @@
   justify-content: space-between;
   gap: 6px;
   flex-wrap: nowrap;
+  min-width: 0;
 }
 
 .temp-card__label {
@@ -82,13 +83,17 @@
 }
 
 .temp-card__reading {
-  font-size: clamp(15px, 2vw, 18px);
+  font-size: clamp(13px, 1.5vw, 16px);
   font-weight: 700;
   color: var(--text-color);
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   letter-spacing: 0.2px;
   transition: color var(--transition-normal), text-shadow var(--transition-normal);
   text-align: right;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
 }
 
 .temp-card__actions {

@@ -737,13 +737,13 @@ async function performGridStackInitialization(initialSerial?: string | null): Pr
       const config = await window.api.requestConfig();
       const updateData: ComponentUpdateData = {
         pollingData: lastPollingData,
-        config: config,
+        config,
         timestamp: new Date().toISOString(),
         printerState: lastPollingData.printerStatus?.state,
         connectionState: lastPollingData.isConnected
       };
       componentManager.updateAll(updateData);
-      console.log('GridStack: Sent initial config update to all components');
+      console.log('GridStack: Sent initial config update to all components (or queued if not ready)');
     }
 
     // 5. Setup GridStack event handlers for auto-save

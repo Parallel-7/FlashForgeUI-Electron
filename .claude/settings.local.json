@@ -86,7 +86,7 @@
       "WebFetch(domain:ffmpeg.org)",
       "WebFetch(domain:lucide.dev)",
       "mcp__context7__get-library-docs",
-      "WebFetch(domain:developer.chrome.com)"
+      "WebFetch(domain:developer.chrome.com)",
       "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": [],
