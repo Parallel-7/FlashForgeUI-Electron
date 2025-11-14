@@ -15,7 +15,7 @@
  * - Port number validation with range checking (1-65535)
  *
  * Settings Categories:
- * - Global Settings: WebUI, Discord, alerts, filament tracker, debug mode
+ * - Global Settings: WebUI, Discord, alerts, Spoolman, debug mode
  * - Per-Printer Settings: Custom camera, custom LEDs, force legacy mode
  *
  * UI State Management:
@@ -102,8 +102,6 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'web-ui-password': 'WebUIPassword',
   'web-ui-password-required': 'WebUIPasswordRequired',
   'camera-proxy-port': 'CameraProxyPort',
-  'filament-tracker-enabled': 'FilamentTrackerIntegrationEnabled',
-  'filament-tracker-api-key': 'FilamentTrackerAPIKey',
   'discord-sync': 'DiscordSync',
   'always-on-top': 'AlwaysOnTop',
   'alert-when-complete': 'AlertWhenComplete',
@@ -667,10 +665,6 @@ class SettingsRenderer {
     this.setInputEnabled('web-ui-port', webUIEnabled);
     this.setInputEnabled('web-ui-password-required', webUIEnabled);
     this.setInputEnabled('web-ui-password', webUIEnabled && passwordRequired);
-
-    // Filament Tracker Integration settings
-    const filamentTrackerEnabled = this.inputs.get('filament-tracker-enabled')?.checked || false;
-    this.setInputEnabled('filament-tracker-api-key', filamentTrackerEnabled);
 
     // Spoolman Integration settings
     const spoolmanEnabled = this.inputs.get('spoolman-enabled')?.checked || false;

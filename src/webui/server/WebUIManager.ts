@@ -42,7 +42,6 @@ import {
 } from '../schemas/web-api.schemas';
 import { StandardAPIResponse } from '../types/web-api.types';
 import { createAPIRoutes } from './api-routes';
-import { createFilamentTrackerRoutes } from './filament-tracker-routes';
 import { getWebSocketManager } from './WebSocketManager';
 import { getRtspStreamService } from '../../services/RtspStreamService';
 import type { PollingData } from '../../types/polling';
@@ -191,17 +190,8 @@ export class WebUIManager extends EventEmitter {
     // Authentication routes (no auth required)
     this.setupAuthRoutes();
 
-    // Filament tracker integration routes (has its own auth middleware)
-    const filamentTrackerRoutes = createFilamentTrackerRoutes();
-    this.expressApp.use('/api/filament-tracker', filamentTrackerRoutes);
-
-    // Protected API routes (WebUI auth required) - skip filament tracker routes
-    this.expressApp.use('/api', (req, res, next) => {
-      if (req.path.startsWith('/filament-tracker')) {
-        return next('route'); // Skip this middleware for filament tracker routes
-      }
-      return createAuthMiddleware()(req, res, next);
-    });
+    // Protected API routes (WebUI auth required)
+    this.expressApp.use('/api', createAuthMiddleware());
 
     // Import and use API routes
     const apiRoutes = createAPIRoutes();
@@ -546,8 +536,9 @@ export class WebUIManager extends EventEmitter {
   public handlePollingUpdate(data: PollingData): void {
     console.log('[WebUIManager] handlePollingUpdate called, hasStatus:', !!data.printerStatus, 'wsManager:', !!this.webSocketManager);
 
-    // Always forward to WebSocket manager to update latest polling data
-    // (needed for filament tracker API even when no WebSocket clients connected)
+    // Always forward to WebSocket manager to update latest polling data so renderer
+    // consumers and remote clients can receive up-to-date printer status, even if
+    // no live WebSocket connections are currently established.
     if (data.printerStatus) {
       console.log('[WebUIManager] Calling webSocketManager.broadcastPrinterStatus...');
       this.webSocketManager.broadcastPrinterStatus(data).catch(error => {

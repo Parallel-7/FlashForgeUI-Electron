@@ -19,7 +19,7 @@
  * - UI Behavior: AlwaysOnTop, RoundedUI, DebugMode
  * - Camera: CustomCamera, CustomCameraUrl, CameraProxyPort
  * - WebUI: WebUIEnabled, WebUIPort, WebUIPassword
- * - Integrations: DiscordSync, FilamentTrackerIntegrationEnabled, Spoolman
+ * - Integrations: DiscordSync, Spoolman
  * - Themes: DesktopTheme, WebUITheme
  * - Advanced: ForceLegacyAPI, CustomLeds
  * - Auto-Update: CheckForUpdatesOnLaunch, UpdateChannel, AutoDownloadUpdates
@@ -59,8 +59,6 @@ export interface AppConfig {
   readonly WebUIPasswordRequired: boolean;
   readonly CameraProxyPort: number;
   readonly RoundedUI: boolean;
-  readonly FilamentTrackerIntegrationEnabled: boolean;
-  readonly FilamentTrackerAPIKey: string;
   readonly CheckForUpdatesOnLaunch: boolean;
   readonly UpdateChannel: 'stable' | 'alpha';
   readonly AutoDownloadUpdates: boolean;
@@ -96,8 +94,6 @@ export interface MutableAppConfig {
   WebUIPasswordRequired: boolean;
   CameraProxyPort: number;
   RoundedUI: boolean;
-  FilamentTrackerIntegrationEnabled: boolean;
-  FilamentTrackerAPIKey: string;
   CheckForUpdatesOnLaunch: boolean;
   UpdateChannel: 'stable' | 'alpha';
   AutoDownloadUpdates: boolean;
@@ -144,8 +140,6 @@ export const DEFAULT_CONFIG: AppConfig = {
   WebUIPasswordRequired: true,
   CameraProxyPort: 8181,
   RoundedUI: false,
-  FilamentTrackerIntegrationEnabled: false,
-  FilamentTrackerAPIKey: '',
   CheckForUpdatesOnLaunch: true,
   UpdateChannel: 'stable',
   AutoDownloadUpdates: false,

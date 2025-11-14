@@ -262,8 +262,6 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'web-ui-port': 'WebUIPort',
   'web-ui-password': 'WebUIPassword',
   'camera-proxy-port': 'CameraProxyPort',
-  'filament-tracker-enabled': 'FilamentTrackerIntegrationEnabled',
-  'filament-tracker-api-key': 'FilamentTrackerAPIKey',
   'discord-sync': 'DiscordSync',
   'always-on-top': 'AlwaysOnTop',
   'alert-when-complete': 'AlertWhenComplete',
@@ -373,8 +371,6 @@ export interface AppConfig {
   readonly WebUIPassword: string;
   readonly CameraProxyPort: number;
   readonly RoundedUI: boolean;
-  readonly FilamentTrackerIntegrationEnabled: boolean;
-  readonly FilamentTrackerAPIKey: string;
   readonly RtspFrameRate: number;        // Add this (per-printer, not saved to config.json)
   readonly RtspQuality: number;          // Add this (per-printer, not saved to config.json)
 }
@@ -402,8 +398,6 @@ export interface MutableAppConfig {
   WebUIPassword: string;
   CameraProxyPort: number;
   RoundedUI: boolean;
-  FilamentTrackerIntegrationEnabled: boolean;
-  FilamentTrackerAPIKey: string;
   RtspFrameRate: number;        // Add this
   RtspQuality: number;          // Add this
 }
@@ -431,8 +425,6 @@ export const DEFAULT_CONFIG: AppConfig = {
   WebUIPassword: 'changeme',
   CameraProxyPort: 8181,
   RoundedUI: false,
-  FilamentTrackerIntegrationEnabled: false,
-  FilamentTrackerAPIKey: '',
   RtspFrameRate: 30,           // Add this (default 30 FPS)
   RtspQuality: 3               // Add this (default quality 3)
 } as const;

@@ -15,7 +15,6 @@
  * - getWebSocketManager(): Singleton accessor function
  * - Connection management: initialize, shutdown, getClientCount, disconnectToken
  * - Broadcasting: broadcastPrinterStatus, broadcastToToken
- * - Status access: getLatestPollingData (for API access without WebSocket clients)
  * - Message types: AUTH_SUCCESS, STATUS_UPDATE, ERROR, COMMAND_RESULT, PONG
  */
 
@@ -663,14 +662,6 @@ export class WebSocketManager extends EventEmitter {
     return this.isRunning;
   }
 
-  /**
-   * Get latest polling data
-   * Used by filament tracker integration API
-   */
-  public getLatestPollingData(): PollingData | null {
-    return this.latestPollingData;
-  }
-  
   /**
    * Shutdown WebSocket server
    */
