@@ -67,10 +67,9 @@ interface ExtendedPrinterStatus {
   readonly filtration?: {
     readonly mode?: 'external' | 'internal' | 'none';
   };
-  readonly currentJobMetadata?: {
-    readonly weight?: number;
-    readonly length?: number;
-  };
+  // Filament usage from DualAPIBackend (estimatedRightLen in mm, estimatedRightWeight in g)
+  readonly estimatedRightLen?: number;
+  readonly estimatedRightWeight?: number;
   // Lifetime statistics from DualAPIBackend
   readonly cumulativeFilament?: number;
   readonly cumulativePrintTime?: number;
@@ -224,8 +223,11 @@ export function createAPIRoutes(): Router {
 
         // Extract additional data
         filtrationMode = extendedStatus.filtration?.mode || 'none';
-        estimatedWeight = extendedStatus.currentJobMetadata?.weight;
-        estimatedLength = extendedStatus.currentJobMetadata?.length;
+        // Map filament usage from backend (estimatedRightWeight in grams, estimatedRightLen in mm)
+        estimatedWeight = extendedStatus.estimatedRightWeight;
+        estimatedLength = extendedStatus.estimatedRightLen
+          ? extendedStatus.estimatedRightLen / 1000  // Convert millimeters to meters
+          : undefined;
         timeElapsed = extendedStatus.printDuration;
 
         // Extract lifetime statistics directly from the status object

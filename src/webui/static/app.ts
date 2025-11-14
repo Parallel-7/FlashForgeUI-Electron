@@ -1110,18 +1110,19 @@ function updatePrinterStatus(status: PrinterStatus | null): void {
       setTextContent('time-remaining', '--:--');
     }
     
-    // Update weight and length with null checks
-    if (status.estimatedWeight !== undefined && !isNaN(status.estimatedWeight)) {
-      setTextContent('job-weight', `${status.estimatedWeight.toFixed(1)}g`);
-    } else {
-      setTextContent('job-weight', '--');
-    }
-    
+    // Update filament usage with combined display (matches main UI format: "17.42 m • 51.95 g")
+    let lengthText = '';
+    let weightText = '';
+
     if (status.estimatedLength !== undefined && !isNaN(status.estimatedLength)) {
-      setTextContent('job-length', `${status.estimatedLength.toFixed(2)}m`);
-    } else {
-      setTextContent('job-length', '--');
+      lengthText = `${status.estimatedLength.toFixed(2)} m`;
     }
+
+    if (lengthText && status.estimatedWeight !== undefined && !isNaN(status.estimatedWeight)) {
+      weightText = ` • ${status.estimatedWeight.toFixed(2)} g`;
+    }
+
+    setTextContent('job-filament-usage', lengthText + weightText || '--');
     
     // Update model preview thumbnail
     updateModelPreview(status.thumbnailData);
@@ -1135,8 +1136,7 @@ function updatePrinterStatus(status: PrinterStatus | null): void {
     setTextContent('layer-info', '-- / --');
     setTextContent('elapsed-time', '--:--');
     setTextContent('time-remaining', '--:--');
-    setTextContent('job-weight', '--');
-    setTextContent('job-length', '--');
+    setTextContent('job-filament-usage', '--');
     
     // Clear model preview when no job
     updateModelPreview(null);
@@ -1804,7 +1804,9 @@ async function startPrintJob(): Promise<void> {
   const startNow = ($('start-now') as HTMLInputElement)?.checked ?? true;
   const jobInfo = state.jobMetadata.get(state.selectedFile);
 
-  if (startNow && hasMaterialStationSupport() && isMultiColorJobFile(jobInfo)) {
+  // Show material matching dialog for ALL AD5X jobs (single and multi-color)
+  // This ensures proper IFS slot mapping and prevents "materialMappings array cannot be empty" errors
+  if (startNow && hasMaterialStationSupport() && isAD5XJobFile(jobInfo)) {
     state.pendingJobStart = {
       filename: state.selectedFile,
       leveling: autoLevel,
