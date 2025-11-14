@@ -156,5 +156,5 @@ When using `--all-saved-printers` or specifying multiple printers with `--printe
 
 ### ETA and/or filament usage is not correct/being reported
 - The file has been sliced with OrcaSlicer and lacks the correct (and correct ordering of) metadata. FlashForge printers only "broadcast" this information to the API for files sliced by Orca-FlashForge. Both slicers include the information, but in different formats, and FlashForge printers only look for/accept the format from Orca-FlashForge.
-- I am developing a post-process script that fixes this, but it will only work for .gcode files.
-- Currently, the only solution is to slice the file with Orca-FlashForge
+- Please download and set up [this](https://github.com/GhostTypes/orca2flashforge) post-process script
+- If you already have a script for MD5 generation, remove it and add `-m` to the end of this. It will generate both the MD5 hash and the corrected metadata.
