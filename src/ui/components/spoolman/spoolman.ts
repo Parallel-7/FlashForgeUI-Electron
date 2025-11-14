@@ -64,6 +64,8 @@ export class SpoolmanComponent extends BaseComponent {
   private activeSpool: ActiveSpoolData | null = null;
   private isEnabled = false;
   private contextId: string | null = null;
+  private contextEnabled = false;
+  private disabledReason: string | null = null;
 
   // DOM references
   private disabledView: HTMLElement | null = null;
@@ -74,6 +76,7 @@ export class SpoolmanComponent extends BaseComponent {
   private spoolInfoText: HTMLElement | null = null;
   private setSpoolButton: HTMLElement | null = null;
   private settingsButton: HTMLElement | null = null;
+  private disabledMessageEl: HTMLElement | null = null;
 
   /**
    * Setup event listeners for spool selection and IPC events
@@ -88,6 +91,7 @@ export class SpoolmanComponent extends BaseComponent {
     this.spoolInfoText = this.findElementByClass('spool-info');
     this.setSpoolButton = this.findElementByClass('btn-set-spool');
     this.settingsButton = this.findElementByClass('btn-settings');
+    this.disabledMessageEl = this.findElementByClass('spoolman-message');
 
     // "Set Active Spool" button
     if (this.setSpoolButton) {
@@ -110,8 +114,7 @@ export class SpoolmanComponent extends BaseComponent {
     initializeUniversalLucideIcons(['package', 'settings', 'x', 'search', 'alert-triangle'], this.container ?? document);
 
     // Load initial state from localStorage
-    await this.loadState();
-    this.updateView();
+    await this.refreshAvailability();
   }
 
   /**
@@ -147,6 +150,8 @@ export class SpoolmanComponent extends BaseComponent {
     this.assertInitialized();
 
     try {
+      let availabilityNeedsRefresh = false;
+
       // Update config state
       if (data.config) {
         const config = data.config as AppConfig;
@@ -154,17 +159,21 @@ export class SpoolmanComponent extends BaseComponent {
         this.isEnabled = config.SpoolmanEnabled;
 
         if (wasEnabled !== this.isEnabled) {
-          this.updateView();
+          availabilityNeedsRefresh = true;
         }
       }
 
       // Store context ID for multi-printer support
       if (data.contextId && typeof data.contextId === 'string' && data.contextId !== this.contextId) {
         this.contextId = data.contextId;
-        void this.loadState(); // Reload spool for new context
+        availabilityNeedsRefresh = true;
       }
 
       this.updateState(data);
+
+      if (availabilityNeedsRefresh) {
+        void this.refreshAvailability();
+      }
     } catch (error) {
       console.error(`Error updating ${this.componentId}:`, error);
     }
@@ -180,8 +189,16 @@ export class SpoolmanComponent extends BaseComponent {
     if (this.activeSpoolView) this.activeSpoolView.style.display = 'none';
 
     // Show appropriate state
-    if (!this.isEnabled) {
+    const disabled = !this.isEnabled || !this.contextEnabled;
+
+    if (disabled) {
       if (this.disabledView) this.disabledView.style.display = 'flex';
+      if (this.disabledMessageEl) {
+        const fallback = this.isEnabled
+          ? 'Spoolman integration is not available for this printer.'
+          : 'Spoolman integration is disabled. Enable it in Settings.';
+        this.disabledMessageEl.textContent = this.disabledReason || fallback;
+      }
     } else if (!this.activeSpool) {
       if (this.noSpoolView) this.noSpoolView.style.display = 'flex';
     } else {
@@ -221,6 +238,10 @@ export class SpoolmanComponent extends BaseComponent {
    * Open spool selection dialog via IPC
    */
   private async openSpoolSelection(): Promise<void> {
+    if (!this.isEnabled || !this.contextEnabled) {
+      return;
+    }
+
     if (window.api?.spoolman) {
       await window.api.spoolman.openSpoolSelection();
     }
@@ -235,6 +256,12 @@ export class SpoolmanComponent extends BaseComponent {
       return;
     }
 
+    if (!this.isEnabled || !this.contextEnabled) {
+      this.activeSpool = null;
+      this.updateView();
+      return;
+    }
+
     try {
       // Request active spool from main process for current context
       const spool = await window.api.spoolman.getActiveSpool(this.contextId || undefined);
@@ -243,6 +270,44 @@ export class SpoolmanComponent extends BaseComponent {
       console.log('[SpoolmanComponent] Loaded active spool from main process:', spool);
     } catch (error) {
       console.error('[SpoolmanComponent] Failed to load active spool:', error);
+    }
+  }
+
+  /**
+   * Refresh per-context availability for Spoolman integration
+   */
+  private async refreshAvailability(): Promise<void> {
+    if (!this.isEnabled) {
+      this.contextEnabled = false;
+      this.disabledReason = 'Spoolman integration is disabled. Enable it in Settings.';
+      this.activeSpool = null;
+      this.updateView();
+      return;
+    }
+
+    if (!window.api?.spoolman?.getStatus) {
+      this.contextEnabled = true;
+      this.disabledReason = null;
+      await this.loadState();
+      return;
+    }
+
+    try {
+      const status = await window.api.spoolman.getStatus(this.contextId || undefined);
+      this.contextEnabled = status.enabled;
+      this.disabledReason = status.disabledReason ?? null;
+
+      if (status.enabled) {
+        await this.loadState();
+      } else {
+        this.activeSpool = null;
+        this.updateView();
+      }
+    } catch (error) {
+      console.error('[SpoolmanComponent] Failed to resolve Spoolman status:', error);
+      this.contextEnabled = true;
+      this.disabledReason = null;
+      await this.loadState();
     }
   }
 

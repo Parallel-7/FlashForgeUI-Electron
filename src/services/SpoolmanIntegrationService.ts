@@ -27,6 +27,8 @@ import { getPrinterDetailsManager } from '../managers/PrinterDetailsManager';
 import { SpoolmanService } from './SpoolmanService';
 import type { ActiveSpoolData, SpoolResponse, SpoolSearchQuery } from '../types/spoolman';
 import { toAppError } from '../utils/error.utils';
+import type { ConfigUpdateEvent } from '../types/config';
+import type { PrinterDetails } from '../types/printer';
 
 /**
  * Event payload for spool selection changes
@@ -44,6 +46,7 @@ export class SpoolmanIntegrationService extends EventEmitter {
   private readonly configManager: ConfigManager;
   private readonly contextManager: PrinterContextManager;
   private readonly backendManager: PrinterBackendManager;
+  private readonly handleConfigUpdatedBound: (event: ConfigUpdateEvent) => void;
 
   constructor(
     configManager: ConfigManager,
@@ -54,6 +57,14 @@ export class SpoolmanIntegrationService extends EventEmitter {
     this.configManager = configManager;
     this.contextManager = contextManager;
     this.backendManager = backendManager;
+
+    this.handleConfigUpdatedBound = (event: ConfigUpdateEvent) => {
+      this.handleConfigUpdated(event).catch(error => {
+        console.error('[SpoolmanIntegrationService] Failed to handle config update:', error);
+      });
+    };
+
+    this.configManager.on('configUpdated', this.handleConfigUpdatedBound);
   }
 
   /**
@@ -172,30 +183,13 @@ export class SpoolmanIntegrationService extends EventEmitter {
     }
 
     // Get PrinterDetailsManager
-    const printerDetailsManager = getPrinterDetailsManager();
-
     // Update printer details with new spool data
     const updatedSpoolData = {
       ...spoolData,
       lastUpdated: new Date().toISOString()
     };
 
-    const updatedDetails = {
-      ...context.printerDetails,
-      activeSpoolData: updatedSpoolData
-    };
-
-    // Save to printer_details.json
-    await printerDetailsManager.savePrinter(updatedDetails, targetContextId);
-
-    // Update in-memory context
-    this.contextManager.updatePrinterDetails(targetContextId, updatedDetails);
-
-    // Emit change event
-    this.emit('spoolman-changed', {
-      contextId: targetContextId,
-      spool: updatedSpoolData
-    } as SpoolmanChangedEvent);
+    await this.persistSpoolData(targetContextId, updatedSpoolData);
   }
 
   /**
@@ -223,25 +217,7 @@ export class SpoolmanIntegrationService extends EventEmitter {
     }
 
     // Get PrinterDetailsManager
-    const printerDetailsManager = getPrinterDetailsManager();
-
-    // Update printer details with cleared spool data
-    const updatedDetails = {
-      ...context.printerDetails,
-      activeSpoolData: null
-    };
-
-    // Save to printer_details.json
-    await printerDetailsManager.savePrinter(updatedDetails, targetContextId);
-
-    // Update in-memory context
-    this.contextManager.updatePrinterDetails(targetContextId, updatedDetails);
-
-    // Emit change event
-    this.emit('spoolman-changed', {
-      contextId: targetContextId,
-      spool: null
-    } as SpoolmanChangedEvent);
+    await this.persistSpoolData(targetContextId, null);
   }
 
   /**
@@ -320,6 +296,146 @@ export class SpoolmanIntegrationService extends EventEmitter {
       return await service.testConnection();
     } catch (error) {
       return { connected: false, error: toAppError(error).message };
+    }
+  }
+
+  /**
+   * Force clear active spool for a context regardless of support status
+   */
+  async forceClearActiveSpool(contextId: string): Promise<void> {
+    try {
+      await this.persistSpoolData(contextId, null, { updateLastUsed: false });
+    } catch (error) {
+      console.error(`[SpoolmanIntegrationService] Failed to force clear spool for ${contextId}:`, error);
+    }
+  }
+
+  /**
+   * Clear cached spool data for all contexts and saved printers
+   */
+  async clearAllCachedSpools(reason?: string): Promise<void> {
+    if (reason) {
+      console.log(`[SpoolmanIntegrationService] Clearing cached spools: ${reason}`);
+    } else {
+      console.log('[SpoolmanIntegrationService] Clearing cached spools');
+    }
+
+    const contexts = this.contextManager.getAllContexts();
+    for (const context of contexts) {
+      if (!context.printerDetails.activeSpoolData) {
+        continue;
+      }
+      await this.forceClearActiveSpool(context.id);
+    }
+
+    await this.clearSavedPrintersSpoolData();
+  }
+
+  /**
+   * Refresh active spool data for all contexts from the Spoolman server
+   */
+  async refreshAllActiveSpools(): Promise<void> {
+    if (!this.isGloballyEnabled()) {
+      return;
+    }
+
+    const contexts = this.contextManager.getAllContexts();
+    for (const context of contexts) {
+      if (!context.printerDetails.activeSpoolData) {
+        continue;
+      }
+
+      try {
+        await this.refreshActiveSpoolFromServer(context.id);
+      } catch (error) {
+        console.error(`[SpoolmanIntegrationService] Failed to refresh spool for ${context.id}:`, toAppError(error).message);
+      }
+    }
+  }
+
+  /**
+   * Refresh a single context's active spool from Spoolman
+   */
+  async refreshActiveSpoolFromServer(contextId: string): Promise<void> {
+    if (!this.isGloballyEnabled() || !this.isContextSupported(contextId)) {
+      return;
+    }
+
+    const currentSpool = this.getActiveSpool(contextId);
+    if (!currentSpool) {
+      return;
+    }
+
+    const serverUrl = this.getServerUrl();
+    const service = new SpoolmanService(serverUrl);
+    const spool = await service.getSpoolById(currentSpool.id);
+    const updatedSpool = this.convertToActiveSpoolData(spool);
+    await this.persistSpoolData(contextId, updatedSpool, { updateLastUsed: false });
+  }
+
+  private async persistSpoolData(
+    targetContextId: string,
+    spoolData: ActiveSpoolData | null,
+    options?: { updateLastUsed?: boolean }
+  ): Promise<void> {
+    const context = this.contextManager.getContext(targetContextId);
+    if (!context) {
+      throw new Error(`Context ${targetContextId} not found`);
+    }
+
+    const printerDetailsManager = getPrinterDetailsManager();
+    const updatedDetails = {
+      ...context.printerDetails,
+      activeSpoolData: spoolData
+    };
+
+    await printerDetailsManager.savePrinter(updatedDetails, targetContextId, options);
+    this.contextManager.updatePrinterDetails(targetContextId, updatedDetails);
+
+    this.emit('spoolman-changed', {
+      contextId: targetContextId,
+      spool: spoolData
+    } as SpoolmanChangedEvent);
+  }
+
+  private async clearSavedPrintersSpoolData(): Promise<void> {
+    const printerDetailsManager = getPrinterDetailsManager();
+    const savedPrinters = printerDetailsManager.getAllSavedPrinters();
+    if (!savedPrinters.length) {
+      return;
+    }
+
+    const previousLastUsed = printerDetailsManager.getLastUsedPrinter()?.SerialNumber ?? null;
+    let updated = false;
+
+    for (const printer of savedPrinters) {
+      if (!printer.activeSpoolData) {
+        continue;
+      }
+
+      const { lastConnected: _lastConnected, ...printerDetails } = printer;
+      void _lastConnected;
+      const updatedDetails: PrinterDetails = {
+        ...printerDetails,
+        activeSpoolData: null
+      };
+
+      await printerDetailsManager.savePrinter(updatedDetails, undefined, { updateLastUsed: false });
+      updated = true;
+    }
+
+    if (updated) {
+      if (previousLastUsed) {
+        await printerDetailsManager.setLastUsedPrinter(previousLastUsed);
+      } else {
+        await printerDetailsManager.clearLastUsedPrinter();
+      }
+    }
+  }
+
+  private async handleConfigUpdated(event: ConfigUpdateEvent): Promise<void> {
+    if (event.changedKeys.includes('SpoolmanServerUrl')) {
+      await this.clearAllCachedSpools('Server URL changed');
     }
   }
 }

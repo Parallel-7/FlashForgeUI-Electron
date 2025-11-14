@@ -94,6 +94,7 @@ interface SpoolmanAPI {
   openSpoolSelection(): Promise<void>;
   getActiveSpool(contextId?: string): Promise<unknown>;
   setActiveSpool(spool: unknown, contextId?: string): Promise<void>;
+  getStatus(contextId?: string): Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
   onSpoolSelected(callback: (spool: unknown) => void): void;
   onSpoolUpdated(callback: (spool: unknown) => void): void;
 }

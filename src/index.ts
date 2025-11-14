@@ -50,9 +50,13 @@ import { getRoundedUIUnsupportedReason, isRoundedUISupported, type RoundedUIUnsu
 import { parseHeadlessArguments, validateHeadlessConfig } from './utils/HeadlessArguments';
 import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection';
 import { getHeadlessManager } from './managers/HeadlessManager';
+import { getLoadingManager } from './managers/LoadingManager';
 import { getAutoUpdateService } from './services/AutoUpdateService';
 import { initializeSpoolmanIntegrationService, getSpoolmanIntegrationService } from './services/SpoolmanIntegrationService';
+import type { SpoolmanIntegrationService } from './services/SpoolmanIntegrationService';
 import { getDiscordNotificationService } from './services/discord';
+import { getSpoolmanHealthMonitor } from './services/SpoolmanHealthMonitor';
+import { showSpoolmanOfflineDialog, hideSpoolmanOfflineDialog } from './windows/dialogs/SpoolmanOfflineDialog';
 import type { PrinterCooledEvent } from './services/MultiContextTemperatureMonitor';
 
 /**
@@ -404,6 +408,35 @@ const setupSpoolmanEventForwarding = (): void => {
   });
 
   console.log('Spoolman event forwarding setup complete');
+};
+
+const setupSpoolmanHealthMonitoring = (service: SpoolmanIntegrationService): void => {
+  const monitor = getSpoolmanHealthMonitor();
+
+  monitor.removeAllListeners('offline');
+  monitor.removeAllListeners('online');
+
+  monitor.on('offline', (event) => {
+    const reason = event?.reason || 'Unable to reach Spoolman server.';
+    console.warn('[Spoolman] Connection lost:', reason);
+
+    if (!isHeadlessMode()) {
+      showSpoolmanOfflineDialog(reason);
+    }
+  });
+
+  monitor.on('online', (event) => {
+    const disabled = event?.disabled === true;
+    console.log('[Spoolman] Connection restored');
+    hideSpoolmanOfflineDialog();
+
+    if (!disabled && !isHeadlessMode()) {
+      const loadingManager = getLoadingManager();
+      loadingManager.showSuccess('Spoolman connection restored', 3000);
+    }
+  });
+
+  monitor.initialize(service);
 };
 
 const setupPrinterContextEventForwarding = (): void => {
@@ -851,12 +884,13 @@ const initializeApp = async (): Promise<void> => {
   console.log('Main window created with all handlers ready');
 
   // Initialize Spoolman integration service (after window creation to avoid timing issues)
-  initializeSpoolmanIntegrationService(
+  const spoolmanService = initializeSpoolmanIntegrationService(
     getConfigManager(),
     getPrinterContextManager(),
     getPrinterBackendManager()
   );
   console.log('Spoolman integration service initialized');
+  setupSpoolmanHealthMonitoring(spoolmanService);
   
   // Continue with remaining initialization
   setupWindowControlHandlers();
@@ -951,12 +985,13 @@ async function initializeHeadless(): Promise<void> {
   console.log('[Headless] RTSP stream service initialized');
 
   // Initialize Spoolman integration service
-  initializeSpoolmanIntegrationService(
+  const headlessSpoolmanService = initializeSpoolmanIntegrationService(
     getConfigManager(),
     getPrinterContextManager(),
     getPrinterBackendManager()
   );
   console.log('[Headless] Spoolman integration service initialized');
+  setupSpoolmanHealthMonitoring(headlessSpoolmanService);
 
   // Initialize temperature monitoring system
   const multiContextTempMonitor = getMultiContextTemperatureMonitor();

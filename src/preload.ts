@@ -89,6 +89,7 @@ interface SpoolmanAPI {
   openSpoolSelection: () => Promise<void>;
   getActiveSpool: (contextId?: string) => Promise<unknown>;
   setActiveSpool: (spool: unknown, contextId?: string) => Promise<void>;
+  getStatus: (contextId?: string) => Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
   onSpoolSelected: (callback: (spool: unknown) => void) => void;
   onSpoolUpdated?: (callback: (spool: unknown) => void) => void;
 }
@@ -367,7 +368,8 @@ contextBridge.exposeInMainWorld('api', {
       'set-update-channel',
       'spoolman:open-dialog',
       'spoolman:get-active-spool',
-      'spoolman:set-active-spool'
+      'spoolman:set-active-spool',
+      'spoolman:get-status'
     ];
     
     if (validInvokeChannels.includes(channel)) {
@@ -543,6 +545,11 @@ contextBridge.exposeInMainWorld('api', {
 
     setActiveSpool: async (spool: unknown, contextId?: string): Promise<void> => {
       await ipcRenderer.invoke('spoolman:set-active-spool', spool, contextId);
+    },
+
+    getStatus: async (contextId?: string): Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }> => {
+      const result: unknown = await ipcRenderer.invoke('spoolman:get-status', contextId);
+      return result as { enabled: boolean; disabledReason?: string | null; contextId?: string | null };
     },
 
     onSpoolSelected: (callback: (spool: unknown) => void) => {

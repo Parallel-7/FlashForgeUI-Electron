@@ -76,6 +76,7 @@ interface DialogSpoolmanAPI {
   openSpoolSelection: () => Promise<void>;
   getActiveSpool: (contextId?: string) => Promise<unknown>;
   setActiveSpool: (spool: unknown, contextId?: string) => Promise<void>;
+  getStatus: (contextId?: string) => Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
   onSpoolSelected: (callback: (spool: unknown) => void) => void;
   onSpoolUpdated: (callback: (spool: unknown) => void) => void;
 }
@@ -261,6 +262,7 @@ const validInvokeChannels = [
   'printer-settings:get',
   'printer-settings:update',
   'printer-settings:get-printer-name',
+  'spoolman:get-status',
   'palette:get-components',
   'shortcut-config:get-current',
   'shortcut-config:save',
@@ -439,6 +441,9 @@ contextBridge.exposeInMainWorld('api', {
     },
     setActiveSpool: async (spool: unknown, contextId?: string): Promise<void> => {
       await ipcRenderer.invoke('spoolman:set-active-spool', spool, contextId);
+    },
+    getStatus: async (contextId?: string) => {
+      return await ipcRenderer.invoke('spoolman:get-status', contextId);
     },
     onSpoolSelected: (callback: (spool: unknown) => void) => {
       const wrapped: DialogIPCListener = (_event: unknown, spool: unknown) => callback(spool);

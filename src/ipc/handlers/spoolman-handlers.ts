@@ -28,6 +28,8 @@ import type { SpoolSearchQuery, ActiveSpoolData } from '../../types/spoolman';
 import { createModalWindow, loadWindowHTML, setupDevTools, setupWindowLifecycle, validateParentWindow } from '../../windows/shared/WindowConfig';
 import { createPreloadPath, createWindowWidth, createWindowHeight, createWindowMinWidth, createWindowMinHeight } from '../../windows/shared/WindowTypes';
 import type { WindowDimensions } from '../../windows/shared/WindowTypes';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager';
+import { getSpoolmanHealthMonitor } from '../../services/SpoolmanHealthMonitor';
 
 let spoolmanDialogWindow: BrowserWindow | null = null;
 
@@ -142,5 +144,46 @@ export function registerSpoolmanHandlers(): void {
         error: error instanceof Error ? error.message : 'Unknown error'
       };
     }
+  });
+
+  ipcMain.handle('spoolman:get-status', async (_event, contextId?: string) => {
+    const service = getSpoolmanIntegrationService();
+    const contextManager = getPrinterContextManager();
+    const targetContextId = contextId || contextManager.getActiveContextId();
+
+    if (!service.isGloballyEnabled()) {
+      return {
+        enabled: false,
+        contextId: targetContextId,
+        disabledReason: 'Spoolman integration is disabled. Enable it in Settings.'
+      };
+    }
+
+    if (!targetContextId) {
+      return {
+        enabled: false,
+        contextId: null,
+        disabledReason: 'Connect a printer to use Spoolman.'
+      };
+    }
+
+    if (!service.isContextSupported(targetContextId)) {
+      return {
+        enabled: false,
+        contextId: targetContextId,
+        disabledReason: service.getDisabledReason(targetContextId)
+      };
+    }
+
+    return {
+      enabled: true,
+      contextId: targetContextId,
+      disabledReason: null
+    };
+  });
+
+  ipcMain.handle('spoolman:retry-connection', async () => {
+    const monitor = getSpoolmanHealthMonitor();
+    return await monitor.manualRetry();
   });
 }

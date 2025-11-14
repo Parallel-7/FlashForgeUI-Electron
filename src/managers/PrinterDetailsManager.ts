@@ -374,7 +374,11 @@ export class PrinterDetailsManager {
    * @param details - Printer details to save
    * @param contextId - Optional context ID for context-specific last-used tracking
    */
-  public async savePrinter(details: PrinterDetails, contextId?: string): Promise<void> {
+  public async savePrinter(
+    details: PrinterDetails,
+    contextId?: string,
+    options?: { updateLastUsed?: boolean }
+  ): Promise<void> {
     console.log('[PrinterDetailsManager] savePrinter called with:', {
       details,
       contextId,
@@ -391,13 +395,17 @@ export class PrinterDetailsManager {
     const storedDetails = this.toStoredPrinterDetails(details);
     console.log('[PrinterDetailsManager] Stored details after conversion:', storedDetails);
 
+    const shouldUpdateLastUsed = options?.updateLastUsed ?? true;
+
     this.currentConfig = {
       ...this.currentConfig,
       printers: {
         ...this.currentConfig.printers,
         [details.SerialNumber]: storedDetails
       },
-      lastUsedPrinterSerial: details.SerialNumber
+      lastUsedPrinterSerial: shouldUpdateLastUsed
+        ? details.SerialNumber
+        : this.currentConfig.lastUsedPrinterSerial
     };
 
     console.log('[PrinterDetailsManager] Updated config in memory:', this.currentConfig.printers[details.SerialNumber]);
@@ -455,6 +463,19 @@ export class PrinterDetailsManager {
 
     await this.saveConfigToFile();
     console.log(`Set last used printer: ${serialNumber}`);
+  }
+
+  /**
+   * Clear the last used printer reference
+   */
+  public async clearLastUsedPrinter(): Promise<void> {
+    this.currentConfig = {
+      ...this.currentConfig,
+      lastUsedPrinterSerial: null
+    };
+
+    await this.saveConfigToFile();
+    console.log('Cleared last used printer reference');
   }
 
   /**

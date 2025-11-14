@@ -31,6 +31,7 @@ module.exports = {
     'send-cmds-renderer': './src/ui/send-cmds/send-cmds-renderer.ts',
     'single-color-confirmation-dialog-renderer': './src/ui/single-color-confirmation-dialog/single-color-confirmation-dialog-renderer.ts',
     'spoolman-dialog-renderer': './src/ui/spoolman-dialog/spoolman-dialog-renderer.ts',
+    'spoolman-offline-dialog-renderer': './src/ui/spoolman-offline-dialog/spoolman-offline-dialog-renderer.ts',
     'status-dialog-renderer': './src/ui/status-dialog/status-dialog-renderer.ts',
     'update-available-renderer': './src/ui/update-available/update-available-renderer.ts',
     'palette': './src/ui/palette/palette.ts',
