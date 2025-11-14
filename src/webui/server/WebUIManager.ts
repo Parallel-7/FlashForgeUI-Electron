@@ -100,8 +100,8 @@ export class WebUIManager extends EventEmitter {
   // Client tracking
   private connectedClients: number = 0;
   // Track which contexts have WebUI enabled
-  private registeredContexts: Set<string> = new Set();
-  private contextSerialNumbers: Map<string, string> = new Map();
+  private readonly registeredContexts: Set<string> = new Set();
+  private readonly contextSerialNumbers: Map<string, string> = new Map();
   
   // WebSocket manager
   private readonly webSocketManager = getWebSocketManager();

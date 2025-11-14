@@ -1076,38 +1076,6 @@ async function initializePrinterTabs(): Promise<void> {
       }
     }
 
-    /**
-     * Helper to create component instance by ID
-     * Extracted from initializeGridComponents for reuse
-     */
-    function createComponentInstance(componentId: string, container: HTMLElement): BaseComponent | null {
-      switch (componentId) {
-        case 'job-stats':
-          return new JobStatsComponent(container);
-        case 'camera-preview':
-          return new CameraPreviewComponent(container);
-        case 'controls-grid':
-          return new ControlsGridComponent(container);
-        case 'model-preview':
-          return new ModelPreviewComponent(container);
-        case 'log-panel':
-          return new LogPanelComponent(container);
-        case 'printer-status':
-          return new PrinterStatusComponent(container);
-        case 'temperature-controls':
-          return new TemperatureControlsComponent(container);
-        case 'filtration-controls':
-          return new FiltrationControlsComponent(container);
-        case 'additional-info':
-          return new AdditionalInfoComponent(container);
-        case 'spoolman':
-          return new SpoolmanComponent(container);
-        default:
-          console.warn(`Unknown component ID: ${componentId}`);
-          return null;
-      }
-    }
-
     // ========================================================================
     // CONTEXT EVENT LISTENERS
     // ========================================================================

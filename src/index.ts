@@ -48,6 +48,7 @@ import { getThumbnailCacheService } from './services/ThumbnailCacheService';
 import { injectUIStyleVariables } from './utils/CSSVariables';
 import { getRoundedUIUnsupportedReason, isRoundedUISupported, type RoundedUIUnsupportedReason } from './utils/RoundedUICompatibility';
 import { parseHeadlessArguments, validateHeadlessConfig } from './utils/HeadlessArguments';
+import type { SpoolmanOfflineEvent, SpoolmanOnlineEvent } from './services/SpoolmanHealthMonitor';
 import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection';
 import { getHeadlessManager } from './managers/HeadlessManager';
 import { getLoadingManager } from './managers/LoadingManager';
@@ -416,7 +417,7 @@ const setupSpoolmanHealthMonitoring = (service: SpoolmanIntegrationService): voi
   monitor.removeAllListeners('offline');
   monitor.removeAllListeners('online');
 
-  monitor.on('offline', (event) => {
+  monitor.on('offline', (event: SpoolmanOfflineEvent) => {
     const reason = event?.reason || 'Unable to reach Spoolman server.';
     console.warn('[Spoolman] Connection lost:', reason);
 
@@ -425,7 +426,7 @@ const setupSpoolmanHealthMonitoring = (service: SpoolmanIntegrationService): voi
     }
   });
 
-  monitor.on('online', (event) => {
+  monitor.on('online', (event: SpoolmanOnlineEvent) => {
     const disabled = event?.disabled === true;
     console.log('[Spoolman] Connection restored');
     hideSpoolmanOfflineDialog();

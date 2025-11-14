@@ -442,8 +442,8 @@ contextBridge.exposeInMainWorld('api', {
     setActiveSpool: async (spool: unknown, contextId?: string): Promise<void> => {
       await ipcRenderer.invoke('spoolman:set-active-spool', spool, contextId);
     },
-    getStatus: async (contextId?: string) => {
-      return await ipcRenderer.invoke('spoolman:get-status', contextId);
+    getStatus: async (contextId?: string): Promise<{ enabled: boolean; contextId: string | null; disabledReason: string | null }> => {
+      return await ipcRenderer.invoke('spoolman:get-status', contextId) as { enabled: boolean; contextId: string | null; disabledReason: string | null };
     },
     onSpoolSelected: (callback: (spool: unknown) => void) => {
       const wrapped: DialogIPCListener = (_event: unknown, spool: unknown) => callback(spool);
