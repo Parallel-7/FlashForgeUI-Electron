@@ -26,6 +26,7 @@ import {
   isGridInitialized,
   setMaterialMatchingState,
   state,
+  updateCurrentSettings,
 } from './core/AppState.js';
 import {
   apiRequest,
@@ -37,20 +38,15 @@ import {
   onStatusUpdate,
   sendCommand,
 } from './core/Transport.js';
-import { $, hideElement, setTextContent, showElement, showToast } from './shared/dom.js';
+import { $, hideElement, showElement, showToast } from './shared/dom.js';
 import {
   buildMaterialBadgeTooltip,
   colorsDiffer,
-  formatETA,
-  formatJobPrintingTime,
-  formatLifetimeFilament,
-  formatLifetimePrintTime,
-  formatTime,
   isAD5XJobFile,
   isMultiColorJobFile,
   materialsMatch,
 } from './shared/formatting.js';
-import { hydrateLucideIcons, initializeLucideIcons } from './shared/icons.js';
+import { initializeLucideIcons } from './shared/icons.js';
 import {
   applySettings,
   ensureSpoolmanVisibilityIfEnabled,
@@ -58,6 +54,7 @@ import {
   isSpoolmanAvailableForCurrentContext,
   loadWebUITheme,
   refreshSettingsUI,
+  persistSettings,
   setupLayoutEventHandlers,
   setupViewportListener,
 } from './features/layout-theme.js';
@@ -68,6 +65,18 @@ import {
   initializeContextSwitching,
   setupContextEventHandlers,
 } from './features/context-switching.js';
+import {
+  DialogHandlers,
+  loadFileList,
+  setupDialogEventHandlers,
+  showTemperatureDialog,
+} from './ui/dialogs.js';
+import {
+  updateConnectionStatus,
+  updatePrinterStatus,
+  updateSpoolmanPanelState,
+} from './ui/panels.js';
+import { setupHeaderEventHandlers } from './ui/header.js';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -282,11 +291,6 @@ export interface SpoolSelectResponse extends ApiResponse {
   spool: ActiveSpoolData;
 }
 
-// Extended HTMLElement for temperature dialog
-interface TemperatureDialogElement extends HTMLElement {
-  temperatureType?: 'bed' | 'extruder';
-}
-
 function hasMaterialStationSupport(): boolean {
   return Boolean(state.printerFeatures?.hasMaterialStation);
 }
@@ -299,23 +303,6 @@ function hasMaterialStationSupport(): boolean {
 // UI UPDATES
 // ============================================================================
 
-
-function updateConnectionStatus(connected: boolean): void {
-  const indicator = $('connection-indicator');
-  const text = $('connection-text');
-  
-  if (indicator) {
-    if (connected) {
-      indicator.classList.add('connected');
-    } else {
-      indicator.classList.remove('connected');
-    }
-  }
-  
-  if (text) {
-    text.textContent = connected ? 'Connected' : 'Disconnected';
-  }
-}
 
 onConnectionChange((connected) => {
   updateConnectionStatus(connected);
@@ -331,180 +318,6 @@ onSpoolmanUpdate((contextId, spool) => {
     updateSpoolmanPanelState();
   }
 });
-
-function updatePrinterStatus(status: PrinterStatus | null): void {
-  if (!status) {
-    // Handle null status
-    updatePrinterStateCard(null);
-    setTextContent('bed-temp', '--°C / --°C');
-    setTextContent('extruder-temp', '--°C / --°C');
-    setTextContent('current-job', 'No data');
-    setTextContent('progress-percentage', '0%');
-    updateModelPreview(null);
-    return;
-  }
-  
-  state.printerStatus = status;
-  
-  // Update printer state card with lifetime statistics
-  updatePrinterStateCard(status);
-  
-  // Update temperatures with null checks and NaN prevention
-  const bedTemp = isNaN(status.bedTemperature) ? 0 : Math.round(status.bedTemperature);
-  const bedTarget = isNaN(status.bedTargetTemperature) ? 0 : Math.round(status.bedTargetTemperature);
-  const extruderTemp = isNaN(status.nozzleTemperature) ? 0 : Math.round(status.nozzleTemperature);
-  const extruderTarget = isNaN(status.nozzleTargetTemperature) ? 0 : Math.round(status.nozzleTargetTemperature);
-  
-  setTextContent('bed-temp', `${bedTemp}°C / ${bedTarget}°C`);
-  setTextContent('extruder-temp', `${extruderTemp}°C / ${extruderTarget}°C`);
-  
-  // Update job info
-  if (status.jobName) {
-    setTextContent('current-job', status.jobName);
-    
-    // Progress with null check and NaN prevention
-    const progress = isNaN(status.progress) ? 0 : status.progress;
-    const progressPercent = progress <= 1 ? Math.round(progress * 100) : Math.round(progress);
-    setTextContent('progress-percentage', `${progressPercent}%`);
-    
-    const progressBar = $('progress-bar') as HTMLProgressElement;
-    if (progressBar) {
-      progressBar.value = progressPercent;
-    }
-    
-    // Update layer info with null checks
-    if (status.currentLayer !== undefined && status.totalLayers !== undefined && 
-        !isNaN(status.currentLayer) && !isNaN(status.totalLayers)) {
-      setTextContent('layer-info', `${status.currentLayer} / ${status.totalLayers}`);
-    } else {
-      setTextContent('layer-info', '-- / --');
-    }
-    
-    // Update times with null checks
-    if (status.timeElapsed !== undefined && !isNaN(status.timeElapsed)) {
-      setTextContent('elapsed-time', formatTime(status.timeElapsed));
-    } else {
-      setTextContent('elapsed-time', '--:--');
-    }
-    
-    if (status.timeRemaining !== undefined && !isNaN(status.timeRemaining)) {
-      setTextContent('time-remaining', formatETA(status.timeRemaining));
-    } else {
-      setTextContent('time-remaining', '--:--');
-    }
-    
-    // Update filament usage with combined display (matches main UI format: "17.42 m • 51.95 g")
-    let lengthText = '';
-    let weightText = '';
-
-    if (status.estimatedLength !== undefined && !isNaN(status.estimatedLength)) {
-      lengthText = `${status.estimatedLength.toFixed(2)} m`;
-    }
-
-    if (lengthText && status.estimatedWeight !== undefined && !isNaN(status.estimatedWeight)) {
-      weightText = ` • ${status.estimatedWeight.toFixed(2)} g`;
-    }
-
-    setTextContent('job-filament-usage', lengthText + weightText || '--');
-    
-    // Update model preview thumbnail
-    updateModelPreview(status.thumbnailData);
-  } else {
-    setTextContent('current-job', 'No active job');
-    setTextContent('progress-percentage', '0%');
-    const progressBar = $('progress-bar') as HTMLProgressElement;
-    if (progressBar) {
-      progressBar.value = 0;
-    }
-    setTextContent('layer-info', '-- / --');
-    setTextContent('elapsed-time', '--:--');
-    setTextContent('time-remaining', '--:--');
-    setTextContent('job-filament-usage', '--');
-    
-    // Clear model preview when no job
-    updateModelPreview(null);
-  }
-  
-  // Update button states based on printer state
-  updateButtonStates(status.printerState || 'Unknown');
-  
-  // Update filtration status if available
-  updateFiltrationStatus(status.filtrationMode);
-}
-
-function updateButtonStates(printerState: string): void {
-  const isPrintingActive = printerState === 'Printing' || 
-                          printerState === 'Paused' ||
-                          printerState === 'Calibrating' ||
-                          printerState === 'Heating' ||
-                          printerState === 'Pausing';
-                          
-  const isReadyForNewJob = printerState === 'Ready' || 
-                          printerState === 'Completed' ||
-                          printerState === 'Cancelled';
-                          
-  const canControlJob = printerState === 'Printing' ||
-                       printerState === 'Paused' ||
-                       printerState === 'Heating' ||
-                       printerState === 'Calibrating';
-                       
-  const isBusy = printerState === 'Busy' || printerState === 'Error';
-  
-  // Pause/Resume buttons
-  const pauseBtn = $('btn-pause') as HTMLButtonElement;
-  const resumeBtn = $('btn-resume') as HTMLButtonElement;
-  const cancelBtn = $('btn-cancel') as HTMLButtonElement;
-  
-  if (pauseBtn) pauseBtn.disabled = printerState !== 'Printing';
-  if (resumeBtn) resumeBtn.disabled = printerState !== 'Paused';
-  if (cancelBtn) cancelBtn.disabled = !canControlJob;
-  
-  // File selection buttons and Home Axes button
-  const recentBtn = $('btn-start-recent') as HTMLButtonElement;
-  const localBtn = $('btn-start-local') as HTMLButtonElement;
-  const homeAxesBtn = $('btn-home-axes') as HTMLButtonElement;
-  
-  if (recentBtn) recentBtn.disabled = !isReadyForNewJob;
-  if (localBtn) localBtn.disabled = !isReadyForNewJob;
-  if (homeAxesBtn) homeAxesBtn.disabled = isPrintingActive;
-  
-  // Temperature control buttons - disable during active states or when disconnected
-  const bedSetBtn = $('btn-bed-set') as HTMLButtonElement;
-  const bedOffBtn = $('btn-bed-off') as HTMLButtonElement;
-  const extruderSetBtn = $('btn-extruder-set') as HTMLButtonElement;
-  const extruderOffBtn = $('btn-extruder-off') as HTMLButtonElement;
-  
-  const tempButtonsDisabled = isPrintingActive || isBusy;
-  if (bedSetBtn) bedSetBtn.disabled = tempButtonsDisabled;
-  if (bedOffBtn) bedOffBtn.disabled = tempButtonsDisabled;
-  if (extruderSetBtn) extruderSetBtn.disabled = tempButtonsDisabled;
-  if (extruderOffBtn) extruderOffBtn.disabled = tempButtonsDisabled;
-}
-
-function updatePrinterStateCard(status: PrinterStatus | null): void {
-  // Update printer status
-  if (status && status.printerState) {
-    setTextContent('printer-status', status.printerState);
-  } else {
-    setTextContent('printer-status', 'Unknown');
-  }
-  
-  // Update lifetime print time
-  if (status && status.cumulativePrintTime !== undefined) {
-    const formattedTime = formatLifetimePrintTime(status.cumulativePrintTime);
-    setTextContent('lifetime-print-time', formattedTime);
-  } else {
-    setTextContent('lifetime-print-time', '--');
-  }
-  
-  // Update lifetime filament usage
-  if (status && status.cumulativeFilament !== undefined) {
-    const formattedFilament = formatLifetimeFilament(status.cumulativeFilament);
-    setTextContent('lifetime-filament', formattedFilament);
-  } else {
-    setTextContent('lifetime-filament', '--');
-  }
-}
 
 // ============================================================================
 // PRINTER CONTROLS
@@ -728,73 +541,6 @@ async function clearActiveSpool(): Promise<void> {
   }
 }
 
-function updateSpoolmanPanelState(): void {
-  const disabled = $('spoolman-disabled');
-  const noSpool = $('spoolman-no-spool');
-  const active = $('spoolman-active');
-
-  if (!disabled || !noSpool || !active) return;
-
-  // State 1: Disabled or unavailable for this context
-  if (!isSpoolmanAvailableForCurrentContext()) {
-    showElement('spoolman-disabled');
-    hideElement('spoolman-no-spool');
-    hideElement('spoolman-active');
-
-    const disabledMessage = $('spoolman-disabled-message');
-    if (disabledMessage) {
-      const reason =
-        state.spoolmanConfig?.disabledReason ||
-        (state.spoolmanConfig?.enabled
-          ? 'Spoolman is not available for this printer'
-          : 'Spoolman integration is disabled');
-      disabledMessage.textContent = reason;
-    }
-    return;
-  }
-
-  // State 2: No spool selected
-  if (!state.activeSpool) {
-    hideElement('spoolman-disabled');
-    showElement('spoolman-no-spool');
-    hideElement('spoolman-active');
-    return;
-  }
-
-  // State 3: Active spool
-  hideElement('spoolman-disabled');
-  hideElement('spoolman-no-spool');
-  showElement('spoolman-active');
-
-  // Update spool display
-  const colorIndicator = $('spool-color');
-  const spoolName = $('spool-name');
-  const spoolMeta = $('spool-meta');
-  const spoolRemaining = $('spool-remaining');
-
-  if (colorIndicator) {
-    colorIndicator.style.backgroundColor = state.activeSpool.colorHex;
-  }
-
-  if (spoolName) {
-    spoolName.textContent = state.activeSpool.name;
-  }
-
-  if (spoolMeta) {
-    const parts = [];
-    if (state.activeSpool.vendor) parts.push(state.activeSpool.vendor);
-    if (state.activeSpool.material) parts.push(state.activeSpool.material);
-    spoolMeta.textContent = parts.join(' • ') || '--';
-  }
-
-  if (spoolRemaining) {
-    const remaining = state.spoolmanConfig?.updateMode === 'weight'
-      ? `${state.activeSpool.remainingWeight.toFixed(0)}g`
-      : `${(state.activeSpool.remainingLength / 1000).toFixed(1)}m`;
-    spoolRemaining.textContent = remaining;
-  }
-}
-
 function openSpoolSelectionModal(): void {
   if (!state.spoolmanConfig?.enabled) {
     showToast('Spoolman integration is disabled', 'error');
@@ -897,87 +643,6 @@ function handleSpoolSearch(event: Event): void {
     void fetchSpools(query);
     spoolSearchDebounceTimer = null;
   }, 300);
-}
-
-function updateFiltrationStatus(mode?: 'external' | 'internal' | 'none'): void {
-  if (!mode) return;
-  
-  // Update filtration status display
-  const filtrationStatusEl = $('filtration-status');
-  if (filtrationStatusEl) {
-    const modeLabels = {
-      'external': 'External',
-      'internal': 'Internal',
-      'none': 'Off'
-    };
-    filtrationStatusEl.textContent = modeLabels[mode] || 'Off';
-  }
-  
-  // Update button states to show which mode is active
-  const externalBtn = $('btn-external-filtration') as HTMLButtonElement;
-  const internalBtn = $('btn-internal-filtration') as HTMLButtonElement;
-  const offBtn = $('btn-no-filtration') as HTMLButtonElement;
-  
-  // Remove active class from all buttons
-  if (externalBtn) externalBtn.classList.remove('active');
-  if (internalBtn) internalBtn.classList.remove('active');
-  if (offBtn) offBtn.classList.remove('active');
-  
-  // Add active class to current mode button
-  switch (mode) {
-    case 'external':
-      if (externalBtn) externalBtn.classList.add('active');
-      break;
-    case 'internal':
-      if (internalBtn) internalBtn.classList.add('active');
-      break;
-    case 'none':
-      if (offBtn) offBtn.classList.add('active');
-      break;
-  }
-}
-
-function updateModelPreview(thumbnailData?: string | null): void {
-  const previewContainer = document.querySelector<HTMLElement>(
-    '[data-component-id="model-preview"] .panel-content',
-  );
-  if (!previewContainer) return;
-
-  if (thumbnailData) {
-    // Clear existing content
-    previewContainer.innerHTML = '';
-    
-    // Create image element
-    const img = document.createElement('img');
-    
-    // Check if thumbnailData already has data URL prefix
-    // Backend methods may return data with or without the prefix
-    let imageUrl: string;
-    if (thumbnailData.startsWith('data:image/')) {
-      // Data already has proper data URL prefix
-      imageUrl = thumbnailData;
-    } else {
-      // Raw base64 data, add the prefix
-      imageUrl = `data:image/png;base64,${thumbnailData}`;
-    }
-    
-    img.src = imageUrl;
-    img.alt = 'Model preview';
-    img.style.width = '100%';
-    img.style.height = 'auto';
-    img.style.display = 'block';
-    
-    // Handle load errors
-    img.onerror = () => {
-      console.error('Failed to load model preview. Image URL length:', imageUrl.length);
-      previewContainer.innerHTML = '<div class="no-preview">Preview load failed</div>';
-    };
-    
-    previewContainer.appendChild(img);
-  } else {
-    // Show no preview message
-    previewContainer.innerHTML = '<div class="no-preview">No preview available</div>';
-  }
 }
 
 async function loadCameraStream(): Promise<void> {
@@ -1092,130 +757,6 @@ async function loadCameraStream(): Promise<void> {
       cameraPlaceholder.textContent = 'Camera Configuration Error';
     }
   }
-}
-
-// ============================================================================
-// FILE MANAGEMENT
-// ============================================================================
-
-async function loadFileList(source: 'recent' | 'local'): Promise<void> {
-  if (state.authRequired && !state.authToken) return;
-  
-  try {
-    const result = await apiRequest<FileListResponse>(`/api/jobs/${source}`);
-    
-    if (result.success && result.files) {
-      state.jobMetadata.clear();
-      result.files.forEach((file) => {
-        state.jobMetadata.set(file.fileName, file);
-      });
-      showFileModal(result.files, source);
-    } else {
-      showToast('Failed to load files', 'error');
-    }
-  } catch (error) {
-    console.error('Failed to load files:', error);
-    showToast('Failed to load files', 'error');
-  }
-}
-
-function showFileModal(files: WebUIJobFile[], source: 'recent' | 'local'): void {
-  const modal = $('file-modal');
-  const fileList = $('file-list');
-  const title = $('modal-title');
-  
-  if (!modal || !fileList || !title) return;
-  
-  // Set title
-  title.textContent = source === 'recent' ? 'Recent Files' : 'Local Files';
-  
-  // Clear and populate file list
-  fileList.innerHTML = '';
-  state.selectedFile = null;
-
-  const printBtn = $('print-file-btn') as HTMLButtonElement | null;
-  if (printBtn) {
-    printBtn.disabled = true;
-  }
-  
-  files.forEach(file => {
-    const item = document.createElement('div');
-    item.className = 'file-item';
-    item.dataset.filename = file.fileName;
-
-    const header = document.createElement('div');
-    header.className = 'file-item-header';
-
-    const name = document.createElement('span');
-    name.className = 'file-name';
-    name.textContent = file.displayName || file.fileName;
-    header.appendChild(name);
-
-    if (isMultiColorJobFile(file)) {
-      const badge = document.createElement('span');
-      badge.className = 'file-badge multi-color';
-      badge.textContent = 'Multi-color';
-      badge.title = buildMaterialBadgeTooltip(file);
-      header.appendChild(badge);
-    }
-
-    item.appendChild(header);
-
-    const meta = document.createElement('div');
-    meta.className = 'file-meta';
-
-    const printingTimeLabel = formatJobPrintingTime(file.printingTime);
-    if (printingTimeLabel) {
-      const timeEl = document.createElement('span');
-      timeEl.className = 'file-meta-item';
-      timeEl.textContent = printingTimeLabel;
-      meta.appendChild(timeEl);
-    }
-
-    if (file.metadataType === 'ad5x' && Array.isArray(file.toolDatas) && file.toolDatas.length > 0) {
-      const requirementSummary = document.createElement('div');
-      requirementSummary.className = 'material-preview';
-
-      file.toolDatas.forEach((tool) => {
-        const chip = document.createElement('div');
-        chip.className = 'material-chip';
-
-        const swatch = document.createElement('span');
-        swatch.className = 'material-chip-swatch';
-        if (tool.materialColor) {
-          swatch.style.backgroundColor = tool.materialColor;
-        }
-
-        const label = document.createElement('span');
-        label.className = 'material-chip-label';
-        label.textContent = tool.materialName || `Tool ${tool.toolId + 1}`;
-
-        chip.appendChild(swatch);
-        chip.appendChild(label);
-        requirementSummary.appendChild(chip);
-      });
-
-      meta.appendChild(requirementSummary);
-    }
-
-    if (meta.childElementCount > 0) {
-      item.appendChild(meta);
-    }
-
-    item.addEventListener('click', () => {
-      fileList.querySelectorAll('.file-item').forEach(el => el.classList.remove('selected'));
-      item.classList.add('selected');
-      state.selectedFile = file.fileName;
-
-      const printBtn = $('print-file-btn') as HTMLButtonElement;
-      if (printBtn) printBtn.disabled = false;
-    });
-
-    fileList.appendChild(item);
-  });
-  
-  // Show modal
-  showElement('file-modal');
 }
 
 async function startPrintJob(): Promise<void> {
@@ -1759,59 +1300,6 @@ async function confirmMaterialMatching(): Promise<void> {
 }
 
 // ============================================================================
-// TEMPERATURE CONTROL
-// ============================================================================
-
-function showTemperatureDialog(type: 'bed' | 'extruder'): void {
-  const dialog = $('temp-dialog');
-  const title = $('temp-dialog-title');
-  const message = $('temp-dialog-message');
-  const input = $('temp-input') as HTMLInputElement;
-  
-  if (!dialog || !title || !message || !input) return;
-  
-  // Set dialog content
-  title.textContent = type === 'bed' ? 'Set Bed Temperature' : 'Set Extruder Temperature';
-  message.textContent = `Enter ${type} temperature (°C):`;
-  
-  // Set current target temperature as default
-  if (state.printerStatus) {
-    const currentTarget = type === 'bed' 
-      ? state.printerStatus.bedTargetTemperature 
-      : state.printerStatus.nozzleTargetTemperature;
-    input.value = Math.round(currentTarget).toString();
-  } else {
-    input.value = '0';
-  }
-  
-  // Store type for confirm handler
-  (dialog as TemperatureDialogElement).temperatureType = type;
-  
-  // Show dialog
-  showElement('temp-dialog');
-  input.focus();
-  input.select();
-}
-
-async function setTemperature(): Promise<void> {
-  const dialog = $('temp-dialog') as TemperatureDialogElement;
-  const input = $('temp-input') as HTMLInputElement;
-  
-  if (!dialog || !input) return;
-  
-  const type = dialog.temperatureType;
-  const temperature = parseInt(input.value, 10);
-  
-  if (isNaN(temperature) || temperature < 0 || temperature > 300) {
-    showToast('Invalid temperature value', 'error');
-    return;
-  }
-  
-  await sendPrinterCommand(`temperature/${type}`, { temperature });
-  hideElement('temp-dialog');
-}
-
-// ============================================================================
 // VIEWPORT AND LAYOUT SWITCHING
 // ============================================================================
 
@@ -1905,70 +1393,6 @@ function setupEventHandlers(): void{
     }
   });
 
-  // File modal handlers
-  const closeModalBtn = $('close-modal');
-  const printFileBtn = $('print-file-btn');
-  
-  if (closeModalBtn) {
-    closeModalBtn.addEventListener('click', () => {
-      hideElement('file-modal');
-      state.selectedFile = null;
-      if (!getMaterialMatchingElement<HTMLDivElement>('material-matching-modal')?.classList.contains('hidden')) {
-        closeMaterialMatchingModal();
-      } else {
-        state.pendingJobStart = null;
-      }
-    });
-  }
-  
-  if (printFileBtn) {
-    printFileBtn.addEventListener('click', startPrintJob);
-  }
-
-  const materialModalClose = $('material-matching-close');
-  if (materialModalClose) {
-    materialModalClose.addEventListener('click', () => {
-      closeMaterialMatchingModal();
-    });
-  }
-
-  const materialModalCancel = $('material-matching-cancel');
-  if (materialModalCancel) {
-    materialModalCancel.addEventListener('click', () => {
-      closeMaterialMatchingModal();
-    });
-  }
-
-  const materialModalConfirm = $('material-matching-confirm');
-  if (materialModalConfirm) {
-    materialModalConfirm.addEventListener('click', () => {
-      void confirmMaterialMatching();
-    });
-  }
-  
-  // Temperature dialog handlers
-  const closeTempBtn = $('close-temp-dialog');
-  const tempCancelBtn = $('temp-cancel');
-  const tempConfirmBtn = $('temp-confirm');
-  const tempInput = $('temp-input') as HTMLInputElement;
-  
-  if (closeTempBtn) {
-    closeTempBtn.addEventListener('click', () => hideElement('temp-dialog'));
-  }
-  if (tempCancelBtn) {
-    tempCancelBtn.addEventListener('click', () => hideElement('temp-dialog'));
-  }
-  if (tempConfirmBtn) {
-    tempConfirmBtn.addEventListener('click', setTemperature);
-  }
-  if (tempInput) {
-    tempInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        void setTemperature();
-      }
-    });
-  }
-
   // Spoolman modal handlers
   const spoolmanModalClose = $('spoolman-modal-close');
   const spoolmanModalCancel = $('spoolman-modal-cancel');
@@ -2012,6 +1436,24 @@ async function initialize(): Promise<void> {
   initializeLucideIcons();
 
   setupLayoutEventHandlers();
+  setupHeaderEventHandlers({
+    getCurrentSettings,
+    updateCurrentSettings,
+    applySettings,
+    persistSettings,
+    refreshSettingsUI,
+  });
+
+  const dialogHandlers: DialogHandlers = {
+    onStartPrintJob: () => startPrintJob(),
+    onMaterialMatchingClosed: () => {
+      closeMaterialMatchingModal();
+    },
+    onMaterialMatchingConfirm: () => confirmMaterialMatching(),
+    onTemperatureSubmit: (type, temperature) =>
+      sendPrinterCommand(`temperature/${type}`, { temperature }),
+  };
+  setupDialogEventHandlers(dialogHandlers);
   setupEventHandlers();
 
   const contextHandlers = {

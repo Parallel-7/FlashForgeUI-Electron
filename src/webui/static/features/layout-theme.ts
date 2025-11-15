@@ -32,6 +32,7 @@ import {
 import type { ApiResponse, PrinterFeatures, PrinterStatus, WebUISettings } from '../app.js';
 import { apiRequest } from '../core/Transport.js';
 import { $, showToast } from '../shared/dom.js';
+import { updateEditModeToggle } from '../ui/header.js';
 
 export interface LayoutUiHooks {
   onConnectionStatusUpdate?: (connected: boolean) => void;
@@ -54,7 +55,6 @@ export function setupLayoutEventHandlers(): void {
   const resetButton = $('reset-layout-btn') as HTMLButtonElement | null;
   const modal = $('settings-modal');
   const modalEditToggle = $('toggle-edit-mode') as HTMLInputElement | null;
-  const headerEditToggle = $('edit-mode-toggle') as HTMLButtonElement | null;
   const applyThemeButton = $('apply-webui-theme-btn') as HTMLButtonElement | null;
   const resetThemeButton = $('reset-webui-theme-btn') as HTMLButtonElement | null;
 
@@ -106,18 +106,6 @@ export function setupLayoutEventHandlers(): void {
     updateCurrentSettings(updatedSettings);
     applySettings(updatedSettings);
     persistSettings();
-  });
-
-  headerEditToggle?.addEventListener('click', () => {
-    const settings = getCurrentSettings();
-    const updatedSettings: WebUISettings = {
-      ...settings,
-      editMode: !settings.editMode,
-    };
-    updateCurrentSettings(updatedSettings);
-    applySettings(updatedSettings);
-    persistSettings();
-    refreshSettingsUI(updatedSettings);
   });
 
   modal?.addEventListener('click', (event) => {
@@ -382,32 +370,6 @@ export function refreshSettingsUI(settings: WebUISettings): void {
   });
 
   updateEditModeToggle(settings.editMode);
-}
-
-export function updateEditModeToggle(editMode: boolean): void {
-  const mobile = isMobileViewport();
-  const toggleButton = $('edit-mode-toggle') as HTMLButtonElement | null;
-
-  if (!toggleButton) {
-    return;
-  }
-
-  if (mobile) {
-    toggleButton.style.display = 'none';
-    return;
-  }
-
-  toggleButton.style.display = '';
-  toggleButton.setAttribute('aria-pressed', editMode ? 'true' : 'false');
-  const lockIcon = toggleButton.querySelector<HTMLElement>('.lock-icon');
-  const text = toggleButton.querySelector('.edit-text');
-  if (lockIcon) {
-    const iconName = editMode ? 'unlock' : 'lock';
-    lockIcon.setAttribute('data-lucide', iconName);
-  }
-  if (text) {
-    text.textContent = editMode ? 'Exit Edit Mode' : 'Enter Edit Mode';
-  }
 }
 
 export function handleLayoutChange(layout: WebUIGridLayout): void {

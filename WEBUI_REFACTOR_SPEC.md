@@ -407,11 +407,11 @@ if (document.readyState === 'loading') {
 - [x] Validation: `npm run type-check && npm run lint`
 
 ### Phase 2: UI Components
-- [ ] `ui/panels.ts`
-- [ ] `ui/dialogs.ts`
-- [ ] `ui/header.ts`
-- [ ] Update app.ts imports
-- [ ] Validation: `npm run type-check`
+- [x] `ui/panels.ts`
+- [x] `ui/dialogs.ts`
+- [x] `ui/header.ts`
+- [x] Update app.ts imports
+- [x] Validation: `npm run type-check`
 
 ### Phase 3: Domain Features
 - [ ] `features/job-control.ts`
@@ -432,7 +432,8 @@ if (document.readyState === 'loading') {
 
 ## Notes & Learnings
 
-*(Update this section as you work through each phase with any insights, gotchas, or deviations from the plan)*
+- `setupDialogEventHandlers` now accepts dependency callbacks so modal wiring can stay in the UI layer without importing feature modules that have yet to be extracted. When job control/material matching modules land (Phase 3) they can register their handlers there.
+- Header-specific DOM logic (edit-mode toggle) now lives in `ui/header.ts` with dependency injection for layout persistence to avoid a circular reference between `features/layout-theme.ts` and the new UI module.
 
 ---
 
