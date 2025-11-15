@@ -31,6 +31,7 @@
     "docs:clean": "rimraf \"fileoverview-collection.json\"",
     "clean": "rimraf lib dist \"NVIDIA Corporation\"",
     "type-check": "npx tsc --noEmit",
+    "full-check": "npm run type-check && npm run lint",
     "knip": "knip",
     "knip:fix": "knip --fix",
     "knip:production": "knip --production",

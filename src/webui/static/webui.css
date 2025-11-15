@@ -811,7 +811,8 @@ body {
   color: var(--text-color);
 }
 
-.material-tool-swatch {
+.material-tool-swatch,
+.material-tool-color {
   width: 16px;
   height: 16px;
   border-radius: 999px;
@@ -1189,7 +1190,8 @@ body {
   border: 1px solid var(--border-color);
 }
 
-.material-chip-swatch {
+.material-chip-swatch,
+.material-color {
   width: 12px;
   height: 12px;
   border-radius: 999px;
@@ -1197,7 +1199,8 @@ body {
   background-color: #555555;
 }
 
-.material-chip-label {
+.material-chip-label,
+.material-label {
   font-size: 12px;
   color: var(--text-color-secondary);
 }
