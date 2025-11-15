@@ -88,7 +88,9 @@
       "mcp__context7__get-library-docs",
       "WebFetch(domain:developer.chrome.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
-      "Bash(git fetch:*)"
+      "Bash(git fetch:*)",
+      "Bash(tree:*)",
+      "Bash(nul)"
     ],
     "deny": [],
     "additionalDirectories": [
