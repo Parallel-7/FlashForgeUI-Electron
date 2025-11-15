@@ -281,12 +281,8 @@ export function setupSpoolmanHandlers(): void {
   }
   handlersRegistered = true;
 
-  ['btn-select-spool', 'btn-change-spool'].forEach((id) => {
-    const button = $(id);
-    button?.addEventListener('click', () => {
-      openSpoolSelectionModal();
-    });
-  });
+  attachPanelButtonHandlers($('webui-grid-desktop'));
+  attachPanelButtonHandlers($('webui-grid-mobile'));
 
   $('spoolman-modal-close')?.addEventListener('click', () => closeSpoolSelectionModal());
   $('spoolman-modal-cancel')?.addEventListener('click', () => closeSpoolSelectionModal());
@@ -296,4 +292,28 @@ export function setupSpoolmanHandlers(): void {
 
   const searchInput = $('spoolman-search') as HTMLInputElement | null;
   searchInput?.addEventListener('input', handleSpoolSearch);
+}
+
+function attachPanelButtonHandlers(container: HTMLElement | null): void {
+  if (!container) {
+    return;
+  }
+
+  container.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement | null;
+    const button = target?.closest<HTMLButtonElement>('button');
+    if (!button) {
+      return;
+    }
+
+    switch (button.id) {
+      case 'btn-select-spool':
+      case 'btn-change-spool':
+        event.preventDefault();
+        openSpoolSelectionModal();
+        break;
+      default:
+        break;
+    }
+  });
 }

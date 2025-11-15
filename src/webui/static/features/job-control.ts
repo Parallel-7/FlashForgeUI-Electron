@@ -14,7 +14,7 @@ import type {
   PrinterFeaturesResponse,
   PrintJobStartResponse,
 } from '../app.js';
-import { getCurrentSettings, isGridInitialized, state } from '../core/AppState.js';
+import { getCurrentSettings, state } from '../core/AppState.js';
 import { apiRequest, sendCommand } from '../core/Transport.js';
 import { $, hideElement, showToast } from '../shared/dom.js';
 import { isAD5XJobFile } from '../shared/formatting.js';

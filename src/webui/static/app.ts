@@ -20,10 +20,9 @@
  * - UI updates: Real-time temperature, progress, layer info, ETA, lifetime statistics, thumbnails
  */
 
-import { getCurrentSettings, isGridInitialized, state, updateCurrentSettings } from './core/AppState.js';
+import { getCurrentSettings, state, updateCurrentSettings } from './core/AppState.js';
 import {
   connectWebSocket,
-  disconnectWebSocket,
   onConnectionChange,
   onSpoolmanUpdate,
   onStatusUpdate,
