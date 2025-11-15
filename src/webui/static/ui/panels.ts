@@ -297,6 +297,9 @@ function updateButtonStates(printerState: string): void {
   if (recentBtn) recentBtn.disabled = !isReadyForNewJob;
   if (localBtn) localBtn.disabled = !isReadyForNewJob;
   if (homeAxesBtn) homeAxesBtn.disabled = isPrintingActive;
+  const clearStatusBtn = $('btn-clear-status') as HTMLButtonElement | null;
+  if (clearStatusBtn) clearStatusBtn.disabled = isPrintingActive;
+
 
   const bedSetBtn = $('btn-bed-set') as HTMLButtonElement | null;
   const bedOffBtn = $('btn-bed-off') as HTMLButtonElement | null;

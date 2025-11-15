@@ -90,7 +90,11 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(git fetch:*)",
       "Bash(tree:*)",
-      "Bash(nul)"
+      "Bash(nul)",
+      "Bash(npm ls:*)",
+      "Bash(npm outdated:*)",
+      "Bash(npm view:*)",
+      "Bash(npm:*)"
     ],
     "deny": [],
     "additionalDirectories": [

@@ -44,6 +44,9 @@
     "email": "106415648+GhostTypes@users.noreply.github.com"
   },
   "license": "MIT",
+  "overrides": {
+    "js-yaml": "4.1.1"
+  },
   "dependencies": {
     "@cycjimmy/jsmpeg-player": "^6.1.2",
     "@ghosttypes/ff-api": "*",
