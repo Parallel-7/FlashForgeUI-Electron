@@ -20,92 +20,75 @@
  * - UI updates: Real-time temperature, progress, layer info, ETA, lifetime statistics, thumbnails
  */
 
-import { WebUIGridManager } from './grid/WebUIGridManager.js';
-import { WebUILayoutPersistence } from './grid/WebUILayoutPersistence.js';
 import { componentRegistry } from './grid/WebUIComponentRegistry.js';
-import { WebUIMobileLayoutManager } from './grid/WebUIMobileLayoutManager.js';
 import type { WebUIComponentLayout, WebUIGridLayout } from './grid/types.js';
-
-type LucideGlobal = {
-  readonly createIcons: (options?: {
-    readonly icons?: Record<string, [string, Record<string, string | number>][]>;
-    readonly nameAttr?: string;
-    readonly attrs?: Record<string, string>;
-    readonly root?: Document | Element | DocumentFragment;
-  }) => void;
-  readonly icons: Record<string, [string, Record<string, string | number>][]>;
-};
-
-declare global {
-  interface Window {
-    lucide?: LucideGlobal;
-  }
-}
-
-function toPascalCase(value: string): string {
-  return value
-    .split(/[^a-zA-Z0-9]+/)
-    .filter(Boolean)
-    .map((segment) => segment.charAt(0).toUpperCase() + segment.slice(1))
-    .join('');
-}
-
-function hydrateLucideIcons(iconNames: string[], root: Document | Element | DocumentFragment = document): void {
-  const lucide = window.lucide;
-  if (!lucide?.createIcons) {
-    return;
-  }
-
-  const icons: Record<string, [string, Record<string, string | number>][]> = {};
-  iconNames.forEach((name) => {
-    const pascal = toPascalCase(name);
-    const iconNode =
-      lucide.icons?.[pascal] ??
-      lucide.icons?.[name] ??
-      lucide.icons?.[name.toUpperCase()] ??
-      lucide.icons?.[name.toLowerCase()];
-
-    if (iconNode) {
-      icons[pascal] = iconNode;
-    } else {
-      console.warn(`[WebUI] Lucide icon "${name}" not available in global registry.`);
-    }
-  });
-
-  if (Object.keys(icons).length === 0) {
-    return;
-  }
-
-  lucide.createIcons({
-    icons,
-    nameAttr: 'data-lucide',
-    attrs: {
-      'stroke-width': '2',
-      'aria-hidden': 'true',
-      focusable: 'false',
-      class: 'lucide-icon',
-    },
-    root,
-  });
-}
+import {
+  ALL_COMPONENT_IDS,
+  DEFAULT_SETTINGS,
+  DEMO_SERIAL,
+  MOBILE_BREAKPOINT,
+  contextById,
+  getCurrentContextId as getStoredContextId,
+  getCurrentPrinterSerial,
+  getCurrentSettings,
+  getGridChangeUnsubscribe,
+  getMaterialMatchingState,
+  gridManager,
+  isGridInitialized,
+  isMobile,
+  layoutPersistence,
+  mobileLayoutManager,
+  setCurrentContextId,
+  setCurrentPrinterSerial,
+  setGridChangeUnsubscribe,
+  setGridInitialized,
+  setMaterialMatchingState,
+  setMobileLayout,
+  state,
+  updateCurrentSettings,
+} from './core/AppState.js';
+import {
+  apiRequest,
+  apiRequestWithMetadata,
+  connectWebSocket,
+  disconnectWebSocket,
+  onConnectionChange,
+  onSpoolmanUpdate,
+  onStatusUpdate,
+  sendCommand,
+} from './core/Transport.js';
+import { $, hideElement, setTextContent, showElement, showToast } from './shared/dom.js';
+import {
+  buildMaterialBadgeTooltip,
+  colorsDiffer,
+  formatETA,
+  formatJobPrintingTime,
+  formatLifetimeFilament,
+  formatLifetimePrintTime,
+  formatTime,
+  isAD5XJobFile,
+  isMultiColorJobFile,
+  materialsMatch,
+} from './shared/formatting.js';
+import { hydrateLucideIcons, initializeLucideIcons } from './shared/icons.js';
 
 // ============================================================================
 // TYPES AND INTERFACES
 // ============================================================================
 
-interface AuthResponse {
+export interface AuthResponse {
   success: boolean;
   token?: string;
   message?: string;
 }
 
-interface AuthStatusResponse {
+export interface AuthStatusResponse {
   authRequired: boolean;
   hasPassword: boolean;
   defaultPassword: boolean;
 }
 
-interface WebSocketMessage {
+export interface WebSocketMessage {
   type: 'AUTH_SUCCESS' | 'STATUS_UPDATE' | 'ERROR' | 'COMMAND_RESULT' | 'PONG' | 'SPOOLMAN_UPDATE';
   timestamp: string;
   status?: PrinterStatus;
@@ -117,13 +100,13 @@ interface WebSocketMessage {
   spool?: ActiveSpoolData | null;
 }
 
-interface WebSocketCommand {
+export interface WebSocketCommand {
   command: 'REQUEST_STATUS' | 'EXECUTE_GCODE' | 'PING';
   gcode?: string;
   data?: unknown;
 }
 
-interface PrinterStatus {
+export interface PrinterStatus {
   printerState: string;
   bedTemperature: number;
   bedTargetTemperature: number;
@@ -143,7 +126,7 @@ interface PrinterStatus {
   cumulativePrintTime?: number; // Total lifetime print time in minutes
 }
 
-interface PrinterFeatures {
+export interface PrinterFeatures {
   hasCamera: boolean;
   hasLED: boolean;
   hasFiltration: boolean;
@@ -154,7 +137,7 @@ interface PrinterFeatures {
   ledUsesLegacyAPI?: boolean; // Whether custom LED control is enabled
 }
 
-interface AD5XToolData {
+export interface AD5XToolData {
   toolId: number;
   materialName: string;
   materialColor: string;
@@ -162,9 +145,9 @@ interface AD5XToolData {
   slotId?: number | null;
 }
 
-type JobMetadataType = 'basic' | 'ad5x';
+export type JobMetadataType = 'basic' | 'ad5x';
 
-interface WebUIJobFile {
+export interface WebUIJobFile {
   fileName: string;
   displayName: string;
   printingTime?: number;
@@ -176,19 +159,19 @@ interface WebUIJobFile {
 }
 
 // API Response interfaces
-interface ApiResponse {
+export interface ApiResponse {
   success: boolean;
   message?: string;
   error?: string;
 }
 
-type PrinterCommandResponse = ApiResponse;
+export type PrinterCommandResponse = ApiResponse;
 
-interface PrinterFeaturesResponse extends ApiResponse {
+export interface PrinterFeaturesResponse extends ApiResponse {
   features?: PrinterFeatures;
 }
 
-interface CameraProxyConfigResponse extends ApiResponse {
+export interface CameraProxyConfigResponse extends ApiResponse {
   streamType?: 'mjpeg' | 'rtsp';
   port?: number;  // For MJPEG camera proxy
   wsPort?: number;  // For RTSP WebSocket port
@@ -197,14 +180,14 @@ interface CameraProxyConfigResponse extends ApiResponse {
   ffmpegAvailable?: boolean;
 }
 
-interface FileListResponse extends ApiResponse {
+export interface FileListResponse extends ApiResponse {
   files?: WebUIJobFile[];
   totalCount?: number;
 }
 
-type PrintJobStartResponse = ApiResponse;
+export type PrintJobStartResponse = ApiResponse;
 
-interface PrinterContext {
+export interface PrinterContext {
   id: string;
   name: string;
   model: string;
@@ -213,24 +196,24 @@ interface PrinterContext {
   isActive: boolean;
 }
 
-interface ContextsResponse extends ApiResponse {
+export interface ContextsResponse extends ApiResponse {
   contexts?: PrinterContext[];
   activeContextId?: string;
 }
 
-interface WebUISettings {
+export interface WebUISettings {
   visibleComponents: string[];
   editMode: boolean;
 }
 
-interface MaterialSlotInfo {
+export interface MaterialSlotInfo {
   slotId: number;
   isEmpty: boolean;
   materialType: string | null;
   materialColor: string | null;
 }
 
-interface MaterialStationStatus {
+export interface MaterialStationStatus {
   connected: boolean;
   slots: MaterialSlotInfo[];
   activeSlot: number | null;
@@ -238,11 +221,11 @@ interface MaterialStationStatus {
   errorMessage: string | null;
 }
 
-interface MaterialStationStatusResponse extends ApiResponse {
+export interface MaterialStationStatusResponse extends ApiResponse {
   status?: MaterialStationStatus | null;
 }
 
-interface MaterialMapping {
+export interface MaterialMapping {
   toolId: number;
   slotId: number;
   materialName: string;
@@ -250,17 +233,17 @@ interface MaterialMapping {
   slotMaterialColor: string;
 }
 
-interface PendingJobStart {
+export interface PendingJobStart {
   filename: string;
   leveling: boolean;
   startNow: boolean;
   job: WebUIJobFile | undefined;
 }
 
-type MaterialMessageType = 'error' | 'warning';
+export type MaterialMessageType = 'error' | 'warning';
 
 // Spoolman types
-interface ActiveSpoolData {
+export interface ActiveSpoolData {
   id: number;
   name: string;
   vendor: string | null;
@@ -271,7 +254,7 @@ interface ActiveSpoolData {
   lastUpdated: string;
 }
 
-interface SpoolSummary {
+export interface SpoolSummary {
   readonly id: number;
   readonly name: string;
   readonly vendor: string | null;
@@ -282,7 +265,7 @@ interface SpoolSummary {
   readonly archived: boolean;
 }
 
-interface SpoolmanConfigResponse extends ApiResponse {
+export interface SpoolmanConfigResponse extends ApiResponse {
   enabled: boolean;
   disabledReason?: string | null;
   serverUrl: string;
@@ -290,20 +273,16 @@ interface SpoolmanConfigResponse extends ApiResponse {
   contextId: string | null;
 }
 
-interface ActiveSpoolResponse extends ApiResponse {
+export interface ActiveSpoolResponse extends ApiResponse {
   spool: ActiveSpoolData | null;
 }
 
-interface SpoolSearchResponse extends ApiResponse {
+export interface SpoolSearchResponse extends ApiResponse {
   spools: SpoolSummary[];
 }
 
-interface SpoolSelectResponse extends ApiResponse {
+export interface SpoolSelectResponse extends ApiResponse {
   spool: ActiveSpoolData;
-}
-
-function initializeLucideIcons(): void {
-  hydrateLucideIcons(['settings', 'lock', 'package', 'search', 'circle'], document);
 }
 
 // Extended HTMLElement for temperature dialog
@@ -311,177 +290,8 @@ interface TemperatureDialogElement extends HTMLElement {
   temperatureType?: 'bed' | 'extruder';
 }
 
-// ============================================================================
-// GLOBAL STATE
-// ============================================================================
-
-class AppState {
-  public isAuthenticated: boolean = false;
-  public authToken: string | null = null;
-  public websocket: WebSocket | null = null;
-  public isConnected: boolean = false;
-  public printerStatus: PrinterStatus | null = null;
-  public printerFeatures: PrinterFeatures | null = null;
-  public selectedFile: string | null = null;
-  public jobMetadata: Map<string, WebUIJobFile> = new Map();
-  public pendingJobStart: PendingJobStart | null = null;
-  public reconnectAttempts: number = 0;
-  public maxReconnectAttempts: number = 5;
-  public reconnectDelay: number = 2000;
-  public authRequired: boolean = true;
-  public defaultPassword: boolean = false;
-  public hasPassword: boolean = true;
-  // Spoolman state
-  public spoolmanConfig: SpoolmanConfigResponse | null = null;
-  public activeSpool: ActiveSpoolData | null = null;
-  public availableSpools: SpoolSummary[] = [];
-}
-
-const state = new AppState();
-
-const gridManager = new WebUIGridManager('.webui-grid-desktop');
-const mobileLayoutManager = new WebUIMobileLayoutManager('.webui-grid-mobile');
-const layoutPersistence = new WebUILayoutPersistence();
-const ALL_COMPONENT_IDS = componentRegistry.getAllIds();
-const DEFAULT_SETTINGS: WebUISettings = {
-  visibleComponents: [...ALL_COMPONENT_IDS],
-  editMode: false,
-};
-
-const MOBILE_BREAKPOINT = 768;
-let currentPrinterSerial: string | null = null;
-let currentContextId: string | null = null;
-const DEMO_SERIAL = 'demo-layout'; // Fallback when no printer connected
-let currentSettings: WebUISettings = { ...DEFAULT_SETTINGS };
-let gridInitialized = false;
-let gridChangeUnsubscribe: (() => void) | null = null;
-const contextById = new Map<string, PrinterContext>();
-let isMobileLayout = false;
-
-interface MaterialMatchingState {
-  pending: PendingJobStart;
-  materialStation: MaterialStationStatus | null;
-  selectedToolId: number | null;
-  mappings: Map<number, MaterialMapping>;
-}
-
-let materialMatchingState: MaterialMatchingState | null = null;
-
-// ============================================================================
-// DOM HELPERS
-// ============================================================================
-
-function $(id: string): HTMLElement | null {
-  return document.getElementById(id);
-}
-
-function showElement(id: string): void {
-  const element = $(id);
-  if (element) {
-    element.classList.remove('hidden');
-  }
-}
-
-function hideElement(id: string): void {
-  const element = $(id);
-  if (element) {
-    element.classList.add('hidden');
-  }
-}
-
-function buildAuthHeaders(
-  extra: Record<string, string> = {},
-): Record<string, string> {
-  if (state.authRequired && state.authToken) {
-    return {
-      ...extra,
-      Authorization: `Bearer ${state.authToken}`,
-    };
-  }
-  return { ...extra };
-}
-
-function isAD5XJobFile(job?: WebUIJobFile): job is WebUIJobFile & { metadataType: 'ad5x'; toolDatas: AD5XToolData[] } {
-  return !!job && job.metadataType === 'ad5x' && Array.isArray(job.toolDatas);
-}
-
-function isMultiColorJobFile(job?: WebUIJobFile): job is WebUIJobFile & { metadataType: 'ad5x'; toolDatas: AD5XToolData[] } {
-  return isAD5XJobFile(job) && job.toolDatas.length > 1;
-}
-
-function buildMaterialBadgeTooltip(job: WebUIJobFile): string {
-  if (!isAD5XJobFile(job)) {
-    return 'Multi-color job';
-  }
-
-  const materials = job.toolDatas
-    .map(tool => `Tool ${tool.toolId + 1}: ${tool.materialName}`)
-    .join('\n');
-  return `Requires material station\n${materials}`;
-}
-
-function formatJobPrintingTime(printingTime?: number): string {
-  if (!printingTime || Number.isNaN(printingTime) || printingTime <= 0) {
-    return '';
-  }
-
-  const totalMinutes = Math.round(printingTime / 60);
-  if (totalMinutes <= 0) {
-    return `${Math.max(printingTime, 1)}s`;
-  }
-
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-
-  if (hours > 0) {
-    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-  }
-
-  return `${minutes}m`;
-}
-
 function hasMaterialStationSupport(): boolean {
   return Boolean(state.printerFeatures?.hasMaterialStation);
-}
-
-function normalizeMaterialString(value: string | null | undefined): string {
-  return (value ?? '').trim().toLowerCase();
-}
-
-function colorsDiffer(toolColor: string, slotColor: string | null): boolean {
-  if (!toolColor) {
-    return false;
-  }
-  return normalizeMaterialString(toolColor) !== normalizeMaterialString(slotColor);
-}
-
-function materialsMatch(toolMaterial: string, slotMaterial: string | null): boolean {
-  if (!toolMaterial) {
-    return false;
-  }
-  return normalizeMaterialString(toolMaterial) === normalizeMaterialString(slotMaterial);
-}
-
-function setTextContent(id: string, text: string): void {
-  const element = $(id);
-  if (element) {
-    element.textContent = text;
-  }
-}
-
-function showToast(message: string, type: 'success' | 'error' | 'info' = 'info'): void {
-  const toast = $('toast');
-  if (!toast) return;
-  
-  toast.textContent = message;
-  toast.className = `toast ${type}`;
-  showElement('toast');
-  toast.classList.add('show');
-  
-  setTimeout(() => {
-    toast.classList.remove('show');
-    setTimeout(() => hideElement('toast'), 300);
-  }, 3000);
 }
 
 // ============================================================================
@@ -496,7 +306,7 @@ function isMobileViewport(): boolean {
 }
 
 function ensureGridInitialized(): void {
-  if (gridInitialized) {
+  if (isGridInitialized()) {
     return;
   }
 
@@ -510,17 +320,18 @@ function ensureGridInitialized(): void {
     minRow: 11,          // Ensure enough vertical space for taller panels
   });
   gridManager.disableEdit();
-  gridInitialized = true;
+  setGridInitialized(true);
 }
 
 function teardownDesktopLayout(): void {
-  if (!gridInitialized) {
+  if (!isGridInitialized()) {
     return;
   }
 
-  if (gridChangeUnsubscribe) {
-    gridChangeUnsubscribe();
-    gridChangeUnsubscribe = null;
+  const unsubscribe = getGridChangeUnsubscribe();
+  if (unsubscribe) {
+    unsubscribe();
+    setGridChangeUnsubscribe(null);
   }
 
   gridManager.disableEdit();
@@ -678,8 +489,11 @@ function loadSettingsForSerial(serialNumber: string | null): WebUISettings {
 }
 
 function persistSettings(): void {
-  if (!currentPrinterSerial) return;
-  layoutPersistence.saveSettings(currentPrinterSerial, currentSettings);
+  const serial = getCurrentPrinterSerial();
+  if (!serial) {
+    return;
+  }
+  layoutPersistence.saveSettings(serial, getCurrentSettings());
 }
 
 function isSpoolmanAvailableForCurrentContext(): boolean {
@@ -712,17 +526,24 @@ function isComponentSupported(componentId: string, features: PrinterFeatures | n
 }
 
 function ensureSpoolmanVisibilityIfEnabled(): void {
-  if (!isSpoolmanAvailableForCurrentContext()) return;
-  if (!gridInitialized) return;
+  if (!isSpoolmanAvailableForCurrentContext()) {
+    return;
+  }
+  if (!isGridInitialized()) {
+    return;
+  }
 
-  // If Spoolman is enabled but not in visible components, add it automatically
-  if (!currentSettings.visibleComponents.includes('spoolman-tracker')) {
+  const settings = getCurrentSettings();
+  if (!settings.visibleComponents.includes('spoolman-tracker')) {
     console.log('[Spoolman] Auto-enabling Spoolman component (enabled in config)');
-    currentSettings.visibleComponents.push('spoolman-tracker');
+    const updatedSettings: WebUISettings = {
+      ...settings,
+      visibleComponents: [...settings.visibleComponents, 'spoolman-tracker'],
+    };
+    updateCurrentSettings(updatedSettings);
     persistSettings();
   }
 
-  // Make sure component is visible on grid
   gridManager.showComponent('spoolman-tracker');
 }
 
@@ -785,7 +606,7 @@ function applySettings(settings: WebUISettings): void {
       }
     } else {
       // Apply to desktop layout
-      if (!gridInitialized) return;
+      if (!isGridInitialized()) return;
       if (shouldShow) {
         gridManager.showComponent(componentId);
       } else {
@@ -795,7 +616,7 @@ function applySettings(settings: WebUISettings): void {
   }
 
   // Edit mode only applies to desktop
-  if (!isMobile && gridInitialized) {
+  if (!isMobile && isGridInitialized()) {
     if (settings.editMode) {
       gridManager.enableEdit();
     } else {
@@ -826,52 +647,61 @@ function refreshSettingsUI(settings: WebUISettings): void {
 }
 
 function handleLayoutChange(layout: WebUIGridLayout): void {
-  if (!currentPrinterSerial) return;
-  layoutPersistence.save(layout, currentPrinterSerial);
+  const serial = getCurrentPrinterSerial();
+  if (!serial) {
+    return;
+  }
+  layoutPersistence.save(layout, serial);
 }
 
 function saveCurrentLayoutSnapshot(): void {
-  if (!gridInitialized || !currentPrinterSerial) {
+  if (!isGridInitialized()) {
+    return;
+  }
+  const serial = getCurrentPrinterSerial();
+  if (!serial) {
     return;
   }
   const snapshot = gridManager.serialize();
-  layoutPersistence.save(snapshot, currentPrinterSerial);
+  layoutPersistence.save(snapshot, serial);
 }
 
 function loadLayoutForCurrentPrinter(): void {
-  if (!currentPrinterSerial) {
-    // Fallback to demo layout if somehow serial is still null
-    currentPrinterSerial = DEMO_SERIAL;
+  let serial = getCurrentPrinterSerial();
+  if (!serial) {
+    serial = DEMO_SERIAL;
+    setCurrentPrinterSerial(serial);
   }
 
-  const isMobile = isMobileViewport();
+  const mobile = isMobileViewport();
 
   resetLayoutContainers();
 
-  if (isMobile) {
-    // Mobile: Use static layout
+  if (mobile) {
     mobileLayoutManager.initialize();
-    currentSettings = loadSettingsForSerial(currentPrinterSerial);
-    mobileLayoutManager.load(currentSettings.visibleComponents);
-    isMobileLayout = true;
+    const settings = loadSettingsForSerial(serial);
+    updateCurrentSettings(settings);
+    mobileLayoutManager.load(settings.visibleComponents);
+    setMobileLayout(true);
   } else {
-    // Desktop: Use GridStack
     ensureGridInitialized();
-    const storedLayout = layoutPersistence.load(currentPrinterSerial);
+    const storedLayout = layoutPersistence.load(serial);
     const layout = ensureCompleteLayout(storedLayout);
 
     gridManager.load(layout);
 
-    if (gridChangeUnsubscribe) {
-      gridChangeUnsubscribe();
+    const unsubscribe = getGridChangeUnsubscribe();
+    if (unsubscribe) {
+      unsubscribe();
     }
-    gridChangeUnsubscribe = gridManager.onChange(handleLayoutChange);
-    isMobileLayout = false;
+    setGridChangeUnsubscribe(gridManager.onChange(handleLayoutChange));
+    setMobileLayout(false);
   }
 
-  currentSettings = loadSettingsForSerial(currentPrinterSerial);
-  applySettings(currentSettings);
-  refreshSettingsUI(currentSettings);
+  const updatedSettings = loadSettingsForSerial(serial);
+  updateCurrentSettings(updatedSettings);
+  applySettings(updatedSettings);
+  refreshSettingsUI(updatedSettings);
 
   updateFeatureVisibility();
   rehydrateLayoutState();
@@ -884,7 +714,7 @@ function loadLayoutForCurrentPrinter(): void {
 function openSettingsModal(): void {
   const modal = $('settings-modal');
   if (!modal) return;
-  refreshSettingsUI(currentSettings);
+  refreshSettingsUI(getCurrentSettings());
   void loadCurrentThemeIntoSettings();
   modal.classList.remove('hidden');
 }
@@ -896,12 +726,13 @@ function closeSettingsModal(): void {
 }
 
 function resetLayoutForCurrentPrinter(): void {
-  if (!currentPrinterSerial) {
+  const serial = getCurrentPrinterSerial();
+  if (!serial) {
     return;
   }
 
-  layoutPersistence.reset(currentPrinterSerial);
-  currentSettings = { ...DEFAULT_SETTINGS };
+  layoutPersistence.reset(serial);
+  updateCurrentSettings({ ...DEFAULT_SETTINGS });
   persistSettings();
   loadLayoutForCurrentPrinter();
   showToast('Layout reset to default', 'info');
@@ -936,12 +767,14 @@ function setupSettingsUI(): void {
 
       const editMode = (modalEditToggle?.checked ?? false);
 
-      currentSettings = {
-        visibleComponents: visibleComponents.length > 0 ? visibleComponents : [...DEFAULT_SETTINGS.visibleComponents],
+      const updatedSettings: WebUISettings = {
+        visibleComponents:
+          visibleComponents.length > 0 ? visibleComponents : [...DEFAULT_SETTINGS.visibleComponents],
         editMode,
       };
 
-      applySettings(currentSettings);
+      updateCurrentSettings(updatedSettings);
+      applySettings(updatedSettings);
       persistSettings();
       closeSettingsModal();
     });
@@ -950,7 +783,7 @@ function setupSettingsUI(): void {
   if (resetButton) {
     resetButton.addEventListener('click', () => {
       resetLayoutForCurrentPrinter();
-      refreshSettingsUI(currentSettings);
+      refreshSettingsUI(getCurrentSettings());
     });
   }
 
@@ -972,18 +805,28 @@ function setupSettingsUI(): void {
 
   if (modalEditToggle) {
     modalEditToggle.addEventListener('change', (event) => {
-      currentSettings.editMode = (event.target as HTMLInputElement).checked;
-      applySettings(currentSettings);
+      const settings = getCurrentSettings();
+      const updatedSettings: WebUISettings = {
+        ...settings,
+        editMode: (event.target as HTMLInputElement).checked,
+      };
+      updateCurrentSettings(updatedSettings);
+      applySettings(updatedSettings);
       persistSettings();
     });
   }
 
   if (headerEditToggle) {
     headerEditToggle.addEventListener('click', () => {
-      currentSettings.editMode = !currentSettings.editMode;
-      applySettings(currentSettings);
+      const settings = getCurrentSettings();
+      const updatedSettings: WebUISettings = {
+        ...settings,
+        editMode: !settings.editMode,
+      };
+      updateCurrentSettings(updatedSettings);
+      applySettings(updatedSettings);
       persistSettings();
-      refreshSettingsUI(currentSettings);
+      refreshSettingsUI(updatedSettings);
     });
   }
 
@@ -1001,7 +844,7 @@ function setupSettingsUI(): void {
     }
   });
 
-  updateEditModeToggle(currentSettings.editMode);
+  updateEditModeToggle(getCurrentSettings().editMode);
 }
 
 // ============================================================================
@@ -1015,15 +858,13 @@ async function login(password: string, rememberMe: boolean): Promise<boolean> {
   }
 
   try {
-    const response = await fetch('/api/auth/login', {
+    const result = await apiRequest<AuthResponse>('/api/auth/login', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ password, rememberMe })
+      body: JSON.stringify({ password, rememberMe }),
     });
-    
-    const result: AuthResponse = await response.json() as AuthResponse;
     
     if (result.success && result.token) {
       state.authToken = result.token;
@@ -1051,9 +892,8 @@ async function login(password: string, rememberMe: boolean): Promise<boolean> {
 async function logout(): Promise<void> {
   if (state.authRequired && state.authToken) {
     try {
-      await fetch('/api/auth/logout', {
+      await apiRequest<ApiResponse>('/api/auth/logout', {
         method: 'POST',
-        headers: buildAuthHeaders()
       });
     } catch (error) {
       console.error('Logout error:', error);
@@ -1066,15 +906,12 @@ async function logout(): Promise<void> {
   localStorage.removeItem('webui-token');
   sessionStorage.removeItem('webui-token');
   
-  // Disconnect WebSocket
-  if (state.websocket) {
-    state.websocket.close();
-  }
+  disconnectWebSocket();
 
-  currentPrinterSerial = null;
-  currentSettings = { ...DEFAULT_SETTINGS };
+  setCurrentPrinterSerial(null);
+  updateCurrentSettings({ ...DEFAULT_SETTINGS });
   contextById.clear();
-  if (gridInitialized) {
+  if (isGridInitialized()) {
     gridManager.clear();
     gridManager.disableEdit();
     updateEditModeToggle(false);
@@ -1087,116 +924,6 @@ async function logout(): Promise<void> {
   } else {
     hideElement('login-screen');
     showElement('main-ui');
-  }
-}
-
-// ============================================================================
-// WEBSOCKET CONNECTION
-// ============================================================================
-
-function connectWebSocket(): void {
-  if (state.authRequired && !state.authToken) {
-    console.error('Cannot connect WebSocket without auth token');
-    return;
-  }
-  
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const tokenQuery = state.authRequired && state.authToken ? `?token=${state.authToken}` : '';
-  const wsUrl = `${protocol}//${window.location.host}/ws${tokenQuery}`;
-  
-  try {
-    state.websocket = new WebSocket(wsUrl);
-    
-    state.websocket.onopen = () => {
-      console.log('WebSocket connected');
-      state.isConnected = true;
-      state.reconnectAttempts = 0;
-      updateConnectionStatus(true);
-      
-      // Request initial status
-      sendCommand({ command: 'REQUEST_STATUS' });
-    };
-    
-    state.websocket.onmessage = (event) => {
-      try {
-        const message: WebSocketMessage = JSON.parse(event.data) as WebSocketMessage;
-        handleWebSocketMessage(message);
-      } catch (error) {
-        console.error('Failed to parse WebSocket message:', error);
-      }
-    };
-    
-    state.websocket.onerror = (error) => {
-      console.error('WebSocket error:', error);
-      // Don't automatically logout - let the reconnect logic handle it
-    };
-    
-    state.websocket.onclose = () => {
-      console.log('WebSocket disconnected');
-      state.isConnected = false;
-      state.websocket = null;
-      updateConnectionStatus(false);
-      
-      // Attempt to reconnect
-      if (state.isAuthenticated && state.reconnectAttempts < state.maxReconnectAttempts) {
-        state.reconnectAttempts++;
-        setTimeout(() => connectWebSocket(), state.reconnectDelay * state.reconnectAttempts);
-      }
-    };
-  } catch (error) {
-    console.error('Failed to create WebSocket:', error);
-  }
-}
-
-function sendCommand(command: WebSocketCommand): void {
-  if (!state.websocket || state.websocket.readyState !== WebSocket.OPEN) {
-    console.error('WebSocket not connected');
-    showToast('Not connected to server', 'error');
-    return;
-  }
-  
-  state.websocket.send(JSON.stringify(command));
-}
-
-function handleWebSocketMessage(message: WebSocketMessage): void {
-  switch (message.type) {
-    case 'AUTH_SUCCESS':
-      console.log('WebSocket authenticated:', message.clientId);
-      break;
-      
-    case 'STATUS_UPDATE':
-      if (message.status) {
-        updatePrinterStatus(message.status);
-      }
-      break;
-      
-    case 'ERROR':
-      console.error('WebSocket error:', message.error);
-      showToast(message.error || 'An error occurred', 'error');
-      break;
-      
-    case 'COMMAND_RESULT':
-      if (message.success) {
-        showToast('Command executed successfully', 'success');
-      } else {
-        showToast(message.error || 'Command failed', 'error');
-      }
-      break;
-      
-    case 'PONG':
-      // Keep-alive response
-      break;
-
-    case 'SPOOLMAN_UPDATE':
-      if (message.contextId && message.spool !== undefined) {
-        // Update UI if the update is for the current context
-        const currentContextId = getCurrentContextId();
-        if (message.contextId === currentContextId) {
-          state.activeSpool = message.spool;
-          updateSpoolmanPanelState();
-        }
-      }
-      break;
   }
 }
 
@@ -1220,6 +947,21 @@ function updateConnectionStatus(connected: boolean): void {
     text.textContent = connected ? 'Connected' : 'Disconnected';
   }
 }
+
+onConnectionChange((connected) => {
+  updateConnectionStatus(connected);
+});
+
+onStatusUpdate((status) => {
+  updatePrinterStatus(status);
+});
+
+onSpoolmanUpdate((contextId, spool) => {
+  if (contextId === getCurrentContextId()) {
+    state.activeSpool = spool;
+    updateSpoolmanPanelState();
+  }
+});
 
 function updatePrinterStatus(status: PrinterStatus | null): void {
   if (!status) {
@@ -1370,56 +1112,6 @@ function updateButtonStates(printerState: string): void {
   if (extruderOffBtn) extruderOffBtn.disabled = tempButtonsDisabled;
 }
 
-function formatTime(minutes: number): string {
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  
-  if (hours > 0) {
-    return `${hours}:${mins.toString().padStart(2, '0')}`;
-  }
-  return `${mins}:00`;
-}
-
-function formatETA(remainingMinutes: number): string {
-  // Calculate completion time by adding remaining minutes to current time
-  const now = new Date();
-  const completionTime = new Date(now.getTime() + remainingMinutes * 60 * 1000);
-  
-  // Format as 12-hour time with AM/PM
-  return completionTime.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true
-  });
-}
-
-function formatLifetimePrintTime(minutes: number): string {
-  if (!minutes || isNaN(minutes) || minutes <= 0) {
-    return '--';
-  }
-  
-  const hours = Math.floor(minutes / 60);
-  const remainingMinutes = minutes % 60;
-  
-  if (hours >= 1000) {
-    // Format with comma for thousands (e.g., "1,250h 30m")
-    return `${hours.toLocaleString()}h ${remainingMinutes}m`;
-  } else if (hours > 0) {
-    return `${hours}h ${remainingMinutes}m`;
-  } else {
-    return `${remainingMinutes}m`;
-  }
-}
-
-function formatLifetimeFilament(meters: number): string {
-  if (!meters || isNaN(meters) || meters <= 0) {
-    return '--';
-  }
-  
-  // Display in meters with 2 decimal places, matching main UI format
-  return `${meters.toFixed(2)}m`;
-}
-
 function updatePrinterStateCard(status: PrinterStatus | null): void {
   // Update printer status
   if (status && status.printerState) {
@@ -1450,8 +1142,9 @@ function updatePrinterStateCard(status: PrinterStatus | null): void {
 // ============================================================================
 
 function getCurrentContextId(): string | null {
-  if (currentContextId) {
-    return currentContextId;
+  const storedContextId = getStoredContextId();
+  if (storedContextId) {
+    return storedContextId;
   }
 
   const select = $('printer-select') as HTMLSelectElement | null;
@@ -1459,8 +1152,8 @@ function getCurrentContextId(): string | null {
     return null;
   }
 
-  currentContextId = select.value;
-  return currentContextId;
+  setCurrentContextId(select.value);
+  return select.value;
 }
 
 async function fetchPrinterContexts(): Promise<void> {
@@ -1470,11 +1163,7 @@ async function fetchPrinterContexts(): Promise<void> {
   }
 
   try {
-    const response = await fetch('/api/contexts', {
-      headers: buildAuthHeaders()
-    });
-
-    const result = await response.json() as ContextsResponse;
+    const result = await apiRequest<ContextsResponse>('/api/contexts');
 
     if (result.success && result.contexts) {
       console.log('[Contexts] Fetched contexts:', result.contexts);
@@ -1486,24 +1175,20 @@ async function fetchPrinterContexts(): Promise<void> {
       const fallbackContext =
         result.contexts.find((context) => context.isActive) ?? result.contexts[0] ?? null;
 
+      const existingContextId = getStoredContextId();
       const selectedContextId =
-        currentContextId && contextById.has(currentContextId)
-          ? currentContextId
+        existingContextId && contextById.has(existingContextId)
+          ? existingContextId
           : result.activeContextId || fallbackContext?.id || '';
 
       updatePrinterSelector(result.contexts, selectedContextId);
 
       const activeContext = selectedContextId ? contextById.get(selectedContextId) : fallbackContext;
-      currentContextId = activeContext?.id ?? null;
+      setCurrentContextId(activeContext?.id ?? null);
       const resolvedSerial = resolveSerialForContext(activeContext);
-      if (resolvedSerial) {
-        currentPrinterSerial = resolvedSerial;
-        loadLayoutForCurrentPrinter();
-      } else {
-        // Use demo serial for testing/preview when no printer connected
-        currentPrinterSerial = DEMO_SERIAL;
-        loadLayoutForCurrentPrinter();
-      }
+      const serialToUse = resolvedSerial ?? DEMO_SERIAL;
+      setCurrentPrinterSerial(serialToUse);
+      loadLayoutForCurrentPrinter();
     } else {
       console.error('[Contexts] Failed to fetch contexts:', result.error);
     }
@@ -1552,18 +1237,16 @@ async function switchPrinterContext(contextId: string): Promise<void> {
     return;
   }
 
-  currentContextId = contextId;
+  setCurrentContextId(contextId);
 
   saveCurrentLayoutSnapshot();
 
   try {
-    const response = await fetch('/api/contexts/switch', {
+    const result = await apiRequest<ApiResponse>('/api/contexts/switch', {
       method: 'POST',
-      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ contextId })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contextId }),
     });
-
-    const result = await response.json() as ApiResponse;
 
     if (result.success) {
       console.log('[Contexts] Switched to context:', contextId);
@@ -1605,13 +1288,11 @@ async function sendPrinterCommand(endpoint: string, data?: unknown): Promise<voi
   }
   
   try {
-    const response = await fetch(`/api/printer/${endpoint}`, {
+    const result = await apiRequest<PrinterCommandResponse>(`/api/printer/${endpoint}`, {
       method: 'POST',
-      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: data ? JSON.stringify(data) : undefined
+      headers: { 'Content-Type': 'application/json' },
+      body: data ? JSON.stringify(data) : undefined,
     });
-    
-    const result = await response.json() as PrinterCommandResponse;
     
     if (result.success) {
       showToast(result.message || 'Command sent', 'success');
@@ -1628,19 +1309,16 @@ async function loadPrinterFeatures(): Promise<void> {
   if (state.authRequired && !state.authToken) return;
   
   try {
-    const response = await fetch('/api/printer/features', {
-      headers: buildAuthHeaders()
-    });
-    
-    const result = await response.json() as PrinterFeaturesResponse;
+    const result = await apiRequest<PrinterFeaturesResponse>('/api/printer/features');
     
     if (result.success && result.features) {
       state.printerFeatures = result.features;
       updateFeatureVisibility();
-      applySettings(currentSettings);
-      refreshSettingsUI(currentSettings);
+      const settings = getCurrentSettings();
+      applySettings(settings);
+      refreshSettingsUI(settings);
 
-      if (state.printerFeatures.hasCamera && gridInitialized) {
+      if (state.printerFeatures.hasCamera && isGridInitialized()) {
         const cameraPlaceholder = $('camera-placeholder');
         const cameraStream = $('camera-stream');
         if (cameraPlaceholder && cameraStream) {
@@ -1672,11 +1350,7 @@ async function loadSpoolmanConfig(): Promise<void> {
   if (state.authRequired && !state.authToken) return;
 
   try {
-    const response = await fetch('/api/spoolman/config', {
-      headers: buildAuthHeaders()
-    });
-
-    const result = await response.json() as SpoolmanConfigResponse;
+    const result = await apiRequest<SpoolmanConfigResponse>('/api/spoolman/config');
 
     if (result.success) {
       state.spoolmanConfig = result;
@@ -1688,8 +1362,9 @@ async function loadSpoolmanConfig(): Promise<void> {
       }
 
       // Re-apply component visibility and UI state since availability may have changed
-      applySettings(currentSettings);
-      refreshSettingsUI(currentSettings);
+      const settings = getCurrentSettings();
+      applySettings(settings);
+      refreshSettingsUI(settings);
       updateSpoolmanPanelState();
     }
   } catch (error) {
@@ -1709,11 +1384,9 @@ async function fetchActiveSpoolForContext(contextId?: string): Promise<void> {
   console.log(`[Spoolman] Fetching active spool for context: ${targetContextId}`);
 
   try {
-    const response = await fetch(`/api/spoolman/active/${encodeURIComponent(targetContextId)}`, {
-      headers: buildAuthHeaders()
-    });
-
-    const result = await response.json() as ActiveSpoolResponse;
+    const result = await apiRequest<ActiveSpoolResponse>(
+      `/api/spoolman/active/${encodeURIComponent(targetContextId)}`,
+    );
 
     if (result.success) {
       state.activeSpool = result.spool;
@@ -1738,11 +1411,7 @@ async function fetchSpools(searchQuery: string = ''): Promise<void> {
 
     // Stage 1: Try server-side search with filament.name filter
     const url = `/api/spoolman/spools${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`;
-    const response = await fetch(url, {
-      headers: buildAuthHeaders()
-    });
-
-    const result = await response.json() as SpoolSearchResponse;
+    const result = await apiRequest<SpoolSearchResponse>(url);
 
     if (result.success && result.spools) {
       let displaySpools = result.spools;
@@ -1753,11 +1422,7 @@ async function fetchSpools(searchQuery: string = ''): Promise<void> {
         console.log('[Spoolman] Server search returned no results, trying client-side fallback');
 
         // Fetch all spools without filter
-        const allSpoolsResponse = await fetch('/api/spoolman/spools', {
-          headers: buildAuthHeaders()
-        });
-
-        const allSpoolsResult = await allSpoolsResponse.json() as SpoolSearchResponse;
+        const allSpoolsResult = await apiRequest<SpoolSearchResponse>('/api/spoolman/spools');
 
         if (allSpoolsResult.success && allSpoolsResult.spools) {
           // Filter client-side across name, vendor, and material
@@ -1789,13 +1454,11 @@ async function selectSpool(spoolId: number): Promise<void> {
   const contextId = getCurrentContextId();
 
   try {
-    const response = await fetch('/api/spoolman/select', {
+    const result = await apiRequest<SpoolSelectResponse>('/api/spoolman/select', {
       method: 'POST',
-      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ contextId, spoolId })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contextId, spoolId }),
     });
-
-    const result = await response.json() as SpoolSelectResponse;
 
     if (result.success && result.spool) {
       state.activeSpool = result.spool;
@@ -1815,13 +1478,11 @@ async function clearActiveSpool(): Promise<void> {
   const contextId = getCurrentContextId();
 
   try {
-    const response = await fetch('/api/spoolman/select', {
+    const result = await apiRequest<ApiResponse>('/api/spoolman/select', {
       method: 'DELETE',
-      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
-      body: JSON.stringify({ contextId })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contextId }),
     });
-
-    const result = await response.json() as ApiResponse;
 
     if (result.success) {
       state.activeSpool = null;
@@ -2104,16 +1765,7 @@ async function loadCameraStream(): Promise<void> {
   }
   
   try {
-    // Get camera proxy configuration from the server
-    const response = await fetch('/api/camera/proxy-config', {
-      headers: buildAuthHeaders()
-    });
-    
-    if (!response.ok) {
-      throw new Error('Failed to get camera proxy configuration');
-    }
-    
-    const config = await response.json() as CameraProxyConfigResponse;
+    const config = await apiRequest<CameraProxyConfigResponse>('/api/camera/proxy-config');
 
     // Handle RTSP cameras with JSMpeg player
     if (config.streamType === 'rtsp') {
@@ -2220,11 +1872,7 @@ async function loadFileList(source: 'recent' | 'local'): Promise<void> {
   if (state.authRequired && !state.authToken) return;
   
   try {
-    const response = await fetch(`/api/jobs/${source}`, {
-      headers: buildAuthHeaders()
-    });
-    
-    const result = await response.json() as FileListResponse;
+    const result = await apiRequest<FileListResponse>(`/api/jobs/${source}`);
     
     if (result.success && result.files) {
       state.jobMetadata.clear();
@@ -2386,18 +2034,16 @@ async function sendJobStartRequest(options: StartJobOptions): Promise<boolean> {
   }
 
   try {
-    const response = await fetch('/api/jobs/start', {
+    const result = await apiRequest<PrintJobStartResponse>('/api/jobs/start', {
       method: 'POST',
-      headers: buildAuthHeaders({ 'Content-Type': 'application/json' }),
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         filename: options.filename,
         leveling: options.leveling,
         startNow: options.startNow,
-        materialMappings: options.materialMappings
-      })
+        materialMappings: options.materialMappings,
+      }),
     });
-
-    const result = await response.json() as PrintJobStartResponse;
 
     if (result.success) {
       showToast(result.message || 'Print job started', 'success');
@@ -2457,14 +2103,15 @@ function updateMaterialMatchingConfirmState(): void {
   const confirmButton = getMaterialMatchingElement<HTMLButtonElement>('material-matching-confirm');
   if (!confirmButton) return;
 
-  if (!materialMatchingState) {
+  const matchingState = getMaterialMatchingState();
+  if (!matchingState) {
     confirmButton.disabled = true;
     return;
   }
 
-  const job = materialMatchingState.pending.job;
+  const job = matchingState.pending.job;
   const requiredMappings = isAD5XJobFile(job) ? job.toolDatas.length : 0;
-  confirmButton.disabled = materialMatchingState.mappings.size !== requiredMappings;
+  confirmButton.disabled = matchingState.mappings.size !== requiredMappings;
 }
 
 function renderMaterialMappings(): void {
@@ -2473,7 +2120,8 @@ function renderMaterialMappings(): void {
 
   container.innerHTML = '';
 
-  if (!materialMatchingState || materialMatchingState.mappings.size === 0) {
+  const matchingState = getMaterialMatchingState();
+  if (!matchingState || matchingState.mappings.size === 0) {
     const empty = document.createElement('div');
     empty.className = 'material-mapping-empty';
     empty.textContent = 'Select a tool and then choose a matching slot to create mappings.';
@@ -2481,7 +2129,7 @@ function renderMaterialMappings(): void {
     return;
   }
 
-  materialMatchingState.mappings.forEach((mapping) => {
+  matchingState.mappings.forEach((mapping) => {
     const item = document.createElement('div');
     item.className = 'material-mapping-item';
 
@@ -2509,13 +2157,14 @@ function renderMaterialMappings(): void {
 }
 
 function handleRemoveMapping(toolId: number): void {
-  if (!materialMatchingState) {
+  const matchingState = getMaterialMatchingState();
+  if (!matchingState) {
     return;
   }
 
-  materialMatchingState.mappings.delete(toolId);
-  renderMaterialRequirements(materialMatchingState.pending.job);
-  renderMaterialSlots(materialMatchingState.materialStation);
+  matchingState.mappings.delete(toolId);
+  renderMaterialRequirements(matchingState.pending.job);
+  renderMaterialSlots(matchingState.materialStation);
   renderMaterialMappings();
   updateMaterialMatchingConfirmState();
   clearMaterialMessages();
@@ -2526,6 +2175,7 @@ function renderMaterialRequirements(job: WebUIJobFile | undefined): void {
   if (!container) return;
 
   container.innerHTML = '';
+  const matchingState = getMaterialMatchingState();
 
   if (!job || !isAD5XJobFile(job) || job.toolDatas.length === 0) {
     const empty = document.createElement('div');
@@ -2540,11 +2190,11 @@ function renderMaterialRequirements(job: WebUIJobFile | undefined): void {
     item.className = 'material-tool-item';
     item.dataset.toolId = `${tool.toolId}`;
 
-    if (materialMatchingState?.selectedToolId === tool.toolId) {
+    if (matchingState?.selectedToolId === tool.toolId) {
       item.classList.add('selected');
     }
 
-    if (materialMatchingState?.mappings.has(tool.toolId)) {
+    if (matchingState?.mappings.has(tool.toolId)) {
       item.classList.add('mapped');
     }
 
@@ -2577,8 +2227,8 @@ function renderMaterialRequirements(job: WebUIJobFile | undefined): void {
       <div class="material-tool-weight">${weightText}</div>
     `;
 
-    if (materialMatchingState?.mappings.has(tool.toolId)) {
-      const mapping = materialMatchingState.mappings.get(tool.toolId);
+    if (matchingState?.mappings.has(tool.toolId)) {
+      const mapping = matchingState.mappings.get(tool.toolId);
       if (mapping) {
         const mappingInfo = document.createElement('div');
         mappingInfo.className = 'material-tool-mapping';
@@ -2598,27 +2248,29 @@ function renderMaterialRequirements(job: WebUIJobFile | undefined): void {
 }
 
 function handleToolSelection(toolId: number): void {
-  if (!materialMatchingState) {
+  const matchingState = getMaterialMatchingState();
+  if (!matchingState) {
     return;
   }
 
-  if (materialMatchingState.selectedToolId === toolId) {
-    materialMatchingState.selectedToolId = null;
+  if (matchingState.selectedToolId === toolId) {
+    matchingState.selectedToolId = null;
   } else {
-    materialMatchingState.selectedToolId = toolId;
+    matchingState.selectedToolId = toolId;
   }
 
   clearMaterialMessages();
-  renderMaterialRequirements(materialMatchingState.pending.job);
-  renderMaterialSlots(materialMatchingState.materialStation);
+  renderMaterialRequirements(matchingState.pending.job);
+  renderMaterialSlots(matchingState.materialStation);
 }
 
 function isSlotAlreadyAssigned(slotDisplayId: number): boolean {
-  if (!materialMatchingState) {
+  const matchingState = getMaterialMatchingState();
+  if (!matchingState) {
     return false;
   }
 
-  for (const mapping of materialMatchingState.mappings.values()) {
+  for (const mapping of matchingState.mappings.values()) {
     if (mapping.slotId === slotDisplayId) {
       return true;
     }
@@ -2699,16 +2351,17 @@ function renderMaterialSlots(status: MaterialStationStatus | null): void {
 }
 
 function handleSlotSelection(slot: MaterialSlotInfo): void {
-  if (!materialMatchingState) {
+  const matchingState = getMaterialMatchingState();
+  if (!matchingState) {
     return;
   }
 
-  const job = materialMatchingState.pending.job;
+  const job = matchingState.pending.job;
   if (!job || !isAD5XJobFile(job)) {
     return;
   }
 
-  const selectedToolId = materialMatchingState.selectedToolId;
+  const selectedToolId = matchingState.selectedToolId;
   if (selectedToolId === null) {
     showMaterialError('Select a tool on the left before choosing a slot.');
     return;
@@ -2745,8 +2398,8 @@ function handleSlotSelection(slot: MaterialSlotInfo): void {
     slotMaterialColor: slot.materialColor || '#333333'
   };
 
-  materialMatchingState.mappings.set(tool.toolId, mapping);
-  materialMatchingState.selectedToolId = null;
+  matchingState.mappings.set(tool.toolId, mapping);
+  matchingState.selectedToolId = null;
 
   if (colorsDiffer(tool.materialColor, slot.materialColor)) {
     showMaterialWarning(`Tool ${tool.toolId + 1} color (${tool.materialColor}) does not match Slot ${displaySlotId} color (${slot.materialColor || 'unknown'}). The print will succeed, but appearance may differ.`);
@@ -2755,7 +2408,7 @@ function handleSlotSelection(slot: MaterialSlotInfo): void {
   }
 
   renderMaterialRequirements(job);
-  renderMaterialSlots(materialMatchingState.materialStation);
+  renderMaterialSlots(matchingState.materialStation);
   renderMaterialMappings();
   updateMaterialMatchingConfirmState();
 }
@@ -2766,11 +2419,7 @@ async function fetchMaterialStationStatus(): Promise<MaterialStationStatus | nul
   }
 
   try {
-    const response = await fetch('/api/printer/material-station', {
-      headers: buildAuthHeaders()
-    });
-
-    const result = await response.json() as MaterialStationStatusResponse;
+    const result = await apiRequest<MaterialStationStatusResponse>('/api/printer/material-station');
     if (result.success) {
       return result.status ?? null;
     }
@@ -2785,7 +2434,7 @@ async function fetchMaterialStationStatus(): Promise<MaterialStationStatus | nul
 }
 
 function resetMaterialMatchingState(): void {
-  materialMatchingState = null;
+  setMaterialMatchingState(null);
   state.pendingJobStart = null;
   clearMaterialMessages();
   updateMaterialMatchingConfirmState();
@@ -2809,12 +2458,12 @@ async function openMaterialMatchingModal(): Promise<void> {
     return;
   }
 
-  materialMatchingState = {
+  setMaterialMatchingState({
     pending: state.pendingJobStart,
     materialStation: null,
     selectedToolId: null,
-    mappings: new Map()
-  };
+    mappings: new Map(),
+  });
 
   if (title) {
     title.textContent = `Match Materials – ${state.pendingJobStart.job.displayName || state.pendingJobStart.job.fileName}`;
@@ -2828,11 +2477,12 @@ async function openMaterialMatchingModal(): Promise<void> {
   showElement('material-matching-modal');
 
   const status = await fetchMaterialStationStatus();
-  if (!materialMatchingState) {
+  const matchingState = getMaterialMatchingState();
+  if (!matchingState) {
     return;
   }
 
-  materialMatchingState.materialStation = status;
+  matchingState.materialStation = status;
   renderMaterialSlots(status);
 
   if (!status || !status.connected) {
@@ -2841,19 +2491,20 @@ async function openMaterialMatchingModal(): Promise<void> {
 }
 
 async function confirmMaterialMatching(): Promise<void> {
-  if (!materialMatchingState || !materialMatchingState.pending.job || !isAD5XJobFile(materialMatchingState.pending.job)) {
+  const matchingState = getMaterialMatchingState();
+  if (!matchingState || !matchingState.pending.job || !isAD5XJobFile(matchingState.pending.job)) {
     return;
   }
 
-  const job = materialMatchingState.pending.job;
+  const job = matchingState.pending.job;
   const requiredMappings = job.toolDatas.length;
 
-  if (materialMatchingState.mappings.size !== requiredMappings) {
+  if (matchingState.mappings.size !== requiredMappings) {
     showMaterialError('Map every tool to a material slot before starting the job.');
     return;
   }
 
-  const mappings = Array.from(materialMatchingState.mappings.values());
+  const mappings = Array.from(matchingState.mappings.values());
   const confirmButton = getMaterialMatchingElement<HTMLButtonElement>('material-matching-confirm');
 
   if (confirmButton) {
@@ -2861,8 +2512,8 @@ async function confirmMaterialMatching(): Promise<void> {
   }
 
   const success = await sendJobStartRequest({
-    filename: materialMatchingState.pending.filename,
-    leveling: materialMatchingState.pending.leveling,
+    filename: matchingState.pending.filename,
+    leveling: matchingState.pending.leveling,
     startNow: true,
     materialMappings: mappings
   });
@@ -2938,21 +2589,17 @@ async function setTemperature(): Promise<void> {
  * Handle viewport resize across breakpoint
  */
 function handleViewportChange(): void {
-  const isMobile = isMobileViewport();
+  const mobile = isMobileViewport();
 
-  // Only reload if layout mode changed
-  if (isMobile !== isMobileLayout) {
+  if (mobile !== isMobile()) {
     console.log('[Layout] Viewport breakpoint crossed, switching layout mode');
 
-    // Save current desktop layout before switching
-    if (!isMobile && gridInitialized) {
+    if (!mobile && isGridInitialized()) {
       saveCurrentLayoutSnapshot();
     }
 
-    // Reload layout in new mode
     loadLayoutForCurrentPrinter();
-
-    isMobileLayout = isMobile;
+    setMobileLayout(mobile);
   }
 }
 
@@ -3210,7 +2857,7 @@ function setupEventHandlers(): void{
     printerSelect.addEventListener('change', (e) => {
       const selectedContextId = (e.target as HTMLSelectElement).value;
       console.log('[Contexts] Printer selector changed to:', selectedContextId);
-      currentContextId = selectedContextId;
+      setCurrentContextId(selectedContextId);
       void switchPrinterContext(selectedContextId);
     });
   }
@@ -3231,12 +2878,7 @@ function setupEventHandlers(): void{
 
 async function loadAuthStatus(): Promise<void> {
   try {
-    const response = await fetch('/api/auth/status');
-    if (!response.ok) {
-      throw new Error(`Status request failed with ${response.status}`);
-    }
-
-    const status = await response.json() as AuthStatusResponse;
+    const status = await apiRequest<AuthStatusResponse>('/api/auth/status');
     state.authRequired = status.authRequired;
     state.defaultPassword = status.defaultPassword;
     state.hasPassword = status.hasPassword;
@@ -3270,25 +2912,21 @@ async function checkAuthStatus(): Promise<boolean> {
   
   // Verify token is still valid by calling a protected endpoint
   try {
-    // Test with printer status endpoint which requires auth
-    const response = await fetch('/api/printer/status', {
-      headers: buildAuthHeaders()
-    });
-    
-    if (response.ok || response.status === 503) {
-      // 503 means printer not connected but auth is valid
+    const result = await apiRequestWithMetadata<ApiResponse>('/api/printer/status');
+
+    if (result.ok || result.status === 503) {
       return true;
-    } else if (response.status === 401) {
-      // Token is invalid or expired
+    }
+
+    if (result.status === 401) {
       state.authToken = null;
       state.isAuthenticated = false;
       localStorage.removeItem('webui-token');
       sessionStorage.removeItem('webui-token');
       return false;
-    } else {
-      // Other error, keep token for now
-      return true;
     }
+
+    return true;
   } catch (error) {
     console.error('Auth check failed:', error);
     // Network error, assume token might be valid
@@ -3310,16 +2948,8 @@ interface ThemeColors {
 
 async function loadWebUITheme(): Promise<void> {
   try {
-    const response = await fetch('/api/webui/theme', {
-      headers: buildAuthHeaders()
-    });
-
-    if (response.ok) {
-      const theme = await response.json() as ThemeColors;
-      applyWebUITheme(theme);
-    } else {
-      console.warn('Failed to load WebUI theme, using defaults');
-    }
+    const theme = await apiRequest<ThemeColors>('/api/webui/theme');
+    applyWebUITheme(theme);
   } catch (error) {
     console.error('Error loading WebUI theme:', error);
   }
@@ -3375,16 +3005,8 @@ function isValidHexColor(value: string): boolean {
 
 async function loadCurrentThemeIntoSettings(): Promise<void> {
   try {
-    const response = await fetch('/api/webui/theme', {
-      headers: buildAuthHeaders()
-    });
-
-    if (response.ok) {
-      const theme = await response.json() as ThemeColors;
-      setThemeInputValues(theme);
-    } else {
-      setThemeInputValues(DEFAULT_THEME_COLORS);
-    }
+    const theme = await apiRequest<ThemeColors>('/api/webui/theme');
+    setThemeInputValues(theme);
   } catch (error) {
     console.error('Error loading theme into settings:', error);
     setThemeInputValues(DEFAULT_THEME_COLORS);
@@ -3437,20 +3059,13 @@ async function handleApplyWebUITheme(): Promise<void> {
   try {
     const theme = getThemeFromInputs();
 
-    // Save to config.json via API
-    const response = await fetch('/api/webui/theme', {
+    await apiRequest<ApiResponse>('/api/webui/theme', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        ...buildAuthHeaders()
       },
-      body: JSON.stringify(theme)
+      body: JSON.stringify(theme),
     });
-
-    if (!response.ok) {
-      showToast('Failed to save theme', 'error');
-      return;
-    }
 
     // Apply theme immediately without reload
     applyWebUITheme(theme);
@@ -3519,4 +3134,3 @@ if (document.readyState === 'loading') {
 } else {
   void initialize();
 }
-
