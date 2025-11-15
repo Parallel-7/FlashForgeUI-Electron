@@ -92,15 +92,19 @@ export function initializePrinterSettingsHandlers(): void {
       // Get current printer details
       const currentDetails = activeContext.printerDetails;
 
-      // Apply defaults for RTSP settings if undefined
-      // This ensures undefined values don't get persisted to disk
-      const settingsWithDefaults = {
+      const settingsWithDefaults: PrinterSettings = {
         ...settings,
         rtspFrameRate: settings.rtspFrameRate ?? 30,
         rtspQuality: settings.rtspQuality ?? 3
       };
 
-      // Merge with new settings
+      // Remove explicit undefined values so validation sees either a boolean or the existing value
+      for (const key of Object.keys(settingsWithDefaults) as Array<keyof PrinterSettings>) {
+        if (settingsWithDefaults[key] === undefined) {
+          delete settingsWithDefaults[key];
+        }
+      }
+
       const updatedDetails = {
         ...currentDetails,
         ...settingsWithDefaults
