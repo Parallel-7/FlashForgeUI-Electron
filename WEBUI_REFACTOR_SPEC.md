@@ -414,12 +414,12 @@ if (document.readyState === 'loading') {
 - [x] Validation: `npm run type-check`
 
 ### Phase 3: Domain Features
-- [ ] `features/job-control.ts`
-- [ ] `features/material-matching.ts`
-- [ ] `features/spoolman.ts`
-- [ ] `features/camera.ts`
-- [ ] Update app.ts imports
-- [ ] Validation: `npm run type-check`
+- [x] `features/job-control.ts`
+- [x] `features/material-matching.ts`
+- [x] `features/spoolman.ts`
+- [x] `features/camera.ts`
+- [x] Update app.ts imports
+- [x] Validation: `npm run type-check`
 
 ### Phase 4: Orchestration & Validation
 - [ ] Rewrite app.ts (~200-250 lines)
