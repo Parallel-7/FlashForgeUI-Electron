@@ -29,44 +29,29 @@ import { initializeLucideIcons, getLucideIcons } from './utils/icons';
 // Component system imports
 import {
   componentManager,
-  JobStatsComponent,
-  CameraPreviewComponent,
-  ControlsGridComponent,
-  ModelPreviewComponent,
-  LogPanelComponent,
-  PrinterStatusComponent,
-  TemperatureControlsComponent,
-  FiltrationControlsComponent,
-  AdditionalInfoComponent,
   PrinterTabsComponent,
-  SpoolmanComponent,
-  type ComponentUpdateData,
-  type BaseComponent
+  type ComponentUpdateData
 } from './ui/components';
-import { logMessage, hydrateLogPanelWithHistory, setLogPanelComponent, getLogPanelComponent } from './renderer/logging';
+import { logMessage, setLogPanelComponent } from './renderer/logging';
 import { LegacyUiController } from './ui/legacy/LegacyUiController';
 
 // GridStack system imports
 import { gridStackManager } from './ui/gridstack/GridStackManager';
 import { layoutPersistence } from './ui/gridstack/LayoutPersistence';
 import { editModeController } from './ui/gridstack/EditModeController';
-import { getComponentDefinition, getAllComponents } from './ui/gridstack/ComponentRegistry';
-import type { GridStackWidgetConfig, LayoutConfig } from './ui/gridstack/types';
 
 // Shortcut system imports
-import { shortcutConfigManager } from './ui/shortcuts/ShortcutConfigManager';
-import { DEFAULT_SHORTCUT_CONFIG, type ShortcutButtonConfig } from './ui/shortcuts/types';
+import { DEFAULT_SHORTCUT_CONFIG } from './ui/shortcuts/types';
 import {
   loadLayoutForSerial,
   saveLayoutForSerial,
   loadShortcutsForSerial,
-  saveShortcutsForSerial,
-  getPinnedComponentIdsForSerial
+  saveShortcutsForSerial
 } from './renderer/perPrinterStorage';
 
 // Existing service imports
-import { getGlobalStateTracker, STATE_EVENTS, type StateChangeEvent } from './services/printer-state';
-import { initializeUIAnimations, resetUI, handleUIError } from './services/ui-updater';
+import { getGlobalStateTracker, STATE_EVENTS } from './services/printer-state';
+import { resetUI, handleUIError } from './services/ui-updater';
 import type { PollingData } from './types/polling';
 import type { ThemeColors, AppConfig } from './types/config';
 import { DEFAULT_THEME } from './types/config';
@@ -83,23 +68,16 @@ let printerTabsComponent: PrinterTabsComponent | null = null;
 
 /** Tracks if configuration has completed loading */
 let configLoaded = false;
-let resolveConfigLoaded: (() => void) | null = null;
-const configReadyPromise = new Promise<void>((resolve) => {
-  resolveConfigLoaded = resolve;
-});
-let gridInitializationPromise: Promise<void> | null = null;
-let pendingGridInitializationSerial: string | null = null;
 
 /** Track last polling data for new components */
 let lastPollingData: PollingData | null = null;
 
-let shortcutButtonController: ShortcutButtonController;
 const gridController = new RendererGridController({
   getActiveSerial: () => activeContextSerial,
   getLastPollingData: () => lastPollingData,
   updateShortcutButtons: (config) => shortcutButtonController.updateButtons(config)
 });
-shortcutButtonController = new ShortcutButtonController({
+const shortcutButtonController = new ShortcutButtonController({
   getActiveSerial: () => activeContextSerial,
   gridController
 });
@@ -124,7 +102,6 @@ const handleConfigLoadedEvent = (): void => {
     return;
   }
   configLoaded = true;
-  resolveConfigLoaded?.();
   console.log('[Config] Renderer marked configuration as loaded');
 };
 
@@ -137,13 +114,6 @@ if (window.api?.receive) {
   console.warn('[Config] Unable to register config-loaded listener (api unavailable)');
 }
 
-const waitForConfigLoaded = async (): Promise<void> => {
-  if (configLoaded) {
-    return;
-  }
-  await configReadyPromise;
-};
-
 function showConnectPlaceholder(): void {
   const grid = document.querySelector('.grid-stack');
   const placeholder = document.getElementById('grid-placeholder');
@@ -154,18 +124,6 @@ function showConnectPlaceholder(): void {
     placeholder.classList.remove('hidden');
   }
   editModeController.setAvailability(false);
-}
-
-function hideConnectPlaceholder(): void {
-  const grid = document.querySelector('.grid-stack');
-  const placeholder = document.getElementById('grid-placeholder');
-  if (grid) {
-    grid.classList.remove('hidden');
-  }
-  if (placeholder) {
-    placeholder.classList.add('hidden');
-  }
-  editModeController.setAvailability(true);
 }
 
 function initializePlaceholderUI(): void {
