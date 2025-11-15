@@ -20,32 +20,12 @@
  * - UI updates: Real-time temperature, progress, layer info, ETA, lifetime statistics, thumbnails
  */
 
-import { componentRegistry } from './grid/WebUIComponentRegistry.js';
-import type { WebUIComponentLayout, WebUIGridLayout } from './grid/types.js';
 import {
-  ALL_COMPONENT_IDS,
-  DEFAULT_SETTINGS,
-  DEMO_SERIAL,
-  MOBILE_BREAKPOINT,
-  contextById,
-  getCurrentContextId as getStoredContextId,
-  getCurrentPrinterSerial,
   getCurrentSettings,
-  getGridChangeUnsubscribe,
   getMaterialMatchingState,
-  gridManager,
   isGridInitialized,
-  isMobile,
-  layoutPersistence,
-  mobileLayoutManager,
-  setCurrentContextId,
-  setCurrentPrinterSerial,
-  setGridChangeUnsubscribe,
-  setGridInitialized,
   setMaterialMatchingState,
-  setMobileLayout,
   state,
-  updateCurrentSettings,
 } from './core/AppState.js';
 import {
   apiRequest,
@@ -71,6 +51,23 @@ import {
   materialsMatch,
 } from './shared/formatting.js';
 import { hydrateLucideIcons, initializeLucideIcons } from './shared/icons.js';
+import {
+  applySettings,
+  ensureSpoolmanVisibilityIfEnabled,
+  initializeLayout,
+  isSpoolmanAvailableForCurrentContext,
+  loadWebUITheme,
+  refreshSettingsUI,
+  setupLayoutEventHandlers,
+  setupViewportListener,
+} from './features/layout-theme.js';
+import { setupAuthEventHandlers, loadAuthStatus, checkAuthStatus } from './features/authentication.js';
+import {
+  fetchPrinterContexts,
+  getCurrentContextId,
+  initializeContextSwitching,
+  setupContextEventHandlers,
+} from './features/context-switching.js';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -298,638 +295,10 @@ function hasMaterialStationSupport(): boolean {
 // GRID AND SETTINGS MANAGEMENT
 // ============================================================================
 
-/**
- * Detects if viewport is mobile size
- */
-function isMobileViewport(): boolean {
-  return window.innerWidth <= MOBILE_BREAKPOINT;
-}
-
-function ensureGridInitialized(): void {
-  if (isGridInitialized()) {
-    return;
-  }
-
-  gridManager.initialize({
-    column: 12,
-    cellHeight: 80,
-    margin: 8,           // Match Electron app
-    staticGrid: true,
-    float: false,
-    animate: true,       // Smooth transitions for resizes
-    minRow: 11,          // Ensure enough vertical space for taller panels
-  });
-  gridManager.disableEdit();
-  setGridInitialized(true);
-}
-
-function teardownDesktopLayout(): void {
-  if (!isGridInitialized()) {
-    return;
-  }
-
-  const unsubscribe = getGridChangeUnsubscribe();
-  if (unsubscribe) {
-    unsubscribe();
-    setGridChangeUnsubscribe(null);
-  }
-
-  gridManager.disableEdit();
-  gridManager.clear();
-}
-
-function teardownMobileLayout(): void {
-  mobileLayoutManager.clear();
-}
-
-function teardownCameraStreamElements(): void {
-  const cameraPlaceholder = $('camera-placeholder');
-  if (cameraPlaceholder) {
-    cameraPlaceholder.classList.remove('hidden');
-    cameraPlaceholder.textContent = 'Camera Unavailable';
-  }
-
-  const cameraStream = $('camera-stream') as HTMLImageElement | null;
-  if (cameraStream) {
-    cameraStream.src = '';
-    cameraStream.onload = null;
-    cameraStream.onerror = null;
-  }
-
-  const cameraCanvas = $('camera-canvas') as HTMLCanvasElement | null;
-  if (cameraCanvas) {
-    const ctx = cameraCanvas.getContext('2d');
-    if (ctx) {
-      ctx.clearRect(0, 0, cameraCanvas.width, cameraCanvas.height);
-    }
-  }
-}
-
-function resetLayoutContainers(): void {
-  teardownCameraStreamElements();
-  teardownDesktopLayout();
-  teardownMobileLayout();
-}
-
-function rehydrateLayoutState(): void {
-  updateConnectionStatus(state.isConnected);
-
-  if (state.printerStatus) {
-    updatePrinterStatus(state.printerStatus);
-  } else {
-    updatePrinterStatus(null);
-  }
-
-  updateSpoolmanPanelState();
-}
-
-function ensureCompleteLayout(baseLayout: WebUIGridLayout | null): WebUIGridLayout {
-  const defaults = componentRegistry.getDefaultLayout();
-  const incoming = baseLayout ?? defaults;
-  const normalizedComponents: Record<string, WebUIGridLayout['components'][string]> = {};
-
-  for (const componentId of ALL_COMPONENT_IDS) {
-    const defaultConfig = defaults.components?.[componentId];
-    const customConfig = incoming.components?.[componentId];
-    normalizedComponents[componentId] = sanitizeLayoutConfig(componentId, defaultConfig, customConfig);
-  }
-
-  const hidden = (incoming.hiddenComponents ?? []).filter((componentId) =>
-    ALL_COMPONENT_IDS.includes(componentId),
-  );
-
-  return {
-    version: defaults.version,
-    components: normalizedComponents,
-    hiddenComponents: hidden.length > 0 ? hidden : undefined,
-  };
-}
-
-function sanitizeLayoutConfig(
-  componentId: string,
-  defaults: WebUIComponentLayout | undefined,
-  custom: WebUIComponentLayout | undefined,
-): WebUIComponentLayout {
-  const source = custom ?? defaults;
-  if (!source) {
-    throw new Error(`Missing layout configuration for component ${componentId}`);
-  }
-
-  const toInteger = (value: number | undefined): number | undefined => {
-    if (value === undefined || Number.isNaN(value)) {
-      return undefined;
-    }
-    return Math.max(0, Math.round(value));
-  };
-
-  const minW = toInteger(custom?.minW ?? defaults?.minW);
-  const minH = toInteger(custom?.minH ?? defaults?.minH);
-  const maxW = toInteger(custom?.maxW ?? defaults?.maxW);
-  const maxH = toInteger(custom?.maxH ?? defaults?.maxH);
-
-  let width = Math.max(1, toInteger(source.w) ?? toInteger(defaults?.w) ?? 1);
-  if (minW !== undefined) {
-    width = Math.max(width, minW);
-  }
-  if (maxW !== undefined) {
-    width = Math.min(width, maxW);
-  }
-
-  let height = Math.max(1, toInteger(source.h) ?? toInteger(defaults?.h) ?? 1);
-  if (minH !== undefined) {
-    height = Math.max(height, minH);
-  }
-  if (maxH !== undefined) {
-    height = Math.min(height, maxH);
-  }
-
-  return {
-    x: toInteger(source.x) ?? toInteger(defaults?.x) ?? 0,
-    y: toInteger(source.y) ?? toInteger(defaults?.y) ?? 0,
-    w: width,
-    h: height,
-    minW,
-    minH,
-    maxW,
-    maxH,
-    locked: custom?.locked ?? defaults?.locked ?? false,
-  };
-}
-
-function resolveSerialForContext(context: PrinterContext | undefined): string | null {
-  if (!context) {
-    return null;
-  }
-  if (context.serialNumber && context.serialNumber.trim().length > 0) {
-    return context.serialNumber;
-  }
-  return context.id || null;
-}
-
-function loadSettingsForSerial(serialNumber: string | null): WebUISettings {
-  const stored = layoutPersistence.loadSettings(serialNumber) as Partial<WebUISettings> | null;
-  if (!stored) {
-    return { ...DEFAULT_SETTINGS };
-  }
-
-  const visibleComponents = Array.isArray(stored.visibleComponents)
-    ? stored.visibleComponents.filter((componentId): componentId is string =>
-        typeof componentId === 'string' && ALL_COMPONENT_IDS.includes(componentId),
-      )
-    : [...DEFAULT_SETTINGS.visibleComponents];
-
-  if (visibleComponents.length === 0) {
-    visibleComponents.push(...DEFAULT_SETTINGS.visibleComponents);
-  }
-
-  return {
-    visibleComponents,
-    editMode: stored.editMode === true,
-  };
-}
-
-function persistSettings(): void {
-  const serial = getCurrentPrinterSerial();
-  if (!serial) {
-    return;
-  }
-  layoutPersistence.saveSettings(serial, getCurrentSettings());
-}
-
-function isSpoolmanAvailableForCurrentContext(): boolean {
-  if (!state.spoolmanConfig?.enabled) {
-    return false;
-  }
-
-  if (!state.spoolmanConfig.contextId) {
-    return true;
-  }
-
-  const activeContextId = getCurrentContextId();
-  return activeContextId === state.spoolmanConfig.contextId;
-}
-
-function isComponentSupported(componentId: string, features: PrinterFeatures | null): boolean {
-  if (!features) {
-    return true;
-  }
-
-  if (componentId === 'filtration-tvoc') {
-    return Boolean(features.hasFiltration);
-  }
-
-  if (componentId === 'spoolman-tracker') {
-    return isSpoolmanAvailableForCurrentContext();
-  }
-
-  return true;
-}
-
-function ensureSpoolmanVisibilityIfEnabled(): void {
-  if (!isSpoolmanAvailableForCurrentContext()) {
-    return;
-  }
-  if (!isGridInitialized()) {
-    return;
-  }
-
-  const settings = getCurrentSettings();
-  if (!settings.visibleComponents.includes('spoolman-tracker')) {
-    console.log('[Spoolman] Auto-enabling Spoolman component (enabled in config)');
-    const updatedSettings: WebUISettings = {
-      ...settings,
-      visibleComponents: [...settings.visibleComponents, 'spoolman-tracker'],
-    };
-    updateCurrentSettings(updatedSettings);
-    persistSettings();
-  }
-
-  gridManager.showComponent('spoolman-tracker');
-}
-
-function shouldComponentBeVisible(
-  componentId: string,
-  settings: WebUISettings,
-  features: PrinterFeatures | null,
-): boolean {
-  if (!settings.visibleComponents.includes(componentId)) {
-    return false;
-  }
-  return isComponentSupported(componentId, features);
-}
-
-function updateEditModeToggle(editMode: boolean): void {
-  const isMobile = isMobileViewport();
-  const toggleButton = $('edit-mode-toggle') as HTMLButtonElement | null;
-
-  if (toggleButton) {
-    // Hide edit mode toggle on mobile (handled by CSS but reinforce here)
-    if (isMobile) {
-      toggleButton.style.display = 'none';
-    } else {
-      toggleButton.style.display = '';
-      toggleButton.setAttribute('aria-pressed', editMode ? 'true' : 'false');
-      const lockIcon = toggleButton.querySelector<HTMLElement>('.lock-icon');
-      const text = toggleButton.querySelector('.edit-text');
-      if (lockIcon) {
-        const iconName = editMode ? 'unlock' : 'lock';
-        lockIcon.setAttribute('data-lucide', iconName);
-        hydrateLucideIcons([iconName], lockIcon);
-      }
-      if (text) {
-        text.textContent = editMode ? 'Unlocked' : 'Locked';
-      }
-    }
-  }
-
-  const modalToggle = $('toggle-edit-mode') as HTMLInputElement | null;
-  if (modalToggle) {
-    modalToggle.checked = editMode;
-    // Disable edit mode checkbox in settings on mobile
-    modalToggle.disabled = isMobile;
-  }
-}
-
-function applySettings(settings: WebUISettings): void {
-  const isMobile = isMobileViewport();
-  const features = state.printerFeatures ?? null;
-
-  for (const componentId of ALL_COMPONENT_IDS) {
-    const shouldShow = shouldComponentBeVisible(componentId, settings, features);
-
-    if (isMobile) {
-      // Apply to mobile layout
-      if (shouldShow) {
-        mobileLayoutManager.showComponent(componentId);
-      } else {
-        mobileLayoutManager.hideComponent(componentId);
-      }
-    } else {
-      // Apply to desktop layout
-      if (!isGridInitialized()) return;
-      if (shouldShow) {
-        gridManager.showComponent(componentId);
-      } else {
-        gridManager.hideComponent(componentId);
-      }
-    }
-  }
-
-  // Edit mode only applies to desktop
-  if (!isMobile && isGridInitialized()) {
-    if (settings.editMode) {
-      gridManager.enableEdit();
-    } else {
-      gridManager.disableEdit();
-    }
-  }
-
-  updateEditModeToggle(isMobile ? false : settings.editMode);
-}
-
-function refreshSettingsUI(settings: WebUISettings): void {
-  const checkboxes = document.querySelectorAll<HTMLInputElement>(
-    '#settings-modal input[type="checkbox"][data-component-id]',
-  );
-
-  checkboxes.forEach((checkbox) => {
-    const componentId = checkbox.dataset.componentId;
-    if (!componentId) {
-      return;
-    }
-
-    const supported = isComponentSupported(componentId, state.printerFeatures ?? null);
-    checkbox.checked = settings.visibleComponents.includes(componentId) && supported;
-    checkbox.disabled = !supported;
-  });
-
-  updateEditModeToggle(settings.editMode);
-}
-
-function handleLayoutChange(layout: WebUIGridLayout): void {
-  const serial = getCurrentPrinterSerial();
-  if (!serial) {
-    return;
-  }
-  layoutPersistence.save(layout, serial);
-}
-
-function saveCurrentLayoutSnapshot(): void {
-  if (!isGridInitialized()) {
-    return;
-  }
-  const serial = getCurrentPrinterSerial();
-  if (!serial) {
-    return;
-  }
-  const snapshot = gridManager.serialize();
-  layoutPersistence.save(snapshot, serial);
-}
-
-function loadLayoutForCurrentPrinter(): void {
-  let serial = getCurrentPrinterSerial();
-  if (!serial) {
-    serial = DEMO_SERIAL;
-    setCurrentPrinterSerial(serial);
-  }
-
-  const mobile = isMobileViewport();
-
-  resetLayoutContainers();
-
-  if (mobile) {
-    mobileLayoutManager.initialize();
-    const settings = loadSettingsForSerial(serial);
-    updateCurrentSettings(settings);
-    mobileLayoutManager.load(settings.visibleComponents);
-    setMobileLayout(true);
-  } else {
-    ensureGridInitialized();
-    const storedLayout = layoutPersistence.load(serial);
-    const layout = ensureCompleteLayout(storedLayout);
-
-    gridManager.load(layout);
-
-    const unsubscribe = getGridChangeUnsubscribe();
-    if (unsubscribe) {
-      unsubscribe();
-    }
-    setGridChangeUnsubscribe(gridManager.onChange(handleLayoutChange));
-    setMobileLayout(false);
-  }
-
-  const updatedSettings = loadSettingsForSerial(serial);
-  updateCurrentSettings(updatedSettings);
-  applySettings(updatedSettings);
-  refreshSettingsUI(updatedSettings);
-
-  updateFeatureVisibility();
-  rehydrateLayoutState();
-
-  if (state.printerFeatures?.hasCamera) {
-    void loadCameraStream();
-  }
-}
-
-function openSettingsModal(): void {
-  const modal = $('settings-modal');
-  if (!modal) return;
-  refreshSettingsUI(getCurrentSettings());
-  void loadCurrentThemeIntoSettings();
-  modal.classList.remove('hidden');
-}
-
-function closeSettingsModal(): void {
-  const modal = $('settings-modal');
-  if (!modal) return;
-  modal.classList.add('hidden');
-}
-
-function resetLayoutForCurrentPrinter(): void {
-  const serial = getCurrentPrinterSerial();
-  if (!serial) {
-    return;
-  }
-
-  layoutPersistence.reset(serial);
-  updateCurrentSettings({ ...DEFAULT_SETTINGS });
-  persistSettings();
-  loadLayoutForCurrentPrinter();
-  showToast('Layout reset to default', 'info');
-}
-
-function setupSettingsUI(): void {
-  const settingsButton = $('settings-button') as HTMLButtonElement | null;
-  const closeButton = $('close-settings') as HTMLButtonElement | null;
-  const saveButton = $('save-settings-btn') as HTMLButtonElement | null;
-  const resetButton = $('reset-layout-btn') as HTMLButtonElement | null;
-  const modal = $('settings-modal');
-  const modalEditToggle = $('toggle-edit-mode') as HTMLInputElement | null;
-  const headerEditToggle = $('edit-mode-toggle') as HTMLButtonElement | null;
-
-  if (settingsButton) {
-    settingsButton.addEventListener('click', () => openSettingsModal());
-  }
-
-  if (closeButton) {
-    closeButton.addEventListener('click', () => closeSettingsModal());
-  }
-
-  if (saveButton) {
-    saveButton.addEventListener('click', () => {
-      const checkboxes = document.querySelectorAll<HTMLInputElement>(
-        '#settings-modal input[type="checkbox"][data-component-id]',
-      );
-      const visibleComponents = Array.from(checkboxes)
-        .filter((checkbox) => checkbox.checked && !checkbox.disabled)
-        .map((checkbox) => checkbox.dataset.componentId ?? '')
-        .filter((componentId): componentId is string => componentId.length > 0);
-
-      const editMode = (modalEditToggle?.checked ?? false);
-
-      const updatedSettings: WebUISettings = {
-        visibleComponents:
-          visibleComponents.length > 0 ? visibleComponents : [...DEFAULT_SETTINGS.visibleComponents],
-        editMode,
-      };
-
-      updateCurrentSettings(updatedSettings);
-      applySettings(updatedSettings);
-      persistSettings();
-      closeSettingsModal();
-    });
-  }
-
-  if (resetButton) {
-    resetButton.addEventListener('click', () => {
-      resetLayoutForCurrentPrinter();
-      refreshSettingsUI(getCurrentSettings());
-    });
-  }
-
-  // Theme controls
-  const applyThemeButton = $('apply-webui-theme-btn') as HTMLButtonElement | null;
-  const resetThemeButton = $('reset-webui-theme-btn') as HTMLButtonElement | null;
-
-  if (applyThemeButton) {
-    applyThemeButton.addEventListener('click', () => {
-      void handleApplyWebUITheme();
-    });
-  }
-
-  if (resetThemeButton) {
-    resetThemeButton.addEventListener('click', () => {
-      loadDefaultThemeIntoSettings();
-    });
-  }
-
-  if (modalEditToggle) {
-    modalEditToggle.addEventListener('change', (event) => {
-      const settings = getCurrentSettings();
-      const updatedSettings: WebUISettings = {
-        ...settings,
-        editMode: (event.target as HTMLInputElement).checked,
-      };
-      updateCurrentSettings(updatedSettings);
-      applySettings(updatedSettings);
-      persistSettings();
-    });
-  }
-
-  if (headerEditToggle) {
-    headerEditToggle.addEventListener('click', () => {
-      const settings = getCurrentSettings();
-      const updatedSettings: WebUISettings = {
-        ...settings,
-        editMode: !settings.editMode,
-      };
-      updateCurrentSettings(updatedSettings);
-      applySettings(updatedSettings);
-      persistSettings();
-      refreshSettingsUI(updatedSettings);
-    });
-  }
-
-  if (modal) {
-    modal.addEventListener('click', (event) => {
-      if (event.target === modal) {
-        closeSettingsModal();
-      }
-    });
-  }
-
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') {
-      closeSettingsModal();
-    }
-  });
-
-  updateEditModeToggle(getCurrentSettings().editMode);
-}
-
-// ============================================================================
-// AUTHENTICATION
-// ============================================================================
-
-async function login(password: string, rememberMe: boolean): Promise<boolean> {
-  if (!state.authRequired) {
-    state.isAuthenticated = true;
-    return true;
-  }
-
-  try {
-    const result = await apiRequest<AuthResponse>('/api/auth/login', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ password, rememberMe }),
-    });
-    
-    if (result.success && result.token) {
-      state.authToken = result.token;
-      state.isAuthenticated = true;
-      
-      // Store token if remember me is checked
-      if (rememberMe) {
-        localStorage.setItem('webui-token', result.token);
-      } else {
-        sessionStorage.setItem('webui-token', result.token);
-      }
-      
-      return true;
-    } else {
-      setTextContent('login-error', result.message || 'Login failed');
-      return false;
-    }
-  } catch (error) {
-    console.error('Login error:', error);
-    setTextContent('login-error', 'Network error. Please try again.');
-    return false;
-  }
-}
-
-async function logout(): Promise<void> {
-  if (state.authRequired && state.authToken) {
-    try {
-      await apiRequest<ApiResponse>('/api/auth/logout', {
-        method: 'POST',
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  }
-  
-  // Clear state and storage
-  state.authToken = null;
-  state.isAuthenticated = false;
-  localStorage.removeItem('webui-token');
-  sessionStorage.removeItem('webui-token');
-  
-  disconnectWebSocket();
-
-  setCurrentPrinterSerial(null);
-  updateCurrentSettings({ ...DEFAULT_SETTINGS });
-  contextById.clear();
-  if (isGridInitialized()) {
-    gridManager.clear();
-    gridManager.disableEdit();
-    updateEditModeToggle(false);
-  }
-  closeSettingsModal();
-  
-  if (state.authRequired) {
-    showElement('login-screen');
-    hideElement('main-ui');
-  } else {
-    hideElement('login-screen');
-    showElement('main-ui');
-  }
-}
-
 // ============================================================================
 // UI UPDATES
 // ============================================================================
+
 
 function updateConnectionStatus(connected: boolean): void {
   const indicator = $('connection-indicator');
@@ -1138,148 +507,9 @@ function updatePrinterStateCard(status: PrinterStatus | null): void {
 }
 
 // ============================================================================
-// MULTI-PRINTER CONTEXT MANAGEMENT
-// ============================================================================
-
-function getCurrentContextId(): string | null {
-  const storedContextId = getStoredContextId();
-  if (storedContextId) {
-    return storedContextId;
-  }
-
-  const select = $('printer-select') as HTMLSelectElement | null;
-  if (!select || !select.value) {
-    return null;
-  }
-
-  setCurrentContextId(select.value);
-  return select.value;
-}
-
-async function fetchPrinterContexts(): Promise<void> {
-  if (state.authRequired && !state.authToken) {
-    console.log('[Contexts] No auth token, skipping context fetch');
-    return;
-  }
-
-  try {
-    const result = await apiRequest<ContextsResponse>('/api/contexts');
-
-    if (result.success && result.contexts) {
-      console.log('[Contexts] Fetched contexts:', result.contexts);
-      contextById.clear();
-      result.contexts.forEach((context) => {
-        contextById.set(context.id, context);
-      });
-
-      const fallbackContext =
-        result.contexts.find((context) => context.isActive) ?? result.contexts[0] ?? null;
-
-      const existingContextId = getStoredContextId();
-      const selectedContextId =
-        existingContextId && contextById.has(existingContextId)
-          ? existingContextId
-          : result.activeContextId || fallbackContext?.id || '';
-
-      updatePrinterSelector(result.contexts, selectedContextId);
-
-      const activeContext = selectedContextId ? contextById.get(selectedContextId) : fallbackContext;
-      setCurrentContextId(activeContext?.id ?? null);
-      const resolvedSerial = resolveSerialForContext(activeContext);
-      const serialToUse = resolvedSerial ?? DEMO_SERIAL;
-      setCurrentPrinterSerial(serialToUse);
-      loadLayoutForCurrentPrinter();
-    } else {
-      console.error('[Contexts] Failed to fetch contexts:', result.error);
-    }
-  } catch (error) {
-    console.error('[Contexts] Error fetching contexts:', error);
-  }
-}
-
-function updatePrinterSelector(contexts: PrinterContext[], activeContextId: string): void {
-  const selector = $('printer-selector');
-  const select = $('printer-select') as HTMLSelectElement;
-
-  if (!selector || !select) {
-    console.error('[Contexts] Printer selector elements not found');
-    return;
-  }
-
-  // Show selector only if there are multiple printers
-  if (contexts.length > 1) {
-    showElement('printer-selector');
-  } else {
-    hideElement('printer-selector');
-    return;
-  }
-
-  // Clear existing options
-  select.innerHTML = '';
-
-  // Populate with printer contexts
-  contexts.forEach(context => {
-    const option = document.createElement('option');
-    option.value = context.id;
-    option.textContent = `${context.name} (${context.ipAddress})`;
-
-    if (context.isActive || context.id === activeContextId) {
-      option.selected = true;
-    }
-
-    select.appendChild(option);
-  });
-}
-
-async function switchPrinterContext(contextId: string): Promise<void> {
-  if (state.authRequired && !state.authToken) {
-    showToast('Not authenticated', 'error');
-    return;
-  }
-
-  setCurrentContextId(contextId);
-
-  saveCurrentLayoutSnapshot();
-
-  try {
-    const result = await apiRequest<ApiResponse>('/api/contexts/switch', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ contextId }),
-    });
-
-    if (result.success) {
-      console.log('[Contexts] Switched to context:', contextId);
-      showToast(result.message || 'Switched printer', 'success');
-      // Refresh context list to obtain updated serial numbers and load layout
-      await fetchPrinterContexts();
-
-      // Reload features for the new context (handles filtration visibility, etc.)
-      await loadPrinterFeatures();
-
-      // Reload Spoolman config and active spool for the new context
-      await loadSpoolmanConfig();
-
-      // Auto-show Spoolman component if enabled
-      ensureSpoolmanVisibilityIfEnabled();
-
-      // Request fresh status for the new context
-      sendCommand({ command: 'REQUEST_STATUS' });
-
-      // Reload camera stream for the new context (uses updated camera proxy port)
-      await loadCameraStream();
-    } else {
-      showToast(result.error || 'Failed to switch printer', 'error');
-    }
-  } catch (error) {
-    console.error('[Contexts] Error switching context:', error);
-    showToast('Failed to switch printer', 'error');
-  }
-}
-
-// ============================================================================
 // PRINTER CONTROLS
 // ============================================================================
+
 
 async function sendPrinterCommand(endpoint: string, data?: unknown): Promise<void> {
   if (state.authRequired && !state.authToken) {
@@ -2588,100 +1818,12 @@ async function setTemperature(): Promise<void> {
 /**
  * Handle viewport resize across breakpoint
  */
-function handleViewportChange(): void {
-  const mobile = isMobileViewport();
-
-  if (mobile !== isMobile()) {
-    console.log('[Layout] Viewport breakpoint crossed, switching layout mode');
-
-    if (!mobile && isGridInitialized()) {
-      saveCurrentLayoutSnapshot();
-    }
-
-    loadLayoutForCurrentPrinter();
-    setMobileLayout(mobile);
-  }
-}
-
-/**
- * Setup viewport change listener
- */
-function setupViewportListener(): void {
-  // Use matchMedia for efficient breakpoint detection
-  const mediaQuery = window.matchMedia(`(max-width: ${MOBILE_BREAKPOINT}px)`);
-
-  // Modern API
-  if (mediaQuery.addEventListener) {
-    mediaQuery.addEventListener('change', handleViewportChange);
-  } else {
-    // Fallback for older browsers (addListener is deprecated but needed for compatibility)
-    mediaQuery.addListener(handleViewportChange);
-  }
-
-  // Also handle window resize (for orientation changes)
-  let resizeTimeout: number;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeTimeout);
-    resizeTimeout = window.setTimeout(handleViewportChange, 250);
-  });
-}
-
 // ============================================================================
 // EVENT HANDLERS
 // ============================================================================
 
+
 function setupEventHandlers(): void{
-  setupSettingsUI();
-
-  // Login form
-  const loginBtn = $('login-button');
-  const passwordInput = $('password-input') as HTMLInputElement;
-  
-  if (loginBtn && passwordInput) {
-    loginBtn.addEventListener('click', async () => {
-      const password = passwordInput.value;
-      const rememberMe = ($('remember-me-checkbox') as HTMLInputElement)?.checked || false;
-      
-      if (!password) {
-        setTextContent('login-error', 'Please enter a password');
-        return;
-      }
-      
-      loginBtn.textContent = 'Logging in...';
-      (loginBtn as HTMLButtonElement).disabled = true;
-      
-      const success = await login(password, rememberMe);
-      
-      if (success) {
-        hideElement('login-screen');
-        showElement('main-ui');
-        connectWebSocket();
-        await loadPrinterFeatures();
-        // Fetch printer contexts first to populate dropdown
-        await fetchPrinterContexts();
-        // Load Spoolman config after contexts (loads active spool automatically)
-        await loadSpoolmanConfig();
-        // Auto-show Spoolman component if enabled
-        ensureSpoolmanVisibilityIfEnabled();
-      }
-      
-      loginBtn.textContent = 'Login';
-      (loginBtn as HTMLButtonElement).disabled = false;
-    });
-    
-    passwordInput.addEventListener('keypress', (e) => {
-      if (e.key === 'Enter') {
-        loginBtn.click();
-      }
-    });
-  }
-  
-  // Logout button
-  const logoutBtn = $('logout-button');
-  if (logoutBtn) {
-    logoutBtn.addEventListener('click', logout);
-  }
-
   // GridStack component buttons - attach to both desktop and mobile grids
   const gridContainerDesktop = $('webui-grid-desktop');
   const gridContainerMobile = $('webui-grid-mobile');
@@ -2851,17 +1993,6 @@ function setupEventHandlers(): void{
     spoolmanSearchInput.addEventListener('input', handleSpoolSearch);
   }
 
-  // Printer selector dropdown
-  const printerSelect = $('printer-select') as HTMLSelectElement;
-  if (printerSelect) {
-    printerSelect.addEventListener('change', (e) => {
-      const selectedContextId = (e.target as HTMLSelectElement).value;
-      console.log('[Contexts] Printer selector changed to:', selectedContextId);
-      setCurrentContextId(selectedContextId);
-      void switchPrinterContext(selectedContextId);
-    });
-  }
-
   // Keep-alive ping
   setInterval(() => {
     if (state.isConnected && state.websocket && state.websocket.readyState === WebSocket.OPEN) {
@@ -2876,255 +2007,78 @@ function setupEventHandlers(): void{
 // INITIALIZATION
 // ============================================================================
 
-async function loadAuthStatus(): Promise<void> {
-  try {
-    const status = await apiRequest<AuthStatusResponse>('/api/auth/status');
-    state.authRequired = status.authRequired;
-    state.defaultPassword = status.defaultPassword;
-    state.hasPassword = status.hasPassword;
-  } catch (error) {
-    console.error('Failed to load authentication status:', error);
-    state.authRequired = true;
-    state.defaultPassword = false;
-    state.hasPassword = true;
-  }
-}
-
-async function checkAuthStatus(): Promise<boolean> {
-  if (!state.authRequired) {
-    state.authToken = null;
-    state.isAuthenticated = true;
-    localStorage.removeItem('webui-token');
-    sessionStorage.removeItem('webui-token');
-    return true;
-  }
-
-  // Check for stored token
-  const storedToken = localStorage.getItem('webui-token') || sessionStorage.getItem('webui-token');
-  
-  if (!storedToken) {
-    return false;
-  }
-  
-  // Set the token in state first
-  state.authToken = storedToken;
-  state.isAuthenticated = true;
-  
-  // Verify token is still valid by calling a protected endpoint
-  try {
-    const result = await apiRequestWithMetadata<ApiResponse>('/api/printer/status');
-
-    if (result.ok || result.status === 503) {
-      return true;
-    }
-
-    if (result.status === 401) {
-      state.authToken = null;
-      state.isAuthenticated = false;
-      localStorage.removeItem('webui-token');
-      sessionStorage.removeItem('webui-token');
-      return false;
-    }
-
-    return true;
-  } catch (error) {
-    console.error('Auth check failed:', error);
-    // Network error, assume token might be valid
-    return true;
-  }
-}
-
-// ============================================================================
-// THEME MANAGEMENT
-// ============================================================================
-
-interface ThemeColors {
-  primary: string;
-  secondary: string;
-  background: string;
-  surface: string;
-  text: string;
-}
-
-async function loadWebUITheme(): Promise<void> {
-  try {
-    const theme = await apiRequest<ThemeColors>('/api/webui/theme');
-    applyWebUITheme(theme);
-  } catch (error) {
-    console.error('Error loading WebUI theme:', error);
-  }
-}
-
-function applyWebUITheme(theme: ThemeColors): void {
-  const root = document.documentElement;
-
-  root.style.setProperty('--theme-primary', theme.primary);
-  root.style.setProperty('--theme-secondary', theme.secondary);
-  root.style.setProperty('--theme-background', theme.background);
-  root.style.setProperty('--theme-surface', theme.surface);
-  root.style.setProperty('--theme-text', theme.text);
-
-  // Compute hover states (slightly lighter for dark theme)
-  const primaryHover = lightenColor(theme.primary, 15);
-  const secondaryHover = lightenColor(theme.secondary, 15);
-  root.style.setProperty('--theme-primary-hover', primaryHover);
-  root.style.setProperty('--theme-secondary-hover', secondaryHover);
-
-  console.log('WebUI theme applied:', theme);
-}
-
-function lightenColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
-
-  // Guard against invalid hex values
-  if (isNaN(num)) {
-    console.warn(`Invalid hex color for lightening: ${hex}, returning original`);
-    return hex;
-  }
-
-  const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * (percent / 100)));
-  const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * (percent / 100)));
-  const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * (percent / 100)));
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
-}
-
-const DEFAULT_THEME_COLORS: ThemeColors = {
-  primary: '#4285f4',
-  secondary: '#357abd',
-  background: '#121212',
-  surface: '#1e1e1e',
-  text: '#e0e0e0',
-};
-
-/**
- * Validates that a value is a valid 6-digit hex color code
- */
-function isValidHexColor(value: string): boolean {
-  return /^#([0-9a-fA-F]{6})$/.test(value);
-}
-
-async function loadCurrentThemeIntoSettings(): Promise<void> {
-  try {
-    const theme = await apiRequest<ThemeColors>('/api/webui/theme');
-    setThemeInputValues(theme);
-  } catch (error) {
-    console.error('Error loading theme into settings:', error);
-    setThemeInputValues(DEFAULT_THEME_COLORS);
-  }
-}
-
-function loadDefaultThemeIntoSettings(): void {
-  setThemeInputValues(DEFAULT_THEME_COLORS);
-  showToast('Theme reset to defaults. Click Apply to save.', 'info');
-}
-
-function setThemeInputValues(theme: ThemeColors): void {
-  const primaryInput = $('webui-theme-primary') as HTMLInputElement | null;
-  const secondaryInput = $('webui-theme-secondary') as HTMLInputElement | null;
-  const backgroundInput = $('webui-theme-background') as HTMLInputElement | null;
-  const surfaceInput = $('webui-theme-surface') as HTMLInputElement | null;
-  const textInput = $('webui-theme-text') as HTMLInputElement | null;
-
-  if (primaryInput) primaryInput.value = theme.primary;
-  if (secondaryInput) secondaryInput.value = theme.secondary;
-  if (backgroundInput) backgroundInput.value = theme.background;
-  if (surfaceInput) surfaceInput.value = theme.surface;
-  if (textInput) textInput.value = theme.text;
-}
-
-function getThemeFromInputs(): ThemeColors {
-  const primaryInput = $('webui-theme-primary') as HTMLInputElement | null;
-  const secondaryInput = $('webui-theme-secondary') as HTMLInputElement | null;
-  const backgroundInput = $('webui-theme-background') as HTMLInputElement | null;
-  const surfaceInput = $('webui-theme-surface') as HTMLInputElement | null;
-  const textInput = $('webui-theme-text') as HTMLInputElement | null;
-
-  // Get values and validate, falling back to defaults for invalid colors
-  const primary = primaryInput?.value ?? DEFAULT_THEME_COLORS.primary;
-  const secondary = secondaryInput?.value ?? DEFAULT_THEME_COLORS.secondary;
-  const background = backgroundInput?.value ?? DEFAULT_THEME_COLORS.background;
-  const surface = surfaceInput?.value ?? DEFAULT_THEME_COLORS.surface;
-  const text = textInput?.value ?? DEFAULT_THEME_COLORS.text;
-
-  return {
-    primary: isValidHexColor(primary) ? primary : DEFAULT_THEME_COLORS.primary,
-    secondary: isValidHexColor(secondary) ? secondary : DEFAULT_THEME_COLORS.secondary,
-    background: isValidHexColor(background) ? background : DEFAULT_THEME_COLORS.background,
-    surface: isValidHexColor(surface) ? surface : DEFAULT_THEME_COLORS.surface,
-    text: isValidHexColor(text) ? text : DEFAULT_THEME_COLORS.text,
-  };
-}
-
-async function handleApplyWebUITheme(): Promise<void> {
-  try {
-    const theme = getThemeFromInputs();
-
-    await apiRequest<ApiResponse>('/api/webui/theme', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(theme),
-    });
-
-    // Apply theme immediately without reload
-    applyWebUITheme(theme);
-    showToast('Theme applied successfully', 'success');
-  } catch (error) {
-    console.error('Error applying WebUI theme:', error);
-    showToast('Error applying theme', 'error');
-  }
-}
-
 async function initialize(): Promise<void> {
   console.log('Initializing Web UI...');
   initializeLucideIcons();
 
-  // Setup event handlers
+  setupLayoutEventHandlers();
   setupEventHandlers();
 
-  // Load WebUI theme
-  await loadWebUITheme();
+  const contextHandlers = {
+    onContextSwitched: async () => {
+      await loadPrinterFeatures();
+      await loadSpoolmanConfig();
+      ensureSpoolmanVisibilityIfEnabled();
+      if (state.printerFeatures?.hasCamera) {
+        void loadCameraStream();
+      }
+    },
+  };
 
-  // Setup viewport change detection
+  setupAuthEventHandlers({
+    onLoginSuccess: async () => {
+      await handlePostLoginTasks();
+    },
+  });
+
+  initializeContextSwitching(contextHandlers);
+  setupContextEventHandlers(contextHandlers);
+
+  initializeLayout({
+    onConnectionStatusUpdate: updateConnectionStatus,
+    onPrinterStatusUpdate: (status) => updatePrinterStatus(status),
+    onSpoolmanPanelUpdate: () => updateSpoolmanPanelState(),
+    onAfterLayoutRefresh: () => {
+      updateFeatureVisibility();
+      if (state.printerFeatures?.hasCamera) {
+        void loadCameraStream();
+      }
+    },
+  });
+
   setupViewportListener();
 
+  await loadWebUITheme();
   await loadAuthStatus();
 
-  // Check authentication status
   const isAuthenticated = await checkAuthStatus();
-  
+
   if (isAuthenticated) {
-    // Authenticated session (or authentication not required)
     hideElement('login-screen');
     showElement('main-ui');
-    
-    // Try to connect and load features
-    connectWebSocket();
-
-    // Load features but handle auth failures gracefully
-    try {
-      await loadPrinterFeatures();
-      // Fetch printer contexts first to populate dropdown
-      await fetchPrinterContexts();
-      // Load Spoolman config after contexts (loads active spool automatically)
-      await loadSpoolmanConfig();
-      // Auto-show Spoolman component if enabled
-      ensureSpoolmanVisibilityIfEnabled();
-    } catch (error) {
-      console.error('Failed to load features:', error);
-      // If we get here, token might be invalid but we'll let WebSocket retry handle it
-    }
+    await handlePostLoginTasks();
   } else {
-    // Show login screen
     showElement('login-screen');
     hideElement('main-ui');
-    
-    // Focus password input
     const passwordInput = $('password-input') as HTMLInputElement;
-    if (passwordInput) {
-      passwordInput.focus();
+    passwordInput?.focus();
+  }
+}
+
+async function handlePostLoginTasks(): Promise<void> {
+  connectWebSocket();
+
+  try {
+    await loadPrinterFeatures();
+    await fetchPrinterContexts();
+    await loadSpoolmanConfig();
+    ensureSpoolmanVisibilityIfEnabled();
+
+    if (state.printerFeatures?.hasCamera) {
+      void loadCameraStream();
     }
+  } catch (error) {
+    console.error('Failed to load features:', error);
   }
 }
 

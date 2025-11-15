@@ -54,98 +54,11 @@ src/webui/static/
 
 1. **Shared utilities extracted:** Created `shared/dom.ts`, `shared/formatting.ts`, and `shared/icons.ts` with `@fileoverview` headers, moved all DOM/formatting/icon helpers out of `app.ts`, and wired the entry file to import them. Validation: `npm run type-check`.
 2. **Core state & transport modules:** Added `core/AppState.ts` (state container, layout managers, accessor helpers) and `core/Transport.ts` (auth headers, `apiRequest` wrappers, WebSocket lifecycle and callbacks). Updated `app.ts` to consume the new modules, cover all former globals, and rely on callback-based WebSocket updates. Validation: `npm run type-check` and `tsc --project src/webui/static/tsconfig.json`.
+3. **Phase 1 feature modules:** Extracted authentication, context-switching, and layout/theme logic into `features/authentication.ts`, `features/context-switching.ts`, and `features/layout-theme.ts`. Updated `app.ts` to import these modules, removed the monolithic sections, and rewired initialization to use hook-based orchestration. Validation: `npm run type-check` and `npm run lint -- src/webui/static/**/*.ts`.
 
 ---
 
 ## Remaining Phases
-
-### Phase 1: Extract Features (Authentication, Context, Layout/Theme)
-
-**Create 3 files:**
-
-#### `features/authentication.ts` (~150 lines)
-Extract from `app.ts:1011-1091, 3232-3297`:
-```typescript
-export async function login(password: string, rememberMe: boolean): Promise<boolean>
-export async function logout(): Promise<void>
-export async function loadAuthStatus(): Promise<void>
-export async function checkAuthStatus(): Promise<void>
-export function setupAuthEventHandlers(): void
-```
-
-**Key logic:**
-- Login: POST /api/auth/login, token storage (localStorage/sessionStorage)
-- Logout: clear state, disconnect WS, reset UI
-- Auth status: fetch requirements, validate token
-- Event handlers: login form submit, logout button
-
-#### `features/context-switching.ts` (~200 lines)
-Extract from `app.ts:1448-1595`:
-```typescript
-export async function fetchPrinterContexts(): Promise<void>
-export function updatePrinterSelector(contexts: PrinterContext[], activeContextId: string): void
-export async function switchPrinterContext(contextId: string): Promise<void>
-export function resolveSerialForContext(context: PrinterContext | undefined): string | null
-export function setupContextEventHandlers(): void
-export function initializeContextSwitching(): void
-```
-
-**Key logic:**
-- Fetch contexts: GET /api/contexts, populate contextById map
-- Switch context: POST /api/contexts/switch, reload layout/features/camera
-- Printer selector: dropdown population, visibility (hidden for single printer)
-
-#### `features/layout-theme.ts` (~280 lines)
-Extract from `app.ts:494-908, 2937-2980, 3299-3462`:
-```typescript
-// Layout management
-export function isMobileViewport(): boolean
-export function ensureGridInitialized(): void
-export function teardownDesktopLayout(): void
-export function teardownMobileLayout(): void
-export function resetLayoutContainers(): void
-export function rehydrateLayoutState(): void
-export function loadLayoutForCurrentPrinter(): void
-export function saveCurrentLayoutSnapshot(): void
-
-// Settings management
-export function loadSettingsForSerial(serialNumber: string | null): WebUISettings
-export function persistSettings(): void
-export function applySettings(settings: WebUISettings): void
-export function refreshSettingsUI(settings: WebUISettings): void
-export function resetLayoutForCurrentPrinter(): void
-
-// Visibility helpers
-export function isSpoolmanAvailableForCurrentContext(): boolean
-export function isComponentSupported(componentId: string, features: PrinterFeatures | null): boolean
-export function shouldComponentBeVisible(componentId: string, settings: WebUISettings, features: PrinterFeatures | null): boolean
-export function ensureSpoolmanVisibilityIfEnabled(): void
-
-// Theme management
-export function loadWebUITheme(): Promise<void>
-export function applyWebUITheme(colors: ThemeColors): void
-export function lightenColor(hex: string, percent: number): string
-export function loadCurrentThemeIntoSettings(): Promise<void>
-export function loadDefaultThemeIntoSettings(): void
-export function handleApplyWebUITheme(): Promise<void>
-
-// Responsive
-export function handleViewportChange(isMobile: boolean): void
-export function setupViewportListener(): void
-
-// Initialization
-export function initializeLayout(): void
-export function setupLayoutEventHandlers(): void
-```
-
-**Update app.ts:**
-- Import: `import { initializeLayout, setupLayoutEventHandlers } from './features/layout-theme.js'`
-- Import: `import { initializeAuthentication, checkAuthStatus } from './features/authentication.js'`
-- Import: `import { initializeContextSwitching, fetchPrinterContexts } from './features/context-switching.js'`
-
-**Validation:** `npm run type-check && npm run lint -- src/webui/static/**/*.ts`
-
----
 
 ### Phase 2: Extract UI Components (Panels, Dialogs, Header)
 
@@ -487,11 +400,11 @@ if (document.readyState === 'loading') {
 - [x] Validation: `npm run type-check`
 
 ### Phase 1: Features (Auth, Context, Layout)
-- [ ] `features/authentication.ts`
-- [ ] `features/context-switching.ts`
-- [ ] `features/layout-theme.ts`
-- [ ] Update app.ts imports
-- [ ] Validation: `npm run type-check && npm run lint`
+- [x] `features/authentication.ts`
+- [x] `features/context-switching.ts`
+- [x] `features/layout-theme.ts`
+- [x] Update app.ts imports
+- [x] Validation: `npm run type-check && npm run lint`
 
 ### Phase 2: UI Components
 - [ ] `ui/panels.ts`

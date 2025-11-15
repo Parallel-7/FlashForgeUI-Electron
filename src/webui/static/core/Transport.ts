@@ -81,7 +81,7 @@ async function performRequest<T>(
       status: response.status,
       ok: response.ok,
     };
-  } catch (error) {
+  } catch {
     throw new Error('Failed to parse server response');
   }
 }
