@@ -32,54 +32,16 @@
 // src/ui/settings/settings-renderer.ts
 
 import { AppConfig, ThemeColors, DEFAULT_THEME } from '../../types/config';
-
-interface ISettingsAPI {
-  requestConfig: () => Promise<AppConfig>;
-  saveConfig: (config: Partial<AppConfig>) => Promise<boolean>;
-  closeWindow: () => void;
-  receiveConfig: (callback: (config: AppConfig) => void) => void;
-  removeListeners: () => void;
-  testSpoolmanConnection: (url: string) => Promise<{ connected: boolean; error?: string }>;
-  testDiscordWebhook: (url: string) => Promise<{ success: boolean; error?: string }>;
-  getRoundedUISupportInfo: () => Promise<RoundedUISupportInfo>;
-}
-
-interface IPrinterSettingsAPI {
-  get: () => Promise<unknown>;
-  update: (settings: unknown) => Promise<boolean>;
-  getPrinterName: () => Promise<string | null>;
-}
-
-interface UpdateInfoSummary {
-  readonly version?: string;
-  readonly releaseNotes?: unknown;
-}
-
-interface UpdateDownloadProgress {
-  readonly percent?: number;
-  readonly total?: number;
-  readonly transferred?: number;
-}
-
-interface UpdateStatusResponse {
-  readonly state: string;
-  readonly updateInfo: UpdateInfoSummary | null;
-  readonly downloadProgress: UpdateDownloadProgress | null;
-  readonly error: { readonly message: string } | null;
-  readonly currentVersion: string;
-  readonly supportsDownload: boolean;
-}
-
-interface RoundedUISupportInfo {
-  readonly supported: boolean;
-  readonly reason: 'macos' | 'windows11' | null;
-}
-
-interface IAutoUpdateAPI {
-  checkForUpdates: () => Promise<{ success: boolean; error?: string }>;
-  getStatus: () => Promise<UpdateStatusResponse>;
-  setUpdateChannel: (channel: 'stable' | 'alpha') => Promise<{ success: boolean }>;
-}
+import type { MutableSettings } from './types';
+import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI } from './types/external';
+import { DesktopThemeSection } from './sections/DesktopThemeSection';
+import { TabSection } from './sections/TabSection';
+import { InputDependencySection } from './sections/InputDependencySection';
+import { AutoUpdateSection } from './sections/AutoUpdateSection';
+import { SpoolmanTestSection } from './sections/SpoolmanTestSection';
+import { DiscordWebhookSection } from './sections/DiscordWebhookSection';
+import { PrinterContextSection } from './sections/PrinterContextSection';
+import { RoundedUISection } from './sections/RoundedUISection';
 
 declare global {
   interface Window {
@@ -126,16 +88,6 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'spoolman-update-mode': 'SpoolmanUpdateMode'
 };
 
-/**
- * Mutable settings tracker for internal use during editing session
- */
-interface MutableSettings {
-  // Global settings (stored in config.json)
-  global: Record<string, unknown>;
-  // Per-printer settings (stored in printer_details.json)
-  perPrinter: Record<string, unknown>;
-}
-
 class SettingsRenderer {
   private readonly inputs: Map<string, HTMLInputElement> = new Map();
   private saveStatusElement: HTMLElement | null = null;
@@ -145,42 +97,21 @@ class SettingsRenderer {
   private spoolmanTestResultElement: HTMLElement | null = null;
   private testDiscordButton: HTMLButtonElement | null = null;
   private discordTestResultElement: HTMLElement | null = null;
-  private resetDesktopThemeButton: HTMLButtonElement | null = null;
-  private readonly desktopThemeInputs: Map<keyof ThemeColors, HTMLInputElement> = new Map();
-  private readonly hexInputs: Map<keyof ThemeColors, HTMLInputElement> = new Map();
-  private readonly colorSwatches: Map<keyof ThemeColors, HTMLButtonElement> = new Map();
   private statusTimeout: NodeJS.Timeout | null = null;
   private readonly settings: MutableSettings = { global: {}, perPrinter: {} };
   private printerName: string | null = null;
   private hasUnsavedChanges: boolean = false;
   private autoDownloadSupported: boolean = true;
-  private tabButtons: HTMLButtonElement[] = [];
-  private readonly tabPanels: Map<string, HTMLElement> = new Map();
-  private activeTabId: string = 'camera';
   private perPrinterControlsEnabled: boolean = true;
-  private roundedUISupportInfo: RoundedUISupportInfo = { supported: true, reason: null };
-
-  // Custom color picker elements
-  private colorPickerModal: HTMLElement | null = null;
-  private colorFieldCanvas: HTMLCanvasElement | null = null;
-  private colorFieldCtx: CanvasRenderingContext2D | null = null;
-  private colorFieldThumb: HTMLElement | null = null;
-  private hueSlider: HTMLInputElement | null = null;
-  private pickerHexInput: HTMLInputElement | null = null;
-  private pickerPreviewSwatch: HTMLElement | null = null;
-  private pickerPreviewLabel: HTMLElement | null = null;
-  private colorPickerClose: HTMLButtonElement | null = null;
-  private currentPickerColorKey: keyof ThemeColors | null = null;
-  private colorFieldPointerMoveHandler: ((event: PointerEvent) => void) | null = null;
-  private colorFieldPointerUpHandler: ((event: PointerEvent) => void) | null = null;
-  private pendingPickerFrame: number | null = null;
-  private updatingPickerInputs: boolean = false;
+  private desktopThemeSection: DesktopThemeSection | null = null;
+  private tabSection: TabSection | null = null;
+  private dependencySection: InputDependencySection | null = null;
+  private autoUpdateSection: AutoUpdateSection | null = null;
+  private spoolmanTestSection: SpoolmanTestSection | null = null;
+  private discordWebhookSection: DiscordWebhookSection | null = null;
+  private printerContextSection: PrinterContextSection | null = null;
+  private roundedUISection: RoundedUISection | null = null;
   private webUIEnabledToggle: HTMLInputElement | null = null;
-
-  // Color picker state
-  private currentHue: number = 0;
-  private currentSaturation: number = 100;
-  private currentBrightness: number = 100;
 
   private static readonly TAB_STORAGE_KEY = 'settingsDialogActiveTab';
 
@@ -191,7 +122,6 @@ class SettingsRenderer {
   private initialize(): void {
     document.addEventListener('DOMContentLoaded', () => {
       window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x', 'alert-triangle']);
-      void this.initializeRoundedUISupportInfo();
       this.initializeElements();
       this.setupEventListeners();
       void this.requestInitialConfig();
@@ -215,10 +145,7 @@ class SettingsRenderer {
 
     this.saveStatusElement = document.getElementById('save-status');
     this.updateStatusElement = document.getElementById('update-check-result');
-    const checkButton = document.getElementById('btn-check-updates') as HTMLButtonElement | null;
-    if (checkButton) {
-      this.updateCheckButton = checkButton;
-    }
+    this.updateCheckButton = document.getElementById('btn-check-updates') as HTMLButtonElement | null;
 
     this.testSpoolmanButton = document.getElementById('btn-test-spoolman') as HTMLButtonElement | null;
     this.spoolmanTestResultElement = document.getElementById('spoolman-test-result');
@@ -226,61 +153,65 @@ class SettingsRenderer {
     this.testDiscordButton = document.getElementById('btn-test-discord') as HTMLButtonElement | null;
     this.discordTestResultElement = document.getElementById('discord-test-result');
 
-    // Initialize desktop theme inputs
-    const themeInputIds: Array<[keyof ThemeColors, string]> = [
-      ['primary', 'desktop-theme-primary'],
-      ['secondary', 'desktop-theme-secondary'],
-      ['background', 'desktop-theme-background'],
-      ['surface', 'desktop-theme-surface'],
-      ['text', 'desktop-theme-text']
-    ];
-
-    themeInputIds.forEach(([key, id]) => {
-      const input = document.getElementById(id) as HTMLInputElement | null;
-      if (input) {
-        this.desktopThemeInputs.set(key, input);
-      } else {
-        console.warn(`Theme input element not found: ${id}`);
-      }
-
-      // Initialize hex inputs
-      const hexInput = document.getElementById(`hex-${key}`) as HTMLInputElement | null;
-      if (hexInput) {
-        this.hexInputs.set(key, hexInput);
-      }
-
-      // Initialize color swatches
-      const swatch = document.getElementById(`swatch-${key}`) as HTMLButtonElement | null;
-      if (swatch) {
-        this.colorSwatches.set(key, swatch);
-      }
-    });
-
-    this.resetDesktopThemeButton = document.getElementById('reset-desktop-theme') as HTMLButtonElement | null;
     this.webUIEnabledToggle = document.getElementById('webui-enabled-toggle') as HTMLInputElement | null;
 
-    // Initialize custom color picker elements
-    this.colorPickerModal = document.getElementById('custom-color-picker');
-    this.colorFieldCanvas = document.getElementById('color-picker-field') as HTMLCanvasElement | null;
-    this.colorFieldThumb = document.getElementById('color-picker-thumb');
-    this.hueSlider = document.getElementById('color-picker-hue') as HTMLInputElement | null;
-    this.pickerHexInput = document.getElementById('picker-hex-input') as HTMLInputElement | null;
-    this.pickerPreviewSwatch = document.getElementById('picker-preview-swatch');
-    this.pickerPreviewLabel = document.getElementById('picker-preview-label');
-    this.colorPickerClose = document.querySelector('.color-picker-close') as HTMLButtonElement | null;
+    this.desktopThemeSection = new DesktopThemeSection({
+      document,
+      defaultTheme: DEFAULT_THEME,
+      onThemeChange: (theme) => this.handleDesktopThemeUpdated(theme)
+    });
+    this.desktopThemeSection.initialize();
 
-    if (this.colorFieldCanvas) {
-      this.colorFieldCtx = this.colorFieldCanvas.getContext('2d');
-      this.drawColorField();
-      this.positionColorFieldThumb();
-    }
+    this.tabSection = new TabSection({
+      document,
+      storageKey: SettingsRenderer.TAB_STORAGE_KEY
+    });
+    this.tabSection.initialize();
 
-    window.addEventListener('resize', () => {
-      this.drawColorField();
-      this.positionColorFieldThumb();
+    this.dependencySection = new InputDependencySection({
+      inputs: this.inputs,
+      webUIEnabledToggle: this.webUIEnabledToggle
     });
 
-    this.initializeTabs();
+    this.printerContextSection = new PrinterContextSection({
+      document,
+      onPerPrinterToggle: (enabled) => {
+        this.perPrinterControlsEnabled = enabled;
+        this.updateInputStates();
+      }
+    });
+    this.printerContextSection.initialize();
+
+    this.spoolmanTestSection = new SpoolmanTestSection({
+      settingsAPI: window.settingsAPI,
+      testButton: this.testSpoolmanButton,
+      resultElement: this.spoolmanTestResultElement,
+      serverUrlInput: this.inputs.get('spoolman-server-url')
+    });
+    this.spoolmanTestSection.initialize();
+
+    this.discordWebhookSection = new DiscordWebhookSection({
+      settingsAPI: window.settingsAPI,
+      testButton: this.testDiscordButton,
+      resultElement: this.discordTestResultElement,
+      webhookInput: this.inputs.get('webhook-url')
+    });
+    this.discordWebhookSection.initialize();
+
+    this.autoUpdateSection = new AutoUpdateSection({
+      autoUpdateAPI: window.autoUpdateAPI,
+      updateCheckButton: this.updateCheckButton,
+      updateStatusElement: this.updateStatusElement,
+      autoDownloadInput: this.inputs.get('auto-download-updates'),
+      settings: this.settings
+    });
+
+    this.roundedUISection = new RoundedUISection({
+      settingsAPI: window.settingsAPI,
+      roundedUIInput: this.inputs.get('rounded-ui'),
+      document,
+      settings: this.settings
+    });
   }
 
   private setupEventListeners(): void {
@@ -309,85 +240,10 @@ class SettingsRenderer {
       saveBtn.addEventListener('click', () => this.handleSave());
     }
 
-    if (this.updateCheckButton) {
-      this.updateCheckButton.addEventListener('click', () => {
-        void this.handleCheckForUpdates();
-      });
-    }
-
-    if (this.testSpoolmanButton) {
-      this.testSpoolmanButton.addEventListener('click', () => {
-        void this.handleTestSpoolmanConnection();
-      });
-    }
-
-    if (this.testDiscordButton) {
-      this.testDiscordButton.addEventListener('click', () => {
-        void this.handleTestDiscordWebhook();
-      });
-    }
-
     if (this.webUIEnabledToggle) {
       this.webUIEnabledToggle.addEventListener('change', () => this.handleWebUIEnabledToggle());
     }
 
-    // Theme color input listeners (native color pickers - used as fallback)
-    this.desktopThemeInputs.forEach((input, key) => {
-      input.addEventListener('input', () => {
-        this.updateColorFromNativePicker(key);
-      });
-    });
-
-    // Hex input listeners
-    this.hexInputs.forEach((hexInput, key) => {
-      hexInput.addEventListener('input', () => {
-        this.handleHexInput(key);
-      });
-    });
-
-    // Color swatch listeners (open custom picker)
-    this.colorSwatches.forEach((swatch, key) => {
-      swatch.addEventListener('click', () => {
-        this.openColorPicker(key);
-      });
-    });
-
-    // Custom color picker event listeners
-    if (this.colorPickerClose) {
-      this.colorPickerClose.addEventListener('click', () => this.closeColorPicker());
-    }
-
-    if (this.colorPickerModal) {
-      this.colorPickerModal.addEventListener('mousedown', (event) => {
-        if (event.target === this.colorPickerModal) {
-          this.closeColorPicker();
-        }
-      });
-
-      // ESC key to close
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && this.colorPickerModal && !this.colorPickerModal.hidden) {
-          this.closeColorPicker();
-        }
-      });
-    }
-
-    if (this.colorFieldCanvas) {
-      this.colorFieldCanvas.addEventListener('pointerdown', (event) => this.handleColorFieldPointerDown(event));
-    }
-
-    if (this.hueSlider) {
-      this.hueSlider.addEventListener('input', () => this.handleHueChange());
-    }
-
-    if (this.pickerHexInput) {
-      this.pickerHexInput.addEventListener('input', () => this.handlePickerHexInput());
-    }
-
-    // Reset theme button
-    if (this.resetDesktopThemeButton) {
-      this.resetDesktopThemeButton.addEventListener('click', () => this.handleResetDesktopTheme());
-    }
   }
 
   private async requestInitialConfig(): Promise<void> {
@@ -414,9 +270,20 @@ class SettingsRenderer {
         }
 
         this.loadConfiguration();
-        this.updatePrinterContextIndicator();
-        await this.initializeAutoUpdateSupport();
-        this.updatePrinterSettingsAvailability();
+        this.printerContextSection?.update(this.printerName);
+
+        if (this.autoUpdateSection) {
+          await this.autoUpdateSection.initialize();
+          this.autoDownloadSupported = this.autoUpdateSection.isAutoDownloadSupported();
+        } else {
+          this.autoDownloadSupported = true;
+        }
+
+        if (this.roundedUISection) {
+          await this.roundedUISection.initialize();
+        }
+
+        this.updateInputStates();
       } catch (error) {
         console.error('Failed to request config:', error);
       }
@@ -476,120 +343,13 @@ class SettingsRenderer {
     });
 
     // Load desktop theme values
-    this.loadDesktopTheme();
+    this.desktopThemeSection?.applyTheme(this.settings.global['DesktopTheme'] as ThemeColors | undefined);
     this.applyWebUIEnabledSetting();
 
     // Update input states after loading
     this.updateInputStates();
-    this.applyRoundedUIRestrictions();
     this.hasUnsavedChanges = false;
     this.updateSaveButtonState();
-  }
-
-  private initializeTabs(): void {
-    this.tabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.settings-tab-button'));
-    const panelElements = document.querySelectorAll<HTMLElement>('.tab-panel');
-
-    panelElements.forEach((panel) => {
-      const dataTab = panel.id.replace('tab-panel-', '');
-      this.tabPanels.set(dataTab, panel);
-    });
-
-    this.tabButtons.forEach((button, index) => {
-      button.addEventListener('click', () => {
-        const tabId = button.dataset.tab;
-        if (tabId) {
-          this.setActiveTab(tabId, true, true);
-        }
-      });
-
-      button.addEventListener('keydown', (event) => {
-        this.handleTabKeydown(event, index);
-      });
-    });
-
-    const persistedTab = this.loadPersistedTabId();
-    if (persistedTab && this.tabPanels.has(persistedTab)) {
-      this.setActiveTab(persistedTab, false, false);
-    } else if (this.tabButtons.length > 0) {
-      const fallbackTab = this.tabButtons[0].dataset.tab ?? 'camera';
-      this.setActiveTab(fallbackTab, true, false);
-    }
-  }
-
-  private setActiveTab(tabId: string, persist: boolean, focusTab: boolean): void {
-    if (!this.tabPanels.has(tabId)) {
-      return;
-    }
-
-    this.tabButtons.forEach((button) => {
-      const isActive = button.dataset.tab === tabId;
-      button.setAttribute('aria-selected', isActive ? 'true' : 'false');
-      button.tabIndex = isActive ? 0 : -1;
-      if (isActive && focusTab) {
-        button.focus();
-      }
-    });
-
-    this.tabPanels.forEach((panel, id) => {
-      if (id === tabId) {
-        panel.removeAttribute('hidden');
-      } else {
-        panel.setAttribute('hidden', 'true');
-      }
-    });
-
-    this.activeTabId = tabId;
-    if (persist) {
-      this.persistTabId(tabId);
-    }
-  }
-
-  private handleTabKeydown(event: KeyboardEvent, currentIndex: number): void {
-    if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) {
-      return;
-    }
-
-    event.preventDefault();
-
-    if (event.key === 'Home') {
-      const firstTab = this.tabButtons[0];
-      if (firstTab?.dataset.tab) {
-        this.setActiveTab(firstTab.dataset.tab, true, true);
-      }
-      return;
-    }
-
-    if (event.key === 'End') {
-      const lastTab = this.tabButtons[this.tabButtons.length - 1];
-      if (lastTab?.dataset.tab) {
-        this.setActiveTab(lastTab.dataset.tab, true, true);
-      }
-      return;
-    }
-
-    const increment = event.key === 'ArrowRight' ? 1 : -1;
-    const newIndex = (currentIndex + increment + this.tabButtons.length) % this.tabButtons.length;
-    const nextTab = this.tabButtons[newIndex];
-    if (nextTab?.dataset.tab) {
-      this.setActiveTab(nextTab.dataset.tab, true, true);
-    }
-  }
-
-  private persistTabId(tabId: string): void {
-    try {
-      window.localStorage.setItem(SettingsRenderer.TAB_STORAGE_KEY, tabId);
-    } catch (error) {
-      console.warn('[Settings] Unable to persist tab selection:', error);
-    }
-  }
-
-  private loadPersistedTabId(): string | null {
-    try {
-      return window.localStorage.getItem(SettingsRenderer.TAB_STORAGE_KEY);
-    } catch {
-      return null;
-    }
   }
 
   private handleInputChange(inputId: string): void {
@@ -659,195 +419,7 @@ class SettingsRenderer {
   }
 
   private updateInputStates(): void {
-    // Web UI settings
-    const webUIEnabled = this.inputs.get('web-ui')?.checked || false;
-    const passwordRequired = this.inputs.get('web-ui-password-required')?.checked ?? true;
-    this.setInputEnabled('web-ui-port', webUIEnabled);
-    this.setInputEnabled('web-ui-password-required', webUIEnabled);
-    this.setInputEnabled('web-ui-password', webUIEnabled && passwordRequired);
-
-    // Spoolman Integration settings
-    const spoolmanEnabled = this.inputs.get('spoolman-enabled')?.checked || false;
-    this.setInputEnabled('spoolman-server-url', spoolmanEnabled);
-    this.setInputEnabled('spoolman-update-mode', spoolmanEnabled);
-
-    // Custom Camera settings
-    if (this.perPrinterControlsEnabled) {
-      const customCameraEnabled = this.inputs.get('custom-camera')?.checked || false;
-      this.setInputEnabled('custom-camera', true);
-      this.setInputEnabled('custom-camera-url', customCameraEnabled);
-      this.setInputEnabled('custom-leds', true);
-      this.setInputEnabled('force-legacy-api', true);
-      this.setInputEnabled('rtsp-frame-rate', true);
-      this.setInputEnabled('rtsp-quality', true);
-    } else {
-      this.setInputEnabled('custom-camera', false);
-      this.setInputEnabled('custom-camera-url', false);
-      this.setInputEnabled('custom-leds', false);
-      this.setInputEnabled('force-legacy-api', false);
-      this.setInputEnabled('rtsp-frame-rate', false);
-      this.setInputEnabled('rtsp-quality', false);
-    }
-
-    if (this.webUIEnabledToggle) {
-      this.webUIEnabledToggle.disabled = !this.perPrinterControlsEnabled;
-    }
-
-    // Discord settings
-    const discordEnabled = this.inputs.get('discord-sync')?.checked || false;
-    this.setInputEnabled('webhook-url', discordEnabled);
-    this.setInputEnabled('discord-update-interval', discordEnabled);
-
-    if (!this.autoDownloadSupported) {
-      this.setInputEnabled('auto-download-updates', false);
-    }
-  }
-
-  private async initializeAutoUpdateSupport(): Promise<void> {
-    if (!window.autoUpdateAPI) {
-      this.autoDownloadSupported = true;
-      return;
-    }
-
-    try {
-      const status = await window.autoUpdateAPI.getStatus();
-      this.autoDownloadSupported = Boolean(status.supportsDownload);
-
-      if (!this.autoDownloadSupported) {
-        const autoDownloadInput = this.inputs.get('auto-download-updates');
-        if (autoDownloadInput) {
-          autoDownloadInput.checked = false;
-        }
-        this.settings.global['AutoDownloadUpdates'] = false;
-      }
-    } catch (error) {
-      console.warn('[Settings] Unable to determine auto-update capabilities:', error);
-      this.autoDownloadSupported = true;
-    }
-  }
-
-  private loadDesktopTheme(): void {
-    const desktopTheme = this.settings.global['DesktopTheme'] as ThemeColors | undefined;
-    const theme = desktopTheme || DEFAULT_THEME;
-
-    this.desktopThemeInputs.forEach((input, key) => {
-      input.value = theme[key];
-    });
-
-    // Also update hex inputs and color swatches
-    this.hexInputs.forEach((hexInput, key) => {
-      hexInput.value = theme[key];
-    });
-
-    this.colorSwatches.forEach((swatch, key) => {
-      swatch.style.backgroundColor = theme[key];
-    });
-
-    console.log('[Settings] Loaded desktop theme:', theme);
-  }
-
-  private async initializeRoundedUISupportInfo(): Promise<void> {
-    if (!window.settingsAPI?.getRoundedUISupportInfo) {
-      return;
-    }
-
-    try {
-      this.roundedUISupportInfo = await window.settingsAPI.getRoundedUISupportInfo();
-      this.applyRoundedUIRestrictions();
-    } catch (error) {
-      console.warn('[Settings] Unable to determine Rounded UI support:', error);
-    }
-  }
-
-  private getRoundedUIWarningMessage(): string {
-    switch (this.roundedUISupportInfo.reason) {
-      case 'macos':
-        return 'Disabled on macOS due to system compatibility issues.';
-      case 'windows11':
-        return 'Disabled on Windows 11 because native rounded chrome conflicts with this mode.';
-      default:
-        return 'Rounded UI is not available on this platform.';
-    }
-  }
-
-  private applyRoundedUIRestrictions(): void {
-    const roundedUIInput = this.inputs.get('rounded-ui');
-    const warningElement = document.querySelector('.rounded-ui-warning') as HTMLElement | null;
-
-    if (!roundedUIInput) {
-      return;
-    }
-
-    if (this.roundedUISupportInfo.supported) {
-      roundedUIInput.disabled = false;
-      roundedUIInput.style.opacity = '';
-      if (warningElement) {
-        warningElement.style.display = 'none';
-      }
-      return;
-    }
-
-    roundedUIInput.disabled = true;
-    roundedUIInput.checked = false;
-    roundedUIInput.style.opacity = '0.5';
-    this.settings.global['RoundedUI'] = false;
-
-    if (warningElement) {
-      const textElement = warningElement.querySelector('.rounded-ui-warning-text');
-      const message = this.getRoundedUIWarningMessage();
-      if (textElement) {
-        textElement.textContent = message;
-      } else {
-        warningElement.textContent = message;
-      }
-      warningElement.style.display = 'inline-flex';
-    }
-  }
-
-  private handleDesktopThemeChange(): void {
-    const theme: ThemeColors = {
-      primary: this.desktopThemeInputs.get('primary')?.value || DEFAULT_THEME.primary,
-      secondary: this.desktopThemeInputs.get('secondary')?.value || DEFAULT_THEME.secondary,
-      background: this.desktopThemeInputs.get('background')?.value || DEFAULT_THEME.background,
-      surface: this.desktopThemeInputs.get('surface')?.value || DEFAULT_THEME.surface,
-      text: this.desktopThemeInputs.get('text')?.value || DEFAULT_THEME.text,
-    };
-
-    this.settings.global['DesktopTheme'] = theme;
-    this.hasUnsavedChanges = true;
-    this.updateSaveButtonState();
-
-    console.log('[Settings] Desktop theme changed:', theme);
-  }
-
-  private handleResetDesktopTheme(): void {
-    this.desktopThemeInputs.forEach((input, key) => {
-      input.value = DEFAULT_THEME[key];
-    });
-
-    // Also update hex inputs and color swatches
-    this.hexInputs.forEach((hexInput, key) => {
-      hexInput.value = DEFAULT_THEME[key];
-      hexInput.classList.remove('invalid');
-    });
-
-    this.colorSwatches.forEach((swatch, key) => {
-      swatch.style.backgroundColor = DEFAULT_THEME[key];
-    });
-
-    this.settings.global['DesktopTheme'] = { ...DEFAULT_THEME };
-    this.hasUnsavedChanges = true;
-    this.updateSaveButtonState();
-
-    console.log('[Settings] Desktop theme reset to default');
-  }
-
-  private setInputEnabled(inputId: string, enabled: boolean): void {
-    const input = this.inputs.get(inputId);
-    if (input) {
-      input.disabled = !enabled;
-      input.style.opacity = enabled ? '1' : '0.5';
-    }
+    this.dependencySection?.updateStates(this.perPrinterControlsEnabled, this.autoDownloadSupported);
   }
 
   private updateSaveButtonState(): void {
@@ -856,154 +428,6 @@ class SettingsRenderer {
       saveBtn.disabled = !this.hasUnsavedChanges;
       saveBtn.style.opacity = this.hasUnsavedChanges ? '1' : '0.6';
     }
-  }
-
-  private async handleCheckForUpdates(): Promise<void> {
-    if (!window.autoUpdateAPI) {
-      this.showUpdateStatus('Auto-update service is not available.', 'error');
-      return;
-    }
-
-    if (this.updateCheckButton) {
-      this.updateCheckButton.disabled = true;
-    }
-
-    this.showUpdateStatus('Checking for updates...', 'info');
-
-    try {
-      const result = await window.autoUpdateAPI.checkForUpdates();
-
-      if (!result.success) {
-        this.showUpdateStatus(result.error ?? 'Failed to start update check.', 'error');
-        return;
-      }
-
-      const status = await window.autoUpdateAPI.getStatus();
-      const availableVersion = status.updateInfo?.version;
-
-      if (status.state === 'available' && availableVersion) {
-        this.showUpdateStatus(`Update ${availableVersion} is available.`, 'success');
-      } else if (status.state === 'downloaded' && availableVersion) {
-        this.showUpdateStatus(`Update ${availableVersion} is ready to install.`, 'success');
-      } else if (status.state === 'error') {
-        this.showUpdateStatus(status.error?.message ?? 'Update check failed.', 'error');
-      } else {
-        this.showUpdateStatus('No updates available.', 'success');
-      }
-    } catch (error) {
-      console.error('[Settings] Auto-update check failed:', error);
-      this.showUpdateStatus('Failed to check for updates.', 'error');
-    } finally {
-      if (this.updateCheckButton) {
-        this.updateCheckButton.disabled = false;
-      }
-    }
-  }
-
-  private async handleTestSpoolmanConnection(): Promise<void> {
-    if (!window.settingsAPI) {
-      this.showSpoolmanTestResult('Settings API not available.', 'error');
-      return;
-    }
-
-    const serverUrlInput = this.inputs.get('spoolman-server-url');
-    if (!serverUrlInput) {
-      this.showSpoolmanTestResult('Server URL input not found.', 'error');
-      return;
-    }
-
-    const serverUrl = serverUrlInput.value.trim();
-    if (!serverUrl) {
-      this.showSpoolmanTestResult('Please enter a Spoolman server URL.', 'error');
-      return;
-    }
-
-    if (this.testSpoolmanButton) {
-      this.testSpoolmanButton.disabled = true;
-    }
-
-    this.showSpoolmanTestResult('Testing connection...', 'info');
-
-    try {
-      const result = await window.settingsAPI.testSpoolmanConnection(serverUrl);
-
-      if (result.connected) {
-        this.showSpoolmanTestResult('✓ Connection successful!', 'success');
-      } else {
-        this.showSpoolmanTestResult(`✗ Connection failed: ${result.error || 'Unknown error'}`, 'error');
-      }
-    } catch (error) {
-      console.error('[Settings] Spoolman connection test failed:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      this.showSpoolmanTestResult(`✗ Connection failed: ${errorMsg}`, 'error');
-    } finally {
-      if (this.testSpoolmanButton) {
-        this.testSpoolmanButton.disabled = false;
-      }
-    }
-  }
-
-  private showSpoolmanTestResult(message: string, type: 'success' | 'error' | 'info'): void {
-    if (!this.spoolmanTestResultElement) return;
-
-    this.spoolmanTestResultElement.textContent = message;
-    this.spoolmanTestResultElement.style.color =
-      type === 'success' ? '#4ade80' :
-      type === 'error' ? '#f87171' :
-      '#60a5fa';
-  }
-
-  private async handleTestDiscordWebhook(): Promise<void> {
-    if (!window.settingsAPI) {
-      this.showDiscordTestResult('Settings API not available.', 'error');
-      return;
-    }
-
-    const webhookUrlInput = this.inputs.get('webhook-url');
-    if (!webhookUrlInput) {
-      this.showDiscordTestResult('Webhook URL input not found.', 'error');
-      return;
-    }
-
-    const webhookUrl = webhookUrlInput.value.trim();
-    if (!webhookUrl) {
-      this.showDiscordTestResult('Please enter a Discord webhook URL.', 'error');
-      return;
-    }
-
-    if (this.testDiscordButton) {
-      this.testDiscordButton.disabled = true;
-    }
-
-    this.showDiscordTestResult('Testing webhook...', 'info');
-
-    try {
-      const result = await window.settingsAPI.testDiscordWebhook(webhookUrl);
-
-      if (result.success) {
-        this.showDiscordTestResult('✓ Webhook test successful!', 'success');
-      } else {
-        this.showDiscordTestResult(`✗ Webhook test failed: ${result.error || 'Unknown error'}`, 'error');
-      }
-    } catch (error) {
-      console.error('[Settings] Discord webhook test failed:', error);
-      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
-      this.showDiscordTestResult(`✗ Webhook test failed: ${errorMsg}`, 'error');
-    } finally {
-      if (this.testDiscordButton) {
-        this.testDiscordButton.disabled = false;
-      }
-    }
-  }
-
-  private showDiscordTestResult(message: string, type: 'success' | 'error' | 'info'): void {
-    if (!this.discordTestResultElement) return;
-
-    this.discordTestResultElement.textContent = message;
-    this.discordTestResultElement.style.color =
-      type === 'success' ? '#4ade80' :
-      type === 'error' ? '#f87171' :
-      '#60a5fa';
   }
 
   private async handleSave(): Promise<void> {
@@ -1080,21 +504,6 @@ class SettingsRenderer {
     }
   }
 
-  private showUpdateStatus(message: string, level: 'info' | 'success' | 'error'): void {
-    if (!this.updateStatusElement) {
-      return;
-    }
-
-    this.updateStatusElement.textContent = message;
-    if (level === 'error') {
-      this.updateStatusElement.style.color = '#e53e3e';
-    } else if (level === 'success') {
-      this.updateStatusElement.style.color = '#4CAF50';
-    } else {
-      this.updateStatusElement.style.color = '#aaa';
-    }
-  }
-
   /**
    * Check if a config key is a per-printer setting
    */
@@ -1124,63 +533,6 @@ class SettingsRenderer {
     return map[configKey] || configKey;
   }
 
-  /**
-   * Update printer context indicator in the UI
-   */
-  private updatePrinterContextIndicator(): void {
-    // Find or create the context indicator element
-    let indicator = document.getElementById('printer-context-indicator');
-
-    if (!indicator) {
-      // Create indicator if it doesn't exist
-      const settingsHeader = document.querySelector('.settings-header');
-      if (settingsHeader) {
-        indicator = document.createElement('div');
-        indicator.id = 'printer-context-indicator';
-        indicator.style.cssText = 'margin-top: 10px; padding: 8px; background: #f0f0f0; border-radius: 4px; font-size: 12px; color: #666;';
-        settingsHeader.appendChild(indicator);
-      }
-    }
-
-    if (indicator) {
-      if (this.printerName) {
-        indicator.textContent = `Per-printer settings for: ${this.printerName}`;
-        indicator.style.display = 'block';
-      } else {
-        indicator.textContent = 'Global settings (no printer connected)';
-        indicator.style.display = 'block';
-      }
-    }
-  }
-
-  private updatePrinterSettingsAvailability(): void {
-    const content = document.getElementById('printer-settings-content');
-    const emptyState = document.getElementById('printer-settings-empty-state');
-    const cameraContent = document.getElementById('camera-printer-settings');
-    const cameraEmptyState = document.getElementById('camera-printer-empty-state');
-
-    const hasPrinter = Boolean(this.printerName);
-    this.perPrinterControlsEnabled = hasPrinter;
-
-    if (content) {
-      content.style.display = hasPrinter ? 'flex' : 'none';
-    }
-
-    if (emptyState) {
-      emptyState.hidden = hasPrinter;
-    }
-
-    if (cameraContent) {
-      cameraContent.style.display = hasPrinter ? 'flex' : 'none';
-    }
-
-    if (cameraEmptyState) {
-      cameraEmptyState.hidden = hasPrinter;
-    }
-
-    this.updateInputStates();
-  }
-
   private applyWebUIEnabledSetting(): void {
     if (!this.webUIEnabledToggle) {
       return;
@@ -1202,430 +554,23 @@ class SettingsRenderer {
     this.updateSaveButtonState();
   }
 
-  // ============================================================================
-  // Color Picker Methods
-  // ============================================================================
-
-  /**
-   * Validates and normalizes a hex color string
-   */
-  private validateHexColor(hex: string): { valid: boolean; normalized: string } {
-    // Remove whitespace
-    hex = hex.trim();
-
-    // Add # if missing
-    if (!hex.startsWith('#')) {
-      hex = '#' + hex;
-    }
-
-    // Check if valid hex color (#RGB or #RRGGBB)
-    const hexRegex = /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/;
-    if (!hexRegex.test(hex)) {
-      return { valid: false, normalized: hex };
-    }
-
-    // Expand shorthand (#RGB to #RRGGBB)
-    if (hex.length === 4) {
-      hex = '#' + hex[1] + hex[1] + hex[2] + hex[2] + hex[3] + hex[3];
-    }
-
-    return { valid: true, normalized: hex.toUpperCase() };
-  }
-
-  /**
-   * Convert RGB numeric components into a hex string
-   */
-  private rgbToHex(r: number, g: number, b: number): string {
-    const toHex = (component: number) => {
-      const clamped = this.clamp(component, 0, 255);
-      return clamped.toString(16).padStart(2, '0');
-    };
-
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`.toUpperCase();
-  }
-
-  /**
-   * Convert hex color to HSB
-   */
-  private hexToHSB(hex: string): { h: number; s: number; b: number } {
-    const r = parseInt(hex.substr(1, 2), 16) / 255;
-    const g = parseInt(hex.substr(3, 2), 16) / 255;
-    const b = parseInt(hex.substr(5, 2), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    const delta = max - min;
-
-    let h = 0;
-    if (delta !== 0) {
-      if (max === r) {
-        h = ((g - b) / delta + (g < b ? 6 : 0)) / 6;
-      } else if (max === g) {
-        h = ((b - r) / delta + 2) / 6;
-      } else {
-        h = ((r - g) / delta + 4) / 6;
-      }
-    }
-
-    const s = max === 0 ? 0 : delta / max;
-    const brightness = max;
-
-    return { h: h * 360, s: s * 100, b: brightness * 100 };
-  }
-
-  /**
-   * Convert HSB to hex color
-   */
-  private hsbToHex(h: number, s: number, b: number): string {
-    h = h / 360;
-    s = s / 100;
-    b = b / 100;
-
-    const i = Math.floor(h * 6);
-    const f = h * 6 - i;
-    const p = b * (1 - s);
-    const q = b * (1 - f * s);
-    const t = b * (1 - (1 - f) * s);
-
-    let r: number, g: number, bl: number;
-    switch (i % 6) {
-      case 0: r = b; g = t; bl = p; break;
-      case 1: r = q; g = b; bl = p; break;
-      case 2: r = p; g = b; bl = t; break;
-      case 3: r = p; g = q; bl = b; break;
-      case 4: r = t; g = p; bl = b; break;
-      case 5: r = b; g = p; bl = q; break;
-      default: r = 0; g = 0; bl = 0;
-    }
-
-    const toHex = (n: number) => {
-      const hex = Math.round(n * 255).toString(16);
-      return hex.length === 1 ? '0' + hex : hex;
-    };
-
-    return `#${toHex(r)}${toHex(g)}${toHex(bl)}`.toUpperCase();
-  }
-
-  /**
-   * Clamp a numeric value between a min and max
-   */
-  private clamp(value: number, min: number, max: number): number {
-    return Math.min(Math.max(value, min), max);
-  }
-
-  /**
-   * Draw the saturation/value field for the selected hue
-   */
-  private drawColorField(): void {
-    if (!this.colorFieldCanvas || !this.colorFieldCtx) return;
-
-    const rect = this.colorFieldCanvas.getBoundingClientRect();
-    const width = Math.max(1, Math.floor(rect.width));
-    const height = Math.max(1, Math.floor(rect.height));
-    if (width === 0 || height === 0) {
-      return;
-    }
-
-    if (this.colorFieldCanvas.width !== width || this.colorFieldCanvas.height !== height) {
-      this.colorFieldCanvas.width = width;
-      this.colorFieldCanvas.height = height;
-    }
-
-    const ctx = this.colorFieldCtx;
-
-    ctx.clearRect(0, 0, width, height);
-
-    ctx.fillStyle = `hsl(${this.currentHue}, 100%, 50%)`;
-    ctx.fillRect(0, 0, width, height);
-
-    const whiteGradient = ctx.createLinearGradient(0, 0, width, 0);
-    whiteGradient.addColorStop(0, '#ffffff');
-    whiteGradient.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = whiteGradient;
-    ctx.fillRect(0, 0, width, height);
-
-    const blackGradient = ctx.createLinearGradient(0, 0, 0, height);
-    blackGradient.addColorStop(0, 'rgba(0,0,0,0)');
-    blackGradient.addColorStop(1, '#000000');
-    ctx.fillStyle = blackGradient;
-    ctx.fillRect(0, 0, width, height);
-  }
-
-  /**
-   * Begin tracking pointer movement in the color field
-   */
-  private handleColorFieldPointerDown(event: PointerEvent): void {
-    if (!this.colorFieldCanvas) return;
-
-    event.preventDefault();
-    this.colorFieldCanvas.setPointerCapture(event.pointerId);
-    this.updateColorFieldFromEvent(event);
-
-    this.colorFieldPointerMoveHandler = (moveEvent: PointerEvent) => {
-      if (moveEvent.pointerId === event.pointerId) {
-        this.updateColorFieldFromEvent(moveEvent);
-      }
-    };
-
-    this.colorFieldPointerUpHandler = (upEvent: PointerEvent) => {
-      if (upEvent.pointerId === event.pointerId) {
-        this.colorFieldCanvas?.releasePointerCapture(event.pointerId);
-
-        if (this.colorFieldPointerMoveHandler) {
-          document.removeEventListener('pointermove', this.colorFieldPointerMoveHandler);
-        }
-        if (this.colorFieldPointerUpHandler) {
-          document.removeEventListener('pointerup', this.colorFieldPointerUpHandler);
-        }
-
-        this.colorFieldPointerMoveHandler = null;
-        this.colorFieldPointerUpHandler = null;
-      }
-    };
-
-    document.addEventListener('pointermove', this.colorFieldPointerMoveHandler);
-    document.addEventListener('pointerup', this.colorFieldPointerUpHandler);
-  }
-
-  /**
-   * Update hue/saturation/value from pointer position
-   */
-  private updateColorFieldFromEvent(event: PointerEvent): void {
-    if (!this.colorFieldCanvas) return;
-
-    const rect = this.colorFieldCanvas.getBoundingClientRect();
-    const x = this.clamp(event.clientX - rect.left, 0, rect.width);
-    const y = this.clamp(event.clientY - rect.top, 0, rect.height);
-
-    this.currentSaturation = (x / rect.width) * 100;
-    this.currentBrightness = 100 - (y / rect.height) * 100;
-
-    this.positionColorFieldThumb(rect, x, y);
-    this.requestPickerRender();
-  }
-
-  /**
-   * Keep the draggable thumb aligned with the current SV values
-   */
-  private positionColorFieldThumb(rect?: DOMRect, x?: number, y?: number): void {
-    if (!this.colorFieldThumb || !this.colorFieldCanvas) return;
-
-    const bounds = rect ?? this.colorFieldCanvas.getBoundingClientRect();
-    const left = typeof x === 'number' ? x : (this.currentSaturation / 100) * bounds.width;
-    const top = typeof y === 'number' ? y : ((100 - this.currentBrightness) / 100) * bounds.height;
-
-    this.colorFieldThumb.style.left = `${left}px`;
-    this.colorFieldThumb.style.top = `${top}px`;
-  }
-
-  /**
-   * Handle hue slider adjustments
-   */
-  private handleHueChange(): void {
-    if (!this.hueSlider) return;
-    this.currentHue = parseFloat(this.hueSlider.value);
-    this.drawColorField();
-    this.requestPickerRender();
-  }
-
-  /**
-   * Handle hex or rgb input in the picker modal
-   */
-  private handlePickerHexInput(): void {
-    if (!this.pickerHexInput || this.updatingPickerInputs) return;
-
-    const parsedHex = this.parseColorInput(this.pickerHexInput.value);
-    if (parsedHex) {
-      this.pickerHexInput.classList.remove('invalid');
-      this.applyHexToPicker(parsedHex);
-    } else {
-      this.pickerHexInput.classList.add('invalid');
-    }
-  }
-
-  /**
-   * Normalize arbitrary color input into #RRGGBB when possible
-   */
-  private parseColorInput(input: string): string | null {
-    const value = input.trim();
-    if (!value) {
-      return null;
-    }
-
-    if (value.toLowerCase().startsWith('rgb')) {
-      const rgbMatch = value.match(/^rgba?\(\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})(?:\s*,\s*(\d*\.?\d+))?\s*\)$/i);
-      if (!rgbMatch) {
-        return null;
-      }
-
-      const r = this.clamp(parseInt(rgbMatch[1], 10), 0, 255);
-      const g = this.clamp(parseInt(rgbMatch[2], 10), 0, 255);
-      const b = this.clamp(parseInt(rgbMatch[3], 10), 0, 255);
-      return this.rgbToHex(r, g, b);
-    }
-
-    const validation = this.validateHexColor(value);
-    return validation.valid ? validation.normalized : null;
-  }
-
-  /**
-   * Apply a hex color to the picker state
-   */
-  private applyHexToPicker(hexColor: string, applyToTheme: boolean = true): void {
-    const validation = this.validateHexColor(hexColor);
-    if (!validation.valid) {
-      return;
-    }
-
-    const hsb = this.hexToHSB(validation.normalized);
-    this.currentHue = hsb.h;
-    this.currentSaturation = hsb.s;
-    this.currentBrightness = hsb.b;
-
-    if (this.hueSlider) {
-      this.hueSlider.value = Math.round(this.currentHue).toString();
-    }
-
-    this.drawColorField();
-    this.positionColorFieldThumb();
-    this.updatePickerFromHSB(applyToTheme);
-  }
-
-  /**
-   * Request a single animation frame update for picker changes
-   */
-  private requestPickerRender(): void {
-    if (this.pendingPickerFrame !== null) {
-      cancelAnimationFrame(this.pendingPickerFrame);
-    }
-
-    this.pendingPickerFrame = window.requestAnimationFrame(() => {
-      this.pendingPickerFrame = null;
-      this.updatePickerFromHSB();
-    });
-  }
-
-  /**
-   * Update picker UI from current HSB values
-   */
-  private updatePickerFromHSB(applyToTheme: boolean = true): void {
-    const hexColor = this.hsbToHex(this.currentHue, this.currentSaturation, this.currentBrightness);
-
-    this.updatingPickerInputs = true;
-    if (this.pickerHexInput) {
-      this.pickerHexInput.value = hexColor;
-      this.pickerHexInput.classList.remove('invalid');
-    }
-    this.updatingPickerInputs = false;
-
-    this.updatePickerPreview(hexColor);
-
-    if (applyToTheme && this.currentPickerColorKey) {
-      this.updateColorValue(this.currentPickerColorKey, hexColor);
-    }
-  }
-
-  /**
-   * Update the preview swatch and label
-   */
-  private updatePickerPreview(hexColor: string): void {
-    if (this.pickerPreviewSwatch) {
-      this.pickerPreviewSwatch.style.backgroundColor = hexColor;
-    }
-    if (this.pickerPreviewLabel) {
-      this.pickerPreviewLabel.textContent = hexColor;
-    }
-  }
-
-  /**
-   * Open the custom color picker for a specific color key
-   */
-  private openColorPicker(key: keyof ThemeColors): void {
-    if (!this.colorPickerModal) return;
-
-    this.currentPickerColorKey = key;
-
-    // Get current color value
-    const currentColor = this.hexInputs.get(key)?.value || DEFAULT_THEME[key];
-    const validation = this.validateHexColor(currentColor);
-
-    if (validation.valid) {
-      this.applyHexToPicker(validation.normalized, false);
-    }
-
-    this.colorPickerModal.hidden = false;
-  }
-
-  /**
-   * Close the custom color picker
-   */
-  private closeColorPicker(): void {
-    if (this.colorPickerModal) {
-      this.colorPickerModal.hidden = true;
-    }
-    this.currentPickerColorKey = null;
-  }
-
-  /**
-   * Handle hex input field changes
-   */
-  private handleHexInput(key: keyof ThemeColors): void {
-    const hexInput = this.hexInputs.get(key);
-    if (!hexInput) return;
-
-    const hexValue = hexInput.value;
-    const validation = this.validateHexColor(hexValue);
-
-    if (validation.valid) {
-      hexInput.classList.remove('invalid');
-      this.updateColorValue(key, validation.normalized);
-    } else {
-      hexInput.classList.add('invalid');
-    }
-  }
-
-  /**
-   * Update color from native color picker
-   */
-  private updateColorFromNativePicker(key: keyof ThemeColors): void {
-    const nativePicker = this.desktopThemeInputs.get(key);
-    if (!nativePicker) return;
-
-    const hexColor = nativePicker.value.toUpperCase();
-    this.updateColorValue(key, hexColor);
-  }
-
-  /**
-   * Update a color value across all inputs and apply to theme
-   */
-  private updateColorValue(key: keyof ThemeColors, hexColor: string): void {
-    // Update native color picker
-    const nativePicker = this.desktopThemeInputs.get(key);
-    if (nativePicker) {
-      nativePicker.value = hexColor;
-    }
-
-    // Update hex input
-    const hexInput = this.hexInputs.get(key);
-    if (hexInput && hexInput.value.toUpperCase() !== hexColor) {
-      hexInput.value = hexColor;
-      hexInput.classList.remove('invalid');
-    }
-
-    // Update color swatch
-    const swatch = this.colorSwatches.get(key);
-    if (swatch) {
-      swatch.style.backgroundColor = hexColor;
-    }
-
-    // Update theme settings
-    this.handleDesktopThemeChange();
+  private handleDesktopThemeUpdated(theme: ThemeColors): void {
+    this.settings.global['DesktopTheme'] = theme;
+    this.hasUnsavedChanges = true;
+    this.updateSaveButtonState();
+    console.log('[Settings] Desktop theme updated:', theme);
   }
 
   private cleanup(): void {
     if (this.statusTimeout) {
       clearTimeout(this.statusTimeout);
     }
+    this.desktopThemeSection?.dispose();
+    this.tabSection?.dispose();
+    this.spoolmanTestSection?.dispose();
+    this.discordWebhookSection?.dispose();
+    this.autoUpdateSection?.dispose();
+    this.printerContextSection?.dispose();
     // Note: No longer need to remove IPC listeners since we're using promises
   }
 }

@@ -1,6 +1,6 @@
 # FlashForgeUI-Electron Development Guide
 
-**Last Updated:** 2025-11-14 16:44 ET (America/New_York)
+**Last Updated:** 2025-11-15 18:54 ET (America/New_York)
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -20,60 +20,105 @@ The information in this file directly influences how Claude Code understands and
 
 FlashForgeUI is an Electron-based desktop and headless controller for FlashForge printers. It supports multi-context printing, material station workflows, Spoolman-powered filament tracking, RTSP/MJPEG camera streaming, Discord + desktop notifications, and a fully authenticated WebUI. The app runs on Windows/macOS/Linux with both GUI and headless entry points (headless automatically boots the WebUI server).
 
+## Bootstrapping & Entry Points
+
+- `src/bootstrap.ts` **must** be the first import inside `src/index.ts`. It sets the Electron app name/AppUserModelID before singletons (ConfigManager, PrinterDetailsManager, etc.) read `app.getPath('userData')`, preventing headless/Desktop desync.
+- `src/index.ts` orchestrates the main process: enforces single-instance locks, parses CLI/headless flags, registers all IPC handlers (`src/ipc/handlers/index.ts` + legacy handlers), instantiates managers/services, and only creates windows after everything else is wired.
+- `src/preload.ts` exposes the typed `window.api` bridge with whitelisted channels plus scoped APIs (`loading`, `camera`, `printerContexts`, `printerSettings`, `spoolman`, etc.). Every renderer (main window + dialogs) depends on this contract, so keep backward compatibility and cleanup helpers (`removeListener`, `removeAllListeners`) intact.
+- `src/renderer.ts` and helpers under `src/renderer/*.ts` initialize the component system, printer tabs, shortcut buttons, layout persistence, and logging hooks before delegating most logic to components/services in the main process.
+
 ## Architecture Snapshot
 
 ### Managers
 - `src/managers/ConfigManager.ts` – centralized config store wrapping `AppConfig` (`src/types/config.ts`)
-- `src/managers/PrinterContextManager.ts` – creates context IDs, tracks active context, relays lifecycle events
-- `src/managers/ConnectionFlowManager.ts` – discovery, connection flows (GUI + headless), CLI connection helpers
-- `src/managers/PrinterBackendManager.ts` – instantiates backends (`src/printer-backends/`) per context
-- `src/managers/PrinterDetailsManager.ts` – persists `printer_details.json` in `app.getPath('userData')`
-- `src/managers/HeadlessManager.ts` – orchestrates `--headless` boot, WebUI startup, polling, camera proxies
-- `src/windows/WindowManager.ts` & `src/windows/WindowFactory.ts` – renderer/window lifecycle
+- `src/managers/PrinterContextManager.ts` – issues context IDs, tracks active context, propagates lifecycle events
+- `src/managers/ConnectionFlowManager.ts` – discovery flows (GUI + headless), manual IP, auto-connect, saved printer restore
+- `src/managers/PrinterBackendManager.ts` – instantiates + maps printer backends (`src/printer-backends/*`) per context
+- `src/managers/PrinterDetailsManager.ts` – persists `printer_details.json` + per-printer settings inside `app.getPath('userData')`
+- `src/managers/HeadlessManager.ts` – orchestrates `--headless` boot, WebUI startup, polling, and graceful shutdown
+- `src/managers/LoadingManager.ts` – modal loading overlays surfaced via IPC (main window + dialogs)
+- `src/windows/WindowManager.ts` / `src/windows/WindowFactory.ts` – renderer/window lifecycle coordination (main window + dialogs)
 
 ### Services (partial list)
-- Core polling/connectivity: `PrinterPollingService`, `PrintStateMonitor`, `TemperatureMonitoringService`, `CameraProxyService`, `RtspStreamService`, `PrinterDiscoveryService`, `ConnectionEstablishmentService`, `PrinterDataTransformer`, `ThumbnailCacheService`
-- Multi-context coordinators: `MultiContextPollingCoordinator`, `MultiContextPrintStateMonitor`, `MultiContextTemperatureMonitor`, `MultiContextNotificationCoordinator`, `MultiContextSpoolmanTracker`
-- Notifications: `services/notifications/*`, `services/discord/DiscordNotificationService.ts`
-- Filament: `SpoolmanService`, `SpoolmanIntegrationService`, `SpoolmanUsageTracker`, `SpoolmanHealthMonitor`
-- Misc: `AutoConnectService`, `AutoUpdateService`, `EnvironmentDetectionService`, `LogService`, `StaticFileManager`, `RtspStreamService`
+- Polling & monitoring: `PrinterPollingService`, `MainProcessPollingCoordinator` (single-printer), `MultiContextPollingCoordinator`, `PrintStateMonitor`, `MultiContextPrintStateMonitor`, `TemperatureMonitoringService`, `MultiContextTemperatureMonitor`
+- Connection/discovery: `PrinterDiscoveryService`, `ConnectionEstablishmentService`, `ConnectionStateManager`, `AutoConnectService`, `SavedPrinterService`, `DialogIntegrationService`
+- Camera & streaming: `CameraProxyService`, `RtspStreamService`, `PortAllocator`, `ThumbnailCacheService`, `ThumbnailRequestQueue`
+- Notifications: `PrinterNotificationCoordinator`, `MultiContextNotificationCoordinator`, `services/notifications/*`, `services/discord/DiscordNotificationService.ts`
+- Filament: `SpoolmanService`, `SpoolmanIntegrationService`, `SpoolmanUsageTracker`, `MultiContextSpoolmanTracker`, `SpoolmanHealthMonitor`
+- Misc/system: `PrinterDataTransformer`, `PrintStateMonitor`, `EnvironmentDetectionService`, `AutoUpdateService`, `LogService`, `StaticFileManager`
 
 ### IPC, UI, and Windows
-- IPC entry: `src/ipc/handlers/index.ts` (connection, jobs, materials, spoolman, camera, control, updates, printer context, WebUI)
-- Renderer entry: `src/renderer.ts` plus `src/ui/components/printer-tabs` for multi-context tab UX
-- Dialogs/live UIs: `src/ui/` (job picker, job uploader, component dialog, gridstack dashboard, spoolman dialogs, palette/material dialogs, settings, shortcuts)
-- Window definitions: `src/windows/dialogs/*`, `src/windows/factories/*`
+- IPC entry: `src/ipc/handlers/index.ts` registers domain handlers (`backend`, `camera`, `component-dialog`, `connection`, `control`, `dialog`, `job`, `material`, `printer-settings`, `shortcut-config`, `spoolman`, etc.) plus supporting modules (`camera-ipc-handler.ts`, `printer-context-handlers.ts`, `WindowControlHandlers.ts`, legacy `DialogHandlers.ts`).
+- Renderer entry: `src/renderer.ts` bootstraps printer tabs (`src/ui/components/printer-tabs`), `ComponentManager`, grid layout, shortcut buttons, and shared renderer helpers (`src/renderer/*.ts`).
+- Dialogs/live UIs: `src/ui/` hosts component dialogs, gridstack dashboard, spoolman dialogs, palette/material dialogs, settings, shortcuts, uploaders, log windows, etc.
+- Window definitions: `src/windows/dialogs/*`, `src/windows/factories/*` (including `ComponentDialogWindowFactory`).
 
 ### WebUI & Headless
 - `src/index.ts` – Electron entry (detects `--headless`, sets headless mode, registers IPC, creates main window)
-- `src/utils/HeadlessArguments.ts` / `HeadlessDetection.ts` / `HeadlessLogger.ts`
-- `src/webui/server/WebUIManager.ts`, `AuthManager.ts`, `api-routes.ts`, `WebSocketManager.ts`
-- `src/webui/static/` – TypeScript app + service workers for remote UI
+- `src/utils/HeadlessArguments.ts` / `HeadlessDetection.ts` / `HeadlessLogger.ts` – CLI + detection helpers shared by GUI/headless boots
+- `src/webui/server/*` – WebUI server (WebUIManager, AuthManager, WebSocketManager) + domain routes (`routes/camera-routes.ts`, `context-routes.ts`, `job-routes.ts`, `printer-control-routes.ts`, `printer-status-routes.ts`, `spoolman-routes.ts`, `temperature-routes.ts`, etc.)
+- `src/webui/static/*` – TypeScript client (state store, transport, features for auth/camera/spoolman/context switching, responsive grid system, dialogs, headers)
 
 ### Utilities & Types
-- `src/utils/PortAllocator.ts` – per-context camera proxy ports (8181–8191)
-- `src/utils/time|camera|error|validation.utils.ts`
-- `src/types/` – contexts, polling, config, printer, spoolman, discord, node-rtsp-stream
+- `src/utils/PortAllocator.ts` – per-context camera proxy ports (8181–8191 range)
+- `src/utils/HeadlessArguments.ts`, `HeadlessDetection.ts`, `HeadlessLogger.ts`, `RoundedUICompatibility.ts`, `CSSVariables.ts`, `time|camera|error|extraction.utils.ts`, `EventEmitter.ts`
+- `src/types/` – contexts, polling, config, printers, spoolman, discord, camera, printer backend operations, IPC
+
+## Renderer Component System
+
+- `ComponentManager` (`src/ui/components/ComponentManager.ts`) registers every component from `src/ui/components/**`, initializes them in DOM order, and fans out `polling-update` payloads. Keep component constructors idempotent—GridStack recreates DOM nodes frequently.
+- Grid/backplane orchestration lives in `src/renderer/gridController.ts` + `src/ui/gridstack/*`. These modules handle component registration, palette toggles, edit mode, layout serialization, and widget hydration (log panel, job info, etc.).
+- Printer tabs (`src/ui/components/printer-tabs/*`) provide the multi-context UX. IPC events from tabs feed directly into `PrinterContextManager`; avoid bypassing these events when adding context-sensitive UI.
+- Renderer helpers: `src/renderer/perPrinterStorage.ts` (layout + shortcut persistence per context), `src/renderer/shortcutButtons.ts` (top-bar shortcuts + dialog wiring), `src/renderer/logging.ts` (shared log forwarding). Touch these only when changing renderer-wide behaviors.
+- Component dialogs reuse the same component stack via `src/windows/factories/ComponentDialogWindowFactory.ts`, `src/ui/component-dialog/*`, and the mirrored preload (`component-dialog-preload.ts`). Import typings with `import type` only—runtime `.d.ts` imports break the preload bootstrap.
+
+## Settings Dialog Architecture
+
+The settings dialog uses a modular, section-based architecture for improved maintainability and testability:
+
+- **Base Contract**: `src/ui/settings/sections/SettingsSection.ts` defines the `SettingsSection` interface with `initialize()` and `dispose()` lifecycle hooks. All sections implement this contract.
+- **Section Implementations** (`src/ui/settings/sections/*.ts`):
+  - `AutoUpdateSection`: Auto-update configuration and version checking
+  - `DesktopThemeSection`: Theme selection with live CSS variable updates
+  - `DiscordWebhookSection`: Discord webhook configuration and testing
+  - `InputDependencySection`: Manages dependent input states (e.g., port fields enabled only when feature is enabled)
+  - `PrinterContextSection`: Per-printer context indicator and settings toggle
+  - `RoundedUISection`: Rounded UI toggle with platform compatibility checks and CSS injection
+  - `SpoolmanTestSection`: Spoolman server connection testing
+  - `TabSection`: Tab navigation state management
+- **Orchestrator**: `src/ui/settings/settings-renderer.ts` instantiates all sections, coordinates lifecycle, manages dual settings routing (global config.json vs. per-printer printer_details.json), and handles save/validation logic.
+- **Type Definitions**: `src/ui/settings/types.ts` and `src/ui/settings/types/external.ts` provide shared interfaces for settings APIs and mutable state.
+
+When adding new settings sections:
+1. Create a new class in `src/ui/settings/sections/` implementing the `SettingsSection` interface
+2. Instantiate and wire it in `settings-renderer.ts`'s `initializeElements()` method
+3. Call `initialize()` during setup and `dispose()` during cleanup
+4. Keep section logic isolated—sections should not directly manipulate other sections' state
+
+## IPC Handler Layout
+
+- `src/ipc/handlers/index.ts` is the authoritative registry. Add new handlers there and ensure they are registered **before** any BrowserWindow is created.
+- Domain handlers: `backend-handlers.ts`, `camera-handlers.ts`, `component-dialog-handlers.ts`, `connection-handlers.ts`, `control-handlers.ts`, `dialog-handlers.ts`, `job-handlers.ts`, `material-handlers.ts`, `printer-settings-handlers.ts`, `shortcut-config-handlers.ts`, `spoolman-handlers.ts`.
+- Supporting modules: `camera-ipc-handler.ts` (legacy camera IPC surface), `printer-context-handlers.ts` (context CRUD + switching), `WindowControlHandlers.ts` (custom title bar), and `DialogHandlers.ts` (loading overlay + connection dialogs). Keep APIs in sync with the preload’s whitelist.
+- When adding IPC channels, update `src/preload.ts` channel allowlists plus any typed surface (`PrinterContextsAPI`, `SpoolmanAPI`, etc.). Dialog-specific handlers should route through `component-dialog-handlers.ts` unless they are part of the legacy `DialogHandlers` path.
 
 ## Multi-Printer & Polling Flow
 
-1. **Context creation**: `PrinterContextManager` issues IDs like `context-1-<timestamp>` whenever `ConnectionFlowManager` completes a connect path.
-2. **Backend wiring**: `PrinterBackendManager` chooses the correct backend (Legacy, A5M, A5M Pro, AD5X) per context and registers features.
-3. **Polling**: `MultiContextPollingCoordinator` allocates a `PrinterPollingService` per context. Active context polls every 3s; inactive contexts stay at 3s to keep TCP alive while still forwarding cached data immediately on tab switch.
-4. **Derived monitors**: `MultiContextPrintStateMonitor` feeds `PrintStateMonitor` instances. Temperature, usage, notification, and spoolman trackers register via their multi-context coordinators as soon as polling is ready.
-5. **Notifications & integrations**: `MultiContextNotificationCoordinator` plugs OS notifications plus `DiscordNotificationService`. Planned Web Push hooks will reuse this path (`ai_specs/webui-push-notifications.md`).
-6. **Cameras**: `CameraProxyService` (MJPEG) and `RtspStreamService` (node-rtsp-stream + ffmpeg) are invoked per context with unique ports from `PortAllocator`.
-7. **Cleanup**: `PrinterContextManager` emits `context-removed`, allowing every coordinator/service (`MultiContext*`, camera proxies, spoolman trackers, Discord) to dispose resources and return ports.
-
-Single-printer legacy mode still relies on `MainProcessPollingCoordinator` for the main-window happy path; multi-printer overrides that with the multi-context services above.
+1. **Context creation**: `PrinterContextManager` issues IDs like `context-1-<timestamp>` whenever `ConnectionFlowManager` completes a connect path. Tabs in `PrinterTabsComponent` drive the active context via IPC.
+2. **Backend wiring**: `PrinterBackendManager` instantiates the correct backend (Legacy, Adventurer5M, Adventurer5M Pro, AD5X) per context, exposes capability flags, and registers printer-specific helpers (material station ops, gcode routing, etc.).
+3. **Polling cadence**: `MultiContextPollingCoordinator` spins up a `PrinterPollingService` per context. Active contexts poll every 3 s; inactive ones slow to 30 s but still push cached data instantly on tab switch. `MainProcessPollingCoordinator` remains for legacy single-printer paths.
+4. **Derived monitors**: `MultiContextPrintStateMonitor`, `MultiContextTemperatureMonitor`, `MultiContextSpoolmanTracker`, and `MultiContextNotificationCoordinator` listen for new/remove events to wire per-context instances (print monitors, cooling monitors, spool usage trackers, notification coordinators). Services expect untouched `polling-update` payloads.
+5. **Integrations**: Camera services (`CameraProxyService`, `RtspStreamService`) use `PortAllocator` to reserve unique MJPEG/RTSP ports per context. Discord + desktop notifications, Spoolman usage updates, and eventual web push flows (`ai_specs/webui-push-notifications.md`) hang off the same events.
+6. **Cleanup**: When `PrinterContextManager` emits `context-removed`, every coordinator disposes listeners, closes sockets/servers, releases camera ports, and removes spoolman usage trackers/Discord timers to prevent leaks.
 
 ## Headless Mode & WebUI Operations
 
-- CLI flags are parsed in `src/utils/HeadlessArguments.ts` and validated via `validateHeadlessConfig`. Supported modes: `--last-used`, `--all-saved-printers`, or `--printers="<ip>:<type>:<checkcode,...>"`. Extra flags: `--webui-port`, `--webui-password`.
+- CLI flags are parsed in `src/utils/HeadlessArguments.ts` and validated via `validateHeadlessConfig`. Supported modes: `--last-used`, `--all-saved-printers`, or `--printers="<ip>:<type>:<checkcode,...>"`. Extra flags include `--webui-port`, `--webui-password`, and camera overrides.
 - `HeadlessManager.initialize()` (invoked from `src/index.ts`) forces `WebUIEnabled`, applies overrides, connects printers (respecting discovery + saved printers), starts the WebUI server, launches polling/camera proxies, and sets up graceful shutdown.
-- Headless mode is documented for users in `docs/README.md` (update that doc whenever CLI or defaults change). Note that `DEFAULT_CONFIG.WebUIPort` is **3000**, so references to 3001 are legacy.
-- The WebUI server (`WebUIManager`) hosts Express + WS, enforces authentication via `AuthManager` (HMAC-signed tokens), and serves static assets resolved by `EnvironmentDetectionService`. API routes live in `src/webui/server/api-routes.ts` and reuse IPC/services for data access.
-- `WebSocketManager` fans out polling updates to WebUI clients per context; headless setups typically rely on this for real-time dashboards.
+- Headless mode is documented for users in `docs/README.md` (update that doc whenever CLI or defaults change). `DEFAULT_CONFIG.WebUIPort` is **3000**; any mention of 3001 is legacy.
+- The WebUI server (`src/webui/server/WebUIManager.ts`) wires Express, authentication (`AuthManager`), route registration (`server/routes/*.ts` for camera, contexts, jobs, printer control/status, spoolman, temperature, theme, filtration), and `WebSocketManager` for per-context real-time updates. Routes reuse the same services/IPC calls as the desktop UI—avoid duplicating logic.
+- Static client code under `src/webui/static/*` mirrors the desktop component model: `app.ts` bootstraps, `core/AppState.ts` + `core/Transport.ts` manage state + IPC bridge, `features/*.ts` implement auth, camera streaming, context switching, job control, layout theme, spoolman, etc., and `grid/*` handles component registration + layout persistence (`WebUIComponentRegistry`, `WebUIGridManager`, `WebUILayoutPersistence`, `WebUIMobileLayoutManager`).
+- `WebSocketManager` fans out polling updates per context and feeds the static client; headless deployments typically rely on this for dashboards with no desktop UI running.
 
 ## Camera & Streaming Stack
 
@@ -83,11 +128,11 @@ Single-printer legacy mode still relies on `MainProcessPollingCoordinator` for t
 
 ## Spoolman Integration & Filament Tracking
 
-- Configuration toggles live in `AppConfig`: `SpoolmanEnabled`, `SpoolmanServerUrl`, `SpoolmanUpdateMode`. Use IPC handlers in `src/ipc/handlers/spoolman-handlers.ts` to reach the services.
-- `SpoolmanIntegrationService` enforces AD5X/material-station blocking (context feature inspection + printer model prefix). Never remove that guard: AD5X printers already manage spools internally.
-- Active spool data persists per printer inside `printer_details.json` via `PrinterDetailsManager`, ensuring GUI, headless, and WebUI stay in sync.
-- `SpoolmanService` wraps the REST API; `SpoolmanUsageTracker` + `MultiContextSpoolmanTracker` watch print/temperature events to push usage updates. `SpoolmanHealthMonitor` periodically validates connectivity so the UI can surface offline warnings.
-- Renderer dialogs: `src/ui/spoolman-dialog`, `spoolman-offline-dialog`, and spool badges in the component dialog. Maintain event contracts so `spoolman-changed` broadcasts keep UI/WebUI consistent.
+- Configuration toggles live in `AppConfig`: `SpoolmanEnabled`, `SpoolmanServerUrl`, `SpoolmanUpdateMode`. IPC handlers in `src/ipc/handlers/spoolman-handlers.ts` expose config/get/set/selection APIs to both renderer and WebUI.
+- `SpoolmanIntegrationService` is the source of truth for active spool assignments. It persists selections per printer in `printer_details.json`, enforces AD5X/material-station blocking (feature detection + model prefix), validates configuration, and emits events for desktop/WebUI consumers. Do **not** bypass it.
+- `SpoolmanService` wraps the REST API with 10 s timeouts, usage updates (weight or length), search, and connectivity checks. `SpoolmanUsageTracker` + `MultiContextSpoolmanTracker` listen for print completion/cooling to submit usage updates, while `SpoolmanHealthMonitor` pings the server and resets cache/UI state when connectivity flips.
+- WebUI routing lives in `src/webui/server/routes/spoolman-routes.ts`; the static client feature is `src/webui/static/features/spoolman.ts`. Keep API responses consistent between desktop and WebUI flows.
+- Renderer dialogs: `src/ui/spoolman-dialog`, `src/ui/spoolman-offline-dialog`, and spool badges/components embedded in both the main gridstack dashboard and component dialogs. Maintain `spoolman-changed` events so everything rehydrates correctly.
 
 ## Notifications & External Integrations
 
@@ -148,42 +193,59 @@ Call out unverified runtime assumptions explicitly in deliverables.
 
 ## Key File Locations
 
-**Multi-Printer Core**
-- `src/managers/PrinterContextManager.ts` – context lifecycle + events
-- `src/services/MultiContextPollingCoordinator.ts` – per-context polling orchestration
-- `src/services/MultiContextPrintStateMonitor.ts`, `MultiContextTemperatureMonitor.ts`, `MultiContextSpoolmanTracker.ts`, `MultiContextNotificationCoordinator.ts`
-- `src/utils/PortAllocator.ts` – camera proxy ports
+**Bootstrapping & Entry**
+- `src/bootstrap.ts` – sets app name/userData path before anything else loads
+- `src/index.ts` – main-process orchestrator (imports bootstrap first, registers IPC, creates windows)
+- `src/preload.ts` / `src/ui/component-dialog/component-dialog-preload.ts` – context bridges for main + dialog renderers
+
+**Managers & Multi-Context Core**
+- `src/managers/PrinterContextManager.ts`, `PrinterBackendManager.ts`, `ConnectionFlowManager.ts`, `PrinterDetailsManager.ts`, `HeadlessManager.ts`, `LoadingManager.ts`
+- `src/services/MultiContextPollingCoordinator.ts`, `MultiContextPrintStateMonitor.ts`, `MultiContextTemperatureMonitor.ts`, `MultiContextSpoolmanTracker.ts`, `MultiContextNotificationCoordinator.ts`
+- `src/services/MainProcessPollingCoordinator.ts`, `PrinterPollingService.ts` for legacy single-printer paths
 
 **Backends & Printers**
 - `src/printer-backends/*.ts` – Legacy, Adventurer5M, Adventurer5M Pro, AD5X implementations
 - `src/printer-backends/ad5x/*` – material station transforms/types/utils
-- `src/managers/PrinterBackendManager.ts` – backend instantiation
 
-**Headless & WebUI**
-- `src/index.ts` – entry + headless bootstrap
-- `src/managers/HeadlessManager.ts` – headless orchestration
-- `src/utils/HeadlessArguments.ts`, `HeadlessDetection.ts`, `HeadlessLogger.ts`
-- `src/webui/server/*` – Express/WS server, auth, API routes
-- `docs/README.md` – user-facing headless instructions (keep updated)
+**Renderer & Components**
+- `src/renderer.ts`, `src/renderer/gridController.ts`, `src/renderer/shortcutButtons.ts`, `src/renderer/perPrinterStorage.ts`, `src/renderer/logging.ts`
+- `src/ui/components/**` (ComponentManager, printer tabs, job info, etc.) + `src/ui/gridstack/**` for layout/palette logic
+- `src/ui/component-dialog/**` – component dialog renderer + preload mirrors
 
-**Camera & Notifications**
-- `src/services/CameraProxyService.ts`, `RtspStreamService.ts`
+**IPC & Windows**
+- `src/ipc/handlers/index.ts` + domain handlers in `src/ipc/handlers/*.ts`, `camera-ipc-handler.ts`, `printer-context-handlers.ts`, `WindowControlHandlers.ts`, `DialogHandlers.ts`
+- `src/windows/WindowManager.ts`, `src/windows/factories/*`, `src/windows/dialogs/*`
+
+**Settings Dialog**
+- `src/ui/settings/settings-renderer.ts` – main orchestrator for dual settings management (global + per-printer)
+- `src/ui/settings/sections/SettingsSection.ts` – base interface for modular sections
+- `src/ui/settings/sections/*.ts` – individual setting sections (AutoUpdate, DesktopTheme, Discord, InputDependency, PrinterContext, RoundedUI, SpoolmanTest, Tab)
+- `src/ui/settings/types.ts`, `src/ui/settings/types/external.ts` – shared type definitions
+
+**Camera, Notifications & Ports**
+- `src/services/CameraProxyService.ts`, `RtspStreamService.ts`, `src/utils/PortAllocator.ts`
 - `src/services/notifications/*`, `src/services/discord/DiscordNotificationService.ts`
 
-**Spoolman**
+**Spoolman & Filament**
 - `src/services/SpoolmanIntegrationService.ts`, `SpoolmanService.ts`, `SpoolmanUsageTracker.ts`, `SpoolmanHealthMonitor.ts`
-- `src/ipc/handlers/spoolman-handlers.ts`
-- `src/ui/spoolman-dialog/*`, `src/ui/spoolman-offline-dialog/*`
+- `src/ipc/handlers/spoolman-handlers.ts`, `src/ui/spoolman-dialog/*`, `src/ui/spoolman-offline-dialog/*`
+- `src/webui/server/routes/spoolman-routes.ts`, `src/webui/static/features/spoolman.ts`
 
-**UI & Windows**
-- `src/renderer.ts`, `src/ui/components/printer-tabs/*`, `src/ui/component-dialog/*`, `src/ui/gridstack/*`, job/material dialogs under `src/ui/`
-- `src/windows/WindowManager.ts`, `src/windows/dialogs/*`
+**Headless & WebUI**
+- `src/utils/HeadlessArguments.ts`, `HeadlessDetection.ts`, `HeadlessLogger.ts`, `src/managers/HeadlessManager.ts`
+- `src/webui/server/*` (WebUIManager, AuthManager, WebSocketManager, route modules) + `src/webui/static/*` (AppState, Transport, features, grid)
+- `docs/README.md` – user-facing headless instructions (keep updated)
 
 **Specs & References**
 - `ai_reference/ARCHITECTURE.md` – additional architecture primer
 - `ai_reference/typescript-best-practices.md`, `ai_reference/electron-typescript-best-practices.md`
 - `ai_specs/CAMERA_PRIORITY_SPEC.md` – camera proxy + RTSP behavior
 - `ai_specs/webui-push-notifications.md` – upcoming WebUI push feature plan
+
+## Fileoverview Inventory
+
+- `fileoverview-collection.json` (repo root) aggregates every `@fileoverview` block across `src/**/*.ts`. Use it to understand module responsibilities quickly before editing; it lists ~230 entries with filenames plus their summaries.
+- Run `npm run docs:check` to ensure new/updated files keep their `@fileoverview` headers synchronized with this inventory.
 
 ## Reference Material
 
