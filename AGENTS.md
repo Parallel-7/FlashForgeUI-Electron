@@ -114,6 +114,7 @@ Use these npm scripts to enforce quality checks and gather insights:
 | `npm run docs:check` | Node/TypeScript script scanning for missing `@fileoverview`. | Use findings to prioritize documentation updates. |
 | `npm run find:console` | Reports all `console.<level>` statements (log/debug/info/warn/error). | Use `-- --level=debug` etc. to scrub noisy logging before releases. |
 | `npm run find:lucide` | Lists every source file referencing Lucide icons. | Handy when pruning unused icons or verifying palette coverage. |
+| `npm run specs:list` | Lists AI specs for LLM agents (`-- --type active|completed`). | Default is active top-level specs; use `--type completed` for `ai_specs/archive`. |
 | `npm run knip` (+ variants) | Dead code and dependency analysis via Knip. | Review results carefully; Electron patterns create false positives. |
 | `npm run build:*` | Build main, renderer, WebUI, or platform packages. | Run only when requested or required for verification. |
 

@@ -37,6 +37,7 @@
     "docs:clean": "rimraf \"fileoverview-report.md\" \"fileoverview-collection.json\"",
     "find:console": "node -r ts-node/register scripts/find-console-usage.ts",
     "find:lucide": "node -r ts-node/register scripts/find-lucide-usage.ts",
+    "specs:list": "node -r ts-node/register scripts/list-specs.ts",
     "clean": "rimraf lib dist \"NVIDIA Corporation\"",
     "type-check": "npx tsc --noEmit",
     "full-check": "npm run type-check && npm run lint",

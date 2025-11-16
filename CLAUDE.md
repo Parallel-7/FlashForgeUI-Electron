@@ -163,6 +163,7 @@ When adding new settings sections:
 | `npm run type-check` | `tsc --noEmit` for main process + shared types | Required before concluding substantial TypeScript changes |
 | `npm run lint` / `lint:fix` | ESLint across `src/**/*.ts` | Run `lint:fix` first when practical; re-run lint to confirm |
 | `npm run docs:check` | PowerShell script scanning for missing `@fileoverview` blocks | Use from Windows shell or ensure PowerShell is available |
+| `npm run specs:list -- --type active|completed` | Lists AI spec Markdown files (top-level or archive) | Defaults to active specs; pass `--type completed` for `ai_specs/archive` |
 | `npm run knip` (+variants) | Dead code/dependency analysis | Expect intentional false positives (Electron patterns) |
 | `npm run build:*` | Build main / renderer / WebUI / platform packages | Only when user asks or when structural build impacts occur |
 | `npm run linecount` | PowerShell LOC summary | Informational only |
