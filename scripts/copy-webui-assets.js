@@ -35,12 +35,32 @@ const vendorLibraries = [
   }
 ];
 
+const GREEN = '\u001B[32m';
+const YELLOW = '\u001B[33m';
+const RED = '\u001B[31m';
+const RESET = '\u001B[0m';
+const GREEN_DOT = `${GREEN}•${RESET}`;
+const YELLOW_DOT = `${YELLOW}•${RESET}`;
+const RED_CROSS = `${RED}✖${RESET}`;
+
+function logInfo(message) {
+  console.log(`  ${GREEN_DOT} ${message}`);
+}
+
+function logWarn(message) {
+  console.warn(`  ${YELLOW_DOT} ${message}`);
+}
+
+function logError(message) {
+  console.error(`  ${RED_CROSS} ${message}`);
+}
+
 // Main function
 function copyWebUIAssets() {
   try {
     // Ensure destination directory exists
     fs.mkdirSync(destDir, { recursive: true });
-    console.log(`Created directory: ${destDir}`);
+    logInfo(`created directory ${destDir}`);
     
     // Copy each file
     let copiedCount = 0;
@@ -50,17 +70,17 @@ function copyWebUIAssets() {
       
       // Check if source file exists
       if (!fs.existsSync(srcPath)) {
-        console.warn(`Warning: Source file does not exist: ${srcPath}`);
+        logWarn(`source file missing ${srcPath}`);
         continue;
       }
       
       // Copy the file
       fs.copyFileSync(srcPath, destPath);
-      console.log(`Copied: ${fileName}`);
+      logInfo(`copied ${fileName}`);
       copiedCount++;
     }
     
-    console.log(`✅ WebUI asset copy complete: ${copiedCount}/${filesToCopy.length} files copied`);
+    logInfo(`webui asset copy complete ${copiedCount}/${filesToCopy.length}`);
 
     // Copy vendor libraries
     let vendorCount = 0;
@@ -70,20 +90,20 @@ function copyWebUIAssets() {
 
       // Check if source file exists
       if (!fs.existsSync(srcPath)) {
-        console.warn(`Warning: Vendor library not found: ${srcPath}`);
+        logWarn(`vendor library missing ${srcPath}`);
         continue;
       }
 
       // Copy the vendor library
       fs.copyFileSync(srcPath, destPath);
-      console.log(`Copied vendor library: ${vendor.dest}`);
+      logInfo(`copied vendor library ${vendor.dest}`);
       vendorCount++;
     }
 
-    console.log(`✅ Vendor library copy complete: ${vendorCount}/${vendorLibraries.length} libraries copied`);
+    logInfo(`vendor library copy complete ${vendorCount}/${vendorLibraries.length}`);
 
   } catch (error) {
-    console.error('❌ Error copying WebUI assets:', error.message);
+    logError(`error copying WebUI assets: ${error.message}`);
     process.exit(1);
   }
 }

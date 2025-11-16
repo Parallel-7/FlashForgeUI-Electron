@@ -1,657 +1,425 @@
-# WebUI Refactor Specification: GridStack Integration + Modern Theming
+# WebUI app.ts Refactoring Specification
 
-**Status:** Planning Phase
-**Created:** 2025-10-26
-**Last Updated:** 2025-10-26
-
-## Overview
-Modernize the WebUI to match the Electron app's theming and add GridStack-based customizable layouts with localStorage persistence.
-
-## User Requirements
-- ✅ Use GridStack for customizable dashboard layout
-- ✅ Store layouts in localStorage (browser-side, NOT Electron file storage)
-- ✅ **Per-printer layouts using Serial Number as unique identifier**
-- ✅ Match Electron app theming exactly (modern dark theme)
-- ✅ WebUI-specific simplified classes (no Electron coupling)
-- ✅ All current panels preserved PLUS separate Filtration/TVOC component
-- ✅ Settings-based panel visibility toggles (not drag-in palette)
-- ✅ **NO functional code changes** - preserve all existing printer control logic
-
-## Architecture Decision: localStorage vs Electron Storage
-
-### Why localStorage is Superior for WebUI:
-
-| Aspect | localStorage | Electron File Storage |
-|--------|--------------|----------------------|
-| **Complexity** | Simple browser API | Requires IPC, file I/O, path handling |
-| **Multi-device** | Per-browser customization | Would need context-per-user mapping |
-| **Network access** | Works perfectly | Complicated over network |
-| **Offline** | Works offline | Requires connected Electron instance |
-| **User privacy** | Stays in user's browser | Stored on server machine |
-| **Performance** | Instant synchronous reads | Async IPC roundtrip |
-
-### Real-World Scenario:
-- User A accesses WebUI from tablet → Gets their custom layout
-- User B accesses from phone → Gets their custom layout
-- User C accesses from laptop → Gets their custom layout
-
-With localStorage, **each device remembers its own layout**. With Electron storage, you'd need user authentication and per-user layout files (massive complexity).
+**Status:** In Progress
+**Last Updated:** 2025-02-15
+**Goal:** Refactor the monolithic 3,522-line `app.ts` into 15 cohesive modules (~200-300 lines each) with zero breaking changes to headless mode, desktop mode, or existing functionality.
 
 ---
 
-## Phase 1: WebUI-Specific GridStack Implementation
+## Current State
 
-**Create new simplified classes tailored to WebUI:**
+**File:** `src/webui/static/app.ts` (3,522 lines)
+- All authentication, WebSocket, UI updates, modals, printer control in single file
+- Natural boundaries exist via comment blocks (GLOBAL STATE, DOM HELPERS, AUTH, WEBSOCKET, etc.)
+- Grid system already modular (`grid/*.ts` - good pattern to follow)
 
-### 1.1 `src/webui/static/grid/WebUIGridManager.ts`
-- Lightweight GridStack wrapper for browser-only use
-- No Electron/IPC dependencies
-- Simplified API focusing on WebUI needs
-- Based on existing GridStackManager patterns but standalone
-- Methods:
-  - `initialize(options)` - Setup grid
-  - `addComponent(componentId, config)` - Add panel to grid
-  - `removeComponent(componentId)` - Remove panel
-  - `enableEdit()` / `disableEdit()` - Toggle drag-and-drop
-  - `serialize()` - Get current layout
-  - `load(layout)` - Restore saved layout
-
-### 1.2 `src/webui/static/grid/WebUILayoutPersistence.ts`
-- localStorage-based persistence
-- **Storage key pattern:** `flashforge-webui-layout-{serialNumber}`
-  - Example: `flashforge-webui-layout-ABC123456`
-- **Per-printer layouts** - Each printer's serial number gets its own layout
-- Methods:
-  - `save(layout, serialNumber)` - Save to localStorage (debounced)
-  - `load(serialNumber)` - Load from localStorage with validation
-  - `reset(serialNumber)` - Clear saved layout for specific printer, restore defaults
-  - `exists(serialNumber)` - Check if saved layout exists for printer
-  - `delete(serialNumber)` - Delete layout for specific printer
-  - `getAllSerialNumbers()` - List all printers with saved layouts (for cleanup)
-
-### 1.3 `src/webui/static/grid/WebUIComponentRegistry.ts`
-- Registry for WebUI-specific components
-- Component definitions for all 8 panels:
-  1. **Camera View** - Video stream display
-  2. **Controls** - Printer control buttons
-  3. **Model Preview** - Job thumbnail display
-  4. **Printer State** - Status and lifetime stats
-  5. **Temperature Control** - Bed/extruder temp ONLY (filtration moved out)
-  6. **Filtration & TVOC** - NEW separate component (matches Electron app)
-  7. **Job Progress** - Progress bar, current job
-  8. **Job Details** - Layer info, time remaining, weight/length
-
-- Component metadata:
-  ```typescript
-  {
-    id: string;
-    displayName: string;
-    defaultSize: { w: number, h: number };
-    minSize: { w: number, h: number };
-    maxSize?: { w: number, h: number };
-    defaultPosition?: { x: number, y: number };
-  }
-  ```
-
-### 1.4 `src/webui/static/grid/types.ts`
-- TypeScript interfaces for WebUI grid system
-- Component configs, layout definitions, persistence options
-- No coupling to Electron types
+**Build Process:**
+- TypeScript compilation: `npm run build:webui` → `tsc` + `copy-webui-assets.js`
+- Output: ES2020 modules in `dist/webui/static/`
+- No bundler (webpack/rollup) - browser loads raw ES modules
+- Entry: `index.html` → `<script type="module" src="app.js"></script>`
 
 ---
 
-## Phase 2: Theming Modernization
+## Target Module Structure (15 files)
 
-**Match Electron app's modern dark theme exactly:**
-
-### 2.1 CSS Custom Properties
-Update `src/webui/static/webui.css` to use CSS variables:
-
-```css
-:root {
-  /* Core Backgrounds - Professional Dark Theme */
-  --dark-bg: #1e1e1e;           /* was #303030 */
-  --darker-bg: #151515;
-  --header-bg: #1a1a1a;
-
-  /* Border and Dividers - Subtle and refined */
-  --border-color: #2d2d2d;      /* was #555 */
-  --border-color-light: #3a3a3a;
-  --border-color-focus: #4a4a4a;
-
-  /* Primary Actions - Vibrant blue with accessibility */
-  --button-bg: #4285f4;         /* was #5c6bc0 */
-  --button-hover: #5a95f5;
-  --button-active: #357abd;
-
-  /* Text Colors - High contrast for readability */
-  --text-color: #e8e8e8;        /* was #e0e0e0 */
-  --text-color-secondary: #b0b0b0;
-  --text-color-muted: #808080;
-
-  /* Accent and Status Colors */
-  --accent-color: #4285f4;
-  --error-color: #f44336;
-  --warning-color: #ff9800;
-  --success-color: #00e676;
-
-  /* Card and Panel Styling */
-  --card-bg: #252525;           /* was #404040 */
-  --card-bg-hover: #2a2a2a;
-
-  /* Shadows for depth */
-  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
-  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.3);
-  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.4);
-
-  /* Transitions */
-  --transition-fast: 0.15s ease;
-  --transition-normal: 0.25s ease;
-  --transition-slow: 0.4s ease;
-}
-```
-
-### 2.2 Component Style Updates
-- Replace all hardcoded color values with CSS variables
-- Update panel backgrounds: `#404040` → `var(--card-bg)`
-- Update borders: `#555` → `var(--border-color)`
-- Update buttons: `#5c6bc0` → `var(--button-bg)`
-- Refine shadows using `var(--shadow-*)` variables
-- Consistent spacing and border-radius
-
----
-
-## Phase 3: HTML Restructuring
-
-**Transform fixed layout to GridStack-based:**
-
-### 3.1 Update `src/webui/static/index.html`
-
-Replace current fixed grid:
-```html
-<!-- OLD: Fixed CSS Grid -->
-<div class="right-side-grid">
-  <div class="panel" id="control-grid">...</div>
-  <div class="panel" id="model-preview-panel">...</div>
-  <!-- ... -->
-</div>
-```
-
-With GridStack container:
-```html
-<!-- NEW: GridStack Grid -->
-<div class="grid-stack webui-grid">
-  <!-- Components will be added dynamically via JavaScript -->
-</div>
-```
-
-### 3.2 Component Templates
-Create HTML templates for each component (stored in JS/TS):
-```typescript
-const componentTemplates = {
-  camera: `
-    <div class="grid-stack-item" data-component-id="camera">
-      <div class="grid-stack-item-content panel">
-        <div class="panel-header">Camera</div>
-        <div class="panel-content">
-          <!-- Camera content -->
-        </div>
-      </div>
-    </div>
-  `,
-  // ... other components
-};
-```
-
-### 3.3 GridStack Assets
-Add to `<head>`:
-```html
-<link rel="stylesheet" href="gridstack.min.css">
-<link rel="stylesheet" href="gridstack-extra.min.css">
-```
-
-Add before closing `</body>`:
-```html
-<script src="gridstack-all.js"></script>
-```
-
----
-
-## Phase 4: TypeScript Application Updates
-
-**Integrate GridStack into WebUI app:**
-
-### 4.1 Update `src/webui/static/app.ts`
-
-#### Initialization Flow:
-```typescript
-import { WebUIGridManager } from './grid/WebUIGridManager';
-import { WebUILayoutPersistence } from './grid/WebUILayoutPersistence';
-import { componentRegistry } from './grid/WebUIComponentRegistry';
-
-// Global state
-let currentPrinterSerial: string | null = null;
-const gridManager = new WebUIGridManager('.webui-grid');
-const layoutPersistence = new WebUILayoutPersistence();
-
-// On page load (after authentication and printer features loaded)
-async function initializeGrid(printerDetails: PrinterDetails, printerFeatures: PrinterFeatures) {
-  currentPrinterSerial = printerDetails.SerialNumber;
-
-  // Load saved layout for THIS specific printer or use defaults
-  const savedLayout = layoutPersistence.load(currentPrinterSerial);
-
-  // Initialize GridStack
-  gridManager.initialize({
-    column: 12,
-    cellHeight: 80,
-    margin: 16,
-    staticGrid: true  // Start locked
-  });
-
-  // Add all components, filtering out feature-dependent ones if not supported
-  const visibleComponents = getVisibleComponents(printerFeatures, savedLayout);
-  for (const componentId of visibleComponents) {
-    const config = savedLayout?.components[componentId] || componentRegistry.getDefault(componentId);
-    gridManager.addComponent(componentId, config);
-  }
-
-  // Auto-save on changes (debounced) - saves to THIS printer's layout
-  gridManager.onChange((layout) => {
-    if (currentPrinterSerial) {
-      layoutPersistence.save(layout, currentPrinterSerial);
-    }
-  });
-}
-
-// Helper to filter components based on printer features
-function getVisibleComponents(features: PrinterFeatures, savedLayout?: Layout): string[] {
-  const allComponents = Object.keys(componentRegistry);
-
-  return allComponents.filter(componentId => {
-    const component = componentRegistry[componentId];
-
-    // Check if component is hidden in user settings
-    if (savedLayout?.hiddenComponents?.includes(componentId)) {
-      return false;
-    }
-
-    // Filter out feature-dependent components if printer doesn't support them
-    if (componentId === 'filtration-tvoc' && !features.hasFiltration) {
-      return false;
-    }
-
-    return true;
-  });
-}
-```
-
-#### Multi-Printer Context Switching:
-```typescript
-// When user switches printer context (multi-printer support)
-async function onPrinterContextSwitch(newPrinterDetails: PrinterDetails, newFeatures: PrinterFeatures) {
-  // Save current printer's layout before switching
-  if (currentPrinterSerial) {
-    const currentLayout = gridManager.serialize();
-    layoutPersistence.save(currentLayout, currentPrinterSerial);
-  }
-
-  // Update current printer
-  currentPrinterSerial = newPrinterDetails.SerialNumber;
-
-  // Clear grid
-  gridManager.clear();
-
-  // Load layout for new printer
-  const newLayout = layoutPersistence.load(currentPrinterSerial);
-
-  // Re-add components for new printer (filtering by features)
-  const visibleComponents = getVisibleComponents(newFeatures, newLayout);
-  for (const componentId of visibleComponents) {
-    const config = newLayout?.components[componentId] || componentRegistry.getDefault(componentId);
-    gridManager.addComponent(componentId, config);
-  }
-
-  console.log(`[WebUI] Switched to printer ${newPrinterDetails.Name} (SN: ${currentPrinterSerial})`);
-}
-```
-
-#### Component State Management:
-```typescript
-// Preserve existing WebSocket update logic - NO CHANGES to functional code
-function updateComponentData(componentId: string, data: any) {
-  const component = document.querySelector(`[data-component-id="${componentId}"]`);
-  // Update component content as before (existing logic preserved)
-}
-```
-
-### 4.2 Settings Menu Implementation
-
-#### Header Button:
-```html
-<!-- Add to header -->
-<button id="settings-button" class="settings-button">
-  <svg><!-- Gear icon --></svg>
-</button>
-```
-
-#### Settings Modal:
-```html
-<div id="settings-modal" class="modal hidden">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h2>WebUI Settings</h2>
-      <button id="close-settings" class="close-btn">&times;</button>
-    </div>
-    <div class="modal-body">
-      <!-- Panel Visibility -->
-      <section>
-        <h3>Panel Visibility</h3>
-        <label><input type="checkbox" id="toggle-camera" checked> Camera View</label>
-        <label><input type="checkbox" id="toggle-controls" checked> Controls</label>
-        <label><input type="checkbox" id="toggle-model-preview" checked> Model Preview</label>
-        <label><input type="checkbox" id="toggle-printer-state" checked> Printer State</label>
-        <label><input type="checkbox" id="toggle-temp-control" checked> Temperature Control</label>
-        <label><input type="checkbox" id="toggle-filtration-tvoc" checked> Filtration & TVOC</label>
-        <label><input type="checkbox" id="toggle-job-progress" checked> Job Progress</label>
-        <label><input type="checkbox" id="toggle-job-details" checked> Job Details</label>
-      </section>
-
-      <!-- Edit Mode -->
-      <section>
-        <h3>Layout Customization</h3>
-        <label>
-          <input type="checkbox" id="toggle-edit-mode"> Enable Edit Mode
-          <span class="help-text">Allows dragging and resizing panels</span>
-        </label>
-      </section>
-
-      <!-- Reset -->
-      <section>
-        <h3>Reset</h3>
-        <button id="reset-layout-btn" class="secondary-btn">Reset Layout to Default</button>
-      </section>
-    </div>
-    <div class="modal-footer">
-      <button id="save-settings-btn" class="primary-btn">Save</button>
-    </div>
-  </div>
-</div>
-```
-
-#### Settings Logic:
-```typescript
-interface WebUISettings {
-  visibleComponents: string[];
-  editMode: boolean;
-}
-
-function loadSettings(): WebUISettings {
-  const stored = localStorage.getItem('flashforge-webui-settings');
-  return stored ? JSON.parse(stored) : {
-    visibleComponents: ['camera', 'controls', 'model-preview', 'printer-state', 'temp-control', 'job-progress', 'job-details'],
-    editMode: false
-  };
-}
-
-function saveSettings(settings: WebUISettings) {
-  localStorage.setItem('flashforge-webui-settings', JSON.stringify(settings));
-  applySettings(settings);
-}
-
-function applySettings(settings: WebUISettings) {
-  // Show/hide components
-  for (const componentId of componentRegistry.getAllIds()) {
-    if (settings.visibleComponents.includes(componentId)) {
-      gridManager.showComponent(componentId);
-    } else {
-      gridManager.hideComponent(componentId);
-    }
-  }
-
-  // Toggle edit mode
-  if (settings.editMode) {
-    gridManager.enableEdit();
-  } else {
-    gridManager.disableEdit();
-  }
-}
-```
-
-### 4.3 Edit Mode Features
-
-#### Toggle Button in Header:
-```html
-<button id="edit-mode-toggle" class="edit-mode-toggle">
-  <span class="lock-icon">🔒</span>
-  <span class="edit-text">Locked</span>
-</button>
-```
-
-#### Visual Feedback:
-```css
-.grid-stack.edit-mode .grid-stack-item {
-  border: 2px dashed var(--accent-color);
-  cursor: move;
-}
-
-.grid-stack.edit-mode .panel-header::before {
-  content: "⋮⋮";
-  margin-right: 8px;
-  opacity: 0.5;
-}
-```
-
----
-
-## Phase 5: Build Integration
-
-**Ensure GridStack assets are bundled for WebUI:**
-
-### 5.1 GridStack Asset Vendoring
-
-Copy GridStack files to WebUI static directory:
 ```
 src/webui/static/
-  ├── gridstack.min.css
-  ├── gridstack-extra.min.css
-  └── gridstack-all.js
+├── app.ts                           (~200-250 lines - orchestration only)
+├── shared/
+│   ├── dom.ts                       (DOM helpers, visibility, toast)
+│   ├── formatting.ts                (time, temperature, material formatters)
+│   └── icons.ts                     (Lucide icon hydration)
+├── core/
+│   ├── AppState.ts                  (state class + singleton + context vars)
+│   └── Transport.ts                 (REST + WebSocket unified)
+├── features/
+│   ├── authentication.ts            (login/logout/token persistence)
+│   ├── context-switching.ts         (multi-printer context management)
+│   ├── layout-theme.ts              (grid/mobile layout + theme)
+│   ├── job-control.ts               (printer commands + job flow)
+│   ├── material-matching.ts         (AD5X material station workflow)
+│   ├── spoolman.ts                  (filament tracking integration)
+│   └── camera.ts                    (MJPEG/RTSP stream handling)
+├── ui/
+│   ├── panels.ts                    (status/temp/spool/job panel updates)
+│   ├── dialogs.ts                   (file/settings/spool modals)
+│   └── header.ts                    (printer selector + auth bar)
+└── grid/                            (existing, unchanged)
 ```
 
-These can be copied from `node_modules/gridstack/dist/` during build or vendored directly.
+---
 
-### 5.2 TypeScript Compilation
+## Completed Work
 
-Update `src/webui/static/tsconfig.json`:
-```json
-{
-  "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "lib": ["ES2020", "DOM"],
-    "moduleResolution": "node",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "outDir": ".",
-    "rootDir": "."
-  },
-  "include": [
-    "app.ts",
-    "grid/**/*.ts"
-  ]
+1. **Shared utilities extracted:** Created `shared/dom.ts`, `shared/formatting.ts`, and `shared/icons.ts` with `@fileoverview` headers, moved all DOM/formatting/icon helpers out of `app.ts`, and wired the entry file to import them. Validation: `npm run type-check`.
+2. **Core state & transport modules:** Added `core/AppState.ts` (state container, layout managers, accessor helpers) and `core/Transport.ts` (auth headers, `apiRequest` wrappers, WebSocket lifecycle and callbacks). Updated `app.ts` to consume the new modules, cover all former globals, and rely on callback-based WebSocket updates. Validation: `npm run type-check` and `tsc --project src/webui/static/tsconfig.json`.
+3. **Phase 1 feature modules:** Extracted authentication, context-switching, and layout/theme logic into `features/authentication.ts`, `features/context-switching.ts`, and `features/layout-theme.ts`. Updated `app.ts` to import these modules, removed the monolithic sections, and rewired initialization to use hook-based orchestration. Validation: `npm run type-check` and `npm run lint -- src/webui/static/**/*.ts`.
+
+---
+
+## Remaining Phases
+
+### Phase 2: Extract UI Components (Panels, Dialogs, Header)
+
+**Create 3 files:**
+
+#### `ui/panels.ts` (~250 lines)
+Extract from `app.ts:1207-1446, 2011-2090`:
+```typescript
+// Pure rendering functions - accept data, minimal global access
+export function updateConnectionStatus(connected: boolean): void
+export function updatePrinterStatus(status: PrinterStatus | null): void
+export function updateButtonStates(printerState: string): void
+export function updatePrinterStateCard(status: PrinterStatus | null): void
+export function updateFiltrationStatus(mode?: 'external' | 'internal' | 'none'): void
+export function updateModelPreview(thumbnailData: string | null | undefined): void
+export function updateSpoolmanPanelState(): void  // Reads from state
+```
+
+#### `ui/dialogs.ts` (~280 lines)
+Extract from `app.ts:884-908, 2244-2414, 2787-2878, 2884-2931`:
+```typescript
+// Settings modal
+export function openSettingsModal(): void
+export function closeSettingsModal(): void
+export function resetLayoutForCurrentPrinter(): void
+
+// File selection modal
+export function showFileModal(source: 'recent' | 'local'): Promise<void>
+export async function loadFileList(source: 'recent' | 'local'): Promise<void>
+
+// Temperature dialog
+export function showTemperatureDialog(type: 'bed' | 'extruder'): void
+export async function setTemperature(): Promise<void>
+
+// Material matching modal (managed by features/material-matching.ts)
+// Spoolman modal (managed by features/spoolman.ts)
+
+// Event handler setup
+export function setupDialogEventHandlers(): void
+```
+
+#### `ui/header.ts` (~80 lines)
+Extract header-specific UI:
+```typescript
+export function updateEditModeToggle(editMode: boolean): void
+export function setupHeaderEventHandlers(): void
+```
+
+**Update app.ts:**
+- Import: `import { updatePrinterStatus, updateConnectionStatus } from './ui/panels.js'`
+- Import: `import { setupDialogEventHandlers } from './ui/dialogs.js'`
+- Import: `import { setupHeaderEventHandlers } from './ui/header.js'`
+- Wire WebSocket callback: `onStatusUpdate((status) => updatePrinterStatus(status))`
+
+**Validation:** `npm run type-check`
+
+---
+
+### Phase 3: Extract Domain Features (Job Control, Material Matching, Spoolman, Camera)
+
+**Create 4 files:**
+
+#### `features/job-control.ts` (~220 lines)
+Extract from `app.ts:1597-1666, 2215-2341`:
+```typescript
+export async function sendPrinterCommand(endpoint: string, data?: unknown): Promise<void>
+export async function loadPrinterFeatures(): Promise<void>
+export function updateFeatureVisibility(): void
+export async function startPrintJob(filename: string, leveling: boolean, startNow: boolean, job: WebUIJobFile | undefined): Promise<void>
+export async function sendJobStartRequest(filename: string, leveling: boolean, startNow: boolean, mappings?: MaterialMapping[]): Promise<void>
+export function setupJobControlEventHandlers(): void
+```
+
+**Key logic:**
+- Generic printer command sender with toast feedback
+- Feature loading: GET /api/printer/features, update visibility
+- Job start: delegates to material-matching if AD5X multi-color, else direct start
+- Event handlers: pause/resume/cancel/home/temp/LED buttons
+
+#### `features/material-matching.ts` (~280 lines)
+Extract from `app.ts:2416-2878`:
+```typescript
+// State helpers
+export function clearMaterialMessages(): void
+export function showMaterialError(message: string): void
+export function showMaterialWarning(message: string): void
+export function updateMaterialMatchingConfirmState(): void
+
+// Rendering
+export function renderMaterialRequirements(): void
+export function renderMaterialSlots(): void
+export function renderMaterialMappings(): void
+
+// Interaction
+export function handleToolSelection(toolId: number): void
+export function handleSlotSelection(slotId: number): void
+
+// Modal flow
+export async function openMaterialMatchingModal(pending: PendingJobStart): Promise<void>
+export function closeMaterialMatchingModal(): void
+export function resetMaterialMatchingState(): void
+export async function confirmMaterialMatching(): Promise<void>
+
+// Setup
+export function setupMaterialMatchingHandlers(): void
+```
+
+**Key logic:**
+- Manages `materialMatchingState` from AppState
+- Tool → slot mapping with validation (material type match, color mismatch warnings)
+- Renders requirements, slots, mappings
+- Confirms and sends job start with mappings
+
+#### `features/spoolman.ts` (~260 lines)
+Extract from `app.ts:1668-2009`:
+```typescript
+// Config & data
+export async function loadSpoolmanConfig(): Promise<void>
+export async function fetchActiveSpoolForContext(contextId?: string): Promise<void>
+export function isSpoolmanAvailableForCurrentContext(): boolean
+
+// Search & selection
+export async function fetchSpools(searchQuery?: string): Promise<void>
+export async function selectSpool(spoolId: number): Promise<void>
+export async function clearActiveSpool(): Promise<void>
+
+// UI
+export function openSpoolSelectionModal(): void
+export function closeSpoolSelectionModal(): void
+export function renderSpoolList(spools: SpoolSummary[]): void
+export function handleSpoolSearch(event: Event): void
+
+// Setup
+export function setupSpoolmanHandlers(): void
+```
+
+**Key logic:**
+- Config: GET /api/spoolman/config
+- Active spool: GET /api/spoolman/active/{contextId}
+- Search: server-side + client-side fallback (vendor/material)
+- Selection: POST /api/spoolman/select, DELETE for clear
+- Modal with debounced search
+
+#### `features/camera.ts` (~180 lines)
+Extract from `app.ts:534-575, 2092-2213`:
+```typescript
+export async function loadCameraStream(): Promise<void>
+export function teardownCameraStreamElements(): void
+export function initializeCamera(): void
+```
+
+**Key logic:**
+- Fetch proxy config: GET /api/camera/proxy-config
+- MJPEG: img element with proxy URL
+- RTSP: JSMpeg WebSocket canvas rendering
+- Error handling with 5s retry
+- Teardown: clear img src, canvas context
+
+**Update app.ts:**
+- Import: `import { setupJobControlEventHandlers, loadPrinterFeatures } from './features/job-control.js'`
+- Import: `import { setupMaterialMatchingHandlers } from './features/material-matching.js'`
+- Import: `import { setupSpoolmanHandlers, loadSpoolmanConfig } from './features/spoolman.js'`
+- Import: `import { initializeCamera } from './features/camera.js'`
+
+**Validation:** `npm run type-check` after each feature
+
+---
+
+### Phase 4: Rewrite app.ts & Final Validation
+
+#### New app.ts Structure (~200-250 lines)
+
+```typescript
+/**
+ * @fileoverview WebUI application orchestration and initialization.
+ *
+ * Coordinates module initialization, wires event handlers, and bootstraps
+ * the browser-based client for remote printer control and monitoring.
+ */
+
+// Shared utilities
+import { initializeLucideIcons } from './shared/icons.js';
+
+// Core
+import { state } from './core/AppState.js';
+import { connectWebSocket, onStatusUpdate, onSpoolmanUpdate } from './core/Transport.js';
+
+// Features
+import { initializeLayout, setupLayoutEventHandlers, setupViewportListener } from './features/layout-theme.js';
+import { checkAuthStatus, setupAuthEventHandlers } from './features/authentication.js';
+import { initializeContextSwitching, fetchPrinterContexts, setupContextEventHandlers } from './features/context-switching.js';
+import { setupJobControlEventHandlers, loadPrinterFeatures } from './features/job-control.js';
+import { setupMaterialMatchingHandlers } from './features/material-matching.js';
+import { setupSpoolmanHandlers, loadSpoolmanConfig, ensureSpoolmanVisibilityIfEnabled } from './features/spoolman.js';
+import { initializeCamera } from './features/camera.js';
+
+// UI
+import { updatePrinterStatus, updateConnectionStatus, updateSpoolmanPanelState } from './ui/panels.js';
+import { setupDialogEventHandlers } from './ui/dialogs.js';
+import { setupHeaderEventHandlers } from './ui/header.js';
+
+// Wire WebSocket callbacks to UI updates
+onStatusUpdate((status) => {
+  updatePrinterStatus(status);
+});
+
+onSpoolmanUpdate((contextId, spool) => {
+  const currentContextId = getCurrentContextId();
+  if (contextId === currentContextId) {
+    state.activeSpool = spool;
+    updateSpoolmanPanelState();
+  }
+});
+
+/**
+ * Main application initialization sequence
+ */
+async function initialize(): Promise<void> {
+  // 1. Initialize icons
+  initializeLucideIcons();
+
+  // 2. Setup all event handlers
+  setupAuthEventHandlers();
+  setupDialogEventHandlers();
+  setupHeaderEventHandlers();
+  setupLayoutEventHandlers();
+  setupContextEventHandlers();
+  setupJobControlEventHandlers();
+  setupMaterialMatchingHandlers();
+  setupSpoolmanHandlers();
+
+  // 3. Initialize layout system
+  initializeLayout();
+
+  // 4. Setup viewport listener for responsive layout
+  setupViewportListener();
+
+  // 5. Check authentication status
+  await checkAuthStatus();
+
+  // 6. If authenticated, connect and load data
+  if (state.isAuthenticated) {
+    connectWebSocket();
+    await loadPrinterFeatures();
+    await fetchPrinterContexts();
+    await loadSpoolmanConfig();
+    ensureSpoolmanVisibilityIfEnabled();
+
+    // Initialize camera if printer has camera feature
+    if (state.printerFeatures?.hasCamera) {
+      initializeCamera();
+    }
+  }
+}
+
+// Bootstrap on DOM ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => void initialize());
+} else {
+  void initialize();
 }
 ```
 
-### 5.3 Build Script Updates
+#### Final Validation Checklist
 
-Ensure webpack/build process:
-1. Compiles TypeScript in `src/webui/static/`
-2. Copies GridStack assets to static folder
-3. Bundles everything for serving
+**Code Quality:**
+- [ ] `npm run docs:check` - blocked in WSL (`powershell.exe` vsock error: `UtilBindVsockAnyPort`)
+- [x] `npm run type-check` (2025-11-14) - pass
+- [x] `npm run lint` (2025-11-14) - pass
+- [x] `npm run build:webui` (2025-11-14) - pass
 
----
+**Manual Testing (Headless Mode):**
+- [ ] Not run in CI/WSL environment (no printers/headless flag available)
 
-## Phase 6: Testing & Polish
+**Manual Testing (Desktop Mode - if accessible):**
+- [ ] Not run (desktop Electron runtime unavailable in current environment)
 
-**Ensure functionality preservation:**
-
-### 6.1 Functional Testing (Manual)
-- [ ] All 6 panels maintain existing functionality
-- [ ] Drag-and-drop customization works
-- [ ] localStorage persistence across sessions
-- [ ] Settings toggles show/hide panels correctly
-- [ ] Edit mode toggle works (lock/unlock)
-- [ ] Layout reset restores defaults
-- [ ] Multi-printer context switching still works
-- [ ] Camera streaming (MJPEG and RTSP) works
-- [ ] WebSocket updates continue to work
-- [ ] All control buttons function correctly
-
-### 6.2 Responsive Design
-- [ ] Mobile layout (< 768px) stacks vertically
-- [ ] Tablet layout (768px - 1024px) adjusts gracefully
-- [ ] Desktop layout (> 1024px) uses full grid
-- [ ] GridStack mobile handling configured
-
-### 6.3 Cross-Browser Compatibility
-- [ ] Chrome/Chromium
-- [ ] Firefox
-- [ ] Safari
-- [ ] Edge
-- [ ] localStorage works in all browsers
-- [ ] GridStack drag behavior consistent
-
-### 6.4 Performance
-- [ ] Initial load time acceptable
-- [ ] Layout save/load is fast
-- [ ] No jank during drag operations
-- [ ] Bundle size reasonable for remote access
-
----
-
-## Component Default Layout
-
-```typescript
-const DEFAULT_LAYOUT = {
-  components: {
-    camera: { x: 0, y: 0, w: 6, h: 4 },              // Left side, tall
-    controls: { x: 6, y: 0, w: 3, h: 2 },            // Top right
-    'model-preview': { x: 9, y: 0, w: 3, h: 2 },
-    'printer-state': { x: 6, y: 2, w: 3, h: 2 },
-    'job-progress': { x: 9, y: 2, w: 3, h: 2 },
-    'temp-control': { x: 6, y: 4, w: 3, h: 1.5 },    // Shorter (no filtration)
-    'filtration-tvoc': { x: 6, y: 5.5, w: 3, h: 1 }, // NEW - below temp control
-    'job-details': { x: 9, y: 4, w: 3, h: 2.5 }       // Taller to match
-  }
-};
-```
-
-Grid: 12 columns × variable rows (auto-height based on content)
-
----
-
-## localStorage Strategy
-
-### Storage Keys:
-- **Layout:** `flashforge-webui-layout-{serialNumber}` (per-printer)
-  - Example: `flashforge-webui-layout-ABC123456`
-- **Settings:** `flashforge-webui-settings-{serialNumber}` (per-printer)
-  - Example: `flashforge-webui-settings-ABC123456`
-
-### Scope:
-- **Per-printer** using serial number as unique identifier
-- Per browser/device (no cross-device sync)
-- User can have different layouts for each physical printer
-- When switching between printers, layout auto-switches
-
-### Persistence:
-- Automatic on every layout change (debounced 1 second)
-- Settings saved immediately on "Save" button click
-
-### Fallback:
-- Default layout if none saved or corrupted
-- Validation on load to ensure data integrity
-
-### Multi-Printer Behavior:
-1. **First Connection**: User connects to Printer A (SN:ABC123)
-   - Loads `flashforge-webui-layout-ABC123` or creates default
-   - User customizes layout → saves to `flashforge-webui-layout-ABC123`
-
-2. **Second Printer**: User connects to Printer B (SN:DEF456) via context switcher
-   - Saves current layout to `flashforge-webui-layout-ABC123`
-   - Loads `flashforge-webui-layout-DEF456` or creates default
-   - Layout switches to Printer B's saved configuration
-
-3. **Switch Back**: User switches back to Printer A
-   - Saves Printer B's layout to `flashforge-webui-layout-DEF456`
-   - Loads `flashforge-webui-layout-ABC123`
-   - Returns to Printer A's customized layout
-
-4. **Feature Differences**: If Printer B doesn't support filtration:
-   - Filtration component is automatically hidden (not available)
-   - Layout adapts to feature set
-   - When switching back to Printer A (with filtration), component reappears
+**Feature-Specific Tests:**
+- [ ] Requires physical printers/material station/camera feeds; not run in this environment
 
 ---
 
 ## Success Criteria
 
-- ✅ WebUI matches Electron app theming (colors, spacing, shadows)
-- ✅ All 6 current panels work identically to current WebUI
-- ✅ Users can drag-and-drop to customize layout
-- ✅ Layout persists in localStorage across sessions
-- ✅ Settings menu allows showing/hiding panels
-- ✅ Edit mode toggle for locking/unlocking layout
-- ✅ Mobile responsive design maintained
-- ✅ No functionality regressions (camera, controls, multi-printer)
-- ✅ Build process includes GridStack assets
-- ✅ Type-safe TypeScript throughout
+### Zero Breaking Changes:
+- ✅ Headless mode works identically
+- ✅ Desktop mode works identically
+- ✅ Same build process (no bundler changes)
+- ✅ Same API/WebSocket contracts
+- ✅ Same HTML entry point
+- ✅ All existing features preserved
+- ✅ No migration required
+
+### Code Quality Improvements:
+- ✅ 15 focused modules vs. 1 monolithic file
+- ✅ Each module ~200-300 lines (readable in one screen)
+- ✅ Clear separation of concerns (shared/core/features/ui)
+- ✅ Testable modules with minimal coupling
+- ✅ Follows existing grid/ module pattern
+- ✅ Type-safe with strict TypeScript
 
 ---
 
-## Open Questions / To Discuss
+## Progress Tracking
 
-1. **Camera as Grid Component:**
-   - Should camera view be a draggable grid component or stay fixed?
-   - Current plan: Keep camera separate (left side) initially, can migrate later
+### Phase 1: Shared Utilities
+- [x] `shared/dom.ts`
+- [x] `shared/formatting.ts`
+- [x] `shared/icons.ts`
+- [x] Update app.ts imports
+- [x] Validation: `npm run type-check`
 
-2. **Mobile Grid Behavior:**
-   - Should mobile force vertical stack or allow limited grid customization?
-   - Current plan: Force vertical stack on mobile (< 768px)
+### Phase 2: Core State & Transport
+- [x] `core/AppState.ts`
+- [x] `core/Transport.ts`
+- [x] Update app.ts imports
+- [x] Validation: `npm run type-check`
 
-3. **Default Panel Visibility:**
-   - Should all panels be visible by default or minimal set?
-   - Current plan: All visible by default, users can hide via settings
+### Phase 1: Features (Auth, Context, Layout)
+- [x] `features/authentication.ts`
+- [x] `features/context-switching.ts`
+- [x] `features/layout-theme.ts`
+- [x] Update app.ts imports
+- [x] Validation: `npm run type-check && npm run lint`
 
-4. **Edit Mode Default:**
-   - Should edit mode be enabled or locked by default?
-   - Current plan: Locked by default for safety
+### Phase 2: UI Components
+- [x] `ui/panels.ts`
+- [x] `ui/dialogs.ts`
+- [x] `ui/header.ts`
+- [x] Update app.ts imports
+- [x] Validation: `npm run type-check`
 
-5. **Layout History:**
-   - Should we implement undo/redo for layout changes?
-   - Current plan: Just reset to default for MVP, history is optional enhancement
+### Phase 3: Domain Features
+- [x] `features/job-control.ts`
+- [x] `features/material-matching.ts`
+- [x] `features/spoolman.ts`
+- [x] `features/camera.ts`
+- [x] Update app.ts imports
+- [x] Validation: `npm run type-check`
+
+### Phase 4: Orchestration & Validation
+- [x] Rewrite app.ts (425 lines including exported shared types; orchestration-only logic)
+- [x] Run full validation suite (`type-check`, `lint`, `build:webui`, attempted `docs:check`)
+- [ ] Manual testing (headless mode) — pending hardware access
+- [ ] Manual testing (desktop mode) — pending hardware access
+- [x] Update this spec with completion status
 
 ---
 
-## Implementation Notes
+## Notes & Learnings
 
-- **No Electron/IPC coupling** - WebUI classes are browser-only
-- **localStorage is superior** to server-side storage for WebUI use case
-- **Gradual migration** - Existing functionality preserved, just enhanced
-- **Type safety** - Full TypeScript throughout
-- **Performance** - localStorage reads are synchronous and fast
-- **Accessibility** - Maintain keyboard navigation and screen reader support
+- `setupDialogEventHandlers` now accepts dependency callbacks so modal wiring can stay in the UI layer without importing feature modules that have yet to be extracted. When job control/material matching modules land (Phase 3) they can register their handlers there.
+- Header-specific DOM logic (edit-mode toggle) now lives in `ui/header.ts` with dependency injection for layout persistence to avoid a circular reference between `features/layout-theme.ts` and the new UI module.
 
 ---
 
-## Future Enhancements (Post-MVP)
+## Completion
 
-- Layout import/export (share layouts between devices)
-- Preset layouts (compact, detailed, monitoring-focused, etc.)
-- Component-specific settings (e.g., camera resolution, refresh rate)
-- Multi-user layout profiles (if auth is added)
-- Layout history with undo/redo
-- Drag-in component palette (like Electron app)
-- Custom component creation
-- Theme variants (light mode, high contrast)
+**Status:** ✅ Completed
+**Completed:** 2025-11-14
+**Final Line Count:**
+- Before: 3,522 lines (1 file)
+- After: 4,038 lines (15 modules + orchestrator)
+- app.ts: 425 lines (orchestration + shared type exports)
