@@ -31,6 +31,9 @@ import type {
   MaterialStationStatus
 } from '../types/polling';
 import { DEFAULT_POLLING_CONFIG, createEmptyPollingData } from '../types/polling';
+import { logVerbose } from '../utils/logging';
+
+const POLLING_LOG_NAMESPACE = 'PrinterPollingService';
 
 // ============================================================================
 // BACKEND INTERFACES
@@ -117,6 +120,9 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
   private currentThumbnail: string | null = null;
   private readonly thumbnailCache: Map<string, string | null> = new Map(); // filename -> thumbnail data (null = failed)
   private readonly thumbnailFailureCache: Set<string> = new Set(); // track failed fetches to avoid retries
+  private logDebug(message: string, ...args: unknown[]): void {
+    logVerbose(POLLING_LOG_NAMESPACE, message, ...args);
+  }
 
   constructor(config: Partial<PollingConfig> = {}) {
     super();
@@ -156,7 +162,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
    */
   public start(): boolean {
     if (this.isPolling) {
-      console.log('Polling already running');
+      this.logDebug('Polling already running');
       return true;
     }
 
@@ -165,7 +171,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
       return false;
     }
 
-    console.log(`Starting polling service (interval: ${this.config.intervalMs}ms)`);
+    console.info(`[PrinterPollingService] Starting polling (interval: ${this.config.intervalMs}ms)`);
     
     this.isPolling = true;
     this.retryCount = 0;
@@ -187,7 +193,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
       return;
     }
 
-    console.log('Stopping polling service');
+    console.info('[PrinterPollingService] Stopping polling service');
     
     this.isPolling = false;
     this.retryCount = 0;
@@ -259,7 +265,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
     }
 
     try {
-      console.log('Polling printer data...');
+      this.logDebug('Polling printer data...');
       
       // Fetch all data in parallel
       const [printerStatus, materialStation] = await Promise.allSettled([
@@ -375,21 +381,21 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
       
       // Job is active, check if it's a new job
       if (fileName !== this.lastJobName) {
-        console.log(`[ThumbnailCache] New job detected: ${fileName}`);
+        this.logDebug(`New job detected: ${fileName}`);
         this.lastJobName = fileName;
         
         // Check cache first
         if (this.thumbnailCache.has(fileName)) {
           const cachedThumbnail = this.thumbnailCache.get(fileName);
           this.currentThumbnail = cachedThumbnail ?? null; // Handle undefined case
-          console.log(`[ThumbnailCache] Using cached thumbnail for ${fileName}: ${this.currentThumbnail ? 'Available' : 'Failed (cached)'}`);
+          this.logDebug(`Using cached thumbnail for ${fileName}: ${this.currentThumbnail ? 'Available' : 'Failed (cached)'}`);
         } else if (this.thumbnailFailureCache.has(fileName)) {
           // Previous failure, don't retry
           this.currentThumbnail = null;
-          console.log(`[ThumbnailCache] Skipping ${fileName} - previous fetch failed`);
+          this.logDebug(`Skipping ${fileName} - previous fetch failed`);
         } else {
           // Fetch new thumbnail using direct filename to avoid redundant status calls
-          console.log(`[ThumbnailCache] Fetching thumbnail for ${fileName}...`);
+          this.logDebug(`Fetching thumbnail for ${fileName}...`);
           try {
             if (this.backendManager?.getJobThumbnail) {
               const thumbnail = await this.backendManager.getJobThumbnail(fileName);
@@ -398,11 +404,11 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
               this.thumbnailCache.set(fileName, thumbnail);
               this.currentThumbnail = thumbnail;
               
-              if (thumbnail) {
-                console.log(`[ThumbnailCache] Thumbnail fetched and cached for ${fileName}`);
-              } else {
-                console.log(`[ThumbnailCache] No thumbnail available for ${fileName} (cached null)`);
-              }
+              this.logDebug(
+                thumbnail
+                  ? `Thumbnail fetched and cached for ${fileName}`
+                  : `No thumbnail available for ${fileName} (cached null)`
+              );
             } else {
               // No thumbnail support
               this.currentThumbnail = null;
@@ -424,7 +430,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
     } else {
       // No active job, clear current thumbnail reference
       if (this.lastJobName !== null) {
-        console.log('[ThumbnailCache] Job completed or no active job, clearing current thumbnail reference');
+        this.logDebug('Job completed or no active job, clearing current thumbnail reference');
         this.clearCurrentThumbnail();
         // Note: Keep cache intact for potential job restart
       }
@@ -438,7 +444,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
    * Clear all thumbnail state and cache
    */
   private clearThumbnailState(): void {
-    console.log('[ThumbnailCache] Clearing all thumbnail state and cache');
+    this.logDebug('Clearing all thumbnail state and cache');
     this.lastJobName = null;
     this.currentThumbnail = null;
     this.thumbnailCache.clear();
@@ -449,7 +455,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
    * Clear only current thumbnail state (keep cache for potential restart)
    */
   private clearCurrentThumbnail(): void {
-    console.log('[ThumbnailCache] Clearing current thumbnail state');
+    this.logDebug('Clearing current thumbnail state');
     this.lastJobName = null;
     this.currentThumbnail = null;
   }

@@ -35,6 +35,7 @@ import {
   loadShortcutsForSerial
 } from './perPrinterStorage';
 import { hydrateLogPanelWithHistory, logMessage, setLogPanelComponent } from './logging';
+import { logVerbose } from '../utils/logging';
 
 interface GridControllerOptions {
   getActiveSerial: () => string | null;
@@ -42,12 +43,18 @@ interface GridControllerOptions {
   updateShortcutButtons: (config: ShortcutButtonConfig) => void;
 }
 
+const GRID_CONTROLLER_LOG_NAMESPACE = 'RendererGridController';
+
 export class RendererGridController {
   private componentsInitialized = false;
   private gridInitializationPromise: Promise<void> | null = null;
   private pendingGridInitializationSerial: string | null = null;
 
   constructor(private readonly options: GridControllerOptions) {}
+
+  private logDebug(message: string, ...args: unknown[]): void {
+    logVerbose(GRID_CONTROLLER_LOG_NAMESPACE, message, ...args);
+  }
 
   areComponentsInitialized(): boolean {
     return this.componentsInitialized;
@@ -128,14 +135,14 @@ export class RendererGridController {
     this.options.updateShortcutButtons(shortcutConfig);
     this.hideConnectPlaceholder();
 
-    console.log(`[PerPrinter] Grid reload complete for serial: ${serialLabel}`);
+    this.logDebug(`[PerPrinter] Grid reload complete for serial: ${serialLabel}`);
   }
 
   async addComponentFromPalette(
     componentId: string,
     dropPosition?: { x: number; y: number }
   ): Promise<void> {
-    console.log('[GridStack] Attempting to add component from palette:', componentId);
+    this.logDebug('[GridStack] Attempting to add component from palette', componentId);
 
     const definition = getComponentDefinition(componentId);
     if (!definition) {
@@ -219,10 +226,10 @@ export class RendererGridController {
         serial
       );
 
-      console.log(`[PerPrinter] Saved layout after adding component for serial: ${serial || 'global'}`);
+      this.logDebug(`[PerPrinter] Saved layout after adding component for serial: ${serial || 'global'}`);
       this.updatePaletteStatus();
 
-      console.log('[GridStack] Component added from palette:', componentId);
+      this.logDebug('[GridStack] Component added from palette', componentId);
       logMessage(`Component ${definition.name} added to grid`);
     } catch (error) {
       console.error('[GridStack] Failed to add component from palette:', error);
@@ -257,31 +264,31 @@ export class RendererGridController {
 
     this.updatePaletteStatus();
 
-    console.log('[GridStack] Component removed successfully:', componentId);
+    this.logDebug('[GridStack] Component removed successfully', componentId);
     logMessage(`Component ${componentId} removed from grid`);
   }
 
   private async performGridStackInitialization(initialSerial?: string | null): Promise<void> {
     if (this.componentsInitialized) {
-      console.log('GridStack already initialized, skipping base setup');
+      this.logDebug('GridStack already initialized, skipping base setup');
       return;
     }
 
-    console.log('Initializing GridStack layout system...');
+    this.logDebug('Initializing GridStack layout system...');
 
     layoutPersistence.initialize();
 
     const serialForLoad = initialSerial ?? this.options.getActiveSerial();
 
     const layout = loadLayoutForSerial(serialForLoad);
-    console.log('Loaded layout configuration:', layout);
+    this.logDebug('Loaded layout configuration', layout);
 
     const shortcutConfig = loadShortcutsForSerial(serialForLoad);
     const pinnedIds = Object.values(shortcutConfig.slots).filter((id): id is string => id !== null);
     const filteredWidgets = layout.widgets.filter((widget) => !pinnedIds.includes(widget.componentId));
 
-    console.log('Pinned components excluded from grid:', pinnedIds);
-    console.log('Filtered widgets for grid:', filteredWidgets.length, 'of', layout.widgets.length);
+    this.logDebug('Pinned components excluded from grid', pinnedIds);
+    this.logDebug('Filtered widgets for grid', `${filteredWidgets.length} of ${layout.widgets.length}`);
 
     gridStackManager.initialize(layout.gridOptions);
 
@@ -304,7 +311,7 @@ export class RendererGridController {
                 await hydrateLogPanelWithHistory(component);
               }
               widgetCount++;
-              console.log(`GridStack: Added widget '${widgetConfig.componentId}'`);
+              this.logDebug(`GridStack: Added widget '${widgetConfig.componentId}'`);
             }
           }
         }
@@ -314,7 +321,7 @@ export class RendererGridController {
       }
     }
 
-    console.log(`GridStack: Created ${widgetCount}/${layout.widgets.length} widgets`);
+    this.logDebug(`GridStack: Created ${widgetCount}/${layout.widgets.length} widgets`);
 
     const lastPollingData = this.options.getLastPollingData();
     if (lastPollingData) {
@@ -327,11 +334,11 @@ export class RendererGridController {
         connectionState: lastPollingData.isConnected
       };
       componentManager.updateAll(updateData);
-      console.log('GridStack: Sent initial config update to all components (or queued if not ready)');
+      this.logDebug('GridStack: Sent initial config update to all components (or queued if not ready)');
     }
 
     gridStackManager.onChange(() => {
-      console.log('GridStack: Layout changed, auto-saving...');
+      this.logDebug('GridStack: Layout changed, auto-saving...');
       const serial = this.options.getActiveSerial();
       const currentLayout = loadLayoutForSerial(serial);
       const updatedWidgets = gridStackManager.serialize();
@@ -342,7 +349,7 @@ export class RendererGridController {
         },
         serial
       );
-      console.log(`[PerPrinter] Saved layout for serial: ${serial || 'global'}`);
+      this.logDebug(`[PerPrinter] Saved layout for serial: ${serial || 'global'}`);
     });
 
     editModeController.initialize(gridStackManager, layoutPersistence);
@@ -350,7 +357,7 @@ export class RendererGridController {
     this.setupPaletteIntegration();
 
     if (!componentManager.isInitialized()) {
-      console.log('GridStack: Finalizing component manager initialization...');
+      this.logDebug('GridStack: Finalizing component manager initialization...');
       await componentManager.initializeAll();
     }
 
@@ -358,7 +365,7 @@ export class RendererGridController {
     this.hideConnectPlaceholder();
     this.options.updateShortcutButtons(shortcutConfig);
 
-    console.log('GridStack initialization complete');
+    this.logDebug('GridStack initialization complete');
     logMessage(`GridStack layout system initialized: ${widgetCount} widgets loaded`);
   }
 
@@ -535,12 +542,12 @@ export class RendererGridController {
     }
 
     window.api.receive('palette:opened', () => {
-      console.log('[GridStack] Palette opened, sending current status');
+      this.logDebug('[GridStack] Palette opened, sending current status');
       this.updatePaletteStatus();
     });
 
     window.api.receive('edit-mode:toggle', () => {
-      console.log('[GridStack] Edit mode toggle triggered from palette window');
+      this.logDebug('[GridStack] Edit mode toggle triggered from palette window');
       editModeController.toggle();
     });
 
@@ -565,7 +572,7 @@ export class RendererGridController {
       this.removeComponentFromGrid(id);
     });
 
-    console.log('[GridStack] Palette integration setup complete');
+    this.logDebug('[GridStack] Palette integration setup complete');
   }
 
   private hideConnectPlaceholder(): void {

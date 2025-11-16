@@ -54,6 +54,7 @@ import type {
   GridStackWidget,
   GridOptions,
 } from './types';
+import { logVerbose } from '../../utils/logging';
 
 /**
  * Event callback types
@@ -61,6 +62,7 @@ import type {
 type ChangeCallback = (widgets: readonly GridStackWidget[]) => void;
 type AddedCallback = (widget: GridStackWidget) => void;
 type RemovedCallback = (widget: GridStackWidget) => void;
+const GRIDSTACK_MANAGER_LOG_NAMESPACE = 'GridStackManager';
 
 /**
  * GridStack manager class
@@ -83,6 +85,9 @@ export class GridStackManager {
   private onChangeCallback: ChangeCallback | null = null;
   private onAddedCallback: AddedCallback | null = null;
   private onRemovedCallback: RemovedCallback | null = null;
+  private logDebug(message: string, ...args: unknown[]): void {
+    logVerbose(GRIDSTACK_MANAGER_LOG_NAMESPACE, message, ...args);
+  }
 
   /**
    * Create a new GridStackManager
@@ -122,7 +127,7 @@ export class GridStackManager {
       );
 
       this.initialized = true;
-      console.log('GridStackManager: Initialized successfully');
+      this.logDebug('GridStackManager: Initialized successfully');
 
       // Setup default event listeners
       this.setupEventListeners();
@@ -199,7 +204,7 @@ export class GridStackManager {
         locked: config.locked
       });
 
-      console.log(
+      this.logDebug(
         `[GridStackManager] Added widget '${config.componentId}' at (${config.x ?? 'auto'}, ${config.y ?? 'auto'})`
       );
 
@@ -227,7 +232,7 @@ export class GridStackManager {
 
     try {
       this.grid.removeWidget(element);
-      console.log('GridStackManager: Removed widget');
+      this.logDebug('GridStackManager: Removed widget');
     } catch (error) {
       console.error('GridStackManager: Failed to remove widget:', error);
     }
@@ -260,14 +265,14 @@ export class GridStackManager {
       // This ensures .ui-resizable-handle elements are properly re-initialized
       // after toggling edit mode (fixes GitHub issue #2045, #2034)
       const allWidgets = this.grid.getGridItems();
-      console.log(`[GridStackManager] Re-enabling resize on ${allWidgets.length} widgets`);
+      this.logDebug(`[GridStackManager] Re-enabling resize on ${allWidgets.length} widgets`);
       allWidgets.forEach((el, index) => {
         this.grid!.resizable(el, true);
-        console.log(`[GridStackManager] Enabled resize on widget ${index + 1}/${allWidgets.length}`);
+        this.logDebug(`[GridStackManager] Enabled resize on widget ${index + 1}/${allWidgets.length}`);
       });
 
       this.editMode = true;
-      console.log('[GridStackManager] Edit mode enabled');
+      this.logDebug('[GridStackManager] Edit mode enabled');
     } catch (error) {
       console.error('[GridStackManager] Failed to enable edit mode:', error);
     }
@@ -301,7 +306,7 @@ export class GridStackManager {
       });
 
       this.editMode = false;
-      console.log('[GridStackManager] Edit mode disabled');
+      this.logDebug('[GridStackManager] Edit mode disabled');
     } catch (error) {
       console.error('[GridStackManager] Failed to disable edit mode:', error);
     }
@@ -341,7 +346,7 @@ export class GridStackManager {
         };
       });
 
-      console.log('GridStackManager: Serialized', configs.length, 'widgets');
+      this.logDebug('GridStackManager: Serialized widgets', configs.length);
       return configs;
     } catch (error) {
       console.error('GridStackManager: Failed to serialize grid:', error);
@@ -362,7 +367,7 @@ export class GridStackManager {
     }
 
     try {
-      console.log('GridStackManager: Loading', widgets.length, 'widgets into grid');
+      this.logDebug('GridStackManager: Loading widgets into grid', widgets.length);
 
       // Clear existing widgets (but don't remove from DOM yet - caller handles cleanup)
       this.grid.removeAll(false);
@@ -379,7 +384,7 @@ export class GridStackManager {
         createdElements.push(item as HTMLElement);
       });
 
-      console.log('GridStackManager: Loaded', createdElements.length, 'widget elements');
+      this.logDebug('GridStackManager: Loaded widget elements', createdElements.length);
       return createdElements;
     } catch (error) {
       console.error('GridStackManager: Failed to load widgets:', error);
@@ -399,7 +404,7 @@ export class GridStackManager {
 
     try {
       this.grid.removeAll(removeDOM);
-      console.log('GridStackManager: Cleared all widgets');
+      this.logDebug('GridStackManager: Cleared all widgets');
     } catch (error) {
       console.error('GridStackManager: Failed to clear widgets:', error);
     }
@@ -438,7 +443,7 @@ export class GridStackManager {
       }
     });
 
-    console.log('GridStackManager: Event listeners setup complete');
+    this.logDebug('GridStackManager: Event listeners setup complete');
   }
 
   /**
@@ -500,7 +505,7 @@ export class GridStackManager {
 
     try {
       this.grid.compact();
-      console.log('GridStackManager: Grid compacted');
+      this.logDebug('GridStackManager: Grid compacted');
     } catch (error) {
       console.error('GridStackManager: Failed to compact grid:', error);
     }
@@ -520,7 +525,7 @@ export class GridStackManager {
       this.grid.batchUpdate();
       callback();
       this.grid.commit();
-      console.log('GridStackManager: Batch update completed');
+      this.logDebug('GridStackManager: Batch update completed');
     } catch (error) {
       console.error('GridStackManager: Batch update failed:', error);
     }
@@ -551,7 +556,7 @@ export class GridStackManager {
         ...options
       });
 
-      console.log('[GridStackManager] Drag-in configured for:', selector);
+      this.logDebug('[GridStackManager] Drag-in configured for selector', selector);
     } catch (error) {
       console.error('[GridStackManager] Failed to setup drag-in:', error);
       throw error;
@@ -571,13 +576,13 @@ export class GridStackManager {
 
     // Listen for dropped events which indicate external drops
     this.grid.on('dropped', (event, previousWidget, newWidget) => {
-      console.log('[GridStackManager] External drop detected:', newWidget);
+      this.logDebug('[GridStackManager] External drop detected', newWidget);
       if (callback && newWidget && newWidget.el) {
         callback(event as Event, { helper: newWidget.el as HTMLElement });
       }
     });
 
-    console.log('[GridStackManager] External drop handler registered');
+    this.logDebug('[GridStackManager] External drop handler registered');
   }
 
   /**
@@ -602,7 +607,7 @@ export class GridStackManager {
       this.initialized = false;
       this.editMode = false;
 
-      console.log('GridStackManager: Destroyed successfully');
+      this.logDebug('GridStackManager: Destroyed successfully');
     } catch (error) {
       console.error('GridStackManager: Destruction failed:', error);
     }

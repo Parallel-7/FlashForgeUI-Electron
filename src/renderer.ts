@@ -25,6 +25,7 @@
 import './index.css';
 
 import { initializeLucideIcons, getLucideIcons } from './utils/icons';
+import { logVerbose } from './utils/logging';
 
 // Component system imports
 import {
@@ -83,6 +84,10 @@ const shortcutButtonController = new ShortcutButtonController({
 });
 
 const legacyUiController = new LegacyUiController(logMessage);
+const RENDERER_LOG_NAMESPACE = 'Renderer';
+const logDebug = (message: string, ...args: unknown[]): void => {
+  logVerbose(RENDERER_LOG_NAMESPACE, message, ...args);
+};
 
 // ============================================================================
 // PER-PRINTER LAYOUT & SHORTCUTS STATE
@@ -102,12 +107,12 @@ const handleConfigLoadedEvent = (): void => {
     return;
   }
   configLoaded = true;
-  console.log('[Config] Renderer marked configuration as loaded');
+  logDebug('[Config] Renderer marked configuration as loaded');
 };
 
 if (window.api?.receive) {
   window.api.receive('config-loaded', () => {
-    console.log('[Config] Renderer received config-loaded IPC event');
+    logDebug('[Config] Renderer received config-loaded IPC event');
     handleConfigLoadedEvent();
   });
 } else {
@@ -138,7 +143,7 @@ function initializePlaceholderUI(): void {
 }
 
 function handleAllContextsRemoved(): void {
-  console.log('[PerPrinter] No active printer contexts; showing placeholder');
+  logDebug('[PerPrinter] No active printer contexts; showing placeholder');
 
   activeContextId = null;
   activeContextSerial = null;
@@ -158,7 +163,7 @@ function handleAllContextsRemoved(): void {
  * Sets up the tabs UI and connects it to context events from main process
  */
 async function initializePrinterTabs(): Promise<void> {
-  console.log('Initializing printer tabs component...');
+  logDebug('Initializing printer tabs component...');
 
   try {
     const tabsContainer = document.getElementById('printer-tabs-container');
@@ -174,18 +179,18 @@ async function initializePrinterTabs(): Promise<void> {
     // Listen for tab interaction events
     printerTabsComponent.on('tab-clicked', (...args: unknown[]) => {
       const contextId = args[0] as string;
-      console.log(`Tab clicked: ${contextId}`);
+      logDebug(`Tab clicked: ${contextId}`);
       void window.api.printerContexts.switch(contextId);
     });
 
     printerTabsComponent.on('tab-closed', (...args: unknown[]) => {
       const contextId = args[0] as string;
-      console.log(`Tab close requested: ${contextId}`);
+      logDebug(`Tab close requested: ${contextId}`);
       void window.api.printerContexts.remove(contextId);
     });
 
     printerTabsComponent.on('add-printer-clicked', () => {
-      console.log('Add printer button clicked');
+      logDebug('Add printer button clicked');
       window.api.send('open-printer-selection');
     });
 
@@ -200,14 +205,14 @@ async function initializePrinterTabs(): Promise<void> {
     // Listen for context events from main process
     window.api.receive('printer-context-created', (...args: unknown[]) => {
       const event = args[0] as import('./types/PrinterContext').ContextCreatedEvent;
-      console.log('Renderer received context-created event:', event);
-      console.log('Event contextId:', event?.contextId);
-      console.log('Event contextInfo:', event?.contextInfo);
+      logDebug('Renderer received context-created event:', event);
+      logDebug('Event contextId:', event?.contextId);
+      logDebug('Event contextInfo:', event?.contextInfo);
 
       // Track serial number for this context
       if (event?.contextInfo?.serialNumber) {
         printerSerialMap.set(event.contextId, event.contextInfo.serialNumber);
-        console.log(`[PerPrinter] Mapped context ${event.contextId} to serial ${event.contextInfo.serialNumber}`);
+        logDebug(`[PerPrinter] Mapped context ${event.contextId} to serial ${event.contextInfo.serialNumber}`);
       }
 
       if (printerTabsComponent && event?.contextInfo) {
@@ -219,11 +224,11 @@ async function initializePrinterTabs(): Promise<void> {
 
     window.api.receive('printer-context-switched', async (...args: unknown[]) => {
       const event = args[0] as import('./types/PrinterContext').ContextSwitchEvent;
-      console.log('Renderer received context-switched event:', event);
+      logDebug('Renderer received context-switched event:', event);
 
       try {
         if (activeContextId && activeContextSerial) {
-          console.log(`[PerPrinter] Saving layout for context ${activeContextId} (serial: ${activeContextSerial})`);
+          logDebug(`[PerPrinter] Saving layout for context ${activeContextId} (serial: ${activeContextSerial})`);
           const currentLayout = loadLayoutForSerial(activeContextSerial);
           const serializedWidgets = gridController.serializeLayout();
           saveLayoutForSerial({ ...currentLayout, widgets: serializedWidgets }, activeContextSerial);
@@ -243,7 +248,7 @@ async function initializePrinterTabs(): Promise<void> {
         legacyUiController.setIfsMenuItemVisible(false);
 
         const serialLabel = activeContextSerial ?? 'default';
-        console.log(`[PerPrinter] Switching UI to context ${event.contextId} (serial: ${serialLabel})`);
+        logDebug(`[PerPrinter] Switching UI to context ${event.contextId} (serial: ${serialLabel})`);
 
         if (!gridController.areComponentsInitialized()) {
           await gridController.initialize(activeContextSerial);
@@ -260,7 +265,7 @@ async function initializePrinterTabs(): Promise<void> {
 
     window.api.receive('printer-context-removed', (...args: unknown[]) => {
       const event = args[0] as { contextId: string };
-      console.log('Renderer received context-removed event:', event);
+      logDebug('Renderer received context-removed event:', event);
       printerSerialMap.delete(event.contextId);
       if (printerTabsComponent) {
         printerTabsComponent.removeTab(event.contextId);
@@ -280,13 +285,13 @@ async function initializePrinterTabs(): Promise<void> {
 
     window.api.receive('printer-context-updated', (...args: unknown[]) => {
       const event = args[0] as { contextId: string; updates: Partial<import('./types/PrinterContext').PrinterContextInfo> };
-      console.log('Renderer received context-updated event:', event);
+      logDebug('Renderer received context-updated event:', event);
       if (printerTabsComponent) {
         printerTabsComponent.updateTab(event.contextId, event.updates);
       }
     });
 
-    console.log('Printer tabs component initialized successfully');
+    logDebug('Printer tabs component initialized successfully');
     logMessage('Multi-printer tabs UI initialized');
 
   } catch (error) {
@@ -374,7 +379,7 @@ function initializePollingListeners(): void {
     }
   });
 
-  console.log('Enhanced polling listeners initialized - component system integration active');
+  logDebug('Enhanced polling listeners initialized - component system integration active');
 }
 
 /**
@@ -384,28 +389,28 @@ function initializeStateAndEventListeners(): void {
   const stateTracker = getGlobalStateTracker();
   
   stateTracker.on(STATE_EVENTS.CONNECTED, () => {
-    console.log('Printer connected');
+    logDebug('Printer connected');
 
   });
   
   stateTracker.on(STATE_EVENTS.DISCONNECTED, () => {
-    console.log('Printer disconnected');
+    logDebug('Printer disconnected');
     logMessage('Printer disconnected');
     resetUI();
     legacyUiController.setIfsMenuItemVisible(false);
-    console.log('[LegacyUI] Reset legacy printer flag on state disconnect');
+    logDebug('[LegacyUI] Reset legacy printer flag on state disconnect');
   });
   
   // Listen for backend events
   if (window.api) {
     window.api.receive('backend-initialized', (...args: unknown[]) => {
       const data = args[0] as { success: boolean; printerName: string; modelType: string; backendType?: string; timestamp: string };
-      console.log('Backend initialized:', data);
+      logDebug('Backend initialized:', data);
       logMessage(`Backend ready for ${data.printerName} (${data.modelType})`);
       
       const backendType = data.backendType || data.modelType || '';
       if (isLegacyBackendType(backendType)) {
-        console.log('[LegacyUI] Legacy printer detected:', backendType);
+        logDebug('[LegacyUI] Legacy printer detected:', backendType);
         logMessage('Legacy printer detected - some features may be unavailable');
       }
     });
@@ -418,7 +423,7 @@ function initializeStateAndEventListeners(): void {
     
     window.api.receive('backend-disposed', (...args: unknown[]) => {
       const data = args[0] as { timestamp: string };
-      console.log('Backend disposed:', data);
+      logDebug('Backend disposed:', data);
       logMessage('Backend disconnected');
       
       resetUI();
@@ -432,7 +437,7 @@ function initializeStateAndEventListeners(): void {
     
     window.api.receive('printer-connected', (...args: unknown[]) => {
       const data = args[0] as { name: string; ipAddress: string; serialNumber: string; clientType: string };
-      console.log('Printer connected event:', data);
+      logDebug('Printer connected event:', data);
       stateTracker.onConnected();
     });
 
@@ -440,13 +445,13 @@ function initializeStateAndEventListeners(): void {
     window.api.receive('config-updated', async (...args: unknown[]) => {
       const updatedConfig = args[0] as { DesktopTheme?: ThemeColors };
       if (updatedConfig.DesktopTheme) {
-        console.log('Config updated, reapplying desktop theme');
+        logDebug('Config updated, reapplying desktop theme');
         applyDesktopTheme(updatedConfig.DesktopTheme);
       }
     });
   }
 
-  console.log('State tracking and event listeners initialized');
+  logDebug('State tracking and event listeners initialized');
 }
 
 // ============================================================================
@@ -473,7 +478,7 @@ function applyDesktopTheme(theme: ThemeColors): void {
   root.style.setProperty('--theme-primary-hover', primaryHover);
   root.style.setProperty('--theme-secondary-hover', secondaryHover);
 
-  console.log('Desktop theme applied:', theme);
+  logDebug('Desktop theme applied:', theme);
 }
 
 /**
@@ -526,7 +531,7 @@ async function loadAndApplyDesktopTheme(): Promise<void> {
  * Main DOM Content Loaded handler - standard initialization
  */
 document.addEventListener('DOMContentLoaded', async () => {
-  console.log('Renderer process started - DOM loaded');
+  logDebug('Renderer process started - DOM loaded');
 
   initializeLucideIcons(
     document,
@@ -559,14 +564,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Apply platform-specific styling IMMEDIATELY (no IPC needed)
   if (window.PLATFORM) {
     document.body.classList.add(`platform-${window.PLATFORM}`);
-    console.log(`Platform-specific styling applied: platform-${window.PLATFORM}`);
+    logDebug(`Platform-specific styling applied: platform-${window.PLATFORM}`);
     logMessage(`Platform detected: ${window.PLATFORM}`);
   }
 
   // Load and apply desktop theme
   await loadAndApplyDesktopTheme();
 
-  console.log('IPC listeners configured for component system integration');
+  logDebug('IPC listeners configured for component system integration');
 
   // Setup essential UI elements
   legacyUiController.initialize();
@@ -582,7 +587,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Initialize printer tabs for multi-printer support
   try {
     await initializePrinterTabs();
-    console.log('Printer tabs ready');
+    logDebug('Printer tabs ready');
   } catch (error) {
     console.error('Printer tabs initialization failed:', error);
     logMessage(`ERROR: Printer tabs failed to initialize: ${error}`);
@@ -594,14 +599,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Signal to main process that renderer is ready
   try {
     await window.api.invoke('renderer-ready');
-    console.log('Renderer ready signal sent successfully');
+    logDebug('Renderer ready signal sent successfully');
     logMessage('Renderer ready signal sent successfully');
   } catch (error) {
     console.error('Failed to send renderer-ready signal:', error);
     logMessage(`ERROR: Failed to signal main process: ${error}`);
   }
 
-  console.log('Enhanced renderer initialization complete with component system');
+  logDebug('Enhanced renderer initialization complete with component system');
 });
 
 // ============================================================================
@@ -613,16 +618,16 @@ document.addEventListener('DOMContentLoaded', async () => {
  * Ensures proper cleanup of both legacy resources and components
  */
 window.addEventListener('beforeunload', () => {
-  console.log('Cleaning up resources in enhanced renderer with GridStack and component system');
+  logDebug('Cleaning up resources in enhanced renderer with GridStack and component system');
   legacyUiController.dispose();
 
   // Clean up GridStack system
   try {
-    console.log('Destroying GridStack system...');
+    logDebug('Destroying GridStack system...');
     editModeController.dispose();
     gridStackManager.destroy();
     layoutPersistence.dispose();
-    console.log('GridStack system cleanup complete');
+    logDebug('GridStack system cleanup complete');
   } catch (error) {
     console.error('Error during GridStack cleanup:', error);
   }
@@ -630,10 +635,10 @@ window.addEventListener('beforeunload', () => {
   // Clean up component system
   if (gridController.areComponentsInitialized()) {
     try {
-      console.log('Destroying component system...');
+      logDebug('Destroying component system...');
       componentManager.destroyAll();
       setLogPanelComponent(null);
-      console.log('Component system cleanup complete');
+      logDebug('Component system cleanup complete');
     } catch (error) {
       console.error('Error during component cleanup:', error);
     }
@@ -643,7 +648,7 @@ window.addEventListener('beforeunload', () => {
   try {
     const stateTracker = getGlobalStateTracker();
     stateTracker.dispose();
-    console.log('State tracker cleanup complete');
+    logDebug('State tracker cleanup complete');
   } catch (error) {
     console.error('Error during state tracker cleanup:', error);
   }
@@ -652,11 +657,11 @@ window.addEventListener('beforeunload', () => {
   if (window.api) {
     try {
       window.api.removeAllListeners();
-      console.log('IPC listeners cleanup complete');
+      logDebug('IPC listeners cleanup complete');
     } catch (error) {
       console.error('Error during IPC cleanup:', error);
     }
   }
 
-  console.log('Enhanced renderer cleanup complete - all resources disposed');
+  logDebug('Enhanced renderer cleanup complete - all resources disposed');
 });

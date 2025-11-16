@@ -25,6 +25,9 @@
 
 import { BaseComponent } from './base/component';
 import type { ComponentUpdateData, IComponentManager, IComponent } from './base/types';
+import { logVerbose } from '../../utils/logging';
+
+const COMPONENT_MANAGER_LOG_NAMESPACE = 'ComponentManager';
 
 /**
  * Central manager for all UI components
@@ -41,6 +44,10 @@ export class ComponentManager implements IComponentManager {
   private lastUpdateData: ComponentUpdateData | null = null;
   private pendingUpdateData: ComponentUpdateData | null = null;
 
+  private logDebug(message: string, ...args: unknown[]): void {
+    logVerbose(COMPONENT_MANAGER_LOG_NAMESPACE, message, ...args);
+  }
+
   /**
    * Register a component with the manager
    * @param component - Component instance to register
@@ -52,7 +59,7 @@ export class ComponentManager implements IComponentManager {
     }
     
     this.components.set(component.componentId, component);
-    console.log(`Registered component: ${component.componentId}`);
+    this.logDebug(`Registered component: ${component.componentId}`);
   }
 
   /**
@@ -65,12 +72,12 @@ export class ComponentManager implements IComponentManager {
       return;
     }
 
-    console.log(`Initializing ${this.components.size} components...`);
+    this.logDebug(`Initializing ${this.components.size} components...`);
 
     const initPromises = Array.from(this.components.values()).map(async (component) => {
       try {
         await component.initialize();
-        console.log(`Component initialized: ${component.componentId}`);
+        this.logDebug(`Component initialized: ${component.componentId}`);
       } catch (error) {
         console.error(`Failed to initialize component ${component.componentId}:`, error);
       }
@@ -79,10 +86,10 @@ export class ComponentManager implements IComponentManager {
     await Promise.allSettled(initPromises);
 
     this.initialized = true;
-    console.log('All components initialized');
+    this.logDebug('All components initialized');
 
     if (this.pendingUpdateData) {
-      console.log('ComponentManager: Applying pending update after initialization');
+      this.logDebug('ComponentManager: Applying pending update after initialization');
       this.updateAllInternal(this.pendingUpdateData);
       this.pendingUpdateData = null;
     }
@@ -151,7 +158,7 @@ export class ComponentManager implements IComponentManager {
 
     try {
       component.update(data);
-      console.debug(`Component ${componentId} updated successfully`);
+      this.logDebug(`Component ${componentId} updated successfully`);
       return true;
     } catch (error) {
       console.error(`Failed to update component ${componentId}:`, error);
@@ -250,7 +257,7 @@ export class ComponentManager implements IComponentManager {
         component.update(this.lastUpdateData);
       }
 
-      console.log(`Component ${componentId} reinitialized successfully`);
+      this.logDebug(`Component ${componentId} reinitialized successfully`);
       return true;
     } catch (error) {
       console.error(`Failed to reinitialize component ${componentId}:`, error);
@@ -279,7 +286,7 @@ export class ComponentManager implements IComponentManager {
 
       // Remove from registry
       this.components.delete(componentId);
-      console.log(`Component ${componentId} removed from manager`);
+      this.logDebug(`Component ${componentId} removed from manager`);
       return true;
     } catch (error) {
       console.error(`Error removing component ${componentId}:`, error);
@@ -292,7 +299,7 @@ export class ComponentManager implements IComponentManager {
    * This method is idempotent and can be called multiple times safely
    */
   destroyAll(): void {
-    console.log(`Destroying ${this.components.size} components...`);
+    this.logDebug(`Destroying ${this.components.size} components...`);
 
     let destroyCount = 0;
     let errorCount = 0;
@@ -319,7 +326,7 @@ export class ComponentManager implements IComponentManager {
     if (errorCount > 0) {
       console.warn(`Component destruction completed with errors: ${destroyCount} successful, ${errorCount} failed`);
     } else {
-      console.log(`All ${destroyCount} components destroyed successfully`);
+      this.logDebug(`All ${destroyCount} components destroyed successfully`);
     }
   }
 

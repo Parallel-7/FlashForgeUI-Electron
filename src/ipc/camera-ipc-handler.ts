@@ -30,16 +30,22 @@ import { getConfigManager } from '../managers/ConfigManager';
 import { getPrinterBackendManager } from '../managers/PrinterBackendManager';
 import { getPrinterContextManager } from '../managers/PrinterContextManager';
 import { ResolvedCameraConfig, CameraProxyStatus } from '../types/camera';
+import { logVerbose } from '../utils/logging';
 
 /**
  * Camera IPC handler class
  */
+const CAMERA_IPC_LOG_NAMESPACE = 'CameraIPCHandler';
+
 export class CameraIPCHandler {
   private readonly configManager = getConfigManager();
   private readonly cameraProxyService = getCameraProxyService();
   private readonly rtspStreamService = getRtspStreamService();
   private readonly contextManager = getPrinterContextManager();
   private currentPrinterIpAddress: string | null = null;
+  private logDebug(message: string, ...args: unknown[]): void {
+    logVerbose(CAMERA_IPC_LOG_NAMESPACE, message, ...args);
+  }
 
   /**
    * Initialize camera IPC handlers
@@ -48,7 +54,7 @@ export class CameraIPCHandler {
     this.registerHandlers();
     this.setupConfigListeners();
 
-    console.log('Camera IPC handlers initialized');
+    this.logDebug('Camera IPC handlers initialized');
   }
 
   /**
@@ -85,7 +91,7 @@ export class CameraIPCHandler {
     ipcMain.handle('camera:set-enabled', async (event: IpcMainInvokeEvent, enabled: boolean): Promise<void> => {
       // This controls whether the UI should display the camera preview
       // The camera proxy server continues running - only the client disconnects
-      console.log(`Camera preview ${enabled ? 'enabled' : 'disabled'} by renderer`);
+      this.logDebug(`Camera preview ${enabled ? 'enabled' : 'disabled'} by renderer`);
 
       // NOTE: We don't remove the camera proxy context here
       // The proxy stays running for the printer context until the printer disconnects
@@ -95,10 +101,10 @@ export class CameraIPCHandler {
     // Get resolved camera configuration
     ipcMain.handle('camera:get-config', async (): Promise<ResolvedCameraConfig | null> => {
       const activeContextId = this.getActiveContextId();
-      console.log(`[camera:get-config] Active context ID: ${activeContextId}`);
+      this.logDebug(`[camera:get-config] Active context ID: ${activeContextId}`);
 
       const config = await this.getCurrentCameraConfigForContext(activeContextId);
-      console.log(`[camera:get-config] Config for context ${activeContextId}:`, config);
+      this.logDebug(`[camera:get-config] Config for context ${activeContextId}:`, config);
 
       return config;
     });
@@ -106,18 +112,18 @@ export class CameraIPCHandler {
     // Get camera proxy URL
     ipcMain.handle('camera:get-proxy-url', async (): Promise<string> => {
       const activeContextId = this.getActiveContextId();
-      console.log(`[camera:get-proxy-url] Active context ID: ${activeContextId}`);
+      this.logDebug(`[camera:get-proxy-url] Active context ID: ${activeContextId}`);
 
       const status = this.cameraProxyService.getStatusForContext(activeContextId);
-      console.log(`[camera:get-proxy-url] Status for context ${activeContextId}:`, status);
+      this.logDebug(`[camera:get-proxy-url] Status for context ${activeContextId}:`, status);
 
       if (!status || !status.isRunning) {
-        console.log('[camera:get-proxy-url] No camera running, returning invalid URL');
+        this.logDebug('[camera:get-proxy-url] No camera running, returning invalid URL');
         return 'http://localhost:0/camera'; // Invalid port signals no camera
       }
 
       const proxyUrl = formatCameraProxyUrl(status.port);
-      console.log(`[camera:get-proxy-url] Returning proxy URL: ${proxyUrl}`);
+      this.logDebug(`[camera:get-proxy-url] Returning proxy URL: ${proxyUrl}`);
       return proxyUrl;
     });
 
@@ -143,14 +149,14 @@ export class CameraIPCHandler {
       const streamStatus = this.rtspStreamService.getStreamStatus(activeContextId);
 
       if (!streamStatus || !streamStatus.isActive) {
-        console.log(`[camera:get-rtsp-relay-info] No RTSP stream active for context ${activeContextId}`);
+        this.logDebug(`[camera:get-rtsp-relay-info] No RTSP stream active for context ${activeContextId}`);
         return null;
       }
 
       // Construct full WebSocket URL for desktop JSMpeg player
       // node-rtsp-stream creates a direct WebSocket server on the allocated port
       const wsUrl = `ws://localhost:${streamStatus.wsPort}`;
-      console.log(`[camera:get-rtsp-relay-info] RTSP stream URL for context ${activeContextId}: ${wsUrl}`);
+      this.logDebug(`[camera:get-rtsp-relay-info] RTSP stream URL for context ${activeContextId}: ${wsUrl}`);
 
       return { wsUrl };
     });
@@ -158,7 +164,7 @@ export class CameraIPCHandler {
     // Manual camera stream restoration (for stuck streams)
     ipcMain.handle('camera:restore-stream', async (): Promise<boolean> => {
       try {
-        console.log('Manual camera stream restoration requested');
+        this.logDebug('Manual camera stream restoration requested');
 
         // Get current camera config
         const config = await this.getCurrentCameraConfig();
@@ -187,7 +193,7 @@ export class CameraIPCHandler {
   private setupConfigListeners(): void {
     // Listen for printer context updates (per-printer settings changes)
     this.contextManager.on('context-updated', (contextId: string) => {
-      console.log(`[CameraIPC] Context ${contextId} updated, checking camera config...`);
+      this.logDebug(`[CameraIPC] Context ${contextId} updated, checking camera config...`);
       void this.handleContextUpdate(contextId);
     });
   }
@@ -198,14 +204,14 @@ export class CameraIPCHandler {
   private async handleContextUpdate(contextId: string): Promise<void> {
     const context = this.contextManager.getContext(contextId);
     if (!context) {
-      console.log(`[CameraIPC] Context ${contextId} not found`);
+      this.logDebug(`[CameraIPC] Context ${contextId} not found`);
       return;
     }
 
     const config = await this.getCurrentCameraConfigForContext(contextId);
 
     if (config && config.isAvailable && config.streamUrl) {
-      console.log(`[CameraIPC] Camera config updated for ${contextId}: ${config.sourceType} - ${config.streamUrl}`);
+      this.logDebug(`[CameraIPC] Camera config updated for ${contextId}: ${config.sourceType} - ${config.streamUrl}`);
 
       // Handle based on stream type
       if (config.streamType === 'rtsp') {
@@ -217,17 +223,17 @@ export class CameraIPCHandler {
             frameRate: rtspFrameRate,
             quality: rtspQuality
           });
-          console.log(`[CameraIPC] RTSP stream setup for context ${contextId}`);
+          this.logDebug(`[CameraIPC] RTSP stream setup for context ${contextId}`);
         } catch (error) {
           console.warn(`[CameraIPC] Failed to setup RTSP stream for context ${contextId}:`, error);
         }
       } else {
         // MJPEG: Use camera proxy service
         await this.cameraProxyService.setStreamUrl(contextId, config.streamUrl);
-        console.log(`[CameraIPC] Camera proxy setup for context ${contextId}`);
+        this.logDebug(`[CameraIPC] Camera proxy setup for context ${contextId}`);
       }
     } else {
-      console.log(`[CameraIPC] No camera available for context ${contextId}, removing proxy`);
+      this.logDebug(`[CameraIPC] No camera available for context ${contextId}, removing proxy`);
       await this.cameraProxyService.removeContext(contextId);
       await this.rtspStreamService.stopStream(contextId);
     }
@@ -241,10 +247,10 @@ export class CameraIPCHandler {
     const contextId = this.getActiveContextId();
 
     if (config && config.isAvailable && config.streamUrl) {
-      console.log(`Camera configuration updated: ${config.sourceType} - ${config.streamUrl}`);
+      this.logDebug(`Camera configuration updated: ${config.sourceType} - ${config.streamUrl}`);
       await this.cameraProxyService.setStreamUrl(contextId, config.streamUrl);
     } else {
-      console.log('Camera configuration updated: No camera available');
+      this.logDebug('Camera configuration updated: No camera available');
       await this.cameraProxyService.removeContext(contextId);
     }
   }
@@ -299,7 +305,7 @@ export class CameraIPCHandler {
    * @param contextId - The context ID of the connected printer
    */
   public async handlePrinterConnected(contextId: string): Promise<void> {
-    console.log(`Handling printer connection for camera setup (context: ${contextId})`);
+    this.logDebug(`Handling printer connection for camera setup (context: ${contextId})`);
 
     // Get context from context manager
     const context = this.contextManager.getContext(contextId);
@@ -314,7 +320,7 @@ export class CameraIPCHandler {
     const config = await this.getCurrentCameraConfigForContext(contextId);
 
     if (config && config.isAvailable && config.streamUrl) {
-      console.log(`Setting camera stream URL for context ${contextId}: ${config.streamUrl} (${config.sourceType}, ${config.streamType})`);
+      this.logDebug(`Setting camera stream URL for context ${contextId}: ${config.streamUrl} (${config.sourceType}, ${config.streamType})`);
 
       // Handle based on stream type
       if (config.streamType === 'rtsp') {
@@ -327,7 +333,7 @@ export class CameraIPCHandler {
             frameRate: rtspFrameRate,
             quality: rtspQuality
           });
-          console.log(`RTSP stream setup for context ${contextId}`);
+          this.logDebug(`RTSP stream setup for context ${contextId}`);
         } catch (error) {
           console.warn(`Failed to setup RTSP stream for context ${contextId}:`, error);
           // Non-fatal - will retry on next connection attempt
@@ -337,7 +343,7 @@ export class CameraIPCHandler {
         await this.cameraProxyService.setStreamUrl(contextId, config.streamUrl);
       }
     } else {
-      console.log(`No camera available for context ${contextId}`);
+      this.logDebug(`No camera available for context ${contextId}`);
       await this.cameraProxyService.removeContext(contextId);
       await this.rtspStreamService.stopStream(contextId);
     }
@@ -348,7 +354,7 @@ export class CameraIPCHandler {
    * @param contextId - Optional context ID (defaults to active context if not provided)
    */
   public async handlePrinterDisconnected(contextId?: string): Promise<void> {
-    console.log('Clearing camera stream URL due to printer disconnection');
+    this.logDebug('Clearing camera stream URL due to printer disconnection');
     this.currentPrinterIpAddress = null;
     const targetContextId = contextId || this.getActiveContextId();
     await this.cameraProxyService.removeContext(targetContextId);
@@ -375,4 +381,3 @@ export class CameraIPCHandler {
 
 // Export singleton instance
 export const cameraIPCHandler = new CameraIPCHandler();
-

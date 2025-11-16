@@ -20,6 +20,7 @@
 // Handles file grid display, selection, and thumbnail loading
 
 import type { AD5XJobInfo } from '../../types/printer-backend';
+import { logVerbose } from '../../utils/logging';
 
 // Global window type extension
 declare global {
@@ -80,6 +81,11 @@ interface MaterialInfoData {
     readonly useMatlStation?: boolean;
 }
 
+const JOB_PICKER_LOG_NAMESPACE = 'JobPickerRenderer';
+const logDebug = (message: string, ...args: unknown[]): void => {
+  logVerbose(JOB_PICKER_LOG_NAMESPACE, message, ...args);
+};
+
 // Global state management
 let selectedFile: string | null = null;
 let printerCapabilities: PrinterJobManagementFeatures | null = null;
@@ -128,18 +134,18 @@ function isJobInfo(value: unknown): value is JobInfo {
 
 function isAD5XJobInfo(value: unknown): value is AD5XJobInfo {
     if (!value || typeof value !== 'object') {
-        console.log('Job picker: isAD5XJobInfo - not an object:', value);
+        logDebug('Job picker: isAD5XJobInfo - not an object:', value);
         return false;
     }
     const obj = value as Record<string, unknown>;
     const result = 'fileName' in obj && typeof obj.fileName === 'string' && 
            ('toolDatas' in obj || '_type' in obj);
-    console.log('Job picker: isAD5XJobInfo check - has fileName:', 'fileName' in obj, 
+    logDebug('Job picker: isAD5XJobInfo check - has fileName:', 'fileName' in obj, 
                 ', has toolDatas:', 'toolDatas' in obj, 
                 ', has _type:', '_type' in obj,
                 ', result:', result);
     if ('toolDatas' in obj) {
-        console.log('Job picker: toolDatas value:', obj.toolDatas);
+        logDebug('Job picker: toolDatas value:', obj.toolDatas);
     }
     return result;
 }
@@ -234,8 +240,8 @@ async function checkPrinterCapabilities(): Promise<void> {
                 selectedPrinterModel = features.modelType;
             }
             
-            console.log('Job picker: Printer capabilities loaded', printerCapabilities);
-            console.log('Job picker: Printer model type:', selectedPrinterModel);
+            logDebug('Job picker: Printer capabilities loaded', printerCapabilities);
+            logDebug('Job picker: Printer model type:', selectedPrinterModel);
         } else {
             console.error('Job picker: Invalid features format received');
         }
@@ -272,19 +278,19 @@ function setupIpcListeners(): void {
 
     // Listen for initialization data
     api.onInit((data: JobPickerInitData) => {
-        console.log('Job picker: Received init data', data);
+        logDebug('Job picker: Received init data', data);
         void initializeDialog(data.isRecentFiles);
     });
 
     // Listen for job list from main process (legacy support)
     api.onJobList((data: JobListData) => {
-        console.log('Job picker: Received job list', data);
+        logDebug('Job picker: Received job list', data);
         handleJobListReceived(data);
     });
 
     // Listen for thumbnail results
     api.onThumbnailResult((data: ThumbnailData) => {
-        console.log('Job picker: Received thumbnail for', data.filename);
+        logDebug('Job picker: Received thumbnail for', data.filename);
         updateThumbnail(data.filename, data.thumbnail);
     });
 }
@@ -390,19 +396,19 @@ function extractFilename(file: string | { filename?: string; name?: string }): s
  * Find job data by filename in the current jobs data
  */
 function findJobDataByFilename(filename: string): unknown {
-    console.log('Job picker: Finding job data for filename:', filename);
-    console.log('Job picker: Current jobs data length:', currentJobsData.length);
+    logDebug('Job picker: Finding job data for filename:', filename);
+    logDebug('Job picker: Current jobs data length:', currentJobsData.length);
     
     const found = currentJobsData.find(job => {
         if (isJobInfo(job)) {
             const matches = job.fileName === filename;
-            console.log('Job picker: Comparing', job.fileName, 'with', filename, '- matches:', matches);
+            logDebug('Job picker: Comparing', job.fileName, 'with', filename, '- matches:', matches);
             return matches;
         }
         return false;
     });
     
-    console.log('Job picker: Found job data:', found);
+    logDebug('Job picker: Found job data:', found);
     return found;
 }
 
@@ -447,9 +453,9 @@ function createFileItem(filename: string): HTMLElement {
     header.className = 'file-item-header';
 
     const jobData = findJobDataByFilename(filename);
-    console.log('Job picker: createFileItem - checking job data for', filename);
+    logDebug('Job picker: createFileItem - checking job data for', filename);
     if (isAD5XJobInfo(jobData) && isMultiColorJob(jobData)) {
-        console.log('Job picker: createFileItem - Adding (i) icon for multi-color job:', filename, 'with', jobData.toolDatas?.length || 0, 'tools');
+        logDebug('Job picker: createFileItem - Adding (i) icon for multi-color job:', filename, 'with', jobData.toolDatas?.length || 0, 'tools');
         const infoIcon = document.createElement('button');
         infoIcon.className = 'info-icon';
         infoIcon.innerHTML = 'i';
@@ -498,7 +504,7 @@ function handleFileSelection(filename: string, fileItem: HTMLElement): void {
         selectButton.disabled = false;
     }
 
-    console.log('Job picker: File selected:', filename);
+    logDebug('Job picker: File selected:', filename);
 }
 
 /**
@@ -549,7 +555,7 @@ function handleCloseDialog(): void {
         return;
     }
 
-    console.log('Job picker: Closing dialog');
+    logDebug('Job picker: Closing dialog');
     api.closeDialog();
 }
 
@@ -557,11 +563,11 @@ function handleCloseDialog(): void {
  * Handle job selection action
  */
 async function handleSelectJob(): Promise<void> {
-    console.log('\n=== Job picker: handleSelectJob START ===');
-    console.log('Job picker: selectedFile:', selectedFile);
-    console.log('Job picker: selectedPrinterModel:', selectedPrinterModel);
-    console.log('Job picker: currentJobsData length:', currentJobsData.length);
-    console.log('Job picker: All current job filenames:', currentJobsData.map(job => isJobInfo(job) ? job.fileName : 'unknown'));
+    logDebug('\n=== Job picker: handleSelectJob START ===');
+    logDebug('Job picker: selectedFile:', selectedFile);
+    logDebug('Job picker: selectedPrinterModel:', selectedPrinterModel);
+    logDebug('Job picker: currentJobsData length:', currentJobsData.length);
+    logDebug('Job picker: All current job filenames:', currentJobsData.map(job => isJobInfo(job) ? job.fileName : 'unknown'));
     
     if (!selectedFile) {
         console.warn('Job picker: No file selected');
@@ -586,22 +592,22 @@ async function handleSelectJob(): Promise<void> {
     }
 
     // For AD5X printers, check if this is a multi-color job
-    console.log('Job picker: Checking for AD5X multi-color - model:', selectedPrinterModel, ', startNow:', startNowCheckbox.checked);
+    logDebug('Job picker: Checking for AD5X multi-color - model:', selectedPrinterModel, ', startNow:', startNowCheckbox.checked);
     if (selectedPrinterModel === 'ad5x' && startNowCheckbox.checked) {
         const jobData = findJobDataByFilename(selectedFile);
-        console.log('Job picker: Found job data for', selectedFile, ':', jobData);
+        logDebug('Job picker: Found job data for', selectedFile, ':', jobData);
         
         // Check if this is a multi-color job (same logic as (i) icon)
         const isAD5X = isAD5XJobInfo(jobData);
         const hasToolDatas = isAD5X && jobData.toolDatas;
         const toolDataLength = hasToolDatas ? jobData.toolDatas.length : 0;
-        console.log('Job picker: Multi-color check - isAD5X:', isAD5X, ', hasToolDatas:', hasToolDatas, ', toolDataLength:', toolDataLength);
+        logDebug('Job picker: Multi-color check - isAD5X:', isAD5X, ', hasToolDatas:', hasToolDatas, ', toolDataLength:', toolDataLength);
         
         if (isAD5XJobInfo(jobData) && isMultiColorJob(jobData)) {
-            console.log('Job picker: Detected multi-color job with', jobData.toolDatas?.length || 0, 'tools');
-            console.log('Job picker: toolDatas details:', jobData.toolDatas);
+            logDebug('Job picker: Detected multi-color job with', jobData.toolDatas?.length || 0, 'tools');
+            logDebug('Job picker: toolDatas details:', jobData.toolDatas);
             // Multi-color job - show material matching dialog
-            console.log('Job picker: AD5X multi-color job detected, showing material matching');
+            logDebug('Job picker: AD5X multi-color job detected, showing material matching');
             
             try {
                 const materialMappings = await api.showMaterialMatching({
@@ -628,7 +634,7 @@ async function handleSelectJob(): Promise<void> {
                 });
                 
                 if (result.success) {
-                    console.log('Multi-color job started successfully');
+                    logDebug('Multi-color job started successfully');
                     api.closeDialog();
                 } else {
                     showErrorState(result.error || 'Failed to start multi-color job');
@@ -639,8 +645,8 @@ async function handleSelectJob(): Promise<void> {
             return;
         } else {
             // Single-color job - show confirmation
-            console.log('Job picker: AD5X single-color job detected, showing confirmation');
-            console.log('Job picker: Job data details - isAD5XJobInfo:', isAD5XJobInfo(jobData), ', toolDatas:', jobData);
+            logDebug('Job picker: AD5X single-color job detected, showing confirmation');
+            logDebug('Job picker: Job data details - isAD5XJobInfo:', isAD5XJobInfo(jobData), ', toolDatas:', jobData);
             
             try {
                 const confirmed = await api.showSingleColorConfirmation({
@@ -665,7 +671,7 @@ async function handleSelectJob(): Promise<void> {
                 });
                 
                 if (result.success) {
-                    console.log('Single-color job started successfully');
+                    logDebug('Single-color job started successfully');
                     api.closeDialog();
                 } else {
                     showErrorState(result.error || 'Failed to start job');
@@ -685,7 +691,7 @@ async function handleSelectJob(): Promise<void> {
         startNow: startNowCheckbox.checked
     };
 
-    console.log('Job picker: Starting job with data:', selectionData);
+    logDebug('Job picker: Starting job with data:', selectionData);
     
     try {
         if (loadingElement) {
@@ -699,7 +705,7 @@ async function handleSelectJob(): Promise<void> {
         });
         
         if (result.success) {
-            console.log('Job started successfully');
+            logDebug('Job started successfully');
             api.closeDialog();
         } else {
             showErrorState(result.error || 'Failed to start job');
@@ -748,13 +754,13 @@ async function loadRecentJobs(): Promise<void> {
         if (loadingElement) loadingElement.style.display = 'flex';
         
         const result = await api.getRecentJobs();
-        console.log('Job picker: Recent jobs result:', result);
+        logDebug('Job picker: Recent jobs result:', result);
         
         if (result.success) {
             // Store full job data for AD5X material info
             currentJobsData = result.jobs;
-            console.log('Job picker: Stored job data count:', currentJobsData.length);
-            console.log('Job picker: First few jobs:', currentJobsData.slice(0, 3));
+            logDebug('Job picker: Stored job data count:', currentJobsData.length);
+            logDebug('Job picker: First few jobs:', currentJobsData.slice(0, 3));
             
             // Convert job objects to file names for display
             const fileNames = result.jobs.map(job => {
@@ -787,7 +793,7 @@ function showCapabilityMessage(isRecentFiles: boolean): void {
  */
 function cleanup(): void {
     selectedFile = null;
-    console.log('Job picker: Cleaned up renderer state');
+    logDebug('Job picker: Cleaned up renderer state');
 }
 
 // Initialize when DOM is ready

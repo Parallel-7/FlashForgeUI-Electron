@@ -29,6 +29,8 @@
 // Ensure this file is treated as a module
 export {};
 
+import { logVerbose } from '../../utils/logging';
+
 // Interface for discovered printer information (matches preload)
 interface PrinterInfo {
     readonly name: string;
@@ -38,6 +40,11 @@ interface PrinterInfo {
     readonly status?: string;
     readonly firmwareVersion?: string;
 }
+
+const PRINTER_SELECTION_LOG_NAMESPACE = 'PrinterSelectionRenderer';
+const logDebug = (message: string, ...args: unknown[]): void => {
+  logVerbose(PRINTER_SELECTION_LOG_NAMESPACE, message, ...args);
+};
 
 // Interface for saved printer information (matches preload)
 interface SavedPrinterInfo {
@@ -303,7 +310,7 @@ const handlePrinterSelection = (printer: PrinterInfo | SavedPrinterInfo): void =
         return;
     }
     
-    console.log('Printer selected via double-click:', printer);
+    logDebug('Printer selected via double-click:', printer);
     currentState.selectedPrinter = printer;
     
     // Both saved and discovered printers use the same selection method
@@ -401,7 +408,7 @@ const updateDiscoveredPrinterTable = (printers: readonly PrinterInfo[]): void =>
         // Show no printers found message
         elements.noPrintersMessage.style.display = 'flex';
         elements.noPrintersMessage.textContent = 'No printers found on the network. Ensure LAN mode is enabled.';
-        console.log('No discovered printers found to display');
+        logDebug('No discovered printers found to display');
         return;
     }
     
@@ -413,7 +420,7 @@ const updateDiscoveredPrinterTable = (printers: readonly PrinterInfo[]): void =>
         elements.tableBody!.appendChild(row);
     });
     
-    console.log(`Updated discovered printer table with ${printers.length} printer(s)`);
+    logDebug(`Updated discovered printer table with ${printers.length} printer(s)`);
 };
 
 // Update the printer table with saved printers
@@ -434,7 +441,7 @@ const updateSavedPrinterTable = (printers: readonly SavedPrinterInfo[], lastUsed
         // Show no printers found message
         elements.noPrintersMessage.style.display = 'flex';
         elements.noPrintersMessage.textContent = 'No saved printers found.';
-        console.log('No saved printers found to display');
+        logDebug('No saved printers found to display');
         return;
     }
     
@@ -460,7 +467,7 @@ const updateSavedPrinterTable = (printers: readonly SavedPrinterInfo[], lastUsed
     // Auto-select last used printer
     setTimeout(() => autoSelectLastUsedPrinter(), 100);
     
-    console.log(`Updated saved printer table with ${printers.length} printer(s)`);
+    logDebug(`Updated saved printer table with ${printers.length} printer(s)`);
 };
 
 // Handle cancel/close actions
@@ -470,7 +477,7 @@ const handleCancel = (): void => {
         return;
     }
     
-    console.log('Printer selection cancelled');
+    logDebug('Printer selection cancelled');
     window.printerSelectionAPI.cancelSelection();
 };
 
@@ -492,7 +499,7 @@ const setupEventListeners = (): void => {
         console.warn('Cancel button not found');
     }
     
-    console.log('Event listeners set up successfully');
+    logDebug('Event listeners set up successfully');
 };
 
 // Setup IPC communication
@@ -504,14 +511,14 @@ const setupIPCListeners = (): void => {
     
     // Listen for mode changes
     window.printerSelectionAPI.receiveMode((mode: SelectionMode) => {
-        console.log('Received mode:', mode);
+        logDebug('Received mode:', mode);
         currentState.mode = mode;
         updateDialogForMode(mode);
     });
     
     // Listen for discovery started event
     window.printerSelectionAPI.onDiscoveryStarted?.(() => {
-        console.log('Discovery started');
+        logDebug('Discovery started');
         currentState.isLoading = true;
         currentState.discoveryStartTime = Date.now();
         
@@ -556,7 +563,7 @@ const setupIPCListeners = (): void => {
     
     // Listen for discovered printer data
     window.printerSelectionAPI.receivePrinters((printers: PrinterInfo[]) => {
-        console.log('Received discovered printers from main process:', printers);
+        logDebug('Received discovered printers from main process:', printers);
         if (currentState.mode === 'discovered') {
             updateDiscoveredPrinterTable(printers);
         }
@@ -564,7 +571,7 @@ const setupIPCListeners = (): void => {
     
     // Listen for saved printer data
     window.printerSelectionAPI.receiveSavedPrinters((printers: SavedPrinterInfo[], lastUsedSerial: string | null) => {
-        console.log('Received saved printers from main process:', printers, 'Last used:', lastUsedSerial);
+        logDebug('Received saved printers from main process:', printers, 'Last used:', lastUsedSerial);
         if (currentState.mode === 'saved') {
             updateSavedPrinterTable(printers, lastUsedSerial);
         }
@@ -572,17 +579,17 @@ const setupIPCListeners = (): void => {
     
     // Listen for connection status updates
     window.printerSelectionAPI.onConnecting?.((printerName: string) => {
-        console.log('Connecting to printer:', printerName);
+        logDebug('Connecting to printer:', printerName);
         showConnectingMessage(printerName);
     });
     
     window.printerSelectionAPI.onConnectionFailed?.((error: string) => {
-        console.log('Connection failed:', error);
+        logDebug('Connection failed:', error);
         hideConnectingMessage();
         showErrorMessage(error);
     });
     
-    console.log('IPC listeners set up successfully');
+    logDebug('IPC listeners set up successfully');
 };
 
 // Show connecting message
@@ -611,13 +618,13 @@ const showErrorMessage = (error: string): void => {
 
 // Initialize the dialog
 const initializeDialog = (): void => {
-    console.log('Initializing printer selection dialog');
+    logDebug('Initializing printer selection dialog');
     
     // Verify API availability
     if (!window.printerSelectionAPI) {
         console.error('ERROR: Printer selection API not available - preload script may not be loaded correctly');
     } else {
-        console.log('Printer selection API available - ready for IPC communication');
+        logDebug('Printer selection API available - ready for IPC communication');
     }
     
     // Setup UI components
@@ -627,12 +634,12 @@ const initializeDialog = (): void => {
     // Initialize with default mode
     updateDialogForMode(currentState.mode);
     
-    console.log('Printer selection dialog initialized - waiting for mode and printer data');
+    logDebug('Printer selection dialog initialized - waiting for mode and printer data');
 };
 
 // Cleanup resources
 const cleanup = (): void => {
-    console.log('Cleaning up printer selection dialog resources');
+    logDebug('Cleaning up printer selection dialog resources');
     
     // Clear any active timeout
     clearDiscoveryTimeout();
@@ -656,7 +663,7 @@ const cleanup = (): void => {
 
 // DOM Content Loaded event handler
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('Printer selection renderer - DOM loaded');
+    logDebug('Printer selection renderer - DOM loaded');
     window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
     initializeDialog();
 });

@@ -26,10 +26,12 @@ import type { ComponentUpdateData } from '../base/types';
 import type { ResolvedCameraConfig } from '../../../types/camera/camera.types';
 import type { PollingData, PrinterState, CurrentJobInfo } from '../../../types/polling';
 import type { JSMpegPlayerInstance, JSMpegStatic } from '../../../types/jsmpeg';
+import { logVerbose } from '../../../utils/logging';
 import './camera-preview.css';
 
 // Import JSMpeg library (no official types available)
 const JSMpeg: JSMpegStatic = require('@cycjimmy/jsmpeg-player') as JSMpegStatic;
+const CAMERA_PREVIEW_LOG_NAMESPACE = 'CameraPreviewComponent';
 
 /**
  * Camera preview states for visual feedback
@@ -100,6 +102,9 @@ export class CameraPreviewComponent extends BaseComponent {
 
   /** Reference to remove the global visibility listener */
   private readonly visibilityChangeHandler: () => void;
+  private logDebug(message: string, ...args: unknown[]): void {
+    logVerbose(CAMERA_PREVIEW_LOG_NAMESPACE, message, ...args);
+  }
 
   constructor(parentElement: HTMLElement) {
     super(parentElement);
@@ -111,7 +116,7 @@ export class CameraPreviewComponent extends BaseComponent {
    */
   protected async onInitialized(): Promise<void> {
     this.updateComponentState('disabled');
-    console.log('Camera preview component initialized');
+    this.logDebug('Camera preview component initialized');
     document.addEventListener('visibilitychange', this.visibilityChangeHandler);
   }
 
@@ -139,7 +144,7 @@ export class CameraPreviewComponent extends BaseComponent {
    * Handle context switch - reload camera stream for new printer
    */
   private async handleContextSwitch(contextId: string): Promise<void> {
-    console.log(`[CameraPreview] Context switched to ${contextId}`);
+    this.logDebug(`[CameraPreview] Context switched to ${contextId}`);
 
     const button = this.findElementById<HTMLButtonElement>('btn-preview');
     const cameraView = this.findElement('.camera-view');
@@ -246,12 +251,12 @@ export class CameraPreviewComponent extends BaseComponent {
   private async enableCameraPreview(button: HTMLElement, cameraView: HTMLElement): Promise<void> {
     this.updateComponentState('loading');
 
-    console.log('[CameraPreview] Enabling camera preview...');
+    this.logDebug('[CameraPreview] Enabling camera preview...');
 
     // Check camera availability
-    console.log('[CameraPreview] Calling window.api.camera.getConfig()...');
+    this.logDebug('[CameraPreview] Calling window.api.camera.getConfig()...');
     const cameraConfigRaw = await window.api.camera.getConfig();
-    console.log('[CameraPreview] Got camera config:', cameraConfigRaw);
+    this.logDebug('[CameraPreview] Got camera config:', cameraConfigRaw);
     const cameraConfig = cameraConfigRaw as ResolvedCameraConfig | null;
 
     if (!cameraConfig) {
@@ -265,19 +270,19 @@ export class CameraPreviewComponent extends BaseComponent {
       
       // Show helpful message based on reason
       if (reason.includes('does not have a built-in camera')) {
-        console.log('Enable custom camera in settings to use an external camera');
+        this.logDebug('Enable custom camera in settings to use an external camera');
       } else if (reason.includes('URL')) {
-        console.log('Please configure camera URL in settings');
+        this.logDebug('Please configure camera URL in settings');
       }
       return;
     }
 
-    console.log(`Enabling camera preview from: ${cameraConfig.sourceType} camera (${cameraConfig.streamType})`);
+    this.logDebug(`Enabling camera preview from: ${cameraConfig.sourceType} camera (${cameraConfig.streamType})`);
 
     // Handle based on stream type
     if (cameraConfig.streamType === 'rtsp') {
       // RTSP: Use node-rtsp-stream WebSocket + JSMpeg player
-      console.log('[CameraPreview] Setting up RTSP stream (node-rtsp-stream + JSMpeg)');
+      this.logDebug('[CameraPreview] Setting up RTSP stream (node-rtsp-stream + JSMpeg)');
 
       // Get the RTSP stream WebSocket URL from backend
       const rtspStreamInfo = await window.api.invoke('camera:get-rtsp-relay-info') as { wsUrl: string } | null;
@@ -287,17 +292,17 @@ export class CameraPreviewComponent extends BaseComponent {
         return;
       }
 
-      console.log('[CameraPreview] RTSP stream WebSocket URL:', rtspStreamInfo.wsUrl);
+      this.logDebug('[CameraPreview] RTSP stream WebSocket URL:', rtspStreamInfo.wsUrl);
       this.createRtspStream(rtspStreamInfo.wsUrl, cameraView);
       this.stopHeartbeat();
       this.lastFrameTimestamp = null;
     } else {
       // MJPEG: Use proxy URL
-      console.log('[CameraPreview] Calling window.api.camera.getProxyUrl()...');
+      this.logDebug('[CameraPreview] Calling window.api.camera.getProxyUrl()...');
       const proxyUrl = await window.api.camera.getProxyUrl();
-      console.log('[CameraPreview] Got proxy URL:', proxyUrl);
+      this.logDebug('[CameraPreview] Got proxy URL:', proxyUrl);
       const streamUrl = `${proxyUrl}`; // The proxy URL already includes /camera
-      console.log('[CameraPreview] Final stream URL:', streamUrl);
+      this.logDebug('[CameraPreview] Final stream URL:', streamUrl);
       this.createMjpegStream(streamUrl, cameraView);
     }
 
@@ -310,7 +315,7 @@ export class CameraPreviewComponent extends BaseComponent {
    * Disable camera preview - clean up stream and reset UI
    */
   private async disableCameraPreview(button: HTMLElement, cameraView: HTMLElement): Promise<void> {
-    console.log('Disabling camera preview');
+    this.logDebug('Disabling camera preview');
 
     // Clean up stream
     this.cleanupCameraStream();
@@ -389,15 +394,15 @@ export class CameraPreviewComponent extends BaseComponent {
         audio: false,
         // Optional callbacks
         onSourceCompleted: () => {
-          console.log('[CameraPreview] RTSP stream completed');
+          this.logDebug('[CameraPreview] RTSP stream completed');
         },
         onSourceEstablished: () => {
-          console.log('[CameraPreview] RTSP stream established');
+          this.logDebug('[CameraPreview] RTSP stream established');
           this.updateComponentState('streaming');
         },
       });
 
-      console.log('[CameraPreview] JSMpeg player initialized for RTSP stream');
+      this.logDebug('[CameraPreview] JSMpeg player initialized for RTSP stream');
     } catch (error) {
       console.error('[CameraPreview] Failed to initialize JSMpeg player:', error);
       this.updateComponentState('error');
@@ -413,7 +418,7 @@ export class CameraPreviewComponent extends BaseComponent {
       try {
         // The player is already typed as JSMpegPlayerInstance | null
         this.jsmpegPlayer.destroy();
-        console.log('[CameraPreview] JSMpeg player destroyed');
+        this.logDebug('[CameraPreview] JSMpeg player destroyed');
       } catch (error) {
         console.warn('[CameraPreview] Error destroying JSMpeg player:', error);
       }
@@ -443,7 +448,7 @@ export class CameraPreviewComponent extends BaseComponent {
     button.textContent = 'Preview On';
     cameraView.innerHTML = `<div class="no-camera">${message}</div>`;
     this.updateComponentState('error');
-    console.log(`Camera error: ${message}`);
+    this.logDebug(`Camera error: ${message}`);
   }
 
   /**
@@ -682,7 +687,7 @@ export class CameraPreviewComponent extends BaseComponent {
    * Component cleanup - stop stream and remove elements
    */
   protected cleanup(): void {
-    console.log('Cleaning up camera preview component');
+    this.logDebug('Cleaning up camera preview component');
     
     this.stopHeartbeat();
     document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
