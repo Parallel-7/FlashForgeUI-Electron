@@ -94,7 +94,8 @@
       "Bash(npm ls:*)",
       "Bash(npm outdated:*)",
       "Bash(npm view:*)",
-      "Bash(npm:*)"
+      "Bash(npm:*)",
+      "Bash(git show:*)"
     ],
     "deny": [],
     "additionalDirectories": [
