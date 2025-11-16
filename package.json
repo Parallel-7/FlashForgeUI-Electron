@@ -1,7 +1,7 @@
 {
   "name": "FlashForgeUI",
   "productName": "FlashForgeUI",
-  "version": "1.0.2-alpha.6",
+  "version": "1.0.2-alpha.10",
   "description": "Monitoring and Control software for FlashForge printers",
   "main": "lib/index.js",
   "scripts": {
@@ -31,6 +31,7 @@
     "docs:clean": "rimraf \"fileoverview-collection.json\"",
     "clean": "rimraf lib dist \"NVIDIA Corporation\"",
     "type-check": "npx tsc --noEmit",
+    "full-check": "npm run type-check && npm run lint",
     "knip": "knip",
     "knip:fix": "knip --fix",
     "knip:production": "knip --production",
@@ -44,10 +45,13 @@
     "email": "106415648+GhostTypes@users.noreply.github.com"
   },
   "license": "MIT",
+  "overrides": {
+    "js-yaml": "4.1.1"
+  },
   "dependencies": {
     "@cycjimmy/jsmpeg-player": "^6.1.2",
     "@ghosttypes/ff-api": "*",
-    "@parallel-7/slicer-meta": "*",
+    "@parallel-7/slicer-meta": "^1.1.0-20251112234641",
     "electron-log": "^5.2.4",
     "electron-updater": "^6.6.2",
     "express": "^5.1.0",

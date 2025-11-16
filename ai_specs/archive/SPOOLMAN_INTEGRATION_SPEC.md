@@ -30,7 +30,6 @@ Integration between FlashForgeUI-Electron and [Spoolman](https://github.com/Donk
 1. **Search and select active spools** from Spoolman server
 2. **Automatically update filament usage** after print completion
 3. **Support multi-printer setups** with per-context spool selection
-4. **Coexist with existing filament tracker** without conflicts
 
 ### User Workflow
 
@@ -429,16 +428,10 @@ export const DEFAULT_CONFIG: AppConfig = {
 
 **File:** `src/ui/settings/settings.html`
 
-Insert **after** existing filament tracker section (after line ~51):
+Insert into the Network Services panel within `settings.html`:
 
 ```html
-<!-- Existing Filament Tracker Section -->
-<label class="checkbox-label">
-    <input type="checkbox" id="filament-tracker-enabled"> Filament Tracker Integration
-</label>
-<!-- ... existing filament tracker inputs ... -->
-
-<!-- NEW: Spoolman Integration Section -->
+<!-- Spoolman Integration Section -->
 <div class="settings-section" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #444;">
     <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 10px; color: #888;">
         Spoolman Integration
@@ -2072,7 +2065,6 @@ src/
 - [ ] Test per-context spool persistence
 - [ ] Test network error handling
 - [ ] Test spool deletion handling
-- [ ] Verify no conflicts with existing filament tracker
 - [ ] Run type checking (`npm run type-check`)
 - [ ] Run linting (`npm run lint`)
 - [ ] Add file documentation headers
@@ -2099,7 +2091,6 @@ src/
 - ✅ Print completion automatically updates Spoolman
 - ✅ Component shows updated remaining weight after print
 - ✅ Error notifications appear on Spoolman failures
-- ✅ Integration coexists with existing filament tracker
 
 **Code Quality:**
 - ✅ All files have `@fileoverview` documentation headers

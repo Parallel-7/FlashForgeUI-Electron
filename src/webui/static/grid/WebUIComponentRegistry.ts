@@ -23,21 +23,21 @@ const COMPONENT_DEFINITIONS: Record<string, WebUIComponentDefinition> = {
     id: 'camera',
     displayName: 'Camera View',
     defaultSize: { w: 6, h: 6 },
-    minSize: { w: 4, h: 4 },
+    minSize: { w: 2, h: 2 },
     defaultPosition: { x: 0, y: 0 },
   },
   controls: {
     id: 'controls',
     displayName: 'Controls',
     defaultSize: { w: 6, h: 4 },
-    minSize: { w: 4, h: 3 },
+    minSize: { w: 2, h: 2 },
     defaultPosition: { x: 6, y: 0 },
   },
   'model-preview': {
     id: 'model-preview',
     displayName: 'Model Preview',
     defaultSize: { w: 6, h: 2 },
-    minSize: { w: 4, h: 2 },
+    minSize: { w: 2, h: 2 },
     defaultPosition: { x: 6, y: 4 },
   },
   'printer-state': {
@@ -65,15 +65,22 @@ const COMPONENT_DEFINITIONS: Record<string, WebUIComponentDefinition> = {
     id: 'job-progress',
     displayName: 'Job Progress',
     defaultSize: { w: 6, h: 2 },
-    minSize: { w: 4, h: 2 },
+    minSize: { w: 2, h: 2 },
     defaultPosition: { x: 6, y: 6 },
   },
   'job-details': {
     id: 'job-details',
     displayName: 'Job Details',
     defaultSize: { w: 6, h: 3 },
-    minSize: { w: 4, h: 3 },
+    minSize: { w: 2, h: 2 },
     defaultPosition: { x: 6, y: 8 },
+  },
+  'spoolman-tracker': {
+    id: 'spoolman-tracker',
+    displayName: 'Spoolman Tracker',
+    defaultSize: { w: 3, h: 2 },
+    minSize: { w: 2, h: 2 },
+    defaultPosition: { x: 3, y: 8 },
   },
 };
 
@@ -225,12 +232,8 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
         <div class="panel-header">Job Details</div>
         <div class="panel-content">
           <div class="detail-row">
-            <span>Weight:</span>
-            <span id="job-weight">--</span>
-          </div>
-          <div class="detail-row">
-            <span>Length:</span>
-            <span id="job-length">--</span>
+            <span>Filament Usage:</span>
+            <span id="job-filament-usage">--</span>
           </div>
           <div class="detail-row">
             <span>Layer:</span>
@@ -248,6 +251,39 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
       </div>
     `,
   },
+  'spoolman-tracker': {
+    id: 'spoolman-tracker',
+    html: `
+      <div class="panel" id="spoolman-panel">
+        <div class="panel-header">Spoolman Tracker</div>
+        <div class="panel-content">
+          <div id="spoolman-disabled" class="spoolman-state hidden">
+            <div class="spoolman-message" id="spoolman-disabled-message">Spoolman integration is disabled</div>
+          </div>
+          <div id="spoolman-no-spool" class="spoolman-state hidden">
+            <div class="spoolman-message">No spool selected</div>
+            <button id="btn-select-spool" class="control-btn">Select Spool</button>
+          </div>
+          <div id="spoolman-active" class="spoolman-state hidden">
+            <div class="spool-info">
+              <div class="spool-color-indicator" id="spool-color"></div>
+              <div class="spool-details">
+                <div class="spool-name" id="spool-name">--</div>
+                <div class="spool-meta" id="spool-meta">--</div>
+              </div>
+            </div>
+            <div class="spool-stats">
+              <div class="stat-row">
+                <span>Remaining:</span>
+                <span id="spool-remaining">--</span>
+              </div>
+            </div>
+            <button id="btn-change-spool" class="temp-btn">Change</button>
+          </div>
+        </div>
+      </div>
+    `,
+  },
 };
 
 const DEFAULT_LAYOUT_COMPONENTS: WebUIComponentLayoutMap = {
@@ -258,6 +294,7 @@ const DEFAULT_LAYOUT_COMPONENTS: WebUIComponentLayoutMap = {
   'temp-control': { x: 3, y: 6, w: 3, h: 2 },
   'job-progress': { x: 6, y: 6, w: 6, h: 2 },
   'filtration-tvoc': { x: 0, y: 8, w: 3, h: 2 },
+  'spoolman-tracker': { x: 3, y: 8, w: 3, h: 2 },
   'job-details': { x: 6, y: 8, w: 6, h: 3 },
 };
 
@@ -316,7 +353,14 @@ export function getComponentTemplate(
   return COMPONENT_TEMPLATES[componentId];
 }
 
+const componentInstanceCache = new Map<string, HTMLElement>();
+
 export function createComponentElement(componentId: string): HTMLElement {
+  const cached = componentInstanceCache.get(componentId);
+  if (cached) {
+    return cached;
+  }
+
   const template = COMPONENT_TEMPLATES[componentId];
   if (!template) {
     throw new Error(`Unknown component: ${componentId}`);
@@ -324,11 +368,14 @@ export function createComponentElement(componentId: string): HTMLElement {
 
   const wrapper = document.createElement('template');
   wrapper.innerHTML = template.html.trim();
-  const element = wrapper.content.firstElementChild;
+  const element = wrapper.content.firstElementChild as HTMLElement | null;
   if (!element) {
     throw new Error(`Template missing root element for ${componentId}`);
   }
-  return element as HTMLElement;
+
+  element.dataset.componentId = componentId;
+  componentInstanceCache.set(componentId, element);
+  return element;
 }
 
 export const componentRegistry = {

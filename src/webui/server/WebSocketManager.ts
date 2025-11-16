@@ -15,7 +15,6 @@
  * - getWebSocketManager(): Singleton accessor function
  * - Connection management: initialize, shutdown, getClientCount, disconnectToken
  * - Broadcasting: broadcastPrinterStatus, broadcastToToken
- * - Status access: getLatestPollingData (for API access without WebSocket clients)
  * - Message types: AUTH_SUCCESS, STATUS_UPDATE, ERROR, COMMAND_RESULT, PONG
  */
 
@@ -26,8 +25,10 @@ import { getAuthManager } from './AuthManager';
 import { getWebUIManager } from './WebUIManager';
 import { getPrinterBackendManager } from '../../managers/PrinterBackendManager';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager';
+import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegrationService';
+import type { SpoolmanChangedEvent } from '../../services/SpoolmanIntegrationService';
 import { AppError, toAppError, ErrorCode } from '../../utils/error.utils';
-import { 
+import {
   WebSocketCommandSchema,
   createValidationError
 } from '../schemas/web-api.schemas';
@@ -117,10 +118,19 @@ export class WebSocketManager extends EventEmitter {
       path: '/ws',
       verifyClient: this.verifyClient.bind(this)
     });
-    
+
     // Setup event handlers
     this.wss.on('connection', this.handleConnection.bind(this));
-    
+
+    // Setup Spoolman integration event listener
+    try {
+      const spoolmanService = getSpoolmanIntegrationService();
+      spoolmanService.on('spoolman-changed', this.handleSpoolmanChanged.bind(this));
+      console.log('WebSocket server subscribed to Spoolman events');
+    } catch (error) {
+      console.warn('Spoolman integration service not available for WebSocket broadcasting:', toAppError(error).message);
+    }
+
     this.isRunning = true;
     console.log('WebSocket server initialized');
   }
@@ -544,7 +554,28 @@ export class WebSocketManager extends EventEmitter {
     this.broadcast(statusMessage);
   }
 
-  
+  /**
+   * Handle Spoolman spool selection changes
+   * Broadcasts SPOOLMAN_UPDATE messages to all connected clients
+   */
+  private handleSpoolmanChanged(event: SpoolmanChangedEvent): void {
+    if (!this.isRunning || this.clients.size === 0) {
+      return;
+    }
+
+    console.log(`[WebSocketManager] Broadcasting Spoolman update for context ${event.contextId}`);
+
+    const spoolmanMessage: WebSocketMessage = {
+      type: 'SPOOLMAN_UPDATE',
+      timestamp: new Date().toISOString(),
+      contextId: event.contextId,
+      spool: event.spool
+    };
+
+    this.broadcast(spoolmanMessage);
+  }
+
+
   /**
    * Send message to specific client
    */
@@ -631,14 +662,6 @@ export class WebSocketManager extends EventEmitter {
     return this.isRunning;
   }
 
-  /**
-   * Get latest polling data
-   * Used by filament tracker integration API
-   */
-  public getLatestPollingData(): PollingData | null {
-    return this.latestPollingData;
-  }
-  
   /**
    * Shutdown WebSocket server
    */

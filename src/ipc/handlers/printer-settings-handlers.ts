@@ -17,6 +17,7 @@ export interface PrinterSettings {
   customCameraUrl?: string;
   customLedsEnabled?: boolean;
   forceLegacyMode?: boolean;
+  webUIEnabled?: boolean;
 
   // RTSP configuration
   rtspFrameRate?: number;
@@ -44,13 +45,22 @@ export function initializePrinterSettingsHandlers(): void {
       console.log('[printer-settings:get] Active context:', activeContext.id);
       console.log('[printer-settings:get] Printer details:', activeContext.printerDetails);
 
-      const { customCameraEnabled, customCameraUrl, customLedsEnabled, forceLegacyMode, rtspFrameRate, rtspQuality } = activeContext.printerDetails;
+      const {
+        customCameraEnabled,
+        customCameraUrl,
+        customLedsEnabled,
+        forceLegacyMode,
+        webUIEnabled,
+        rtspFrameRate,
+        rtspQuality
+      } = activeContext.printerDetails;
 
       const settings = {
         customCameraEnabled,
         customCameraUrl,
         customLedsEnabled,
         forceLegacyMode,
+        webUIEnabled,
         rtspFrameRate,
         rtspQuality
       };
@@ -82,15 +92,19 @@ export function initializePrinterSettingsHandlers(): void {
       // Get current printer details
       const currentDetails = activeContext.printerDetails;
 
-      // Apply defaults for RTSP settings if undefined
-      // This ensures undefined values don't get persisted to disk
-      const settingsWithDefaults = {
+      const settingsWithDefaults: PrinterSettings = {
         ...settings,
         rtspFrameRate: settings.rtspFrameRate ?? 30,
         rtspQuality: settings.rtspQuality ?? 3
       };
 
-      // Merge with new settings
+      // Remove explicit undefined values so validation sees either a boolean or the existing value
+      for (const key of Object.keys(settingsWithDefaults) as Array<keyof PrinterSettings>) {
+        if (settingsWithDefaults[key] === undefined) {
+          delete settingsWithDefaults[key];
+        }
+      }
+
       const updatedDetails = {
         ...currentDetails,
         ...settingsWithDefaults

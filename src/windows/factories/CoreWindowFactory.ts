@@ -209,3 +209,44 @@ export const createLogDialog = (): void => {
   // Register window with WindowManager
   windowManager.setLogDialog(logDialog);
 };
+
+/**
+ * Create the about dialog window with consistent styling and lifecycle
+ * Provides application metadata and external resource links
+ */
+export const createAboutDialog = (): void => {
+  const windowManager = getWindowManager();
+
+  if (windowManager.hasAboutDialogWindow()) {
+    const existingWindow = windowManager.getAboutDialogWindow();
+    if (focusExistingWindow(existingWindow)) {
+      return;
+    }
+  }
+
+  const mainWindow = windowManager.getMainWindow();
+  if (!validateParentWindow(mainWindow, 'about dialog')) {
+    return;
+  }
+
+  const dimensions = getWindowDimensions('ABOUT_DIALOG');
+  const preloadPath = createUIPreloadPath('about-dialog');
+  const uiOptions = getUIWindowOptions();
+
+  const aboutDialog = createModalWindow(
+    mainWindow,
+    dimensions,
+    preloadPath,
+    { resizable: false, frame: false, transparent: uiOptions.transparent }
+  );
+
+  void loadWindowHTML(aboutDialog, 'about-dialog');
+
+  setupWindowLifecycle(
+    aboutDialog,
+    () => windowManager.setAboutDialogWindow(null)
+  );
+
+  setupDevTools(aboutDialog);
+  windowManager.setAboutDialogWindow(aboutDialog);
+};

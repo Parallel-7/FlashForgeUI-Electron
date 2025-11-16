@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>About FlashForgeUI</title>
+  <link rel="stylesheet" href="about-dialog.css" />
+  <script src="../../../node_modules/lucide/dist/umd/lucide.min.js"></script>
+  <script src="../../../dist/renderer/lucide.bundle.js"></script>
+</head>
+<body>
+  <div class="dialog-container">
+    <div class="dialog-header">
+      <div class="dialog-title">About FlashForgeUI</div>
+      <button class="dialog-close" id="btn-close" aria-label="Close">
+        <i data-lucide="x" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div class="dialog-content about-content">
+      <img src="../../icons/icon.png" alt="FlashForgeUI app icon" class="about-app-icon" id="about-app-icon" />
+      <h1 class="about-app-name" id="about-app-name">FlashForgeUI</h1>
+      <div class="version-row">
+        <span class="version-badge" id="version-badge">v0.0.0</span>
+        <span class="release-label" id="release-label">Stable Release</span>
+      </div>
+      <p class="developer-credit" id="developer-credit">Created by GhostTypes</p>
+
+      <div class="info-grid" id="about-link-grid" role="list"></div>
+    </div>
+
+    <div class="dialog-footer compact">
+      <button class="dialog-button" id="btn-close-footer">Close</button>
+    </div>
+  </div>
+
+  <script src="../../../dist/renderer/about-dialog-renderer.bundle.js"></script>
+</body>
+</html>

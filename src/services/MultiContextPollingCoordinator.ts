@@ -48,7 +48,6 @@
 import { EventEmitter } from 'events';
 import { PrinterPollingService, POLLING_EVENTS } from './PrinterPollingService';
 import { getPrinterContextManager } from '../managers/PrinterContextManager';
-import { getMultiContextNotificationCoordinator } from './MultiContextNotificationCoordinator';
 import type { PollingData, PollingConfig } from '../types/polling';
 import type { ContextSwitchEvent, ContextRemovedEvent } from '../types/PrinterContext';
 
@@ -265,10 +264,6 @@ export class MultiContextPollingCoordinator extends EventEmitter {
     if (started) {
       console.log(`[MultiContextPollingCoordinator] Started ${isActive ? 'fast' : 'slow'} polling for context ${contextId} (${intervalMs}ms)`);
       this.emit('polling-started', contextId);
-
-      // Create notification coordinator for this context
-      const notificationCoordinator = getMultiContextNotificationCoordinator();
-      notificationCoordinator.createCoordinatorForContext(contextId, pollingService);
     } else {
       console.error(`[MultiContextPollingCoordinator] Failed to start polling for context ${contextId}`);
     }

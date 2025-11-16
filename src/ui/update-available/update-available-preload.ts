@@ -45,27 +45,27 @@ export {};
 
 contextBridge.exposeInMainWorld('updateDialogAPI', {
   async getStatus(): Promise<UpdateStatusResponse> {
-    return await ipcRenderer.invoke('get-update-status');
+    return await ipcRenderer.invoke('get-update-status') as UpdateStatusResponse;
   },
 
   async checkForUpdates(): Promise<AutoUpdateActionResult> {
-    return await ipcRenderer.invoke('check-for-updates');
+    return await ipcRenderer.invoke('check-for-updates') as AutoUpdateActionResult;
   },
 
   async downloadUpdate(): Promise<AutoUpdateActionResult> {
-    return await ipcRenderer.invoke('download-update');
+    return await ipcRenderer.invoke('download-update') as AutoUpdateActionResult;
   },
 
   async installUpdate(): Promise<AutoUpdateActionResult> {
-    return await ipcRenderer.invoke('install-update');
+    return await ipcRenderer.invoke('install-update') as AutoUpdateActionResult;
   },
 
   async openInstaller(): Promise<AutoUpdateActionResult> {
-    return await ipcRenderer.invoke('open-installer');
+    return await ipcRenderer.invoke('open-installer') as AutoUpdateActionResult;
   },
 
   async openReleasePage(): Promise<{ success: boolean }> {
-    return await ipcRenderer.invoke('open-release-page');
+    return await ipcRenderer.invoke('open-release-page') as { success: boolean };
   },
 
   onStateChanged(callback: (payload: UpdateStatePayload) => void): void {

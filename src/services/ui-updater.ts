@@ -58,17 +58,17 @@
  * @exports resetUI - Reset UI to default disconnected state
  */
 
-import type { 
-  PollingData, 
-  PrinterStatus, 
-  MaterialStationStatus 
+import type {
+  PollingData,
+  PrinterStatus,
+  MaterialStationStatus
 } from '../types/polling';
-import { 
-  formatTemperature, 
-  formatTime, 
-  formatWeight, 
+import {
+  formatTemperature,
+  formatWeight,
   formatLength
 } from '../types/polling';
+import { formatJobTime } from '../utils/time.utils';
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -345,7 +345,7 @@ export function updateJobPanel(data: PollingData): void {
 
   // Update timing
   setElementText('eta', formatETA(job.progress.formattedEta, job.progress.timeRemaining));
-  setElementText('job-time', formatTime(job.progress.elapsedTime));
+  setElementText('job-time', formatJobTime(job.progress.elapsedTimeSeconds));
 
   // Update material usage
   setElementText('weight', formatWeight(job.progress.weightUsed));
@@ -605,15 +605,16 @@ export function handleUIError(error: unknown, context: string): void {
  */
 export function resetUI(): void {
   console.log('Resetting UI to default state');
-  
+
   const emptyData = {
     printerStatus: null,
     materialStation: null,
     thumbnailData: null,
     isConnected: false,
+    isInitializing: false,
     lastPolled: new Date()
   };
-  
+
   updateAllPanels(emptyData);
 }
 

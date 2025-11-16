@@ -86,8 +86,16 @@
       "WebFetch(domain:ffmpeg.org)",
       "WebFetch(domain:lucide.dev)",
       "mcp__context7__get-library-docs",
-      "WebFetch(domain:developer.chrome.com)"
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:developer.chrome.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(git fetch:*)",
+      "Bash(tree:*)",
+      "Bash(nul)",
+      "Bash(npm ls:*)",
+      "Bash(npm outdated:*)",
+      "Bash(npm view:*)",
+      "Bash(npm:*)",
+      "Bash(git show:*)"
     ],
     "deny": [],
     "additionalDirectories": [

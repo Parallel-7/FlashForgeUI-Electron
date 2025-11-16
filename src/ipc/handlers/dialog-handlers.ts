@@ -19,7 +19,7 @@
  * functionality. Supports context-aware operations for multi-printer architecture.
  */
 
-import { ipcMain, BrowserWindow } from 'electron';
+import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import * as os from 'os';
 import type { ConfigManager } from '../../managers/ConfigManager';
 import type { getWindowManager } from '../../windows/WindowManager';
@@ -28,6 +28,7 @@ import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManage
 import { getWebUIManager } from '../../webui/server/WebUIManager';
 import { getCameraProxyService } from '../../services/CameraProxyService';
 import { getModelDisplayName } from '../../utils/PrinterUtils';
+import { getRoundedUISupportInfo } from '../../utils/RoundedUICompatibility';
 import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
 import { getLogService } from '../../services/LogService';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager';
@@ -46,6 +47,7 @@ import {
   createMaterialInfoDialog,
   createMaterialMatchingDialog,
   createSingleColorConfirmationDialog,
+  createAboutDialog,
   type InputDialogOptions
 } from '../../windows/WindowFactory';
 
@@ -55,6 +57,49 @@ interface WindowWithResolver<T> extends BrowserWindow {
     readonly resolve?: (value: T) => void;
   };
 }
+
+interface AboutDialogLink {
+  readonly id: 'developer' | 'project' | 'docs';
+  readonly label: string;
+  readonly description: string;
+  readonly url: string;
+  readonly icon: string;
+}
+
+interface AboutDialogInfo {
+  readonly appName: string;
+  readonly version: string;
+  readonly releaseTag: 'stable' | 'beta';
+  readonly releaseLabel: string;
+  readonly developerName: string;
+  readonly links: readonly AboutDialogLink[];
+}
+
+const ABOUT_DIALOG_LINKS: readonly AboutDialogLink[] = [
+  {
+    id: 'developer',
+    label: 'GhostTypes on GitHub',
+    description: 'Follow the developer behind FlashForgeUI',
+    url: 'https://github.com/GhostTypes',
+    icon: 'github'
+  },
+  {
+    id: 'project',
+    label: 'FlashForgeUI Repository',
+    description: 'View the source code and contribute on GitHub',
+    url: 'https://github.com/Parallel-7/FlashForgeUI-Electron',
+    icon: 'code-2'
+  },
+  {
+    id: 'docs',
+    label: 'User Guide & Docs',
+    description: 'Read setup instructions and feature documentation',
+    url: 'https://github.com/Parallel-7/FlashForgeUI-Electron/tree/main/docs',
+    icon: 'book-open'
+  }
+] as const;
+
+const ABOUT_DIALOG_LINK_SET = new Set(ABOUT_DIALOG_LINKS.map((link) => link.url));
 
 /**
  * Register all dialog-related IPC handlers
@@ -79,10 +124,21 @@ export function registerDialogHandlers(
     return configManager.getConfig();
   });
 
+  ipcMain.handle('request-config', async (): Promise<AppConfig> => {
+    return configManager.getConfig();
+  });
+
   ipcMain.handle('settings-save-config', async (_, config: Partial<AppConfig>): Promise<boolean> => {
     try {
       configManager.replaceConfig(config);
       await configManager.forceSave();
+
+      // Broadcast config update to main window so components can react
+      const mainWindow = windowManager.getMainWindow();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('config-updated', configManager.getConfig());
+      }
+
       return true;
     } catch (error) {
       console.error('Failed to save configuration:', error);
@@ -90,9 +146,93 @@ export function registerDialogHandlers(
     }
   });
 
+  ipcMain.handle('rounded-ui:get-support-info', async () => {
+    return getRoundedUISupportInfo();
+  });
+
+  // Test Discord webhook
+  ipcMain.handle('discord:test-webhook', async (_event, webhookUrl: string) => {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+
+      const testPayload = {
+        embeds: [{
+          title: '🧪 Test Webhook',
+          description: 'Test message from FlashForgeUI',
+          color: 0x4285f4,
+          timestamp: new Date().toISOString()
+        }]
+      };
+
+      try {
+        const response = await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(testPayload),
+          signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+          return {
+            success: false,
+            error: `Discord webhook returned ${response.status}: ${response.statusText}`
+          };
+        }
+
+        return { success: true };
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        throw fetchError;
+      }
+    } catch (error) {
+      console.error('[DialogHandlers] Discord webhook test failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error'
+      };
+    }
+  });
+
   // Status dialog handlers
   ipcMain.on('open-status-dialog', () => {
     createStatusWindow();
+  });
+
+  ipcMain.on('open-about-dialog', () => {
+    createAboutDialog();
+  });
+
+  ipcMain.handle('about-dialog:get-info', async (): Promise<AboutDialogInfo> => {
+    const version = app.getVersion();
+    const prereleasePattern = /(alpha|beta|rc)/i;
+    const releaseTag: AboutDialogInfo['releaseTag'] = prereleasePattern.test(version) ? 'beta' : 'stable';
+
+    return {
+      appName: app.getName(),
+      version,
+      releaseTag,
+      releaseLabel: releaseTag === 'stable' ? 'Stable Release' : 'Pre-release Build',
+      developerName: 'GhostTypes',
+      links: ABOUT_DIALOG_LINKS
+    };
+  });
+
+  ipcMain.handle('about-dialog:open-link', async (_event, url: string) => {
+    if (typeof url !== 'string' || !ABOUT_DIALOG_LINK_SET.has(url)) {
+      console.warn('[AboutDialog] Ignoring unsupported link open request');
+      return { success: false };
+    }
+
+    try {
+      await shell.openExternal(url);
+      return { success: true };
+    } catch (error) {
+      console.error('[AboutDialog] Failed to open link', error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
   });
 
   ipcMain.on('status-close-window', () => {

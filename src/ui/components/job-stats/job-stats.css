@@ -42,7 +42,6 @@
   flex-direction: column;
   justify-content: center;
   gap: 6px;
-  min-width: 200px;
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   overflow: auto;
 }

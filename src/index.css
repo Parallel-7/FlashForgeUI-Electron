@@ -11,35 +11,40 @@
 }
 
 :root {
-  /* Core Backgrounds - Professional Dark Theme */
-  --dark-bg: #1e1e1e;
-  --darker-bg: #151515;
-  --header-bg: #1a1a1a;
+  /* Theme Variables (set by renderer.ts from config) */
+  /* --theme-primary: set dynamically */
+  /* --theme-secondary: set dynamically */
+  /* --theme-background: set dynamically */
+  /* --theme-surface: set dynamically */
+  /* --theme-text: set dynamically */
+  /* --theme-primary-hover: computed dynamically */
+  /* --theme-secondary-hover: computed dynamically */
 
-  /* Border and Dividers - Subtle and refined */
-  --border-color: #2d2d2d;
-  --border-color-light: #3a3a3a;
-  --border-color-focus: #4a4a4a;
+  /* Derived theme-based variables for compatibility */
+  --dark-bg: var(--theme-background, #1e1e1e);
+  --card-bg: var(--theme-surface, #252525);
+  --button-bg: var(--theme-secondary, #357abd);
+  --button-hover: var(--theme-secondary-hover, #4a8dd4);
+  --button-active: var(--theme-secondary, #357abd);
+  --text-color: var(--theme-text, #e8e8e8);
+  --accent-color: var(--theme-primary, #4285f4);
 
-  /* Primary Actions - Vibrant blue with accessibility */
-  --button-bg: #4285f4;
-  --button-hover: #5a95f5;
-  --button-active: #357abd;
-
-  /* Text Colors - High contrast for readability */
-  --text-color: #e8e8e8;
+  /* Secondary derived colors */
+  --darker-bg: var(--theme-background, #151515);
+  --header-bg: var(--theme-background, #1a1a1a);
   --text-color-secondary: #b0b0b0;
   --text-color-muted: #808080;
+  --card-bg-hover: #2a2a2a;
 
-  /* Accent and Status Colors */
-  --accent-color: #4285f4;
+  /* Border colors (derived from surface with transparency) */
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-color-light: rgba(255, 255, 255, 0.15);
+  --border-color-focus: rgba(255, 255, 255, 0.2);
+
+  /* Status Colors (independent of theme) */
   --error-color: #f44336;
   --warning-color: #ff9800;
   --success-color: #00e676;
-
-  /* Card and Panel Styling */
-  --card-bg: #252525;
-  --card-bg-hover: #2a2a2a;
 
   /* Shadows for depth */
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -77,6 +82,89 @@ body {
   overflow: hidden;
 }
 
+.grid-stack.hidden {
+  display: none;
+}
+
+.grid-placeholder {
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: radial-gradient(circle at top, rgba(255, 255, 255, 0.04), transparent 55%);
+}
+
+.grid-placeholder.hidden {
+  display: none;
+}
+
+.placeholder-card {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  padding: 62px;
+  max-width: 780px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+}
+
+.placeholder-icon {
+  width: 83px;
+  height: 83px;
+  margin: 0 auto 21px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.placeholder-icon i {
+  width: 83px;
+  height: 83px;
+  color: var(--accent-color);
+}
+
+.placeholder-card h2 {
+  margin: 16px 0 31px;
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.placeholder-card p {
+  margin: 8px 0 24px;
+  color: var(--text-color-secondary);
+  line-height: 1.4;
+}
+
+#placeholder-connect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 13px 23px;
+  border-radius: 10px;
+  border: none;
+  background-color: var(--accent-color);
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), transform var(--transition-fast);
+}
+
+#placeholder-connect-btn:hover {
+  background-color: var(--button-hover);
+  transform: translateY(-1px);
+}
+
+#placeholder-connect-btn:active {
+  transform: translateY(0);
+}
+
+#placeholder-connect-btn i {
+  width: 18px;
+  height: 18px;
+}
+
 /* Header */
 .header {
   display: flex;
@@ -85,7 +173,8 @@ body {
   gap: 10px;
   background-color: var(--header-bg);
   height: 32px;
-  padding: 0 10px;
+  padding-left: 10px;
+  padding-right: 0;
   -webkit-app-region: drag;
   border-bottom: 1px solid var(--border-color);
   flex: 0 0 32px; /* Fixed height for header */
@@ -225,6 +314,10 @@ body {
   letter-spacing: 0.5px;
 }
 
+.menu-item-shortcut.hidden {
+  display: none;
+}
+
 .menu-item:hover .menu-item-shortcut {
   color: var(--text-color-secondary);
 }
@@ -269,6 +362,7 @@ body {
   display: flex;
   -webkit-app-region: no-drag;
   margin-left: auto;
+  height: 100%;
 }
 
 .window-controls button {
@@ -299,6 +393,11 @@ body {
 
 #btn-close:hover {
   background-color: #e81123;
+}
+
+#btn-close {
+  padding-right: 6px;
+  padding-left: 0;
 }
 
 /* =========================== */

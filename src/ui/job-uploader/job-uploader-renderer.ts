@@ -50,29 +50,6 @@ type MetadataResult = ParseResult & {
     error?: string;
 };
 
-// Extend Window interface to include our job uploader API
-declare global {
-    interface Window {
-        uploaderAPI?: {
-            browseFile: () => void;
-            uploadJob: (payload: UploadJobPayload) => void;
-            cancelUpload: () => void;
-            receiveFile: (func: (filePath: string | null) => void) => void;
-            receiveMetadata: (func: (result: MetadataResult) => void) => void;
-            removeListeners: () => void;
-            // New methods for 3MF multi-color support
-            showMaterialMatchingDialog: (filePath: string, toolData: FFGcodeToolData[]) => Promise<AD5XMaterialMapping[] | null>;
-            showSingleColorDialog: (filePath: string, filament: FilamentInfo) => void;
-            uploadFileAD5X: (filePath: string, startNow: boolean, autoLevel: boolean, materialMappings?: AD5XMaterialMapping[]) => Promise<unknown>;
-            // Helper methods
-            isAD5XPrinter: () => Promise<boolean>;
-            // Progress reporting methods
-            receiveUploadProgress: (func: (progress: UploadProgress) => void) => void;
-            receiveUploadComplete: (func: (result: UploadCompletionResult) => void) => void;
-        };
-    }
-}
-
 // DOM element references with proper typing
 interface DialogElements {
     filePathDisplay: HTMLElement | null;
@@ -82,7 +59,6 @@ interface DialogElements {
     printerModel: HTMLElement | null;
     filamentType: HTMLElement | null;
     filamentLen: HTMLElement | null;
-    filamentWt: HTMLElement | null;
     supportUsed: HTMLElement | null;
     slicerName: HTMLElement | null;
     slicerVer: HTMLElement | null;
@@ -170,7 +146,6 @@ document.addEventListener('DOMContentLoaded', (): void => {
         printerModel: document.getElementById('meta-printer'),
         filamentType: document.getElementById('meta-filament-type'),
         filamentLen: document.getElementById('meta-filament-len'),
-        filamentWt: document.getElementById('meta-filament-wt'),
         supportUsed: document.getElementById('meta-support'),
         slicerName: document.getElementById('meta-slicer-name'),
         slicerVer: document.getElementById('meta-slicer-ver'),
@@ -353,39 +328,34 @@ async function handleMetadataResult(elements: DialogElements, result: MetadataRe
         // Check if this is a 3MF file for AD5X that should use enhanced upload flow
         if (currentFilePath && await shouldUseEnhanced3MFFlow(currentFilePath)) {
             try {
-                const filaments = result.threeMf?.filaments || [];
-                
-                if (filaments.length > 1) {
-                    // Multi-color file - route to material matching dialog
-                    console.log(`3MF multi-color file detected with ${filaments.length} filaments`);
-                    const toolData = convertFilamentsToToolData(filaments);
-                    
-                    if (window.uploaderAPI?.showMaterialMatchingDialog) {
-                        const mappings = await window.uploaderAPI.showMaterialMatchingDialog(currentFilePath, toolData);
-                        if (mappings && Array.isArray(mappings)) {
-                            // Save material mappings for later use
-                            savedMaterialMappings = mappings;
-                            console.log('Material mappings saved:', mappings);
-                            // Enable OK button now that mappings are confirmed
-                            setOKButtonState(elements, true);
-                        } else {
-                            // User cancelled - disable OK button
-                            console.log('Material matching cancelled by user');
-                            setOKButtonState(elements, false);
-                        }
-                        return; // Don't enable OK button here, handled above
-                    }
-                } else if (filaments.length === 1) {
-                    // Single-color file - just save the filament info and continue to main dialog
-                    // The user will see the metadata and can choose auto level/start now options
-                    console.log('3MF single-color file detected');
-                    // No need to show single-color dialog, just enable OK button
-                    // The upload will use AD5X path when OK is clicked
-                } else {
+                // ✅ NEW: Check both threeMf.filaments and file.filaments as fallback
+                const filaments = result.threeMf?.filaments || result.file?.filaments || [];
+
+                if (filaments.length === 0) {
                     // No filament data - show warning and fall back to regular upload
                     console.log('3MF file has no filament data, falling back to regular upload');
                     showNoFilamentDataWarning(currentFilePath);
                     return; // Warning function handles enabling OK button
+                }
+
+                // Always show material matching dialog for AD5X 3MF files (single or multi-color)
+                console.log(`3MF file detected with ${filaments.length} filament(s)`);
+                const toolData = convertFilamentsToToolData(filaments);
+
+                if (window.uploaderAPI?.showMaterialMatchingDialog) {
+                    const mappings = await window.uploaderAPI.showMaterialMatchingDialog(currentFilePath, toolData);
+                    if (mappings && Array.isArray(mappings)) {
+                        // Save material mappings for later use
+                        savedMaterialMappings = mappings;
+                        console.log('Material mappings saved:', mappings);
+                        // Enable OK button now that mappings are confirmed
+                        setOKButtonState(elements, true);
+                    } else {
+                        // User cancelled - disable OK button
+                        console.log('Material matching cancelled by user');
+                        setOKButtonState(elements, false);
+                    }
+                    return; // Don't enable OK button here, handled above
                 }
             } catch (error) {
                 console.warn('Error processing 3MF file for enhanced upload:', error);
@@ -490,24 +460,37 @@ function populateMetadata(elements: DialogElements, data: MetadataResult): void 
 
     if (elements.filamentLen) {
         let lengthText = '-';
-        if (data.file?.filamentUsedMM) {
-            lengthText = `${data.file.filamentUsedMM.toFixed(2)} mm`;
-        } else if (data.threeMf?.filaments?.[0]?.usedM) {
-            const usedM = parseFloat(data.threeMf.filaments[0].usedM);
-            lengthText = `${usedM.toFixed(2)} mm`;
-        }
-        elements.filamentLen.textContent = lengthText;
-    }
+        let weightText = '';
 
-    if (elements.filamentWt) {
-        let weightText = '-';
-        if (data.file?.filamentUsedG) {
-            weightText = `${data.file.filamentUsedG.toFixed(2)} g`;
-        } else if (data.threeMf?.filaments?.[0]?.usedG) {
-            const usedG = parseFloat(data.threeMf.filaments[0].usedG);
-            weightText = `${usedG.toFixed(2)} g`;
+        // Get length
+        if (data.file?.filaments?.[0]?.usedM) {
+            // NEW: Use file.filaments (works for both .gcode and .3mf)
+            const usedM = parseFloat(data.file.filaments[0].usedM);
+            lengthText = `${usedM.toFixed(2)} m`;
+        } else if (data.threeMf?.filaments?.[0]?.usedM) {
+            // FALLBACK: Use threeMf.filaments for .3mf files
+            const usedM = parseFloat(data.threeMf.filaments[0].usedM);
+            lengthText = `${usedM.toFixed(2)} m`;
+        } else if (data.file?.filamentUsedMM) {
+            // LEGACY: Convert millimeters to meters for display
+            lengthText = `${(data.file.filamentUsedMM / 1000).toFixed(2)} m`;
         }
-        elements.filamentWt.textContent = weightText;
+
+        // Get weight (only if length is available)
+        if (lengthText !== '-') {
+            if (data.file?.filamentUsedG) {
+                weightText = ` • ${data.file.filamentUsedG.toFixed(2)} g`;
+            } else if (data.threeMf?.filaments?.[0]?.usedG) {
+                const usedG = parseFloat(data.threeMf.filaments[0].usedG);
+                weightText = ` • ${usedG.toFixed(2)} g`;
+            } else if (data.file?.filaments?.[0]?.usedG) {
+                const usedG = parseFloat(data.file.filaments[0].usedG);
+                weightText = ` • ${usedG.toFixed(2)} g`;
+            }
+        }
+
+        // Combine: "17.42 m • 51.95 g" or just "17.42 m" if no weight data
+        elements.filamentLen.textContent = lengthText + weightText;
     }
 
     if (elements.supportUsed) {
@@ -584,7 +567,6 @@ function resetMetadata(elements: DialogElements): void {
         elements.printerModel,
         elements.filamentType,
         elements.filamentLen,
-        elements.filamentWt,
         elements.supportUsed,
         elements.slicerName,
         elements.slicerVer,

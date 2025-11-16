@@ -83,7 +83,8 @@ export interface JobProgress {
   currentLayer: number | null;
   totalLayers: number | null;
   timeRemaining: number | null; // minutes
-  elapsedTime: number; // minutes
+  elapsedTime: number; // minutes (kept for backward compatibility)
+  elapsedTimeSeconds: number; // seconds (for precise time display)
   weightUsed: number; // grams
   lengthUsed: number; // meters
   formattedEta?: string; // formatted ETA from ff-api (e.g. "14:30")
@@ -192,6 +193,7 @@ export interface PollingData {
   materialStation: MaterialStationStatus | null;
   thumbnailData: string | null; // base64 image data
   isConnected: boolean;
+  isInitializing: boolean; // true until first poll completes
   lastPolled: Date;
 }
 
@@ -326,6 +328,7 @@ export function createEmptyPollingData(): PollingData {
     materialStation: null,
     thumbnailData: null,
     isConnected: false,
+    isInitializing: true,
     lastPolled: new Date()
   };
 }

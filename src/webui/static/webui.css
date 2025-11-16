@@ -1,38 +1,43 @@
 /**
  * Web UI Stylesheet
- * Dark theme matching the main Electron UI
+ * Theme colors are set dynamically via JavaScript from --theme-* CSS variables
  */
 
 :root {
-  /* Core Backgrounds - Professional Dark Theme */
-  --dark-bg: #1e1e1e;
-  --darker-bg: #151515;
-  --header-bg: #1a1a1a;
+  /* Theme Variables (set by app.ts from config) */
+  /* --theme-primary: set dynamically */
+  /* --theme-secondary: set dynamically */
+  /* --theme-background: set dynamically */
+  /* --theme-surface: set dynamically */
+  /* --theme-text: set dynamically */
+  /* --theme-primary-hover: computed dynamically */
+  /* --theme-secondary-hover: computed dynamically */
 
-  /* Border and Dividers - Subtle and refined */
-  --border-color: #2d2d2d;
-  --border-color-light: #3a3a3a;
-  --border-color-focus: #4a4a4a;
+  /* Derived theme-based variables for compatibility */
+  --dark-bg: var(--theme-background, #1e1e1e);
+  --card-bg: var(--theme-surface, #252525);
+  --button-bg: var(--theme-primary, #4285f4);
+  --button-hover: var(--theme-primary-hover, #5a95f5);
+  --button-active: var(--theme-secondary, #357abd);
+  --text-color: var(--theme-text, #e8e8e8);
+  --accent-color: var(--theme-primary, #4285f4);
 
-  /* Primary Actions - Vibrant blue with accessibility */
-  --button-bg: #4285f4;
-  --button-hover: #5a95f5;
-  --button-active: #357abd;
-
-  /* Text Colors - High contrast for readability */
-  --text-color: #e8e8e8;
+  /* Secondary derived colors */
+  --darker-bg: var(--theme-background, #151515);
+  --header-bg: var(--theme-background, #1a1a1a);
   --text-color-secondary: #b0b0b0;
   --text-color-muted: #808080;
+  --card-bg-hover: #2a2a2a;
 
-  /* Accent and Status Colors */
-  --accent-color: #4285f4;
+  /* Border colors (derived from surface with transparency) */
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border-color-light: rgba(255, 255, 255, 0.15);
+  --border-color-focus: rgba(255, 255, 255, 0.2);
+
+  /* Status Colors (independent of theme) */
   --error-color: #f44336;
   --warning-color: #ff9800;
   --success-color: #00e676;
-
-  /* Card and Panel Styling */
-  --card-bg: #252525;
-  --card-bg-hover: #2a2a2a;
 
   /* Shadows for depth */
   --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -264,7 +269,16 @@ body {
 }
 
 .edit-mode-toggle .lock-icon {
-  font-size: 16px;
+  display: inline-flex;
+  width: 17px;
+  height: 17px;
+  color: currentColor;
+}
+
+.edit-mode-toggle .lock-icon .lucide-icon,
+.edit-mode-toggle .lock-icon svg {
+  width: 100%;
+  height: 100%;
 }
 
 .edit-mode-toggle[aria-pressed="true"] {
@@ -797,7 +811,8 @@ body {
   color: var(--text-color);
 }
 
-.material-tool-swatch {
+.material-tool-swatch,
+.material-tool-color {
   width: 16px;
   height: 16px;
   border-radius: 999px;
@@ -977,6 +992,58 @@ body {
   margin-left: 26px;
 }
 
+.theme-color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.theme-color-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.theme-color-grid label span {
+  font-size: 14px;
+  color: var(--text-color);
+}
+
+.theme-color-grid .color-input {
+  width: 100%;
+  height: 48px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  cursor: pointer;
+  background: var(--darker-bg);
+}
+
+.theme-color-grid .color-input:hover {
+  border-color: var(--border-color-light);
+}
+
+.theme-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 16px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .theme-color-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .theme-buttons {
+    flex-direction: column;
+  }
+
+  .theme-buttons button {
+    width: 100%;
+  }
+}
+
 .modal-footer {
   padding: 16px 20px;
   border-top: 1px solid var(--border-color);
@@ -1123,7 +1190,8 @@ body {
   border: 1px solid var(--border-color);
 }
 
-.material-chip-swatch {
+.material-chip-swatch,
+.material-color {
   width: 12px;
   height: 12px;
   border-radius: 999px;
@@ -1131,7 +1199,8 @@ body {
   background-color: #555555;
 }
 
-.material-chip-label {
+.material-chip-label,
+.material-label {
   font-size: 12px;
   color: var(--text-color-secondary);
 }
@@ -1324,4 +1393,211 @@ body {
 
 #control-grid .panel-content::-webkit-scrollbar-thumb:hover {
   background: var(--accent-color);
+}
+
+/* ============================================================================
+   SPOOLMAN TRACKER COMPONENT
+   ============================================================================ */
+
+/* Spoolman Panel States */
+.spoolman-state {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.spoolman-message {
+  padding: 12px;
+  border-radius: 10px;
+  background-color: var(--darker-bg);
+  border: 1px dashed var(--border-color);
+  color: var(--text-color-secondary);
+  text-align: center;
+  font-size: 14px;
+}
+
+/* Spool Info Display */
+.spool-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.spool-color-indicator {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+  /* Ensure color is visible even with dark colors on dark backgrounds */
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.spool-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.spool-name {
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spool-meta {
+  font-size: 13px;
+  color: var(--text-color-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.spool-stats {
+  margin-bottom: 12px;
+}
+
+.spool-stats .stat-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.spool-stats .stat-row span:first-child {
+  color: var(--text-color-secondary);
+}
+
+.spool-stats .stat-row span:last-child {
+  color: var(--text-color);
+  font-weight: 500;
+}
+
+/* ============================================================================
+   SPOOLMAN MODAL
+   ============================================================================ */
+
+.spoolman-search-input {
+  width: 100%;
+  background-color: var(--darker-bg);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 16px;
+  outline: none;
+  margin-bottom: 16px;
+  transition: border-color var(--transition-fast);
+}
+
+.spoolman-search-input:focus {
+  border-color: var(--accent-color);
+}
+
+.spoolman-search-input::placeholder {
+  color: var(--text-color-muted);
+}
+
+.spoolman-spool-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 400px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.spoolman-spool-item {
+  background-color: var(--darker-bg);
+  padding: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  border: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: background-color var(--transition-fast), transform var(--transition-fast), border-color var(--transition-fast);
+}
+
+.spoolman-spool-item:hover {
+  background-color: var(--card-bg-hover);
+  transform: translateY(-1px);
+  border-color: var(--border-color-light);
+}
+
+.spoolman-spool-item:active {
+  transform: translateY(0);
+}
+
+.spoolman-spool-item .spool-color-indicator {
+  width: 24px;
+  height: 24px;
+  /* Slightly thicker border for better visibility in modal */
+  border-width: 2px;
+}
+
+.spoolman-spool-item .spool-details {
+  flex: 1;
+  min-width: 0;
+}
+
+.spoolman-spool-item .spool-name {
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.spoolman-spool-item .spool-meta {
+  font-size: 13px;
+}
+
+.spoolman-spool-item .spool-remaining {
+  font-size: 13px;
+  color: var(--text-color-secondary);
+  text-align: right;
+  white-space: nowrap;
+}
+
+.spoolman-no-results,
+.spoolman-loading {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-color-secondary);
+  font-size: 14px;
+}
+
+.spoolman-loading {
+  color: var(--accent-color);
+}
+
+/* ============================================================================
+   SPOOLMAN RESPONSIVE (Mobile)
+   ============================================================================ */
+
+@media (max-width: 768px) {
+  .spool-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .spool-color-indicator {
+    margin-bottom: 4px;
+  }
+
+  .spoolman-spool-list {
+    max-height: 300px;
+  }
+
+  .spoolman-spool-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+
+  .spoolman-spool-item .spool-remaining {
+    text-align: left;
+  }
 }

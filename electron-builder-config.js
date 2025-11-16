@@ -118,6 +118,11 @@ module.exports = {
                 arch: ["universal"],
             },
         ],
+        // Ensure macOS prompts for local network permission (required for Sequoia 15.0+)
+        // This triggers the system permission dialog when the app attempts to discover/connect to printers
+        extendInfo: {
+            NSLocalNetworkUsageDescription: "FlashForgeUI requires access to your local network to discover and communicate with FlashForge 3D printers on your network."
+        }
     },
 
     // Linux configuration
@@ -139,6 +144,9 @@ module.exports = {
         // Ensure shortcuts are created for Windows notification support
         createDesktopShortcut: true,
         createStartMenuShortcut: true,
+
+        // Force standard hyphen-based naming for electron-updater compatibility
+        artifactName: "${productName}-Setup-${version}.${ext}",
     },
 
     // DMG configuration

@@ -130,7 +130,7 @@ export class ControlsGridComponent extends BaseComponent {
       action: 'invoke',
       channel: 'clear-status',
       requiresConnection: true,
-      disableDuringPrint: false,
+      disableDuringPrint: true,
       legacySupported: false // Not supported on legacy printers
     },
 

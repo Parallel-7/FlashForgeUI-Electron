@@ -37,3 +37,6 @@ export { AdditionalInfoComponent } from './additional-info';
 
 // Multi-Printer Support Components
 export { PrinterTabsComponent } from './printer-tabs';
+
+// Spoolman Integration Component
+export { SpoolmanComponent } from './spoolman';
