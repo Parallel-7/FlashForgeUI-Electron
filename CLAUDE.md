@@ -244,7 +244,7 @@ Call out unverified runtime assumptions explicitly in deliverables.
 
 ## Fileoverview Inventory
 
-- `fileoverview-collection.json` (repo root) aggregates every `@fileoverview` block across `src/**/*.ts`. Use it to understand module responsibilities quickly before editing; it lists ~230 entries with filenames plus their summaries.
+- `fileoverview-report.md` (repo root) aggregates every `@fileoverview` block across `src/**/*.ts`. Use it to understand module responsibilities quickly before editing; it lists ~230 entries with filenames plus their summaries.
 - Run `npm run docs:check` to ensure new/updated files keep their `@fileoverview` headers synchronized with this inventory.
 
 ## Reference Material

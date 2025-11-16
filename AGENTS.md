@@ -25,7 +25,7 @@ This guide captures project-specific expectations for OpenAI Codex agents assist
   - `src/ui/components/ComponentManager.ts` + `src/ui/gridstack/*`: component system + layout/palette orchestration.
   - `src/utils/PortAllocator.ts`: assigns unique camera proxy ports (8181‑8191) for MJPEG streams plus RTSP WebSocket ports.
 - **Feature status**: Multi-printer and headless/WebUI flows are feature-complete but still unverified with live printers (filament tracking, simultaneous jobs, multi-camera). Treat runtime assumptions as unvalidated.
-- **Documentation standard**: Every `.ts` file needs an `@fileoverview` block explaining purpose, exports, and dependencies. Generate `fileoverview-collection.json` via `npm run docs:combine` when you need module summaries, then run `npm run docs:clean` to delete it so the repo stays clean.
+- **Documentation standard**: Every `.ts` file needs an `@fileoverview` block explaining purpose, exports, and dependencies. Generate `fileoverview-report.md` via `npm run docs:combine` when you need module summaries, then run `npm run docs:clean` to delete it so the repo stays clean.
 
 ### Sample `@fileoverview` Blocks
 
@@ -111,7 +111,7 @@ Use these npm scripts to enforce quality checks and gather insights:
 | --- | --- | --- |
 | `npm run type-check` | TypeScript validation (`tsc --noEmit`). | Report success/fail clearly; fix root causes before completion. |
 | `npm run lint` / `npm run lint:fix` | ESLint checks and auto-fixes on `src/**/*.ts`. | Auto-fix first; re-run lint to confirm clean state. |
-| `npm run docs:check` | PowerShell script scanning for missing `@fileoverview`. | Use findings to prioritize documentation updates. |
+| `npm run docs:check` | Node/TypeScript script scanning for missing `@fileoverview`. | Use findings to prioritize documentation updates. |
 | `npm run knip` (+ variants) | Dead code and dependency analysis via Knip. | Review results carefully; Electron patterns create false positives. |
 | `npm run build:*` | Build main, renderer, WebUI, or platform packages. | Run only when requested or required for verification. |
 
@@ -173,7 +173,7 @@ When extending settings, create a new section class implementing `SettingsSectio
 
 ## Fileoverview Inventory
 
-- Run `npm run docs:combine` to generate `fileoverview-collection.json`, which aggregates every `@fileoverview` block for quick module summaries while you work.
+- Run `npm run docs:combine` to generate `fileoverview-report.md`, which aggregates every `@fileoverview` block for quick module summaries while you work.
 - After you're done, run `npm run docs:clean` to remove the generated file and keep the repo tidy.
 - Continue to run `npm run docs:check` after creating or heavily modifying files to ensure headers remain accurate; this script powers the combined inventory.
 

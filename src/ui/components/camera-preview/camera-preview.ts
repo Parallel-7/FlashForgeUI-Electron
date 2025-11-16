@@ -85,12 +85,34 @@ export class CameraPreviewComponent extends BaseComponent {
   /** Current printer state for progress bar styling */
   private currentPrinterState: PrinterState | null = null;
 
+  /** Heartbeat interval identifier */
+  private heartbeatIntervalId: number | null = null;
+
+  /** Timestamp when the last MJPEG frame rendered */
+  private lastFrameTimestamp: number | null = null;
+
+  /** True while a watchdog restart is in progress */
+  private isRestartingStream = false;
+
+  /** Heartbeat cadence and timeout thresholds */
+  private readonly heartbeatCheckIntervalMs = 5000;
+  private readonly heartbeatTimeoutMs = 10000;
+
+  /** Reference to remove the global visibility listener */
+  private readonly visibilityChangeHandler: () => void;
+
+  constructor(parentElement: HTMLElement) {
+    super(parentElement);
+    this.visibilityChangeHandler = this.handleVisibilityChange.bind(this);
+  }
+
   /**
    * Initialize component and set up initial state
    */
   protected async onInitialized(): Promise<void> {
     this.updateComponentState('disabled');
     console.log('Camera preview component initialized');
+    document.addEventListener('visibilitychange', this.visibilityChangeHandler);
   }
 
   /**
@@ -267,6 +289,8 @@ export class CameraPreviewComponent extends BaseComponent {
 
       console.log('[CameraPreview] RTSP stream WebSocket URL:', rtspStreamInfo.wsUrl);
       this.createRtspStream(rtspStreamInfo.wsUrl, cameraView);
+      this.stopHeartbeat();
+      this.lastFrameTimestamp = null;
     } else {
       // MJPEG: Use proxy URL
       console.log('[CameraPreview] Calling window.api.camera.getProxyUrl()...');
@@ -290,6 +314,8 @@ export class CameraPreviewComponent extends BaseComponent {
 
     // Clean up stream
     this.cleanupCameraStream();
+    this.stopHeartbeat();
+    this.lastFrameTimestamp = null;
 
     // Restore the no-camera message
     cameraView.innerHTML = '<div class="no-camera">Preview Disabled</div>';
@@ -317,15 +343,24 @@ export class CameraPreviewComponent extends BaseComponent {
     imgElement.style.objectFit = 'cover';
     imgElement.alt = 'Camera Stream';
 
-    // Handle stream errors
+    imgElement.onload = () => {
+      this.lastFrameTimestamp = Date.now();
+      this.updateComponentState('streaming');
+    };
+
     imgElement.onerror = () => {
       console.error('MJPEG stream failed to load');
       this.updateComponentState('error');
+      if (this.previewEnabled) {
+        void this.restartMjpegStream('img-error');
+      }
     };
 
     // Add to view
     cameraView.appendChild(imgElement);
     this.cameraStreamElement = imgElement;
+    this.lastFrameTimestamp = Date.now();
+    this.startHeartbeat();
   }
 
   /**
@@ -396,6 +431,8 @@ export class CameraPreviewComponent extends BaseComponent {
 
       this.cameraStreamElement = null;
     }
+
+    this.lastFrameTimestamp = null;
   }
 
   /**
@@ -422,6 +459,106 @@ export class CameraPreviewComponent extends BaseComponent {
     this.container.classList.add(`state-${state}`);
     
     this.currentState = state;
+  }
+
+  /**
+   * Restart the MJPEG stream when a heartbeat or visibility change detects a stall
+   */
+  private async restartMjpegStream(reason: string): Promise<void> {
+    if (this.isRestartingStream || !this.previewEnabled) {
+      return;
+    }
+
+    const cameraView = this.findElement('.camera-view');
+    if (!cameraView) {
+      return;
+    }
+
+    const button = this.findElementById<HTMLButtonElement>('btn-preview');
+    const originalText = button?.textContent;
+
+    console.warn(`[CameraPreview] Restarting MJPEG stream (${reason})`);
+    this.isRestartingStream = true;
+    this.updateComponentState('loading');
+    if (button) {
+      button.textContent = 'Loading...';
+    }
+
+    try {
+      this.cleanupCameraStream();
+
+      const restored = await window.api.camera.restoreStream();
+      if (!restored) {
+        console.warn('[CameraPreview] Camera proxy was not restarted by backend');
+      }
+
+      const proxyUrl = await window.api.camera.getProxyUrl();
+      this.createMjpegStream(proxyUrl, cameraView);
+      if (button) {
+        button.textContent = 'Preview Off';
+      }
+      this.updateComponentState('streaming');
+    } catch (error) {
+      console.error('[CameraPreview] Failed to restart MJPEG stream:', error);
+      if (button && originalText) {
+        button.textContent = originalText;
+      }
+      this.updateComponentState('error');
+    } finally {
+      this.isRestartingStream = false;
+    }
+  }
+
+  /**
+   * Start heartbeat interval to monitor MJPEG freshness
+   */
+  private startHeartbeat(): void {
+    if (this.heartbeatIntervalId !== null) {
+      return;
+    }
+
+    this.heartbeatIntervalId = window.setInterval(() => {
+      if (document.hidden || !this.previewEnabled || this.isRestartingStream) {
+        return;
+      }
+
+      if (!this.lastFrameTimestamp) {
+        return;
+      }
+
+      const elapsed = Date.now() - this.lastFrameTimestamp;
+      if (elapsed >= this.heartbeatTimeoutMs) {
+        void this.restartMjpegStream('heartbeat-timeout');
+      }
+    }, this.heartbeatCheckIntervalMs);
+  }
+
+  /**
+   * Stop the heartbeat when the preview is disabled
+   */
+  private stopHeartbeat(): void {
+    if (this.heartbeatIntervalId !== null) {
+      window.clearInterval(this.heartbeatIntervalId);
+      this.heartbeatIntervalId = null;
+    }
+  }
+
+  /**
+   * When the window regains focus, ensure the MJPEG stream is still alive
+   */
+  private handleVisibilityChange(): void {
+    if (document.hidden || !this.previewEnabled || this.isRestartingStream) {
+      return;
+    }
+
+    if (!this.lastFrameTimestamp) {
+      return;
+    }
+
+    const elapsed = Date.now() - this.lastFrameTimestamp;
+    if (elapsed >= this.heartbeatTimeoutMs) {
+      void this.restartMjpegStream('visibility-change');
+    }
   }
 
   /**
@@ -547,6 +684,11 @@ export class CameraPreviewComponent extends BaseComponent {
   protected cleanup(): void {
     console.log('Cleaning up camera preview component');
     
+    this.stopHeartbeat();
+    document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
+    this.lastFrameTimestamp = null;
+    this.isRestartingStream = false;
+
     // Clean up camera stream
     this.cleanupCameraStream();
     

@@ -86,6 +86,8 @@ interface ContextStreamInfo {
   retryCount: number;
   /** Retry timer handle */
   retryTimer: NodeJS.Timeout | null;
+  /** Delay before tearing down upstream after last client disconnects */
+  idleTimeout: NodeJS.Timeout | null;
   /** Last error message */
   lastError: string | null;
   /** Statistics for this stream */
@@ -125,6 +127,9 @@ export class CameraProxyService extends EventEmitter {
 
   /** Reference to context manager */
   private readonly contextManager = getPrinterContextManager();
+
+  /** Delay before stopping upstream stream after last renderer disconnects */
+  private readonly noClientGracePeriodMs = 5000;
 
   private constructor() {
     super();
@@ -214,6 +219,7 @@ export class CameraProxyService extends EventEmitter {
       currentResponse: null,
       retryCount: 0,
       retryTimer: null,
+      idleTimeout: null,
       lastError: null,
       stats: {
         bytesReceived: 0,
@@ -288,6 +294,8 @@ export class CameraProxyService extends EventEmitter {
 
     console.log(`[CameraProxyService] Removing stream for context ${contextId}`);
 
+    this.clearIdleTimeout(streamInfo);
+
     // Stop streaming
     this.stopStreamingForContext(contextId, streamInfo);
 
@@ -338,6 +346,8 @@ export class CameraProxyService extends EventEmitter {
       return;
     }
 
+    this.clearIdleTimeout(streamInfo);
+
     const clientId = this.generateClientId();
     const client: CameraProxyClient = {
       id: clientId,
@@ -357,8 +367,8 @@ export class CameraProxyService extends EventEmitter {
 
       // Stop streaming if no more clients
       if (streamInfo.activeClients.size === 0) {
-        console.log(`[CameraProxyService] No more clients for context ${contextId}, stopping stream`);
-        this.stopStreamingForContext(contextId, streamInfo);
+        console.log(`[CameraProxyService] No more clients for context ${contextId}, scheduling stream stop`);
+        this.scheduleIdleStreamStop(contextId, streamInfo);
       }
     });
 
@@ -549,6 +559,36 @@ export class CameraProxyService extends EventEmitter {
   }
 
   /**
+   * Schedule stream shutdown after a grace period when all clients disconnect
+   */
+  private scheduleIdleStreamStop(contextId: string, streamInfo: ContextStreamInfo): void {
+    if (streamInfo.idleTimeout) {
+      return;
+    }
+
+    streamInfo.idleTimeout = setTimeout(() => {
+      streamInfo.idleTimeout = null;
+
+      if (streamInfo.activeClients.size === 0) {
+        console.log(
+          `[CameraProxyService] Idle timeout reached for context ${contextId}, stopping upstream stream`
+        );
+        this.stopStreamingForContext(contextId, streamInfo);
+      }
+    }, this.noClientGracePeriodMs);
+  }
+
+  /**
+   * Clear pending idle shutdown timers when new clients connect or service stops
+   */
+  private clearIdleTimeout(streamInfo: ContextStreamInfo): void {
+    if (streamInfo.idleTimeout) {
+      clearTimeout(streamInfo.idleTimeout);
+      streamInfo.idleTimeout = null;
+    }
+  }
+
+  /**
    * Handle stream errors and reconnection for a context
    *
    * @param contextId - Context ID
@@ -590,6 +630,8 @@ export class CameraProxyService extends EventEmitter {
 
     console.log(`[CameraProxyService] Stopping camera stream for context ${contextId}`);
     streamInfo.isStreaming = false;
+
+    this.clearIdleTimeout(streamInfo);
 
     // Clear retry timer
     if (streamInfo.retryTimer) {
@@ -770,4 +812,3 @@ export class CameraProxyService extends EventEmitter {
 export function getCameraProxyService(): CameraProxyServiceInstance {
   return CameraProxyService.getInstance();
 }
-
