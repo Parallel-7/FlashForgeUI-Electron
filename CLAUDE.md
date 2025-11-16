@@ -245,6 +245,8 @@ Call out unverified runtime assumptions explicitly in deliverables.
 ## Fileoverview Inventory
 
 - `fileoverview-report.md` (repo root) aggregates every `@fileoverview` block across `src/**/*.ts`. Use it to understand module responsibilities quickly before editing; it lists ~230 entries with filenames plus their summaries.
+- `npm run find:console` surfaces `console.<level>` calls (pass `-- --level=debug` etc.) so you can strip leftover logs before packaging or focus on specific severities quickly.
+- `npm run find:lucide` shows every file touching Lucide icons, making it simple to prune unused imports or confirm icon hydration paths.
 - Run `npm run docs:check` to ensure new/updated files keep their `@fileoverview` headers synchronized with this inventory.
 
 ## Reference Material

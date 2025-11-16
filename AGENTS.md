@@ -112,6 +112,8 @@ Use these npm scripts to enforce quality checks and gather insights:
 | `npm run type-check` | TypeScript validation (`tsc --noEmit`). | Report success/fail clearly; fix root causes before completion. |
 | `npm run lint` / `npm run lint:fix` | ESLint checks and auto-fixes on `src/**/*.ts`. | Auto-fix first; re-run lint to confirm clean state. |
 | `npm run docs:check` | Node/TypeScript script scanning for missing `@fileoverview`. | Use findings to prioritize documentation updates. |
+| `npm run find:console` | Reports all `console.<level>` statements (log/debug/info/warn/error). | Use `-- --level=debug` etc. to scrub noisy logging before releases. |
+| `npm run find:lucide` | Lists every source file referencing Lucide icons. | Handy when pruning unused icons or verifying palette coverage. |
 | `npm run knip` (+ variants) | Dead code and dependency analysis via Knip. | Review results carefully; Electron patterns create false positives. |
 | `npm run build:*` | Build main, renderer, WebUI, or platform packages. | Run only when requested or required for verification. |
 
