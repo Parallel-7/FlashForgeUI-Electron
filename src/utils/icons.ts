@@ -27,6 +27,7 @@ import Package from 'lucide/dist/esm/icons/package.js';
 import Search from 'lucide/dist/esm/icons/search.js';
 import AlertTriangle from 'lucide/dist/esm/icons/triangle-alert.js';
 import Circle from 'lucide/dist/esm/icons/circle.js';
+import Info from 'lucide/dist/esm/icons/info.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -192,6 +193,7 @@ registerIcon(Package, 'package');
 registerIcon(Search, 'search');
 registerIcon(AlertTriangle, 'alert-triangle', 'triangle-alert');
 registerIcon(Circle, 'circle');
+registerIcon(Info, 'info');
 
 function resolveIconNode(name: string): IconNode | undefined {
   const trimmed = name.trim();

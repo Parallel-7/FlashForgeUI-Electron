@@ -10,6 +10,7 @@ This guide captures project-specific expectations for OpenAI Codex agents assist
 - **Testing mindset**: Favor targeted verification (type checking, linting) over full builds unless the user requests otherwise or build validation is obviously necessary.
 - **Escalation etiquette**: Sandbox is `workspace-write`, network is restricted, and approval policy is `on-request`. Request elevation only when essential, providing concise justification.
 - **Interaction style**: Keep responses concise, friendly, and actionable. Reference files with `path:line` syntax. Suggest next steps only when they are natural.
+- **Proactive verification**: When touching only CSS/theme assets you can skip code checks, but any JS/TS change should be followed by `npm run type-check` and `npm run lint` to keep the codebase healthy. If your edits could impact runtime wiring, also run `npm run build:renderer` and `npm run build:webui` to flush out latent issues. Regardless of scope, run `npm run linecount` so you stay aware of file sizes and avoid creating monolith modules.
 
 ## Key Repository Facts
 

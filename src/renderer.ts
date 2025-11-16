@@ -537,6 +537,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       'bar-chart-3',
       'grid-3x3',
       'pin',
+      'info',
       'minus',
       'square',
       'x',

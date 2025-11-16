@@ -9,7 +9,7 @@
 
 import { initializeUIAnimations } from '../../services/ui-updater';
 
-const MAIN_MENU_ACTIONS = ['connect', 'settings', 'status', 'ifs', 'pin-config'] as const;
+const MAIN_MENU_ACTIONS = ['connect', 'settings', 'status', 'ifs', 'pin-config', 'about'] as const;
 type MainMenuAction = typeof MAIN_MENU_ACTIONS[number];
 
 const MAIN_MENU_ACTION_CHANNELS: Record<MainMenuAction, string> = {
@@ -17,10 +17,11 @@ const MAIN_MENU_ACTION_CHANNELS: Record<MainMenuAction, string> = {
   settings: 'open-settings-window',
   status: 'open-status-dialog',
   ifs: 'open-ifs-dialog',
-  'pin-config': 'shortcut-config:open'
+  'pin-config': 'shortcut-config:open',
+  about: 'open-about-dialog'
 };
 
-const MAIN_MENU_SHORTCUTS: Record<MainMenuAction, { key: string; label: string }> = {
+const MAIN_MENU_SHORTCUTS: Partial<Record<MainMenuAction, { key: string; label: string }>> = {
   connect: { key: 'k', label: 'K' },
   settings: { key: ',', label: ',' },
   status: { key: 'i', label: 'I' },
@@ -54,7 +55,8 @@ class MenuShortcutManager {
     settings: true,
     status: true,
     ifs: false,
-    'pin-config': true
+    'pin-config': true,
+    about: true
   };
 
   constructor(private readonly onShortcutTriggered?: () => void) {}
@@ -91,17 +93,28 @@ class MenuShortcutManager {
 
     MAIN_MENU_ACTIONS.forEach((action) => {
       const config = MAIN_MENU_SHORTCUTS[action];
-      const displayValue = `${displayPrefix}${config.label}`;
-      const ariaValue = `${ariaPrefix}${config.label}`;
-
       const shortcutEl = document.querySelector<HTMLSpanElement>(
         `.menu-item-shortcut[data-shortcut-id="${action}"]`
       );
+      const button = document.querySelector<HTMLButtonElement>(`.menu-item[data-action="${action}"]`);
+
+      if (!config) {
+        shortcutEl?.classList.add('hidden');
+        if (shortcutEl) {
+          shortcutEl.textContent = '';
+        }
+        button?.removeAttribute('aria-keyshortcuts');
+        return;
+      }
+
+      const displayValue = `${displayPrefix}${config.label}`;
+      const ariaValue = `${ariaPrefix}${config.label}`;
+
+      shortcutEl?.classList.remove('hidden');
       if (shortcutEl) {
         shortcutEl.textContent = displayValue;
       }
 
-      const button = document.querySelector<HTMLButtonElement>(`.menu-item[data-action="${action}"]`);
       if (button) {
         button.setAttribute('aria-keyshortcuts', ariaValue);
       }
@@ -174,6 +187,10 @@ class MenuShortcutManager {
 
     for (const action of MAIN_MENU_ACTIONS) {
       const shortcut = MAIN_MENU_SHORTCUTS[action];
+      if (!shortcut) {
+        continue;
+      }
+
       if (shortcut.key === ',') {
         if (event.key === ',') {
           return action;
@@ -464,4 +481,3 @@ export class LegacyUiController {
     }
   }
 }
-

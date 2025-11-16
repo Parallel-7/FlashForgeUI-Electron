@@ -33,6 +33,7 @@ module.exports = {
     'spoolman-dialog-renderer': './src/ui/spoolman-dialog/spoolman-dialog-renderer.ts',
     'spoolman-offline-dialog-renderer': './src/ui/spoolman-offline-dialog/spoolman-offline-dialog-renderer.ts',
     'status-dialog-renderer': './src/ui/status-dialog/status-dialog-renderer.ts',
+    'about-dialog-renderer': './src/ui/about-dialog/about-dialog-renderer.ts',
     'update-available-renderer': './src/ui/update-available/update-available-renderer.ts',
     'palette': './src/ui/palette/palette.ts',
     'shortcut-config-dialog': './src/ui/shortcut-config-dialog/shortcut-config-dialog.ts',

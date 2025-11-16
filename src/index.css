@@ -314,6 +314,10 @@ body {
   letter-spacing: 0.5px;
 }
 
+.menu-item-shortcut.hidden {
+  display: none;
+}
+
 .menu-item:hover .menu-item-shortcut {
   color: var(--text-color-secondary);
 }

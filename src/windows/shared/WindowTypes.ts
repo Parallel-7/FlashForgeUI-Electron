@@ -195,6 +195,7 @@ export type WindowType =
   | { kind: 'SingleColorConfirmation'; data: SingleColorConfirmationDialogData }
   | { kind: 'AutoConnectChoice'; data: AutoConnectChoiceDialogData }
   | { kind: 'ConnectChoice'; data: ConnectChoiceDialogData }
+  | { kind: 'AboutDialog' }
   | { kind: 'UpdateAvailableDialog'; data?: UpdateDialogInitData }
   | { kind: 'PrinterConnectedWarning'; data: PrinterConnectedWarningData };
 
@@ -283,6 +284,12 @@ export const WINDOW_SIZES = {
     height: createWindowHeight(450),
     minWidth: createWindowMinWidth(450),
     minHeight: createWindowMinHeight(400)
+  },
+  ABOUT_DIALOG: {
+    width: createWindowWidth(540),
+    height: createWindowHeight(620),
+    minWidth: createWindowMinWidth(520),
+    minHeight: createWindowMinHeight(560)
   },
   PRINTER_CONNECTED_WARNING: {
     width: createWindowWidth(450),
