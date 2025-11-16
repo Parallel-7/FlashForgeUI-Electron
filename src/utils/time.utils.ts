@@ -19,6 +19,7 @@
  * - minutesToSeconds(minutes): Minutes to seconds
  * - formatDuration(seconds): Seconds to "Xh Ym" or "Xm" or "Xs"
  * - formatMinutes(minutes): Minutes to "Xh Ym" or "Xm"
+ * - formatJobTime(seconds): Seconds to "mm:ss" or "HH:mm:ss" for job elapsed time display
  * - parseDuration(string): "Xh Ym Zs" to seconds
  *
  * Date/Time Formatting:
@@ -91,11 +92,31 @@ export function formatMinutes(minutes: number): string {
   if (minutes < 60) {
     return `${minutes}m`;
   }
-  
+
   const hours = Math.floor(minutes / 60);
   const mins = minutes % 60;
-  
+
   return mins > 0 ? `${hours}h ${mins}m` : `${hours}h`;
+}
+
+/**
+ * Format job elapsed time as mm:ss or HH:mm:ss
+ * @param seconds - Elapsed time in seconds
+ * @returns Formatted time string (e.g., "03:45", "16:00", "1:25:30")
+ */
+export function formatJobTime(seconds: number): string {
+  const hours = Math.floor(seconds / 3600);
+  const mins = Math.floor((seconds % 3600) / 60);
+  const secs = Math.floor(seconds % 60);
+
+  const mm = String(mins).padStart(2, '0');
+  const ss = String(secs).padStart(2, '0');
+
+  if (hours > 0) {
+    return `${hours}:${mm}:${ss}`;
+  }
+
+  return `${mm}:${ss}`;
 }
 
 /**

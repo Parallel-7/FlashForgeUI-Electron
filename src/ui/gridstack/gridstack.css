@@ -124,6 +124,38 @@
   font-size: 14px;
 }
 
+.edit-mode-reset-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  margin-left: 8px;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  color: white;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.edit-mode-reset-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: scale(1.05);
+}
+
+.edit-mode-reset-btn:active {
+  background: rgba(255, 255, 255, 0.2);
+  transform: scale(0.98);
+}
+
+.edit-mode-reset-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
 /* Edit mode body class styling */
 body.edit-mode .grid-stack-item {
   cursor: move;

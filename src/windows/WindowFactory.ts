@@ -80,7 +80,8 @@ export type { InputDialogOptions } from './shared/WindowTypes';
 export {
   createSettingsWindow,
   createStatusWindow,
-  createLogDialog
+  createLogDialog,
+  createAboutDialog
 } from './factories/CoreWindowFactory';
 
 // Dialog windows with user interaction
@@ -101,4 +102,3 @@ export {
   createPrinterSelectionWindow,
   createSendCommandsWindow
 } from './factories/UtilityWindowFactory';
-

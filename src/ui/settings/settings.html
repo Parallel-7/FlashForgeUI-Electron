@@ -5,12 +5,7 @@
     <title>Settings</title>
     <link rel="stylesheet" href="settings.css" />
     <script src="../../../node_modules/lucide/dist/umd/lucide.min.js"></script>
-    <script>
-      if (typeof exports === 'undefined') {
-        var exports = {};
-      }
-    </script>
-    <script src="../../../lib/ui/shared/lucide.js"></script>
+    <script src="../../../dist/renderer/lucide.bundle.js"></script>
 </head>
 <body>
 <div class="dialog-container dialog-container--full">
@@ -119,6 +114,8 @@
                         <label for="discord-update-interval">Discord Update Interval (minutes):</label>
                         <input type="number" id="discord-update-interval" class="settings-input" min="1" max="60" placeholder="5">
                     </div>
+                    <button id="btn-test-discord" class="settings-action-button">Test Discord Webhook</button>
+                    <div id="discord-test-result" class="settings-info-text" style="margin-top: 8px;"></div>
                 </div>
 
                 <div class="settings-section">
@@ -159,19 +156,39 @@
                     </div>
                 </div>
 
-        <div class="settings-section">
+                <div class="settings-section">
+                    <h4 class="section-title">Spoolman Integration</h4>
+                    <div class="settings-info-text">
+                        Connect to your Spoolman server to automatically track filament usage across all your printers.
+                    </div>
+
                     <label class="checkbox-label">
-                        <input type="checkbox" id="filament-tracker-enabled"> Filament Tracker Integration
+                        <input type="checkbox" id="spoolman-enabled"> Enable Spoolman Integration
                     </label>
-                    <div class="settings-info-text">
-                        Enable HTTP API endpoints for integration with filament-tracker-electron application. Uses the Web UI port.
-                    </div>
+
                     <div class="input-group">
-                        <label for="filament-tracker-api-key">Filament Tracker API Key (Optional):</label>
-                        <input type="text" id="filament-tracker-api-key" class="settings-input" placeholder="Leave empty for no authentication">
+                        <label for="spoolman-server-url">Spoolman Server URL:</label>
+                        <input type="text"
+                               id="spoolman-server-url"
+                               class="settings-input"
+                               placeholder="http://192.168.1.10:7912">
                     </div>
                     <div class="settings-info-text">
-                        Optional API key for authentication. If set, external applications must include this key in the x-api-key header.
+                        Full URL including http:// or https:// and port (e.g., http://192.168.1.10:7912)
+                    </div>
+
+                    <button id="btn-test-spoolman" class="settings-action-button">Test Spoolman Connection</button>
+                    <div id="spoolman-test-result" class="settings-info-text" style="margin-top: 8px;"></div>
+
+                    <div class="input-group">
+                        <label for="spoolman-update-mode">Filament Update Mode:</label>
+                        <select id="spoolman-update-mode" class="settings-input">
+                            <option value="weight">Weight (grams)</option>
+                            <option value="length">Length (millimeters)</option>
+                        </select>
+                    </div>
+                    <div class="settings-info-text">
+                        Choose whether to update Spoolman using filament weight or length after prints complete
                     </div>
                 </div>
             </section>
@@ -187,10 +204,112 @@
                     </label>
                     <div class="settings-info-text">
                         Enable rounded windows and dialogs. Restart required after changing.
-                        <span class="macos-warning" style="display: none; color: #ff9800; font-weight: 500;">
+                        <span class="rounded-ui-warning" style="display: none; color: #ff9800; font-weight: 500; align-items: center; gap: 6px;">
                             <i data-lucide="alert-triangle" aria-hidden="true"></i>
-                            Disabled on macOS due to system compatibility issues.
+                            <span class="rounded-ui-warning-text">Rounded UI is not available on this platform.</span>
                         </span>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h4 class="section-title">Desktop Theme Colors</h4>
+                    <div class="settings-info-text">
+                        Customize the color scheme for the desktop application
+                    </div>
+
+                    <div class="theme-colors-grid">
+                        <div class="theme-color-card" data-color-key="primary">
+                            <div class="color-card-header">
+                                <span class="color-label">Primary Color</span>
+                                <input type="text" class="hex-input" id="hex-primary" placeholder="#4285f4" maxlength="7">
+                            </div>
+                            <div class="color-preview-container">
+                                <button type="button" class="color-swatch" id="swatch-primary" aria-label="Pick primary color"></button>
+                                <input type="color" id="desktop-theme-primary" class="native-color-picker" tabindex="-1">
+                            </div>
+                        </div>
+
+                        <div class="theme-color-card" data-color-key="secondary">
+                            <div class="color-card-header">
+                                <span class="color-label">Secondary Color</span>
+                                <input type="text" class="hex-input" id="hex-secondary" placeholder="#357abd" maxlength="7">
+                            </div>
+                            <div class="color-preview-container">
+                                <button type="button" class="color-swatch" id="swatch-secondary" aria-label="Pick secondary color"></button>
+                                <input type="color" id="desktop-theme-secondary" class="native-color-picker" tabindex="-1">
+                            </div>
+                        </div>
+
+                        <div class="theme-color-card" data-color-key="background">
+                            <div class="color-card-header">
+                                <span class="color-label">Background Color</span>
+                                <input type="text" class="hex-input" id="hex-background" placeholder="#121212" maxlength="7">
+                            </div>
+                            <div class="color-preview-container">
+                                <button type="button" class="color-swatch" id="swatch-background" aria-label="Pick background color"></button>
+                                <input type="color" id="desktop-theme-background" class="native-color-picker" tabindex="-1">
+                            </div>
+                        </div>
+
+                        <div class="theme-color-card" data-color-key="surface">
+                            <div class="color-card-header">
+                                <span class="color-label">Surface Color</span>
+                                <input type="text" class="hex-input" id="hex-surface" placeholder="#1e1e1e" maxlength="7">
+                            </div>
+                            <div class="color-preview-container">
+                                <button type="button" class="color-swatch" id="swatch-surface" aria-label="Pick surface color"></button>
+                                <input type="color" id="desktop-theme-surface" class="native-color-picker" tabindex="-1">
+                            </div>
+                        </div>
+
+                        <div class="theme-color-card" data-color-key="text">
+                            <div class="color-card-header">
+                                <span class="color-label">Text Color</span>
+                                <input type="text" class="hex-input" id="hex-text" placeholder="#e0e0e0" maxlength="7">
+                            </div>
+                            <div class="color-preview-container">
+                                <button type="button" class="color-swatch" id="swatch-text" aria-label="Pick text color"></button>
+                                <input type="color" id="desktop-theme-text" class="native-color-picker" tabindex="-1">
+                            </div>
+                        </div>
+                    </div>
+
+                    <button id="reset-desktop-theme" class="settings-action-button">Reset to Default Theme</button>
+                </div>
+
+                <!-- Custom Color Picker Modal -->
+                <div id="custom-color-picker" class="color-picker-modal" hidden>
+                    <div class="color-picker-dialog">
+                        <div class="color-picker-header">
+                            <h5 class="color-picker-title">Choose Color</h5>
+                            <button type="button" class="color-picker-close" aria-label="Close color picker">&times;</button>
+                        </div>
+                        <div class="color-picker-body">
+                            <div class="color-picker-layout">
+                                <div class="color-picker-main">
+                                    <div class="color-field-wrapper">
+                                        <canvas id="color-picker-field" width="240" height="240"></canvas>
+                                        <div id="color-picker-thumb" class="color-picker-thumb" role="presentation"></div>
+                                    </div>
+                                    <div class="slider-field">
+                                        <label for="color-picker-hue">Hue</label>
+                                        <input type="range" id="color-picker-hue" min="0" max="360" value="0">
+                                    </div>
+                                </div>
+                                <div class="color-picker-side">
+                                    <div class="color-preview-large">
+                                        <div class="checkerboard">
+                                            <div id="picker-preview-swatch"></div>
+                                        </div>
+                                        <span id="picker-preview-label">#000000</span>
+                                    </div>
+                                    <div class="hex-input-container">
+                                        <label for="picker-hex-input">Hex or RGB</label>
+                                        <input type="text" id="picker-hex-input" class="hex-input" placeholder="#000000 or rgb(0,0,0)" maxlength="32">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -249,6 +368,15 @@
                             Requires reconnection to take effect.
                         </div>
                     </div>
+
+                    <div class="settings-section">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="webui-enabled-toggle" checked> Enable WebUI for this printer
+                        </label>
+                        <div class="settings-info-text">
+                            Starts the WebUI server when this printer connects. WebUI password and port remain global settings.
+                        </div>
+                    </div>
                 </div>
             </section>
         </div>
@@ -263,12 +391,6 @@
         </div>
     </div>
 </div>
-<script>
-  // Shim for CommonJS exports in browser context
-  if (typeof exports === 'undefined') {
-    var exports = {};
-  }
-</script>
-<script src="../../../lib/ui/settings/settings-renderer.js"></script>
+<script src="../../../dist/renderer/settings-renderer.bundle.js"></script>
 </body>
 </html>

@@ -353,21 +353,37 @@ export class GridStackManager {
    * Load widget configurations into the grid
    * Clears existing widgets and adds new ones
    * @param widgets - Array of widget configurations
+   * @returns Array of created widget elements (for component initialization)
    */
-  load(widgets: readonly GridStackWidgetConfig[]): void {
+  load(widgets: readonly GridStackWidgetConfig[]): HTMLElement[] {
     if (!this.grid) {
       console.error('GridStackManager: Grid not initialized');
-      return;
+      return [];
     }
 
     try {
-      // Note: This method is typically called during initialization
-      // When widgets are being added through the component system
-      // The actual widget elements should be added via addWidget()
-      console.log('GridStackManager: Load called with', widgets.length, 'widgets');
-      console.log('GridStackManager: Widgets should be added via addWidget() method');
+      console.log('GridStackManager: Loading', widgets.length, 'widgets into grid');
+
+      // Clear existing widgets (but don't remove from DOM yet - caller handles cleanup)
+      this.grid.removeAll(false);
+
+      // Create widget elements and add to grid using GridStack's load method
+      const createdElements: HTMLElement[] = [];
+
+      // Use GridStack's native load method to restore layout
+      this.grid.load([...widgets] as GridStackWidget[], false);
+
+      // Get all grid items that were just added
+      const gridItems = this.grid.getGridItems();
+      gridItems.forEach(item => {
+        createdElements.push(item as HTMLElement);
+      });
+
+      console.log('GridStackManager: Loaded', createdElements.length, 'widget elements');
+      return createdElements;
     } catch (error) {
       console.error('GridStackManager: Failed to load widgets:', error);
+      return [];
     }
   }
 

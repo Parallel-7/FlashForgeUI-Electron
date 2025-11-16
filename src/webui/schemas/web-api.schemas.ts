@@ -279,6 +279,25 @@ export function createValidationError(zodError: z.ZodError): { error: string; de
 }
 
 // ============================================================================
+// SPOOLMAN SCHEMAS
+// ============================================================================
+
+/**
+ * Spool selection request validation
+ */
+export const SpoolSelectRequestSchema = z.object({
+  contextId: z.string().optional(),
+  spoolId: z.number().int().positive('Spool ID must be a positive integer')
+});
+
+/**
+ * Spool clear request validation
+ */
+export const SpoolClearRequestSchema = z.object({
+  contextId: z.string().optional()
+});
+
+// ============================================================================
 // TYPE EXPORTS
 // ============================================================================
 
@@ -288,4 +307,6 @@ export type ValidatedTemperatureData = z.infer<typeof TemperatureDataSchema>;
 export type ValidatedJobStartData = z.infer<typeof JobStartDataSchema>;
 export type ValidatedPrinterCommand = z.infer<typeof PrinterCommandSchema>;
 export type ValidatedPrinterFeatures = z.infer<typeof PrinterFeaturesSchema>;
+export type ValidatedSpoolSelectRequest = z.infer<typeof SpoolSelectRequestSchema>;
+export type ValidatedSpoolClearRequest = z.infer<typeof SpoolClearRequestSchema>;
 

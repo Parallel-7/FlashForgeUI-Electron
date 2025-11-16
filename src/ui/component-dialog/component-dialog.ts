@@ -31,6 +31,7 @@ import {
   LogPanelComponent,
   ControlsGridComponent,
   FiltrationControlsComponent,
+  SpoolmanComponent,
 } from '../components';
 import { parseLogEntry } from '../shared/log-panel';
 import type { ComponentUpdateData } from '../components/base/types';
@@ -107,6 +108,15 @@ async function initializeDialog(componentId: string): Promise<void> {
     dialogComponentManager.registerComponent(component);
     await dialogComponentManager.initializeAll();
     await initializeComponentIntegrations(componentId, component);
+
+    // Send initial config update to component
+    const config = await window.api.requestConfig();
+    const updateData: ComponentUpdateData = {
+      config: config,
+      timestamp: new Date().toISOString()
+    };
+    dialogComponentManager.updateAll(updateData);
+
     console.log(`[ComponentDialog] Component initialized: ${componentId}`);
   } catch (error) {
     console.error('[ComponentDialog] Component initialization failed:', error);
@@ -140,6 +150,8 @@ function createComponentInstance(componentId: string, container: HTMLElement) {
       return new ControlsGridComponent(container);
     case 'filtration-controls':
       return new FiltrationControlsComponent(container);
+    case 'spoolman-tracker':
+      return new SpoolmanComponent(container);
     default:
       console.error(`[ComponentDialog] Unknown component ID: ${componentId}`);
       return null;

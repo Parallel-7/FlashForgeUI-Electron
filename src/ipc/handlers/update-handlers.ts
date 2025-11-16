@@ -107,7 +107,7 @@ export function registerUpdateHandlers(configManager: ConfigManager, windowManag
     }
   };
 
-  updateService.on('state-changed', (payload) => {
+  updateService.on('state-changed', (payload: UpdateStatePayload) => {
     broadcastState(payload);
 
     if (payload.state === UpdateState.AVAILABLE || payload.state === UpdateState.DOWNLOADED) {

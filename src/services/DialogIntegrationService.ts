@@ -18,7 +18,7 @@
  */
 
 import { EventEmitter } from 'events';
-import type { IpcMainEvent, BrowserWindow } from 'electron';
+import { ipcMain, type IpcMainEvent, type BrowserWindow } from 'electron';
 import { getWindowManager } from '../windows/WindowManager';
 import { SavedPrinterMatch, DiscoveredPrinter, ConnectionResult, StoredPrinterDetails } from '../types/printer';
 
@@ -290,9 +290,6 @@ export class DialogIntegrationService extends EventEmitter {
     onCancel: () => void
   ): void {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const { ipcMain }: typeof import('electron') = require('electron');
-      
       // Clean up any existing listeners first
       this.cleanupSavedSelectionListeners();
       
@@ -321,9 +318,6 @@ export class DialogIntegrationService extends EventEmitter {
    */
   private cleanupSavedSelectionListeners(): void {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const { ipcMain }: typeof import('electron') = require('electron');
-      
       if (this.currentSavedSelectionListener) {
         ipcMain.removeListener('printer-selection:select-saved', this.currentSavedSelectionListener);
         this.currentSavedSelectionListener = null;
@@ -347,9 +341,6 @@ export class DialogIntegrationService extends EventEmitter {
     onCancel: () => void
   ): void {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const { ipcMain }: typeof import('electron') = require('electron');
-      
       // Clean up any existing listeners first
       this.cleanupDiscoveredSelectionListeners();
       
@@ -378,9 +369,6 @@ export class DialogIntegrationService extends EventEmitter {
    */
   private cleanupDiscoveredSelectionListeners(): void {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-      const { ipcMain }: typeof import('electron') = require('electron');
-      
       if (this.currentDiscoveredSelectionListener) {
         ipcMain.removeListener('printer-selection:select', this.currentDiscoveredSelectionListener);
         this.currentDiscoveredSelectionListener = null;

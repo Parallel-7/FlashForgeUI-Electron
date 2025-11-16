@@ -39,6 +39,7 @@ export class ComponentManager implements IComponentManager {
   
   /** Last update data sent to components */
   private lastUpdateData: ComponentUpdateData | null = null;
+  private pendingUpdateData: ComponentUpdateData | null = null;
 
   /**
    * Register a component with the manager
@@ -79,6 +80,12 @@ export class ComponentManager implements IComponentManager {
 
     this.initialized = true;
     console.log('All components initialized');
+
+    if (this.pendingUpdateData) {
+      console.log('ComponentManager: Applying pending update after initialization');
+      this.updateAllInternal(this.pendingUpdateData);
+      this.pendingUpdateData = null;
+    }
   }
 
   /**
@@ -87,14 +94,19 @@ export class ComponentManager implements IComponentManager {
    * @param data - Update data containing polling info, state changes, etc.
    */
   updateAll(data: ComponentUpdateData): void {
-    if (!this.initialized) {
-      console.warn('ComponentManager: Cannot update components - not initialized yet');
-      return;
-    }
-
     // Store the last update data for debugging and late-joining components
     this.lastUpdateData = { ...data };
 
+    if (!this.initialized) {
+      console.warn('ComponentManager: Components not initialized yet - queuing update data');
+      this.pendingUpdateData = { ...data };
+      return;
+    }
+
+    this.updateAllInternal(data);
+  }
+
+  private updateAllInternal(data: ComponentUpdateData): void {
     let updateCount = 0;
     let errorCount = 0;
 

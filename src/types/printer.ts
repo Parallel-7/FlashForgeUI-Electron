@@ -43,10 +43,15 @@ export interface PrinterDetails {
   customCameraUrl?: string; // Supports http://, https://, and rtsp:// URLs
   customLedsEnabled?: boolean;
   forceLegacyMode?: boolean;
+  // WebUI settings (per-printer overrides)
+  webUIEnabled?: boolean;
 
   // RTSP streaming settings (per-printer)
   rtspFrameRate?: number;    // 1-60 fps, default: 30
   rtspQuality?: number;       // 1-5 (1=best, 5=worst), default: 3
+
+  // Spoolman integration (per-printer)
+  activeSpoolData?: import('../types/spoolman').ActiveSpoolData | null;
 }
 
 /**

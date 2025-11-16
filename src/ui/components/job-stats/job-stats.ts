@@ -24,7 +24,8 @@
 import { BaseComponent } from '../base/component';
 import type { ComponentUpdateData } from '../base/types';
 import type { PollingData } from '../../../types/polling';
-import { formatTime, formatWeight, formatLength } from '../../../types/polling';
+import { formatWeight, formatLength } from '../../../types/polling';
+import { formatJobTime } from '../../../utils/time.utils';
 import './job-stats.css';
 
 /**
@@ -160,15 +161,15 @@ export class JobStatsComponent extends BaseComponent {
 
   /**
    * Update job time (elapsed time) display
-   * Shows elapsed printing time using formatTime utility
+   * Shows elapsed printing time in mm:ss or HH:mm:ss format
    * @param pollingData - Current polling data from printer
    */
   private updateJobTime(pollingData?: PollingData): void {
     const currentJob = pollingData?.printerStatus?.currentJob;
-    
+
     if (currentJob?.isActive && currentJob.progress) {
-      const elapsedMinutes = currentJob.progress.elapsedTime;
-      const formattedTime = formatTime(elapsedMinutes);
+      const elapsedSeconds = currentJob.progress.elapsedTimeSeconds;
+      const formattedTime = formatJobTime(elapsedSeconds);
       this.setElementText('#job-time', formattedTime);
     } else {
       this.setElementText('#job-time', '00:00');

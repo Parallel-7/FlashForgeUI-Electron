@@ -88,6 +88,13 @@ interface JobUploaderAPI {
     receiveUploadComplete: (func: (result: UploadCompletionResult) => void) => void;
 }
 
+// Augment the global Window interface
+declare global {
+    interface Window {
+        uploaderAPI: JobUploaderAPI;
+    }
+}
+
 // Expose the job uploader API to the renderer process
 contextBridge.exposeInMainWorld('uploaderAPI', {
     // Renderer to Main Process

@@ -50,6 +50,7 @@ export class MainProcessPollingCoordinator extends EventEmitter {
     materialStation: printerDataTransformer.createDefaultMaterialStation(),
     thumbnailData: null,
     isConnected: false,
+    isInitializing: false,
     lastPolled: new Date()
   };
   
@@ -123,6 +124,7 @@ export class MainProcessPollingCoordinator extends EventEmitter {
       materialStation: printerDataTransformer.createDefaultMaterialStation(),
       thumbnailData: null,
       isConnected: false,
+      isInitializing: false,
       lastPolled: new Date()
     };
   }
@@ -229,6 +231,7 @@ export class MainProcessPollingCoordinator extends EventEmitter {
         materialStation: materialStation || printerDataTransformer.createDefaultMaterialStation(),
         thumbnailData,
         isConnected: statusResult.success && !!statusResult.status,
+        isInitializing: false,
         lastPolled: new Date()
       };
       

@@ -44,7 +44,10 @@ contextBridge.exposeInMainWorld('settingsAPI', {
   },
   removeListeners: () => {
     ipcRenderer.removeAllListeners('settings-config-data');
-  }
+  },
+  testSpoolmanConnection: (url: string) => ipcRenderer.invoke('spoolman:test-connection', url),
+  testDiscordWebhook: (url: string) => ipcRenderer.invoke('discord:test-webhook', url),
+  getRoundedUISupportInfo: () => ipcRenderer.invoke('rounded-ui:get-support-info')
 });
 
 // Expose printer settings API (reusing same implementation as main preload)
@@ -66,13 +69,13 @@ contextBridge.exposeInMainWorld('printerSettingsAPI', {
 
 contextBridge.exposeInMainWorld('autoUpdateAPI', {
   checkForUpdates: async (): Promise<{ success: boolean; error?: string }> => {
-    return await ipcRenderer.invoke('check-for-updates');
+    return await ipcRenderer.invoke('check-for-updates') as Promise<{ success: boolean; error?: string }>;
   },
   getStatus: async (): Promise<unknown> => {
     return await ipcRenderer.invoke('get-update-status');
   },
   setUpdateChannel: async (channel: 'stable' | 'alpha'): Promise<{ success: boolean }> => {
-    return await ipcRenderer.invoke('set-update-channel', channel);
+    return await ipcRenderer.invoke('set-update-channel', channel) as Promise<{ success: boolean }>;
   }
 });
 

@@ -13,6 +13,7 @@
  * - PrinterContextsAPI: Multi-printer context management
  * - ConnectionStateAPI: Connection status and state queries
  * - PrinterSettingsAPI: Per-printer settings management
+ * - SpoolmanAPI: Filament tracking and spool management
  * - WindowControls: Sub-window control methods (minimize, close)
  *
  * Window Extensions:
@@ -88,6 +89,16 @@ interface PrinterSettingsAPI {
   getPrinterName(): Promise<string | null>;
 }
 
+// Spoolman API interface
+interface SpoolmanAPI {
+  openSpoolSelection(): Promise<void>;
+  getActiveSpool(contextId?: string): Promise<unknown>;
+  setActiveSpool(spool: unknown, contextId?: string): Promise<void>;
+  getStatus(contextId?: string): Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
+  onSpoolSelected(callback: (spool: unknown) => void): void;
+  onSpoolUpdated(callback: (spool: unknown) => void): void;
+}
+
 // API interface for type safety
 interface ElectronAPI {
   send: (channel: string, data?: unknown) => void;
@@ -100,12 +111,14 @@ interface ElectronAPI {
   requestMaterialStationStatus: () => Promise<unknown>;
   requestModelPreview: () => Promise<string | null>;
   requestBackendStatus: () => Promise<unknown>;
+  requestConfig: () => Promise<unknown>;
   onPlatformInfo: (callback: (platform: string) => void) => void;
   loading: LoadingAPI;
   camera: CameraAPI;
   printerContexts: PrinterContextsAPI;
   connectionState: ConnectionStateAPI;
   printerSettings: PrinterSettingsAPI;
+  spoolman: SpoolmanAPI;
 }
 
 // Window controls interface for sub-windows

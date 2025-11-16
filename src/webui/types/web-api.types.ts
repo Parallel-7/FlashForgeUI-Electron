@@ -60,7 +60,7 @@ export type WebSocketCommandType = 'REQUEST_STATUS' | 'EXECUTE_GCODE' | 'PING';
 /**
  * WebSocket message types
  */
-export type WebSocketMessageType = 'AUTH_SUCCESS' | 'STATUS_UPDATE' | 'ERROR' | 'COMMAND_RESULT' | 'PONG';
+export type WebSocketMessageType = 'AUTH_SUCCESS' | 'STATUS_UPDATE' | 'ERROR' | 'COMMAND_RESULT' | 'PONG' | 'SPOOLMAN_UPDATE';
 
 /**
  * Represents the detailed status data of a printer.
@@ -129,6 +129,18 @@ export interface WebSocketMessage {
   readonly clientId?: string;
   readonly command?: string;
   readonly success?: boolean;
+  // Spoolman update fields (when type === 'SPOOLMAN_UPDATE')
+  readonly contextId?: string;
+  readonly spool?: {
+    readonly id: number;
+    readonly name: string;
+    readonly vendor: string | null;
+    readonly material: string | null;
+    readonly colorHex: string;
+    readonly remainingWeight: number;
+    readonly remainingLength: number;
+    readonly lastUpdated: string;
+  } | null;
 }
 
 // ============================================================================
@@ -292,6 +304,89 @@ export interface WebUIJobFile {
  */
 export interface MaterialStationStatusResponse extends StandardAPIResponse {
   readonly status?: MaterialStationStatus | null;
+}
+
+// ============================================================================
+// SPOOLMAN INTEGRATION TYPES
+// ============================================================================
+
+/**
+ * Spoolman configuration response
+ */
+export interface SpoolmanConfigResponse extends StandardAPIResponse {
+  readonly enabled: boolean;
+  readonly disabledReason?: string | null;
+  readonly serverUrl: string;
+  readonly updateMode: 'length' | 'weight';
+  readonly contextId: string | null;
+}
+
+/**
+ * Simplified spool summary for search results
+ */
+export interface SpoolSummary {
+  readonly id: number;
+  readonly name: string;
+  readonly vendor: string | null;
+  readonly material: string | null;
+  readonly colorHex: string;
+  readonly remainingWeight: number;
+  readonly remainingLength: number;
+  readonly archived: boolean;
+}
+
+/**
+ * Spoolman spool search response
+ */
+export interface SpoolSearchResponse extends StandardAPIResponse {
+  readonly spools: readonly SpoolSummary[];
+}
+
+/**
+ * Active spool data response
+ */
+export interface ActiveSpoolResponse extends StandardAPIResponse {
+  readonly spool: {
+    readonly id: number;
+    readonly name: string;
+    readonly vendor: string | null;
+    readonly material: string | null;
+    readonly colorHex: string;
+    readonly remainingWeight: number;
+    readonly remainingLength: number;
+    readonly lastUpdated: string;
+  } | null;
+}
+
+/**
+ * Spool selection request
+ */
+export interface SpoolSelectRequest {
+  readonly contextId?: string;
+  readonly spoolId: number;
+}
+
+/**
+ * Spool selection response
+ */
+export interface SpoolSelectResponse extends StandardAPIResponse {
+  readonly spool: {
+    readonly id: number;
+    readonly name: string;
+    readonly vendor: string | null;
+    readonly material: string | null;
+    readonly colorHex: string;
+    readonly remainingWeight: number;
+    readonly remainingLength: number;
+    readonly lastUpdated: string;
+  };
+}
+
+/**
+ * Spool clear request
+ */
+export interface SpoolClearRequest {
+  readonly contextId?: string;
 }
 
 // ============================================================================

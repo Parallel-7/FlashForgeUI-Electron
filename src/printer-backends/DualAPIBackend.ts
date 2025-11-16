@@ -42,7 +42,19 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
   protected fiveMClient!: FiveMClient;
   protected legacyClient!: FlashForgeClient;
   protected productInfo: Product | null = null;
-  
+
+  /**
+   * Cache for last known filament usage data while printing
+   * Preserved when print completes so Spoolman can deduct usage
+   * Cleared when state returns to Ready or new print starts
+   */
+  private lastFilamentUsageCache: {
+    estimatedRightLen: number;
+    estimatedRightWeight: number;
+    currentJob: string;
+    cachedAt: Date;
+  } | null = null;
+
   constructor(options: BackendInitOptions) {
     super(options);
     this.initializeClients();
@@ -254,6 +266,43 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
         ? estimatedTimeSeconds - elapsedTimeSeconds 
         : 0;
       
+      // Extract current filament usage values
+      const estimatedRightLen = machineInfo?.EstLength || 0;
+      const estimatedRightWeight = machineInfo?.EstWeight || 0;
+      const currentJob = machineInfo?.PrintFileName;
+
+      // Cache filament usage while actively printing
+      if ((status === 'printing' || status === 'paused') &&
+          currentJob &&
+          (estimatedRightLen > 0 || estimatedRightWeight > 0)) {
+        this.lastFilamentUsageCache = {
+          estimatedRightLen,
+          estimatedRightWeight,
+          currentJob,
+          cachedAt: new Date()
+        };
+      }
+
+      // Use cached values when print is completed
+      let finalEstimatedRightLen = estimatedRightLen;
+      let finalEstimatedRightWeight = estimatedRightWeight;
+
+      if (status === 'completed' && this.lastFilamentUsageCache) {
+        // Verify cache matches current job
+        if (this.lastFilamentUsageCache.currentJob === currentJob) {
+          finalEstimatedRightLen = this.lastFilamentUsageCache.estimatedRightLen;
+          finalEstimatedRightWeight = this.lastFilamentUsageCache.estimatedRightWeight;
+          console.log(`[DualAPIBackend] Using cached filament usage for completed print: ${finalEstimatedRightWeight}g, ${finalEstimatedRightLen}mm`);
+        }
+      }
+
+      // Clear cache when returning to ready or new print starts
+      if (status === 'ready' ||
+          (status === 'printing' && currentJob && this.lastFilamentUsageCache?.currentJob !== currentJob)) {
+        console.log('[DualAPIBackend] Clearing filament usage cache');
+        this.lastFilamentUsageCache = null;
+      }
+
       const printerStatus = {
         printerState: status,
         bedTemperature: machineInfo?.PrintBed?.current || 0,
@@ -267,8 +316,8 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
         printDuration: elapsedTimeSeconds,
         currentLayer: machineInfo?.CurrentPrintLayer || undefined,
         totalLayers: machineInfo?.TotalPrintLayers || undefined,
-        estimatedRightLen: machineInfo?.EstLength || 0,
-        estimatedRightWeight: machineInfo?.EstWeight || 0,
+        estimatedRightLen: finalEstimatedRightLen,
+        estimatedRightWeight: finalEstimatedRightWeight,
         printEta: machineInfo?.PrintEta || undefined,
         cumulativePrintTime: machineInfo?.CumulativePrintTime || 0,
         cumulativeFilament: machineInfo?.CumulativeFilament || 0,
@@ -762,6 +811,18 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
   protected transformJobList(jobs: BasicJobInfo[], _source: 'local' | 'recent'): BasicJobInfo[] {
     // Default implementation returns jobs unchanged
     return jobs;
+  }
+
+  /**
+   * Dispose of backend resources and clear caches
+   * Override to clear filament usage cache on disconnect
+   */
+  public async dispose(): Promise<void> {
+    // Clear filament usage cache on disconnect
+    this.lastFilamentUsageCache = null;
+
+    // Call parent dispose to clean up clients
+    await super.dispose();
   }
 }
 

@@ -22,7 +22,15 @@ import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as path from 'path';
 import { app } from 'electron';
-import { AppConfig, MutableAppConfig, DEFAULT_CONFIG, ConfigUpdateEvent, sanitizeConfig, isValidConfig } from '../types/config';
+import {
+  AppConfig,
+  MutableAppConfig,
+  DEFAULT_CONFIG,
+  ConfigUpdateEvent,
+  sanitizeConfig,
+  isValidConfig,
+  isValidConfigKey
+} from '../types/config';
 
 /**
  * Centralized configuration manager with live access and automatic file syncing.
@@ -206,6 +214,32 @@ export class ConfigManager extends EventEmitter {
   public getConfigPath(): string {
     return this.configPath;
   }
+
+  /**
+   * Determines whether the sanitized config differs from what was loaded on disk.
+   * Used to drop legacy keys (e.g., filament tracker) and normalize persisted values.
+   */
+  private configNeedsResave(
+    loadedData: Record<string, unknown>,
+    sanitizedConfig: AppConfig
+  ): boolean {
+    const hasExtraKeys = Object.keys(loadedData).some(key => !isValidConfigKey(key));
+    if (hasExtraKeys) {
+      return true;
+    }
+
+    for (const key of Object.keys(DEFAULT_CONFIG) as Array<keyof AppConfig>) {
+      if (!Object.prototype.hasOwnProperty.call(loadedData, key)) {
+        return true;
+      }
+
+      if (loadedData[key] !== sanitizedConfig[key]) {
+        return true;
+      }
+    }
+
+    return false;
+  }
   
   /**
    * Loads configuration from file
@@ -223,12 +257,21 @@ export class ConfigManager extends EventEmitter {
         const loadedData: unknown = JSON.parse(fileContent);
         
         if (isValidConfig(loadedData)) {
+          const sanitizedConfig = sanitizeConfig(loadedData as Partial<AppConfig>);
           const previousConfig = { ...this.currentConfig };
-          this.currentConfig = { ...loadedData };
+          this.currentConfig = { ...sanitizedConfig };
           
           // Emit update event for initialization
           const changedKeys = Object.keys(DEFAULT_CONFIG) as Array<keyof AppConfig>;
           this.emitUpdateEvent(previousConfig, changedKeys);
+
+          const needsResave = this.configNeedsResave(
+            (loadedData as unknown) as Record<string, unknown>,
+            sanitizedConfig
+          );
+          if (needsResave) {
+            this.scheduleSave();
+          }
         } else {
           console.warn('Loaded config is invalid, using defaults');
           // Sanitize and use what we can

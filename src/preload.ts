@@ -41,12 +41,14 @@ interface ElectronAPI {
   requestMaterialStationStatus: () => Promise<unknown>;
   requestModelPreview: () => Promise<string | null>;
   requestBackendStatus: () => Promise<unknown>;
+  requestConfig: () => Promise<unknown>;
   onPlatformInfo: (callback: (platform: string) => void) => void;
   loading: LoadingAPI;
   camera: CameraAPI;
   printerContexts: PrinterContextsAPI;
   connectionState: ConnectionStateAPI;
   printerSettings: PrinterSettingsAPI;
+  spoolman: SpoolmanAPI;
 }
 
 // Camera API interface
@@ -80,6 +82,16 @@ interface PrinterSettingsAPI {
   get: () => Promise<unknown>;
   update: (settings: unknown) => Promise<boolean>;
   getPrinterName: () => Promise<string | null>;
+}
+
+// Spoolman API interface
+interface SpoolmanAPI {
+  openSpoolSelection: () => Promise<void>;
+  getActiveSpool: (contextId?: string) => Promise<unknown>;
+  setActiveSpool: (spool: unknown, contextId?: string) => Promise<void>;
+  getStatus: (contextId?: string) => Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
+  onSpoolSelected: (callback: (spool: unknown) => void) => void;
+  onSpoolUpdated?: (callback: (spool: unknown) => void) => void;
 }
 
 // Input dialog options interface
@@ -144,6 +156,7 @@ const validSendChannels = [
   'connect-button-clicked',
   'open-settings-window',
   'open-status-dialog',
+  'open-about-dialog',
   'open-printer-selection',
   'open-job-uploader',
   'open-ifs-dialog',
@@ -217,7 +230,11 @@ const validReceiveChannels = [
   'shortcut-config:updated',
   'shortcut-config:get-current-request',
   'shortcut-config:save-request',
-  'shortcut-config:get-components-request'
+  'shortcut-config:get-components-request',
+  'spoolman:spool-selected',
+  'spoolman:spool-updated',
+  'config-updated',
+  'config-loaded'
 ];
 
 // Expose camera URL for renderer
@@ -349,7 +366,11 @@ contextBridge.exposeInMainWorld('api', {
       'open-installer',
       'open-release-page',
       'get-update-status',
-      'set-update-channel'
+      'set-update-channel',
+      'spoolman:open-dialog',
+      'spoolman:get-active-spool',
+      'spoolman:set-active-spool',
+      'spoolman:get-status'
     ];
     
     if (validInvokeChannels.includes(channel)) {
@@ -381,6 +402,10 @@ contextBridge.exposeInMainWorld('api', {
 
   requestBackendStatus: async (): Promise<unknown> => {
     return await ipcRenderer.invoke('request-backend-status');
+  },
+
+  requestConfig: async (): Promise<unknown> => {
+    return await ipcRenderer.invoke('request-config');
   },
 
   onPlatformInfo: (callback: (platform: string) => void) => {
@@ -507,6 +532,41 @@ contextBridge.exposeInMainWorld('api', {
     getPrinterName: async (): Promise<string | null> => {
       const result: unknown = await ipcRenderer.invoke('printer-settings:get-printer-name');
       return typeof result === 'string' ? result : null;
+    }
+  },
+
+  spoolman: {
+    openSpoolSelection: async (): Promise<void> => {
+      await ipcRenderer.invoke('spoolman:open-dialog');
+    },
+
+    getActiveSpool: async (contextId?: string): Promise<unknown> => {
+      return await ipcRenderer.invoke('spoolman:get-active-spool', contextId);
+    },
+
+    setActiveSpool: async (spool: unknown, contextId?: string): Promise<void> => {
+      await ipcRenderer.invoke('spoolman:set-active-spool', spool, contextId);
+    },
+
+    getStatus: async (contextId?: string): Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }> => {
+      const result: unknown = await ipcRenderer.invoke('spoolman:get-status', contextId);
+      return result as { enabled: boolean; disabledReason?: string | null; contextId?: string | null };
+    },
+
+    onSpoolSelected: (callback: (spool: unknown) => void) => {
+      const wrappedCallback: IPCListener = (event: unknown, spool: unknown) => {
+        callback(spool);
+      };
+      listeners.set('spoolman:spool-selected', { original: callback as IPCListener, wrapped: wrappedCallback });
+      ipcRenderer.on('spoolman:spool-selected', wrappedCallback);
+    },
+
+    onSpoolUpdated: (callback: (spool: unknown) => void) => {
+      const wrappedCallback: IPCListener = (event: unknown, spool: unknown) => {
+        callback(spool);
+      };
+      listeners.set('spoolman:spool-updated', { original: callback as IPCListener, wrapped: wrappedCallback });
+      ipcRenderer.on('spoolman:spool-updated', wrappedCallback);
     }
   }
 } as ElectronAPI);

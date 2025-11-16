@@ -1,0 +1,141 @@
+/**
+ * About dialog specific styling layered on top of the shared rounded dialog template.
+ */
+@import url('../shared/rounded-dialog-template.css');
+
+.dialog-container {
+  max-width: 560px;
+}
+
+.about-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.about-app-icon {
+  width: 96px;
+  height: 96px;
+  border-radius: 22px;
+  background: #1f1f1f;
+  padding: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.about-app-name {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.version-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.version-badge {
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: rgba(76, 175, 80, 0.2);
+  color: #4caf50;
+  border: 1px solid rgba(76, 175, 80, 0.4);
+}
+
+.version-badge.beta {
+  background: rgba(255, 193, 7, 0.18);
+  border-color: rgba(255, 193, 7, 0.5);
+  color: #ffc107;
+}
+
+.release-label {
+  font-size: 0.9rem;
+  color: #d0d0d0;
+}
+
+.developer-credit {
+  font-size: 1rem;
+  color: #f5f5f5;
+  margin: 0;
+}
+
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.info-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: #3a3a3a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.info-card i {
+  width: 24px;
+  height: 24px;
+  color: inherit;
+}
+
+.info-card .label {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.link-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.link-card:hover {
+  border-color: #4a90e2;
+  background: rgba(74, 144, 226, 0.1);
+  transform: translateY(-1px);
+}
+
+.link-card i {
+  width: 26px;
+  height: 26px;
+  color: #ffffff;
+}
+
+.link-card .link-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.link-card .link-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.link-card .link-description {
+  font-size: 0.85rem;
+  color: #c8c8c8;
+}
+
+.dialog-footer {
+  justify-content: center;
+}

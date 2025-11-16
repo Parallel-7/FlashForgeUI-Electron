@@ -59,6 +59,8 @@ import type {
   ContextCreatedEvent,
   ContextRemovedEvent
 } from '../types/PrinterContext';
+import type { ActiveSpoolData } from '../types/spoolman';
+import { getSpoolmanIntegrationService } from '../services/SpoolmanIntegrationService';
 
 /**
  * Complete printer context containing all state for a single printer connection
@@ -97,6 +99,12 @@ export interface PrinterContext {
 
   /** Last activity timestamp */
   lastActivity: Date;
+
+  /** Active Spoolman spool ID (null if no spool selected) */
+  activeSpoolId: number | null;
+
+  /** Active Spoolman spool data for UI display (null if no spool selected) */
+  activeSpoolData: ActiveSpoolData | null;
 }
 
 /**
@@ -166,7 +174,9 @@ export class PrinterContextManager extends EventEmitter {
       cameraProxyPort: null,
       isActive: false,
       createdAt: now,
-      lastActivity: now
+      lastActivity: now,
+      activeSpoolId: null,
+      activeSpoolData: null
     };
 
     this.contexts.set(contextId, context);
@@ -400,6 +410,21 @@ export class PrinterContextManager extends EventEmitter {
   }
 
   /**
+   * Resolve the context ID for a notification coordinator instance.
+   *
+   * @param coordinator - Notification coordinator to locate
+   * @returns Context ID or null if coordinator is not registered
+   */
+  public getContextIdForNotificationCoordinator(coordinator: PrinterNotificationCoordinator): string | null {
+    for (const [contextId, context] of this.contexts.entries()) {
+      if (context.notificationCoordinator === coordinator) {
+        return contextId;
+      }
+    }
+    return null;
+  }
+
+  /**
    * Update context camera proxy port
    *
    * @param contextId - Context to update
@@ -430,6 +455,7 @@ export class PrinterContextManager extends EventEmitter {
       name: context.name,
       ip: context.printerDetails.IPAddress,
       model: context.printerDetails.printerModel,
+      serialNumber: context.printerDetails.SerialNumber || null,
       status: context.connectionState,
       isActive: context.isActive,
       hasCamera: context.cameraProxyPort !== null,
@@ -437,6 +463,61 @@ export class PrinterContextManager extends EventEmitter {
       createdAt: context.createdAt.toISOString(),
       lastActivity: context.lastActivity.toISOString()
     };
+  }
+
+  /**
+   * Set active spool for a context
+   * Delegates to SpoolmanIntegrationService for persistence
+   *
+   * @param contextId - Context ID (defaults to active context if not provided)
+   * @param spoolData - Active spool data (null to clear)
+   * @deprecated Use SpoolmanIntegrationService.setActiveSpool() or clearActiveSpool() directly
+   */
+  public async setActiveSpool(contextId: string | undefined, spoolData: ActiveSpoolData | null): Promise<void> {
+    try {
+      const { getSpoolmanIntegrationService } = await import('../services/SpoolmanIntegrationService');
+      const service = getSpoolmanIntegrationService();
+
+      if (spoolData) {
+        await service.setActiveSpool(contextId, spoolData);
+      } else {
+        await service.clearActiveSpool(contextId);
+      }
+    } catch (error) {
+      console.error('[PrinterContextManager] Failed to set active spool:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get active spool for a context
+   * Delegates to SpoolmanIntegrationService for consistency
+   *
+   * @param contextId - Context ID (defaults to active context if not provided)
+   * @returns Active spool data or null if no spool selected
+   * @deprecated Use SpoolmanIntegrationService.getActiveSpool() directly
+   */
+  public getActiveSpool(contextId?: string): ActiveSpoolData | null {
+    try {
+      const service = getSpoolmanIntegrationService();
+      return service.getActiveSpool(contextId);
+    } catch {
+      // Service not initialized yet - return null during early initialization
+      return null;
+    }
+  }
+
+  /**
+   * Get active spool ID for a context
+   * Delegates to SpoolmanIntegrationService for consistency
+   *
+   * @param contextId - Context ID (defaults to active context if not provided)
+   * @returns Active spool ID or null if no spool selected
+   * @deprecated Use SpoolmanIntegrationService.getActiveSpool() and access .id directly
+   */
+  public getActiveSpoolId(contextId?: string): number | null {
+    const spoolData = this.getActiveSpool(contextId);
+    return spoolData?.id || null;
   }
 
   /**

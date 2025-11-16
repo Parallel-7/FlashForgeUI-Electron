@@ -39,6 +39,9 @@ export interface PrinterContextInfo {
   /** Printer model string for display */
   readonly model: string;
 
+  /** Printer serial number (stable identifier for layout/config persistence) */
+  readonly serialNumber: string | null;
+
   /** Current connection status */
   readonly status: ContextConnectionState;
 

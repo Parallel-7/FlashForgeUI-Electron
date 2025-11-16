@@ -33,7 +33,10 @@ import { setupPrinterContextHandlers, setupConnectionStateHandlers, setupCameraC
 import type { PollingData } from './types/polling';
 // import { getMainProcessPollingCoordinator } from './services/MainProcessPollingCoordinator';
 import { getMultiContextPollingCoordinator } from './services/MultiContextPollingCoordinator';
+import { getMultiContextPrintStateMonitor } from './services/MultiContextPrintStateMonitor';
 import { getMultiContextNotificationCoordinator } from './services/MultiContextNotificationCoordinator';
+import { getMultiContextTemperatureMonitor } from './services/MultiContextTemperatureMonitor';
+import { getMultiContextSpoolmanTracker } from './services/MultiContextSpoolmanTracker';
 import { getCameraProxyService } from './services/CameraProxyService';
 import { getRtspStreamService } from './services/RtspStreamService';
 import { cameraIPCHandler } from './ipc/camera-ipc-handler';
@@ -43,10 +46,19 @@ import { getStaticFileManager } from './services/StaticFileManager';
 import { initializeNotificationSystem, disposeNotificationSystem } from './services/notifications';
 import { getThumbnailCacheService } from './services/ThumbnailCacheService';
 import { injectUIStyleVariables } from './utils/CSSVariables';
+import { getRoundedUIUnsupportedReason, isRoundedUISupported, type RoundedUIUnsupportedReason } from './utils/RoundedUICompatibility';
 import { parseHeadlessArguments, validateHeadlessConfig } from './utils/HeadlessArguments';
+import type { SpoolmanOfflineEvent, SpoolmanOnlineEvent } from './services/SpoolmanHealthMonitor';
 import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection';
 import { getHeadlessManager } from './managers/HeadlessManager';
+import { getLoadingManager } from './managers/LoadingManager';
 import { getAutoUpdateService } from './services/AutoUpdateService';
+import { initializeSpoolmanIntegrationService, getSpoolmanIntegrationService } from './services/SpoolmanIntegrationService';
+import type { SpoolmanIntegrationService } from './services/SpoolmanIntegrationService';
+import { getDiscordNotificationService } from './services/discord';
+import { getSpoolmanHealthMonitor } from './services/SpoolmanHealthMonitor';
+import { showSpoolmanOfflineDialog, hideSpoolmanOfflineDialog } from './windows/dialogs/SpoolmanOfflineDialog';
+import type { PrinterCooledEvent } from './services/MultiContextTemperatureMonitor';
 
 /**
  * Main Electron process entry point. Handles app lifecycle, creates the main window,
@@ -171,40 +183,51 @@ Please check the installation and try restarting the application.`;
 };
 
 /**
- * Handle macOS rounded UI compatibility by disabling it and warning the user
+ * Handle Rounded UI compatibility by disabling it on unsupported platforms
  */
-const handleMacOSRoundedUICompatibility = async (): Promise<void> => {
-  // Check if running on macOS
-  if (process.platform !== 'darwin') {
-    return; // Not on macOS, no action needed
+const handleRoundedUICompatibilityIssues = async (): Promise<void> => {
+  const unsupportedReason = getRoundedUIUnsupportedReason();
+  if (!unsupportedReason) {
+    return;
   }
-  
+
   const configManager = getConfigManager();
   const config = configManager.getConfig();
-  
-  // Check if rounded UI is enabled on macOS
-  if (config.RoundedUI) {
-    console.log('macOS detected with rounded UI enabled - disabling for compatibility');
-    
-    // Disable rounded UI
-    configManager.updateConfig({ RoundedUI: false });
-    
-    // Show warning dialog
-    const result = await dialog.showMessageBox({
-      type: 'warning',
-      title: 'Rounded UI Disabled',
+
+  if (!config.RoundedUI) {
+    return;
+  }
+
+  console.log(`[RoundedUI] Unsupported on ${unsupportedReason} - disabling for compatibility`);
+  configManager.updateConfig({ RoundedUI: false });
+
+  const dialogCopy: Record<RoundedUIUnsupportedReason, { message: string; detail: string }> = {
+    macos: {
       message: 'Rounded UI has been automatically disabled on macOS',
-      detail: 'The rounded UI feature causes window control positioning issues on macOS. It has been disabled automatically to ensure proper functionality. Please restart the application to avoid any UI inconsistencies.',
-      buttons: ['Restart Now', 'Continue'],
-      defaultId: 0,
-      cancelId: 1
-    });
-    
-    if (result.response === 0) {
-      // User chose to restart
-      app.relaunch();
-      app.exit();
+      detail:
+        'The rounded UI feature causes window control positioning issues on macOS. It has been disabled automatically to ensure proper functionality. Please restart the application to avoid any UI inconsistencies.'
+    },
+    windows11: {
+      message: 'Rounded UI has been automatically disabled on Windows 11',
+      detail:
+        'Windows 11 already applies platform-rounded window chrome that conflicts with this experimental Rounded UI mode, causing duplicate titlebars and invisible controls. It has been disabled automatically to maintain a stable experience. Please restart the application to ensure consistent window visuals.'
     }
+  };
+
+  const copy = dialogCopy[unsupportedReason];
+  const result = await dialog.showMessageBox({
+    type: 'warning',
+    title: 'Rounded UI Disabled',
+    message: copy.message,
+    detail: copy.detail,
+    buttons: ['Restart Now', 'Continue'],
+    defaultId: 0,
+    cancelId: 1
+  });
+
+  if (result.response === 0) {
+    app.relaunch();
+    app.exit();
   }
 };
 
@@ -216,8 +239,8 @@ const createMainWindow = async (): Promise<void> => {
   const environmentService = getEnvironmentDetectionService();
   const staticFileManager = getStaticFileManager();
   
-  // Handle macOS rounded UI compatibility before creating windows
-  await handleMacOSRoundedUICompatibility();
+  // Handle rounded UI compatibility before creating windows
+  await handleRoundedUICompatibilityIssues();
   
   // Validate assets before creating window
   const assetValidation = await validateWebUIAssets();
@@ -238,7 +261,7 @@ const createMainWindow = async (): Promise<void> => {
   const configManager = getConfigManager();
   const config = configManager.getConfig();
   const roundedUI = config.RoundedUI;
-  const useRoundedUI = roundedUI && process.platform !== 'darwin';
+  const useRoundedUI = roundedUI && isRoundedUISupported();
   
   // Create the browser window - always frameless for custom titlebar
   const mainWindow = new BrowserWindow({
@@ -297,6 +320,13 @@ const createMainWindow = async (): Promise<void> => {
       console.log('Power save blocker started to prevent app suspension');
     }
   });
+
+  mainWindow.webContents.once('did-finish-load', () => {
+    if (configManager.isConfigLoaded()) {
+      console.log('Config already loaded - notifying renderer window');
+      mainWindow.webContents.send('config-loaded');
+    }
+  });
   
 
 
@@ -352,6 +382,64 @@ const createMainWindow = async (): Promise<void> => {
 /**
  * Set up printer context event forwarding to renderer process
  */
+/**
+ * Setup Spoolman event forwarding to renderer windows
+ */
+const setupSpoolmanEventForwarding = (): void => {
+  const spoolmanService = getSpoolmanIntegrationService();
+  const windowManager = getWindowManager();
+
+  // Forward spoolman-changed events to all renderer windows
+  spoolmanService.on('spoolman-changed', (event: unknown) => {
+    const spoolmanEvent = event as import('./services/SpoolmanIntegrationService').SpoolmanChangedEvent;
+
+    // Forward to main window
+    const mainWindow = windowManager.getMainWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('spoolman:spool-updated', spoolmanEvent.spool);
+    }
+
+    // Forward to component dialog if open
+    const componentDialog = windowManager.getComponentDialogWindow();
+    if (componentDialog && !componentDialog.isDestroyed()) {
+      componentDialog.webContents.send('spoolman:spool-updated', spoolmanEvent.spool);
+    }
+
+    console.log(`[Spoolman Event] Forwarded spool update for context ${spoolmanEvent.contextId}`);
+  });
+
+  console.log('Spoolman event forwarding setup complete');
+};
+
+const setupSpoolmanHealthMonitoring = (service: SpoolmanIntegrationService): void => {
+  const monitor = getSpoolmanHealthMonitor();
+
+  monitor.removeAllListeners('offline');
+  monitor.removeAllListeners('online');
+
+  monitor.on('offline', (event: SpoolmanOfflineEvent) => {
+    const reason = event?.reason || 'Unable to reach Spoolman server.';
+    console.warn('[Spoolman] Connection lost:', reason);
+
+    if (!isHeadlessMode()) {
+      showSpoolmanOfflineDialog(reason);
+    }
+  });
+
+  monitor.on('online', (event: SpoolmanOnlineEvent) => {
+    const disabled = event?.disabled === true;
+    console.log('[Spoolman] Connection restored');
+    hideSpoolmanOfflineDialog();
+
+    if (!disabled && !isHeadlessMode()) {
+      const loadingManager = getLoadingManager();
+      loadingManager.showSuccess('Spoolman connection restored', 3000);
+    }
+  });
+
+  monitor.initialize(service);
+};
+
 const setupPrinterContextEventForwarding = (): void => {
   const contextManager = getPrinterContextManager();
   const windowManager = getWindowManager();
@@ -378,23 +466,130 @@ const setupPrinterContextEventForwarding = (): void => {
   // Start polling and camera when backend is initialized for a context
   backendManager.on('backend-initialized', (event: unknown) => {
     const backendEvent = event as { contextId: string; modelType: string };
+    const contextId = backendEvent.contextId;
 
-    console.log(`[MultiContext] Backend initialized for context ${backendEvent.contextId}`);
+    console.log(`[Main] Backend initialized for context ${contextId}`);
 
     // Start polling for this context
     try {
-      multiContextPollingCoordinator.startPollingForContext(backendEvent.contextId);
-      console.log(`[MultiContext] Started polling for context ${backendEvent.contextId}`);
+      multiContextPollingCoordinator.startPollingForContext(contextId);
+      console.log(`[Main] Started polling for context ${contextId}`);
+
+      // Get the backend and polling service from context
+      const contextManager = getPrinterContextManager();
+      const context = contextManager.getContext(contextId);
+      const backend = getPrinterBackendManager().getBackendForContext(contextId);
+      const pollingService = context?.pollingService;
+
+      if (!backend || !pollingService) {
+        console.error('[Main] Missing backend or polling service for context initialization');
+        return;
+      }
+
+      // ====================================================================
+      // STEP 1: Create PrintStateMonitor FIRST (foundation)
+      // ====================================================================
+      const printStateMonitor = getMultiContextPrintStateMonitor();
+      printStateMonitor.createMonitorForContext(contextId, pollingService);
+      const stateMonitor = printStateMonitor.getMonitor(contextId);
+
+      if (!stateMonitor) {
+        console.error('[Main] Failed to create print state monitor');
+        return;
+      }
+
+      console.log(`[Main] Created PrintStateMonitor for context ${contextId}`);
+
+      // ====================================================================
+      // STEP 2: Create TemperatureMonitor (depends on PrintStateMonitor)
+      // ====================================================================
+      const tempMonitor = getMultiContextTemperatureMonitor();
+      tempMonitor.createMonitorForContext(
+        contextId,
+        pollingService,
+        stateMonitor  // Pass state monitor
+      );
+      const temperatureMonitor = tempMonitor.getMonitor(contextId);
+
+      if (!temperatureMonitor) {
+        console.error('[Main] Failed to create temperature monitor');
+        return;
+      }
+
+      console.log(`[Main] Created TemperatureMonitor for context ${contextId}`);
+
+      // ====================================================================
+      // STEP 3: Create SpoolmanTracker (depends on PrintStateMonitor)
+      // ====================================================================
+      const spoolmanTracker = getMultiContextSpoolmanTracker();
+      spoolmanTracker.createTrackerForContext(
+        contextId,
+        stateMonitor  // Pass state monitor (not temperature monitor)
+      );
+
+      console.log(`[Main] Created SpoolmanTracker for context ${contextId}`);
+
+      // ====================================================================
+      // STEP 4: Create NotificationCoordinator (depends on both monitors)
+      // ====================================================================
+      const notificationCoordinator = getMultiContextNotificationCoordinator();
+      notificationCoordinator.createCoordinatorForContext(
+        contextId,
+        pollingService,
+        stateMonitor  // Pass state monitor
+      );
+
+      const coordinator = notificationCoordinator.getCoordinator(contextId);
+      if (coordinator) {
+        // Wire temperature monitor for cooled notifications
+        coordinator.setTemperatureMonitor(temperatureMonitor);
+        console.log('[Main] Wired TemperatureMonitor to NotificationCoordinator');
+      }
+
+      console.log(`[Main] Created NotificationCoordinator for context ${contextId}`);
+
+      // ====================================================================
+      // STEP 5: Register context with Discord notification service and wire events
+      // ====================================================================
+      const discordService = getDiscordNotificationService();
+      discordService.registerContext(contextId);
+
+      // Wire Discord service to print state events for event-driven notifications
+      stateMonitor.on('print-completed', (event) => {
+        const duration = event.status.currentJob?.progress.elapsedTime;
+        void discordService.notifyPrintComplete(event.contextId, event.jobName, duration);
+      });
+
+      // Wire printer cooled events
+      if (temperatureMonitor) {
+        temperatureMonitor.on('printer-cooled', (event: PrinterCooledEvent) => {
+          void discordService.notifyPrinterCooled(event.contextId);
+        });
+      }
+
+      // ====================================================================
+      // INITIALIZATION COMPLETE
+      // ====================================================================
+      console.log(`[Main] Context ${contextId} fully initialized with all monitors and coordinators`);
+
     } catch (error) {
-      console.error(`[MultiContext] Failed to start polling for context ${backendEvent.contextId}:`, error);
+      console.error(`[Main] Error initializing context ${contextId}:`, error);
     }
 
     // Setup camera for this context
-    void cameraIPCHandler.handlePrinterConnected(backendEvent.contextId);
+    void cameraIPCHandler.handlePrinterConnected(contextId);
   });
 
   // Forward polling data from active context to renderer
   multiContextPollingCoordinator.on('polling-data', (contextId: string, data: unknown) => {
+    const pollingData = data as PollingData;
+
+    // Update Discord service with current printer status
+    if (pollingData.printerStatus) {
+      const discordService = getDiscordNotificationService();
+      discordService.updatePrinterStatus(contextId, pollingData.printerStatus);
+    }
+
     // Only forward polling data from the active context to avoid flooding the renderer
     const activeContextId = contextManager.getActiveContextId();
     if (contextId === activeContextId) {
@@ -405,7 +600,7 @@ const setupPrinterContextEventForwarding = (): void => {
 
       // Forward to WebUI for WebSocket clients
       const webUIManager = getWebUIManager();
-      webUIManager.handlePollingUpdate(data as PollingData);
+      webUIManager.handlePollingUpdate(pollingData);
     }
   });
 
@@ -421,11 +616,43 @@ const setupPrinterContextEventForwarding = (): void => {
 
   // Forward context-removed events
   contextManager.on('context-removed', (event: unknown) => {
+    const contextEvent = event as { contextId: string };
+    const contextId = contextEvent.contextId;
+
+    console.log(`[Main] Cleaning up context ${contextId}`);
+
+    try {
+      // Destroy in reverse order of creation
+      const discordService = getDiscordNotificationService();
+      discordService.unregisterContext(contextId);
+
+      const notificationCoordinator = getMultiContextNotificationCoordinator();
+      notificationCoordinator.destroyCoordinator(contextId);
+      console.log(`[Main] Destroyed NotificationCoordinator for context ${contextId}`);
+
+      const spoolmanTracker = getMultiContextSpoolmanTracker();
+      spoolmanTracker.destroyTracker(contextId);
+      console.log(`[Main] Destroyed SpoolmanTracker for context ${contextId}`);
+
+      const tempMonitor = getMultiContextTemperatureMonitor();
+      tempMonitor.destroyMonitor(contextId);
+      console.log(`[Main] Destroyed TemperatureMonitor for context ${contextId}`);
+
+      const printStateMonitor = getMultiContextPrintStateMonitor();
+      printStateMonitor.destroyMonitor(contextId);
+      console.log(`[Main] Destroyed PrintStateMonitor for context ${contextId}`);
+
+      console.log(`[Main] Context ${contextId} cleanup complete`);
+
+    } catch (error) {
+      console.error(`[Main] Error cleaning up context ${contextId}:`, error);
+    }
+
+    // Forward to renderer
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('printer-context-removed', event);
-      const contextEvent = event as { contextId: string };
-      console.log(`Forwarded context-removed event: ${contextEvent.contextId}`);
+      console.log(`Forwarded context-removed event: ${contextId}`);
     }
   });
 
@@ -455,8 +682,11 @@ const setupConnectionEventForwarding = (): void => {
   // Backend initialization notification
   // NOTE: In multi-context mode, polling and camera setup happen in context-created events
   connectionManager.on('backend-initialized', (data: unknown) => {
-    // Send only serializable data, not the backend instance
-    const eventData = data as { printerDetails?: { Name?: string; IPAddress?: string }; modelType?: string };
+    const eventData = data as {
+      contextId?: string;
+      printerDetails?: { Name?: string; IPAddress?: string; SerialNumber?: string; webUIEnabled?: boolean };
+      modelType?: string;
+    };
 
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -464,6 +694,8 @@ const setupConnectionEventForwarding = (): void => {
         success: true,
         printerName: eventData.printerDetails?.Name || 'Unknown',
         modelType: eventData.modelType || 'unknown',
+        contextId: eventData.contextId,
+        serialNumber: eventData.printerDetails?.SerialNumber,
         timestamp: new Date().toISOString()
       });
     }
@@ -472,7 +704,16 @@ const setupConnectionEventForwarding = (): void => {
     console.log('Backend initialized - polling and camera will start when context is created');
 
     // Start WebUI server now that printer is connected
-    void webUIManager.startForPrinter(eventData.printerDetails?.Name || 'Unknown');
+    const printerName = eventData.printerDetails?.Name || 'Unknown';
+    const serialNumber = eventData.printerDetails?.SerialNumber || '';
+    const contextId = eventData.contextId || '';
+    const webUIEnabled = eventData.printerDetails?.webUIEnabled;
+
+    if (contextId && serialNumber) {
+      void webUIManager.startForPrinter(printerName, contextId, serialNumber, webUIEnabled);
+    } else {
+      console.warn('[WebUI] Missing contextId or serialNumber, cannot start WebUI for this printer');
+    }
   });
   
   connectionManager.on('backend-initialization-failed', (data: unknown) => {
@@ -488,17 +729,23 @@ const setupConnectionEventForwarding = (): void => {
     }
   });
   
-  connectionManager.on('backend-disposed', () => {
+  connectionManager.on('backend-disposed', (data: unknown) => {
+    const eventData = data as { contextId?: string };
     // In multi-context mode, polling is stopped automatically when contexts are removed
     console.log('Backend disposed');
     // Polling cleanup is handled by context-removed events in MultiContextPollingCoordinator
 
     // Stop WebUI server when printer disconnects
-    void webUIManager.stopForPrinter();
+    if (eventData?.contextId) {
+      void webUIManager.stopForPrinter(eventData.contextId);
+    } else {
+      console.warn('[WebUI] backend-disposed event missing contextId');
+    }
 
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('backend-disposed', {
+        contextId: eventData?.contextId,
         timestamp: new Date().toISOString()
       });
     }
@@ -533,6 +780,37 @@ const performAutoConnect = async (): Promise<void> => {
 };
 
 /**
+ * Broadcast config-loaded event to all active renderer windows
+ */
+const broadcastConfigLoadedEvent = (): void => {
+  const windowManager = getWindowManager();
+  const windows = windowManager.getActiveWindows();
+
+  windows.forEach((window) => {
+    if (!window.isDestroyed()) {
+      window.webContents.send('config-loaded');
+    }
+  });
+
+  if (windows.length === 0) {
+    console.log('[Config] No renderer windows available to receive config-loaded event');
+  } else {
+    console.log(`[Config] Broadcasted config-loaded event to ${windows.length} window(s)`);
+  }
+};
+
+/**
+ * Forward ConfigManager config-loaded events to renderer windows
+ */
+const setupConfigLoadedForwarding = (): void => {
+  const configManager = getConfigManager();
+  configManager.on('config-loaded', () => {
+    console.log('[Config] Config loaded - forwarding to renderer windows');
+    broadcastConfigLoadedEvent();
+  });
+};
+
+/**
  * Setup event-driven services triggered by renderer ready signal
  */
 const setupEventDrivenServices = (): void => {
@@ -555,11 +833,13 @@ const setupEventDrivenServices = (): void => {
     // Check if config is already loaded
     if (configManager.isConfigLoaded()) {
       console.log('Config already loaded - starting auto-connect immediately');
+      broadcastConfigLoadedEvent();
       void performAutoConnect();
     } else {
       console.log('Config not yet loaded - waiting for config-loaded event');
       configManager.once('config-loaded', () => {
         console.log('Config loaded - starting auto-connect');
+        broadcastConfigLoadedEvent();
         void performAutoConnect();
       });
     }
@@ -578,6 +858,8 @@ const initializeApp = async (): Promise<void> => {
   // Setup event-driven auto-connect FIRST (before window creation)
   setupEventDrivenServices();
   console.log('Event-driven services handlers registered (WebUI starts on printer connection)');
+  setupConfigLoadedForwarding();
+  console.log('Config-loaded forwarding initialized');
   
   // Register all IPC handlers using the modular system
   const managers = {
@@ -597,10 +879,19 @@ const initializeApp = async (): Promise<void> => {
 
   // Setup legacy dialog handlers (printer selection enhancement, loading overlay)
   setupDialogHandlers();
-  
+
   // NOW create the window - renderer will find handlers already registered
   await createMainWindow();
   console.log('Main window created with all handlers ready');
+
+  // Initialize Spoolman integration service (after window creation to avoid timing issues)
+  const spoolmanService = initializeSpoolmanIntegrationService(
+    getConfigManager(),
+    getPrinterContextManager(),
+    getPrinterBackendManager()
+  );
+  console.log('Spoolman integration service initialized');
+  setupSpoolmanHealthMonitoring(spoolmanService);
   
   // Continue with remaining initialization
   setupWindowControlHandlers();
@@ -608,6 +899,7 @@ const initializeApp = async (): Promise<void> => {
   // Setup event forwarding
   setupConnectionEventForwarding();
   setupPrinterContextEventForwarding();
+  setupSpoolmanEventForwarding();
 
   // Initialize camera service
   await initializeCameraService();
@@ -620,6 +912,16 @@ const initializeApp = async (): Promise<void> => {
 
   // Note: WebUI server initialization moved to non-blocking context
   // (will be initialized after renderer-ready signal to prevent startup crashes)
+
+  // Initialize temperature monitoring system
+  const multiContextTempMonitor = getMultiContextTemperatureMonitor();
+  multiContextTempMonitor.initialize();
+  console.log('Multi-context temperature monitor initialized');
+
+  // Initialize Spoolman usage tracking
+  const multiContextSpoolmanTracker = getMultiContextSpoolmanTracker();
+  multiContextSpoolmanTracker.initialize();
+  console.log('Multi-context Spoolman tracker initialized');
 
   // Initialize notification system (base system only, per-context coordinators created when polling starts)
   initializeNotificationSystem();
@@ -637,6 +939,10 @@ const initializeApp = async (): Promise<void> => {
   const multiContextNotificationCoordinator = getMultiContextNotificationCoordinator();
   multiContextNotificationCoordinator.initialize();
   console.log('Multi-context notification coordinator initialized');
+
+  // Initialize Discord notification service
+  const discordService = getDiscordNotificationService();
+  discordService.initialize();
 
   // Initialize thumbnail cache service
   const thumbnailCacheService = getThumbnailCacheService();
@@ -678,6 +984,38 @@ async function initializeHeadless(): Promise<void> {
   const rtspStreamService = getRtspStreamService();
   await rtspStreamService.initialize();
   console.log('[Headless] RTSP stream service initialized');
+
+  // Initialize Spoolman integration service
+  const headlessSpoolmanService = initializeSpoolmanIntegrationService(
+    getConfigManager(),
+    getPrinterContextManager(),
+    getPrinterBackendManager()
+  );
+  console.log('[Headless] Spoolman integration service initialized');
+  setupSpoolmanHealthMonitoring(headlessSpoolmanService);
+
+  // Initialize temperature monitoring system
+  const multiContextTempMonitor = getMultiContextTemperatureMonitor();
+  multiContextTempMonitor.initialize();
+  console.log('[Headless] Multi-context temperature monitor initialized');
+
+  // Initialize Spoolman usage tracking
+  const multiContextSpoolmanTracker = getMultiContextSpoolmanTracker();
+  multiContextSpoolmanTracker.initialize();
+  console.log('[Headless] Multi-context Spoolman tracker initialized');
+
+  // Initialize notification system (now runs in headless too - platform detection handles compatibility)
+  initializeNotificationSystem();
+  console.log('[Headless] Notification system initialized');
+
+  // Initialize multi-context notification coordinator (now runs in headless too)
+  const multiContextNotificationCoordinator = getMultiContextNotificationCoordinator();
+  multiContextNotificationCoordinator.initialize();
+  console.log('[Headless] Multi-context notification coordinator initialized');
+
+  // Initialize Discord notification service
+  const discordService = getDiscordNotificationService();
+  discordService.initialize();
 
   // Initialize headless manager
   const headlessManager = getHeadlessManager();

@@ -39,6 +39,7 @@ import { registerPaletteHandlers } from './palette-handlers';
 import { registerShortcutConfigHandlers } from './shortcut-config-handlers';
 import { registerComponentDialogHandlers } from './component-dialog-handlers';
 import { registerUpdateHandlers } from './update-handlers';
+import { registerSpoolmanHandlers } from './spoolman-handlers';
 
 /**
  * Application managers required by IPC handlers
@@ -71,5 +72,6 @@ export function registerAllIpcHandlers(managers: AppManagers): void {
   registerShortcutConfigHandlers();
   registerComponentDialogHandlers();
   registerUpdateHandlers(configManager, windowManager);
+  registerSpoolmanHandlers();
 }
 

@@ -97,7 +97,8 @@ export enum WindowType {
   PALETTE = 'palette',
   SHORTCUT_CONFIG_DIALOG = 'shortcutConfigDialog',
   COMPONENT_DIALOG = 'componentDialog',
-  UPDATE_DIALOG = 'updateDialog'
+  UPDATE_DIALOG = 'updateDialog',
+  ABOUT_DIALOG = 'aboutDialog'
 }
 
 class WindowManager {
@@ -204,6 +205,19 @@ class WindowManager {
 
   public hasLogDialog(): boolean {
     return this.hasWindow(WindowType.LOG_DIALOG);
+  }
+
+  // Convenience methods for about dialog access
+  public getAboutDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.ABOUT_DIALOG);
+  }
+
+  public setAboutDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.ABOUT_DIALOG, window);
+  }
+
+  public hasAboutDialogWindow(): boolean {
+    return this.hasWindow(WindowType.ABOUT_DIALOG);
   }
 
   // Convenience methods for input dialog access

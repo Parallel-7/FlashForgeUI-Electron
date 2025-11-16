@@ -7,21 +7,109 @@
  */
 
 import type { IconNode } from 'lucide';
+import lucideCreateElement from 'lucide/dist/esm/createElement.js';
+import lucideReplaceElement from 'lucide/dist/esm/replaceElement.js';
+import Menu from 'lucide/dist/esm/icons/menu.js';
+import Printer from 'lucide/dist/esm/icons/printer.js';
+import SettingsIcon from 'lucide/dist/esm/icons/settings.js';
+import BarChart3 from 'lucide/dist/esm/icons/chart-column.js';
+import Grid3x3 from 'lucide/dist/esm/icons/grid-3x3.js';
+import Pin from 'lucide/dist/esm/icons/pin.js';
+import Minus from 'lucide/dist/esm/icons/minus.js';
+import Square from 'lucide/dist/esm/icons/square.js';
+import CloseIcon from 'lucide/dist/esm/icons/x.js';
+import CheckCircle from 'lucide/dist/esm/icons/circle-check-big.js';
+import XCircle from 'lucide/dist/esm/icons/circle-x.js';
+import Pencil from 'lucide/dist/esm/icons/pencil.js';
+import RotateCcw from 'lucide/dist/esm/icons/rotate-ccw.js';
+import Plug from 'lucide/dist/esm/icons/plug.js';
+import Package from 'lucide/dist/esm/icons/package.js';
+import Search from 'lucide/dist/esm/icons/search.js';
+import AlertTriangle from 'lucide/dist/esm/icons/triangle-alert.js';
+import Circle from 'lucide/dist/esm/icons/circle.js';
+import Info from 'lucide/dist/esm/icons/info.js';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
-type LucideModule = {
-  readonly createIcons: (options?: {
-    readonly icons?: Record<string, IconNode>;
-    readonly nameAttr?: string;
-    readonly attrs?: Record<string, string>;
-    readonly root?: Document | Element | DocumentFragment;
-  }) => void;
-  readonly createElement: (iconNode: IconNode, attrs?: Record<string, string | number>) => SVGElement;
-  readonly icons: Record<string, IconNode>;
+type ReplaceElementFn = (
+  element: Element,
+  options: {
+    nameAttr: string;
+    icons: Record<string, IconNode>;
+    attrs: Record<string, string>;
+  }
+) => void;
+
+const replaceElement = lucideReplaceElement as ReplaceElementFn;
+
+interface CreateIconsOptions {
+  readonly icons?: Record<string, IconNode>;
+  readonly nameAttr?: string;
+  readonly attrs?: Record<string, string>;
+  readonly root?: Document | Element | DocumentFragment;
+  readonly inTemplates?: boolean;
+}
+
+type LucideRuntime = {
+  readonly createIcons: (options?: CreateIconsOptions) => void;
+  readonly createElement: typeof lucideCreateElement;
 };
 
-let cachedLucide: LucideModule | null = null;
+let cachedRuntime: LucideRuntime | null = null;
+function createIconsRuntime({
+  icons = {},
+  nameAttr = 'data-lucide',
+  attrs = {},
+  root = typeof document !== 'undefined' ? document : undefined,
+  inTemplates
+}: CreateIconsOptions = {}): void {
+  if (!Object.keys(icons).length) {
+    throw new Error(
+      'Please provide an icons object.\nIf you want to use all the icons you can import it like:\n `import { createIcons, icons } from \'lucide\';\nlucide.createIcons({icons});`'
+    );
+  }
+
+  if (!root) {
+    throw new Error('`createIcons()` only works in a browser environment.');
+  }
+
+  const elementsToReplace = Array.from(root.querySelectorAll(`[${nameAttr}]`));
+  elementsToReplace.forEach((element) => {
+    replaceElement(element, { nameAttr, icons, attrs });
+  });
+
+  if (inTemplates) {
+    const templates = Array.from(root.querySelectorAll('template'));
+    templates.forEach((template) => {
+      createIconsRuntime({
+        icons,
+        nameAttr,
+        attrs,
+        root: (template as HTMLTemplateElement).content,
+        inTemplates
+      });
+    });
+  }
+
+  if (nameAttr === 'data-lucide') {
+    const deprecatedElements = root.querySelectorAll('[icon-name]');
+    if (deprecatedElements.length > 0) {
+      console.warn(
+        '[Lucide] Some icons were found with the deprecated icon-name attribute. Support will be removed in a future release.'
+      );
+      Array.from(deprecatedElements).forEach((element) => {
+        replaceElement(element, { nameAttr: 'icon-name', icons, attrs });
+      });
+    }
+  }
+}
+
+const moduleRuntime: LucideRuntime = {
+  createIcons: createIconsRuntime,
+  createElement: lucideCreateElement
+};
+
+const ICON_REGISTRY: Map<string, IconNode> = new Map();
 
 function normalizeClassName(className?: string | string[]): string | undefined {
   if (!className) {
@@ -30,68 +118,22 @@ function normalizeClassName(className?: string | string[]): string | undefined {
   return Array.isArray(className) ? className.join(' ') : className;
 }
 
-function resolveLucide(): LucideModule {
-  if (cachedLucide) {
-    return cachedLucide;
+function resolveLucideRuntime(): LucideRuntime {
+  if (cachedRuntime) {
+    return cachedRuntime;
   }
 
-  const resolved = attemptResolveLucide();
-  if (!resolved) {
-    throw new Error('Lucide runtime is not available. Ensure the lucide package is installed and accessible.');
-  }
-  cachedLucide = resolved;
-  return resolved;
-}
-
-function attemptResolveLucide(): LucideModule | null {
-  const globalCandidate = (globalThis as { lucide?: LucideModule }).lucide;
-  if (globalCandidate?.createIcons) {
-    return globalCandidate;
+  const globalCandidate = (globalThis as { lucide?: Partial<LucideRuntime> }).lucide;
+  if (globalCandidate?.createIcons && globalCandidate?.createElement) {
+    cachedRuntime = {
+      createIcons: globalCandidate.createIcons,
+      createElement: globalCandidate.createElement
+    };
+    return cachedRuntime;
   }
 
-  if (typeof require !== 'function') {
-    return null;
-  }
-
-  try {
-    const direct = require('lucide') as LucideModule;
-    if (direct && typeof direct.createIcons === 'function') {
-      return direct;
-    }
-  } catch {
-    // Fall back to manual resolution paths below.
-  }
-
-  try {
-    const path = require('path') as typeof import('path');
-    const candidateDirs: string[] = [];
-
-    if (typeof __dirname === 'string') {
-      candidateDirs.push(__dirname);
-      candidateDirs.push(path.resolve(__dirname, '..'));
-      candidateDirs.push(path.resolve(__dirname, '../..'));
-    }
-
-    if (typeof process !== 'undefined' && typeof process.cwd === 'function') {
-      candidateDirs.push(process.cwd());
-    }
-
-    for (const dir of new Set(candidateDirs)) {
-      try {
-        const modulePath = path.join(dir, 'node_modules/lucide');
-        const mod = require(modulePath) as LucideModule;
-        if (mod && typeof mod.createIcons === 'function') {
-          return mod;
-        }
-      } catch {
-        // Try next candidate path.
-      }
-    }
-  } catch {
-    // Ignore path resolution errors and fall back to null.
-  }
-
-  return null;
+  cachedRuntime = moduleRuntime;
+  return cachedRuntime;
 }
 
 function assertIcon(name: string, icon: IconNode | undefined): IconNode {
@@ -123,60 +165,78 @@ function toPascalCase(value: string): string {
     .join('');
 }
 
-function resolveIconNode(lucide: LucideModule, name: string): IconNode | undefined {
+function normalizeIconKey(value: string): string {
+  return value.replace(/[^a-zA-Z0-9]/g, '').toLowerCase();
+}
+
+function registerIcon(icon: IconNode, ...aliases: string[]): void {
+  aliases.forEach((alias) => {
+    ICON_REGISTRY.set(normalizeIconKey(alias), icon);
+  });
+}
+
+registerIcon(Menu, 'menu');
+registerIcon(Printer, 'printer');
+registerIcon(SettingsIcon, 'settings');
+registerIcon(BarChart3, 'bar-chart-3', 'chart-column');
+registerIcon(Grid3x3, 'grid-3x3', 'grid3x3');
+registerIcon(Pin, 'pin');
+registerIcon(Minus, 'minus');
+registerIcon(Square, 'square');
+registerIcon(CloseIcon, 'x');
+registerIcon(CheckCircle, 'check-circle');
+registerIcon(XCircle, 'x-circle');
+registerIcon(Pencil, 'pencil');
+registerIcon(RotateCcw, 'rotate-ccw');
+registerIcon(Plug, 'plug');
+registerIcon(Package, 'package');
+registerIcon(Search, 'search');
+registerIcon(AlertTriangle, 'alert-triangle', 'triangle-alert');
+registerIcon(Circle, 'circle');
+registerIcon(Info, 'info');
+
+function resolveIconNode(name: string): IconNode | undefined {
   const trimmed = name.trim();
   if (!trimmed) {
     return undefined;
   }
 
-  if (!lucide.icons) {
-    console.error('[Lucide] lucide.icons is undefined or null');
-    return undefined;
-  }
-
-  const candidates = new Set<string>();
-  candidates.add(trimmed);
-  candidates.add(trimmed.charAt(0).toUpperCase() + trimmed.slice(1));
-  candidates.add(toPascalCase(trimmed));
-
-  console.log(`[Lucide] Resolving "${name}", trying candidates:`, Array.from(candidates));
+  const candidates = new Set<string>([
+    trimmed,
+    trimmed.charAt(0).toUpperCase() + trimmed.slice(1),
+    toPascalCase(trimmed)
+  ]);
 
   for (const candidate of candidates) {
-    const iconNode = lucide.icons?.[candidate];
+    const iconNode = ICON_REGISTRY.get(normalizeIconKey(candidate));
     if (iconNode) {
-      console.log(`[Lucide] Found icon "${name}" as "${candidate}"`);
       return iconNode;
     }
   }
 
-  console.warn(`[Lucide] Could not resolve "${name}". Tried:`, Array.from(candidates));
-  console.log('[Lucide] Available icons sample:', Object.keys(lucide.icons).slice(0, 10));
-
+  console.warn(`[Lucide] Icon "${name}" is not registered in the renderer bundle.`);
   return undefined;
 }
 
 export function getLucideIcons(...names: string[]): Record<string, IconNode> {
-  const lucide = resolveLucide();
   return names.reduce<Record<string, IconNode>>((acc, rawName) => {
     const key = rawName.trim();
     if (!key) {
       return acc;
     }
-    const iconNode = resolveIconNode(lucide, key);
+    const iconNode = resolveIconNode(key);
     if (iconNode) {
       const pascalKey = toPascalCase(key);
       acc[pascalKey] = iconNode;
-      console.log(`[Lucide] Loaded "${key}" as "${pascalKey}"`);
     } else {
-      console.warn(`[Lucide] Icon "${rawName}" is not available in the loaded lucide icons set.`);
+      console.warn(`[Lucide] Icon "${rawName}" is not available in the renderer registry.`);
     }
     return acc;
   }, {});
 }
 
 export function getLucideIcon(name: string): IconNode {
-  const lucide = resolveLucide();
-  const iconNode = resolveIconNode(lucide, name);
+  const iconNode = resolveIconNode(name);
   return assertIcon(name, iconNode);
 }
 
@@ -185,13 +245,7 @@ export function initializeLucideIcons(
   icons: Record<string, IconNode>,
   options: LucideInitializationOptions = {}
 ): void {
-  const lucide = resolveLucide();
-  const iconKeys = Object.keys(icons);
-  console.log('[Lucide] initializeLucideIcons called with:', {
-    iconKeys,
-    iconCount: iconKeys.length,
-    sampleIcon: icons[iconKeys[0]],
-  });
+  const lucide = resolveLucideRuntime();
   const { strokeWidth = 2, className = 'lucide-icon', attrs = {} } = options;
   const classValue = normalizeClassName(className) ?? 'lucide-icon';
 
@@ -212,7 +266,7 @@ export function initializeLucideIcons(
 }
 
 export function createIcon(icon: IconNode, config: IconConfig = {}): SVGElement {
-  const lucide = resolveLucide();
+  const lucide = resolveLucideRuntime();
   const {
     size = 24,
     strokeWidth = 2,
@@ -246,6 +300,42 @@ export function createIcon(icon: IconNode, config: IconConfig = {}): SVGElement 
   }
 
   return element;
+}
+
+interface WindowLucideHelpers {
+  initializeLucideIconsFromGlobal(iconNames: string[], root?: Document | Element | DocumentFragment): void;
+}
+
+declare global {
+  interface Window {
+    lucideHelpers?: WindowLucideHelpers;
+  }
+}
+
+export function initializeUniversalLucideIcons(
+  iconNames: string[],
+  root: Document | Element | DocumentFragment = document
+): void {
+  if (typeof window !== 'undefined' && window.lucideHelpers?.initializeLucideIconsFromGlobal) {
+    const globalLucide = (window as typeof window & { lucide?: { createIcons?: (...args: unknown[]) => void } }).lucide;
+    const hasGlobalRuntime = typeof globalLucide?.createIcons === 'function';
+    if (hasGlobalRuntime) {
+      try {
+        window.lucideHelpers.initializeLucideIconsFromGlobal(iconNames, root);
+        return;
+      } catch (error) {
+        console.warn('[Lucide] Global helper initialization failed, falling back to module runtime:', error);
+      }
+    }
+  }
+
+  const icons = getLucideIcons(...iconNames);
+  if (Object.keys(icons).length === 0) {
+    console.warn('[Lucide] No icons resolved for initialization', iconNames);
+    return;
+  }
+
+  initializeLucideIcons(root, icons);
 }
 
 export function createNumberedBadge(

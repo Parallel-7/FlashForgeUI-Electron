@@ -11,11 +11,11 @@
  * - Dependent input state management (e.g., port fields enabled only when feature is enabled)
  * - Unsaved changes detection with confirmation prompts
  * - Per-printer context indicator showing which printer's settings are being edited
- * - macOS compatibility handling (rounded UI disabled on macOS)
+ * - Platform compatibility handling (Rounded UI disabled when unsupported)
  * - Port number validation with range checking (1-65535)
  *
  * Settings Categories:
- * - Global Settings: WebUI, Discord, alerts, filament tracker, debug mode
+ * - Global Settings: WebUI, Discord, alerts, Spoolman, debug mode
  * - Per-Printer Settings: Custom camera, custom LEDs, force legacy mode
  *
  * UI State Management:
@@ -31,47 +31,17 @@
 
 // src/ui/settings/settings-renderer.ts
 
-import { AppConfig } from '../../types/config';
-
-interface ISettingsAPI {
-  requestConfig: () => Promise<AppConfig>;
-  saveConfig: (config: Partial<AppConfig>) => Promise<boolean>;
-  closeWindow: () => void;
-  receiveConfig: (callback: (config: AppConfig) => void) => void;
-  removeListeners: () => void;
-}
-
-interface IPrinterSettingsAPI {
-  get: () => Promise<unknown>;
-  update: (settings: unknown) => Promise<boolean>;
-  getPrinterName: () => Promise<string | null>;
-}
-
-interface UpdateInfoSummary {
-  readonly version?: string;
-  readonly releaseNotes?: unknown;
-}
-
-interface UpdateDownloadProgress {
-  readonly percent?: number;
-  readonly total?: number;
-  readonly transferred?: number;
-}
-
-interface UpdateStatusResponse {
-  readonly state: string;
-  readonly updateInfo: UpdateInfoSummary | null;
-  readonly downloadProgress: UpdateDownloadProgress | null;
-  readonly error: { readonly message: string } | null;
-  readonly currentVersion: string;
-  readonly supportsDownload: boolean;
-}
-
-interface IAutoUpdateAPI {
-  checkForUpdates: () => Promise<{ success: boolean; error?: string }>;
-  getStatus: () => Promise<UpdateStatusResponse>;
-  setUpdateChannel: (channel: 'stable' | 'alpha') => Promise<{ success: boolean }>;
-}
+import { AppConfig, ThemeColors, DEFAULT_THEME } from '../../types/config';
+import type { MutableSettings } from './types';
+import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI } from './types/external';
+import { DesktopThemeSection } from './sections/DesktopThemeSection';
+import { TabSection } from './sections/TabSection';
+import { InputDependencySection } from './sections/InputDependencySection';
+import { AutoUpdateSection } from './sections/AutoUpdateSection';
+import { SpoolmanTestSection } from './sections/SpoolmanTestSection';
+import { DiscordWebhookSection } from './sections/DiscordWebhookSection';
+import { PrinterContextSection } from './sections/PrinterContextSection';
+import { RoundedUISection } from './sections/RoundedUISection';
 
 declare global {
   interface Window {
@@ -94,8 +64,6 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'web-ui-password': 'WebUIPassword',
   'web-ui-password-required': 'WebUIPasswordRequired',
   'camera-proxy-port': 'CameraProxyPort',
-  'filament-tracker-enabled': 'FilamentTrackerIntegrationEnabled',
-  'filament-tracker-api-key': 'FilamentTrackerAPIKey',
   'discord-sync': 'DiscordSync',
   'always-on-top': 'AlwaysOnTop',
   'alert-when-complete': 'AlertWhenComplete',
@@ -114,33 +82,36 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'rtsp-quality': 'RtspQuality',
   'check-updates-on-launch': 'CheckForUpdatesOnLaunch',
   'update-channel': 'UpdateChannel',
-  'auto-download-updates': 'AutoDownloadUpdates'
+  'auto-download-updates': 'AutoDownloadUpdates',
+  'spoolman-enabled': 'SpoolmanEnabled',
+  'spoolman-server-url': 'SpoolmanServerUrl',
+  'spoolman-update-mode': 'SpoolmanUpdateMode'
 };
-
-/**
- * Mutable settings tracker for internal use during editing session
- */
-interface MutableSettings {
-  // Global settings (stored in config.json)
-  global: Record<string, unknown>;
-  // Per-printer settings (stored in printer_details.json)
-  perPrinter: Record<string, unknown>;
-}
 
 class SettingsRenderer {
   private readonly inputs: Map<string, HTMLInputElement> = new Map();
   private saveStatusElement: HTMLElement | null = null;
   private updateStatusElement: HTMLElement | null = null;
   private updateCheckButton: HTMLButtonElement | null = null;
+  private testSpoolmanButton: HTMLButtonElement | null = null;
+  private spoolmanTestResultElement: HTMLElement | null = null;
+  private testDiscordButton: HTMLButtonElement | null = null;
+  private discordTestResultElement: HTMLElement | null = null;
   private statusTimeout: NodeJS.Timeout | null = null;
   private readonly settings: MutableSettings = { global: {}, perPrinter: {} };
   private printerName: string | null = null;
   private hasUnsavedChanges: boolean = false;
   private autoDownloadSupported: boolean = true;
-  private tabButtons: HTMLButtonElement[] = [];
-  private readonly tabPanels: Map<string, HTMLElement> = new Map();
-  private activeTabId: string = 'camera';
   private perPrinterControlsEnabled: boolean = true;
+  private desktopThemeSection: DesktopThemeSection | null = null;
+  private tabSection: TabSection | null = null;
+  private dependencySection: InputDependencySection | null = null;
+  private autoUpdateSection: AutoUpdateSection | null = null;
+  private spoolmanTestSection: SpoolmanTestSection | null = null;
+  private discordWebhookSection: DiscordWebhookSection | null = null;
+  private printerContextSection: PrinterContextSection | null = null;
+  private roundedUISection: RoundedUISection | null = null;
+  private webUIEnabledToggle: HTMLInputElement | null = null;
 
   private static readonly TAB_STORAGE_KEY = 'settingsDialogActiveTab';
 
@@ -174,12 +145,73 @@ class SettingsRenderer {
 
     this.saveStatusElement = document.getElementById('save-status');
     this.updateStatusElement = document.getElementById('update-check-result');
-    const checkButton = document.getElementById('btn-check-updates') as HTMLButtonElement | null;
-    if (checkButton) {
-      this.updateCheckButton = checkButton;
-    }
+    this.updateCheckButton = document.getElementById('btn-check-updates') as HTMLButtonElement | null;
 
-    this.initializeTabs();
+    this.testSpoolmanButton = document.getElementById('btn-test-spoolman') as HTMLButtonElement | null;
+    this.spoolmanTestResultElement = document.getElementById('spoolman-test-result');
+
+    this.testDiscordButton = document.getElementById('btn-test-discord') as HTMLButtonElement | null;
+    this.discordTestResultElement = document.getElementById('discord-test-result');
+
+    this.webUIEnabledToggle = document.getElementById('webui-enabled-toggle') as HTMLInputElement | null;
+
+    this.desktopThemeSection = new DesktopThemeSection({
+      document,
+      defaultTheme: DEFAULT_THEME,
+      onThemeChange: (theme) => this.handleDesktopThemeUpdated(theme)
+    });
+    this.desktopThemeSection.initialize();
+
+    this.tabSection = new TabSection({
+      document,
+      storageKey: SettingsRenderer.TAB_STORAGE_KEY
+    });
+    this.tabSection.initialize();
+
+    this.dependencySection = new InputDependencySection({
+      inputs: this.inputs,
+      webUIEnabledToggle: this.webUIEnabledToggle
+    });
+
+    this.printerContextSection = new PrinterContextSection({
+      document,
+      onPerPrinterToggle: (enabled) => {
+        this.perPrinterControlsEnabled = enabled;
+        this.updateInputStates();
+      }
+    });
+    this.printerContextSection.initialize();
+
+    this.spoolmanTestSection = new SpoolmanTestSection({
+      settingsAPI: window.settingsAPI,
+      testButton: this.testSpoolmanButton,
+      resultElement: this.spoolmanTestResultElement,
+      serverUrlInput: this.inputs.get('spoolman-server-url')
+    });
+    this.spoolmanTestSection.initialize();
+
+    this.discordWebhookSection = new DiscordWebhookSection({
+      settingsAPI: window.settingsAPI,
+      testButton: this.testDiscordButton,
+      resultElement: this.discordTestResultElement,
+      webhookInput: this.inputs.get('webhook-url')
+    });
+    this.discordWebhookSection.initialize();
+
+    this.autoUpdateSection = new AutoUpdateSection({
+      autoUpdateAPI: window.autoUpdateAPI,
+      updateCheckButton: this.updateCheckButton,
+      updateStatusElement: this.updateStatusElement,
+      autoDownloadInput: this.inputs.get('auto-download-updates'),
+      settings: this.settings
+    });
+
+    this.roundedUISection = new RoundedUISection({
+      settingsAPI: window.settingsAPI,
+      roundedUIInput: this.inputs.get('rounded-ui'),
+      document,
+      settings: this.settings
+    });
   }
 
   private setupEventListeners(): void {
@@ -208,11 +240,10 @@ class SettingsRenderer {
       saveBtn.addEventListener('click', () => this.handleSave());
     }
 
-    if (this.updateCheckButton) {
-      this.updateCheckButton.addEventListener('click', () => {
-        void this.handleCheckForUpdates();
-      });
+    if (this.webUIEnabledToggle) {
+      this.webUIEnabledToggle.addEventListener('change', () => this.handleWebUIEnabledToggle());
     }
+
   }
 
   private async requestInitialConfig(): Promise<void> {
@@ -239,9 +270,20 @@ class SettingsRenderer {
         }
 
         this.loadConfiguration();
-        this.updatePrinterContextIndicator();
-        await this.initializeAutoUpdateSupport();
-        this.updatePrinterSettingsAvailability();
+        this.printerContextSection?.update(this.printerName);
+
+        if (this.autoUpdateSection) {
+          await this.autoUpdateSection.initialize();
+          this.autoDownloadSupported = this.autoUpdateSection.isAutoDownloadSupported();
+        } else {
+          this.autoDownloadSupported = true;
+        }
+
+        if (this.roundedUISection) {
+          await this.roundedUISection.initialize();
+        }
+
+        this.updateInputStates();
       } catch (error) {
         console.error('Failed to request config:', error);
       }
@@ -300,117 +342,14 @@ class SettingsRenderer {
       }
     });
 
+    // Load desktop theme values
+    this.desktopThemeSection?.applyTheme(this.settings.global['DesktopTheme'] as ThemeColors | undefined);
+    this.applyWebUIEnabledSetting();
+
     // Update input states after loading
     this.updateInputStates();
-    this.handleMacOSCompatibility();
     this.hasUnsavedChanges = false;
     this.updateSaveButtonState();
-  }
-
-  private initializeTabs(): void {
-    this.tabButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('.settings-tab-button'));
-    const panelElements = document.querySelectorAll<HTMLElement>('.tab-panel');
-
-    panelElements.forEach((panel) => {
-      const dataTab = panel.id.replace('tab-panel-', '');
-      this.tabPanels.set(dataTab, panel);
-    });
-
-    this.tabButtons.forEach((button, index) => {
-      button.addEventListener('click', () => {
-        const tabId = button.dataset.tab;
-        if (tabId) {
-          this.setActiveTab(tabId, true, true);
-        }
-      });
-
-      button.addEventListener('keydown', (event) => {
-        this.handleTabKeydown(event, index);
-      });
-    });
-
-    const persistedTab = this.loadPersistedTabId();
-    if (persistedTab && this.tabPanels.has(persistedTab)) {
-      this.setActiveTab(persistedTab, false, false);
-    } else if (this.tabButtons.length > 0) {
-      const fallbackTab = this.tabButtons[0].dataset.tab ?? 'camera';
-      this.setActiveTab(fallbackTab, true, false);
-    }
-  }
-
-  private setActiveTab(tabId: string, persist: boolean, focusTab: boolean): void {
-    if (!this.tabPanels.has(tabId)) {
-      return;
-    }
-
-    this.tabButtons.forEach((button) => {
-      const isActive = button.dataset.tab === tabId;
-      button.setAttribute('aria-selected', isActive ? 'true' : 'false');
-      button.tabIndex = isActive ? 0 : -1;
-      if (isActive && focusTab) {
-        button.focus();
-      }
-    });
-
-    this.tabPanels.forEach((panel, id) => {
-      if (id === tabId) {
-        panel.removeAttribute('hidden');
-      } else {
-        panel.setAttribute('hidden', 'true');
-      }
-    });
-
-    this.activeTabId = tabId;
-    if (persist) {
-      this.persistTabId(tabId);
-    }
-  }
-
-  private handleTabKeydown(event: KeyboardEvent, currentIndex: number): void {
-    if (!['ArrowRight', 'ArrowLeft', 'Home', 'End'].includes(event.key)) {
-      return;
-    }
-
-    event.preventDefault();
-
-    if (event.key === 'Home') {
-      const firstTab = this.tabButtons[0];
-      if (firstTab?.dataset.tab) {
-        this.setActiveTab(firstTab.dataset.tab, true, true);
-      }
-      return;
-    }
-
-    if (event.key === 'End') {
-      const lastTab = this.tabButtons[this.tabButtons.length - 1];
-      if (lastTab?.dataset.tab) {
-        this.setActiveTab(lastTab.dataset.tab, true, true);
-      }
-      return;
-    }
-
-    const increment = event.key === 'ArrowRight' ? 1 : -1;
-    const newIndex = (currentIndex + increment + this.tabButtons.length) % this.tabButtons.length;
-    const nextTab = this.tabButtons[newIndex];
-    if (nextTab?.dataset.tab) {
-      this.setActiveTab(nextTab.dataset.tab, true, true);
-    }
-  }
-
-  private persistTabId(tabId: string): void {
-    try {
-      window.localStorage.setItem(SettingsRenderer.TAB_STORAGE_KEY, tabId);
-    } catch (error) {
-      console.warn('[Settings] Unable to persist tab selection:', error);
-    }
-  }
-
-  private loadPersistedTabId(): string | null {
-    try {
-      return window.localStorage.getItem(SettingsRenderer.TAB_STORAGE_KEY);
-    } catch {
-      return null;
-    }
   }
 
   private handleInputChange(inputId: string): void {
@@ -456,6 +395,12 @@ class SettingsRenderer {
           input.value = 'stable';
         }
       }
+      if (configKey === 'SpoolmanUpdateMode' && typeof value === 'string') {
+        if (value !== 'length' && value !== 'weight') {
+          value = 'weight';
+          input.value = 'weight';
+        }
+      }
     }
 
     // Update appropriate settings store
@@ -474,95 +419,7 @@ class SettingsRenderer {
   }
 
   private updateInputStates(): void {
-    // Web UI settings
-    const webUIEnabled = this.inputs.get('web-ui')?.checked || false;
-    const passwordRequired = this.inputs.get('web-ui-password-required')?.checked ?? true;
-    this.setInputEnabled('web-ui-port', webUIEnabled);
-    this.setInputEnabled('web-ui-password-required', webUIEnabled);
-    this.setInputEnabled('web-ui-password', webUIEnabled && passwordRequired);
-
-    // Filament Tracker Integration settings
-    const filamentTrackerEnabled = this.inputs.get('filament-tracker-enabled')?.checked || false;
-    this.setInputEnabled('filament-tracker-api-key', filamentTrackerEnabled);
-
-    // Custom Camera settings
-    if (this.perPrinterControlsEnabled) {
-      const customCameraEnabled = this.inputs.get('custom-camera')?.checked || false;
-      this.setInputEnabled('custom-camera', true);
-      this.setInputEnabled('custom-camera-url', customCameraEnabled);
-      this.setInputEnabled('custom-leds', true);
-      this.setInputEnabled('force-legacy-api', true);
-      this.setInputEnabled('rtsp-frame-rate', true);
-      this.setInputEnabled('rtsp-quality', true);
-    } else {
-      this.setInputEnabled('custom-camera', false);
-      this.setInputEnabled('custom-camera-url', false);
-      this.setInputEnabled('custom-leds', false);
-      this.setInputEnabled('force-legacy-api', false);
-      this.setInputEnabled('rtsp-frame-rate', false);
-      this.setInputEnabled('rtsp-quality', false);
-    }
-
-    // Discord settings
-    const discordEnabled = this.inputs.get('discord-sync')?.checked || false;
-    this.setInputEnabled('webhook-url', discordEnabled);
-    this.setInputEnabled('discord-update-interval', discordEnabled);
-
-    if (!this.autoDownloadSupported) {
-      this.setInputEnabled('auto-download-updates', false);
-    }
-  }
-
-  private async initializeAutoUpdateSupport(): Promise<void> {
-    if (!window.autoUpdateAPI) {
-      this.autoDownloadSupported = true;
-      return;
-    }
-
-    try {
-      const status = await window.autoUpdateAPI.getStatus();
-      this.autoDownloadSupported = Boolean(status.supportsDownload);
-
-      if (!this.autoDownloadSupported) {
-        const autoDownloadInput = this.inputs.get('auto-download-updates');
-        if (autoDownloadInput) {
-          autoDownloadInput.checked = false;
-        }
-        this.settings.global['AutoDownloadUpdates'] = false;
-      }
-    } catch (error) {
-      console.warn('[Settings] Unable to determine auto-update capabilities:', error);
-      this.autoDownloadSupported = true;
-    }
-  }
-
-  private handleMacOSCompatibility(): void {
-    // Check if running on macOS
-    const isMacOS = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
-    
-    if (isMacOS) {
-      // Disable the rounded UI checkbox on macOS
-      const roundedUIInput = this.inputs.get('rounded-ui');
-      if (roundedUIInput) {
-        roundedUIInput.disabled = true;
-        roundedUIInput.checked = false;
-        roundedUIInput.style.opacity = '0.5';
-      }
-      
-      // Show the macOS warning message
-      const macosWarning = document.querySelector('.macos-warning');
-      if (macosWarning) {
-        (macosWarning as HTMLElement).style.display = 'block';
-      }
-    }
-  }
-
-  private setInputEnabled(inputId: string, enabled: boolean): void {
-    const input = this.inputs.get(inputId);
-    if (input) {
-      input.disabled = !enabled;
-      input.style.opacity = enabled ? '1' : '0.5';
-    }
+    this.dependencySection?.updateStates(this.perPrinterControlsEnabled, this.autoDownloadSupported);
   }
 
   private updateSaveButtonState(): void {
@@ -570,48 +427,6 @@ class SettingsRenderer {
     if (saveBtn) {
       saveBtn.disabled = !this.hasUnsavedChanges;
       saveBtn.style.opacity = this.hasUnsavedChanges ? '1' : '0.6';
-    }
-  }
-
-  private async handleCheckForUpdates(): Promise<void> {
-    if (!window.autoUpdateAPI) {
-      this.showUpdateStatus('Auto-update service is not available.', 'error');
-      return;
-    }
-
-    if (this.updateCheckButton) {
-      this.updateCheckButton.disabled = true;
-    }
-
-    this.showUpdateStatus('Checking for updates...', 'info');
-
-    try {
-      const result = await window.autoUpdateAPI.checkForUpdates();
-
-      if (!result.success) {
-        this.showUpdateStatus(result.error ?? 'Failed to start update check.', 'error');
-        return;
-      }
-
-      const status = await window.autoUpdateAPI.getStatus();
-      const availableVersion = status.updateInfo?.version;
-
-      if (status.state === 'available' && availableVersion) {
-        this.showUpdateStatus(`Update ${availableVersion} is available.`, 'success');
-      } else if (status.state === 'downloaded' && availableVersion) {
-        this.showUpdateStatus(`Update ${availableVersion} is ready to install.`, 'success');
-      } else if (status.state === 'error') {
-        this.showUpdateStatus(status.error?.message ?? 'Update check failed.', 'error');
-      } else {
-        this.showUpdateStatus('No updates available.', 'success');
-      }
-    } catch (error) {
-      console.error('[Settings] Auto-update check failed:', error);
-      this.showUpdateStatus('Failed to check for updates.', 'error');
-    } finally {
-      if (this.updateCheckButton) {
-        this.updateCheckButton.disabled = false;
-      }
     }
   }
 
@@ -689,21 +504,6 @@ class SettingsRenderer {
     }
   }
 
-  private showUpdateStatus(message: string, level: 'info' | 'success' | 'error'): void {
-    if (!this.updateStatusElement) {
-      return;
-    }
-
-    this.updateStatusElement.textContent = message;
-    if (level === 'error') {
-      this.updateStatusElement.style.color = '#e53e3e';
-    } else if (level === 'success') {
-      this.updateStatusElement.style.color = '#4CAF50';
-    } else {
-      this.updateStatusElement.style.color = '#aaa';
-    }
-  }
-
   /**
    * Check if a config key is a per-printer setting
    */
@@ -733,67 +533,44 @@ class SettingsRenderer {
     return map[configKey] || configKey;
   }
 
-  /**
-   * Update printer context indicator in the UI
-   */
-  private updatePrinterContextIndicator(): void {
-    // Find or create the context indicator element
-    let indicator = document.getElementById('printer-context-indicator');
-
-    if (!indicator) {
-      // Create indicator if it doesn't exist
-      const settingsHeader = document.querySelector('.settings-header');
-      if (settingsHeader) {
-        indicator = document.createElement('div');
-        indicator.id = 'printer-context-indicator';
-        indicator.style.cssText = 'margin-top: 10px; padding: 8px; background: #f0f0f0; border-radius: 4px; font-size: 12px; color: #666;';
-        settingsHeader.appendChild(indicator);
-      }
+  private applyWebUIEnabledSetting(): void {
+    if (!this.webUIEnabledToggle) {
+      return;
     }
 
-    if (indicator) {
-      if (this.printerName) {
-        indicator.textContent = `Per-printer settings for: ${this.printerName}`;
-        indicator.style.display = 'block';
-      } else {
-        indicator.textContent = 'Global settings (no printer connected)';
-        indicator.style.display = 'block';
-      }
-    }
+    const storedValue = this.settings.perPrinter.webUIEnabled;
+    const isEnabled = storedValue !== false;
+    this.webUIEnabledToggle.checked = isEnabled;
   }
 
-  private updatePrinterSettingsAvailability(): void {
-    const content = document.getElementById('printer-settings-content');
-    const emptyState = document.getElementById('printer-settings-empty-state');
-    const cameraContent = document.getElementById('camera-printer-settings');
-    const cameraEmptyState = document.getElementById('camera-printer-empty-state');
-
-    const hasPrinter = Boolean(this.printerName);
-    this.perPrinterControlsEnabled = hasPrinter;
-
-    if (content) {
-      content.style.display = hasPrinter ? 'flex' : 'none';
+  private handleWebUIEnabledToggle(): void {
+    if (!this.webUIEnabledToggle) {
+      return;
     }
 
-    if (emptyState) {
-      emptyState.hidden = hasPrinter;
-    }
+    this.settings.perPrinter.webUIEnabled = this.webUIEnabledToggle.checked;
+    console.log('[Settings] Updated per-printer webUIEnabled:', this.webUIEnabledToggle.checked);
+    this.hasUnsavedChanges = true;
+    this.updateSaveButtonState();
+  }
 
-    if (cameraContent) {
-      cameraContent.style.display = hasPrinter ? 'flex' : 'none';
-    }
-
-    if (cameraEmptyState) {
-      cameraEmptyState.hidden = hasPrinter;
-    }
-
-    this.updateInputStates();
+  private handleDesktopThemeUpdated(theme: ThemeColors): void {
+    this.settings.global['DesktopTheme'] = theme;
+    this.hasUnsavedChanges = true;
+    this.updateSaveButtonState();
+    console.log('[Settings] Desktop theme updated:', theme);
   }
 
   private cleanup(): void {
     if (this.statusTimeout) {
       clearTimeout(this.statusTimeout);
     }
+    this.desktopThemeSection?.dispose();
+    this.tabSection?.dispose();
+    this.spoolmanTestSection?.dispose();
+    this.discordWebhookSection?.dispose();
+    this.autoUpdateSection?.dispose();
+    this.printerContextSection?.dispose();
     // Note: No longer need to remove IPC listeners since we're using promises
   }
 }

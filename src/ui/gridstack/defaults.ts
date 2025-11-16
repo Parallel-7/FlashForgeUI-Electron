@@ -27,6 +27,7 @@
  */
 
 import type { LayoutConfig, GridStackWidgetConfig, GridOptions } from './types';
+import { getComponentDefinition } from './ComponentRegistry';
 
 /**
  * Default grid options matching current layout behavior
@@ -59,8 +60,8 @@ export const DEFAULT_WIDGETS: readonly GridStackWidgetConfig[] = [
     y: 0,
     w: 6,
     h: 6,
-    minW: 4,
-    minH: 4,
+    minW: 2,
+    minH: 2,
     id: 'widget-camera-preview',
   },
 
@@ -71,7 +72,7 @@ export const DEFAULT_WIDGETS: readonly GridStackWidgetConfig[] = [
     y: 0,
     w: 6,
     h: 3,
-    minW: 4,
+    minW: 2,
     minH: 2,
     id: 'widget-controls-grid',
   },
@@ -83,7 +84,7 @@ export const DEFAULT_WIDGETS: readonly GridStackWidgetConfig[] = [
     y: 3,
     w: 6,
     h: 3,
-    minW: 4,
+    minW: 2,
     minH: 2,
     id: 'widget-model-preview',
   },
@@ -95,8 +96,8 @@ export const DEFAULT_WIDGETS: readonly GridStackWidgetConfig[] = [
     y: 6,
     w: 6,
     h: 2,
-    minW: 4,
-    minH: 1,
+    minW: 2,
+    minH: 2,
     id: 'widget-job-stats',
   },
 
@@ -214,9 +215,27 @@ export function isValidLayout(config: unknown): config is LayoutConfig {
 /**
  * Merge user layout with defaults
  * Fills in missing widgets and options from defaults
+ * Also applies current ComponentRegistry minSize values to ensure saved layouts
+ * pick up the latest minimum size constraints
  */
 export function mergeWithDefaults(userLayout: Partial<LayoutConfig>): LayoutConfig {
   const defaultLayout = getDefaultLayout();
+
+  // Get user widgets or default widgets
+  const baseWidgets = userLayout.widgets ?? defaultLayout.widgets;
+
+  // Apply ComponentRegistry minSize values to each widget
+  const widgetsWithUpdatedMinSize = baseWidgets.map(widget => {
+    const componentDef = getComponentDefinition(widget.componentId);
+    if (componentDef) {
+      return {
+        ...widget,
+        minW: componentDef.minSize.w,
+        minH: componentDef.minSize.h,
+      };
+    }
+    return widget;
+  });
 
   return {
     version: userLayout.version ?? defaultLayout.version,
@@ -225,7 +244,7 @@ export function mergeWithDefaults(userLayout: Partial<LayoutConfig>): LayoutConf
       ...defaultLayout.gridOptions,
       ...userLayout.gridOptions,
     },
-    widgets: userLayout.widgets ?? defaultLayout.widgets,
+    widgets: widgetsWithUpdatedMinSize,
     timestamp: userLayout.timestamp ?? defaultLayout.timestamp,
     name: userLayout.name ?? defaultLayout.name,
     isDefault: userLayout.isDefault ?? false,
