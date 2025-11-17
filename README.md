@@ -5,11 +5,11 @@
 </div>
 
 <p align="center">
-  <a href="https://github.com/Parallel-7/FlashForgeUI-Electron/releases/tag/v1.0.2">
+  <a href="https://github.com/Parallel-7/FlashForgeUI-Electron/releases/tag/v1.0.3">
     <img src="https://img.shields.io/badge/Download_Stable-blue?style=for-the-badge&logo=&logoColor=white">
   </a>
   
-  <a href="https://github.com/Parallel-7/FlashForgeUI-Electron/releases/tag/v1.0.2-alpha.9">
+  <a href="https://github.com/Parallel-7/FlashForgeUI-Electron/releases/tag/v1.0.2-alpha.10">
     <img src="https://img.shields.io/badge/Download_Alpha-orange?style=for-the-badge&logo=&logoColor=white">
   </a>
 
