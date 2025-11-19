@@ -53,7 +53,7 @@
  *
  * Window Specifications:
  * - Input Dialog: 420x300 (min 380x280), non-resizable, frameless, transparent
- * - Material Matching: 700x650 (min 600x550), non-resizable, frameless, transparent
+ * - Material Matching: 800x720 (min 600x550), non-resizable, frameless, transparent
  * - Single Color Confirmation: 450x500 (min 400x450), non-resizable, frameless, transparent
  * - Material Info: 600x500 (min 450x400), non-resizable, frameless, transparent
  * - IFS Dialog: 600x700 (min 600x650), non-resizable, frameless, transparent
