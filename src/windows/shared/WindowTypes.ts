@@ -256,8 +256,8 @@ export const WINDOW_SIZES = {
     minHeight: createWindowMinHeight(650)
   },
   MATERIAL_INFO: {
-    width: createWindowWidth(600),
-    height: createWindowHeight(500),
+    width: createWindowWidth(700),
+    height: createWindowHeight(620),
     minWidth: createWindowMinWidth(450),
     minHeight: createWindowMinHeight(400)
   },

@@ -237,7 +237,7 @@ export const createAboutDialog = (): void => {
     mainWindow,
     dimensions,
     preloadPath,
-    { resizable: false, frame: false, transparent: uiOptions.transparent }
+    { resizable: true, frame: false, transparent: uiOptions.transparent }
   );
 
   void loadWindowHTML(aboutDialog, 'about-dialog');

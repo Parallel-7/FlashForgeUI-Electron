@@ -10,7 +10,7 @@
  * - Modal: true (blocks main window)
  * - Frameless: true
  * - Transparent: true
- * - Resizable: false
+ * - Resizable: true
  *
  * Communication pattern:
  * - Uses unique dialog ID and response channel for each instance
@@ -102,7 +102,7 @@ export const createShortcutConfigDialog = (): Promise<void> => {
           '../../ui/shortcut-config-dialog/shortcut-config-dialog-preload.js'
         )
       ),
-      { resizable: false, frame: false }
+      { resizable: true, frame: false }
     );
 
     // Set up response handler
