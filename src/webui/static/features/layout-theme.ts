@@ -2,9 +2,16 @@
  * @fileoverview Layout and theme management utilities for the WebUI client.
  *
  * Provides GridStack initialization, per-printer layout persistence, settings
- * dialog management, responsive handling, and WebUI theme customization.
- * Exposes hooks that let the orchestrator react to layout rehydration without
- * introducing direct coupling to UI rendering functions.
+ * dialog management, responsive handling, and WebUI theme customization with
+ * theme profile support. Exposes hooks that let the orchestrator react to
+ * layout rehydration without introducing direct coupling to UI rendering functions.
+ *
+ * Theme Profile Features:
+ * - Load and render theme profile cards with color previews
+ * - Select profiles to load colors into editor
+ * - Create custom theme profiles from current colors
+ * - Delete custom profiles (built-in profiles protected)
+ * - Full synchronization with server-side profile storage
  */
 
 import { componentRegistry } from '../grid/WebUIComponentRegistry.js';
@@ -57,6 +64,7 @@ export function setupLayoutEventHandlers(): void {
   const modalEditToggle = $('toggle-edit-mode') as HTMLInputElement | null;
   const applyThemeButton = $('apply-webui-theme-btn') as HTMLButtonElement | null;
   const resetThemeButton = $('reset-webui-theme-btn') as HTMLButtonElement | null;
+  const saveCustomProfileButton = $('save-webui-custom-profile') as HTMLButtonElement | null;
 
   settingsButton?.addEventListener('click', () => openSettingsModal());
   closeButton?.addEventListener('click', () => closeSettingsModal());
@@ -95,6 +103,10 @@ export function setupLayoutEventHandlers(): void {
 
   resetThemeButton?.addEventListener('click', () => {
     loadDefaultThemeIntoSettings();
+  });
+
+  saveCustomProfileButton?.addEventListener('click', () => {
+    void handleSaveCustomProfile();
   });
 
   modalEditToggle?.addEventListener('change', (event) => {
@@ -437,6 +449,7 @@ export function openSettingsModal(): void {
   if (!modal) return;
   refreshSettingsUI(getCurrentSettings());
   void loadCurrentThemeIntoSettings();
+  void loadWebUIThemeProfiles();
   modal.classList.remove('hidden');
 }
 
@@ -534,6 +547,21 @@ interface ThemeColors {
   surface: string;
   text: string;
 }
+
+interface ThemeProfile {
+  id: string;
+  name: string;
+  isBuiltIn: boolean;
+  colors: ThemeColors;
+}
+
+interface ThemeProfilesResponse {
+  profiles: ThemeProfile[];
+  selectedProfileId: string;
+}
+
+let currentProfiles: ThemeProfile[] = [];
+let selectedProfileId: string = 'default';
 
 export function applyWebUITheme(theme: ThemeColors): void {
   const root = document.documentElement;
@@ -644,6 +672,191 @@ function getThemeFromInputs(): ThemeColors {
 
 function isValidHexColor(value: string): boolean {
   return /^#([0-9a-fA-F]{6})$/.test(value);
+}
+
+/**
+ * Theme Profile Management Functions
+ */
+
+export async function loadWebUIThemeProfiles(): Promise<void> {
+  try {
+    const response = await apiRequest<ThemeProfilesResponse>('/api/webui/theme/profiles');
+    currentProfiles = response.profiles;
+    selectedProfileId = response.selectedProfileId;
+    renderThemeProfiles();
+  } catch (error) {
+    console.error('Error loading WebUI theme profiles:', error);
+  }
+}
+
+function renderThemeProfiles(): void {
+  const container = $('webui-theme-profiles');
+  if (!container) {
+    return;
+  }
+
+  // Clear existing profiles
+  container.innerHTML = '';
+
+  // Render each profile
+  currentProfiles.forEach(profile => {
+    const card = createProfileCard(profile);
+    container.appendChild(card);
+  });
+}
+
+function createProfileCard(profile: ThemeProfile): HTMLElement {
+  const card = document.createElement('div');
+  card.className = 'webui-theme-profile-card';
+  card.dataset.profileId = profile.id;
+
+  if (profile.id === selectedProfileId) {
+    card.classList.add('active');
+  }
+
+  // Profile header with name and delete button
+  const header = document.createElement('div');
+  header.className = 'webui-theme-profile-header';
+
+  const name = document.createElement('div');
+  name.className = 'webui-theme-profile-name';
+  name.textContent = profile.name;
+  header.appendChild(name);
+
+  // Add delete button for custom profiles
+  if (!profile.isBuiltIn) {
+    const deleteBtn = document.createElement('button');
+    deleteBtn.className = 'webui-theme-profile-delete';
+    deleteBtn.innerHTML = '×';
+    deleteBtn.title = 'Delete profile';
+    deleteBtn.setAttribute('aria-label', `Delete ${profile.name} profile`);
+    deleteBtn.addEventListener('click', (event) => {
+      event.stopPropagation();
+      void handleDeleteProfile(profile.id);
+    });
+    header.appendChild(deleteBtn);
+  }
+
+  card.appendChild(header);
+
+  // Color preview strip
+  const colors = document.createElement('div');
+  colors.className = 'webui-theme-profile-colors';
+
+  // Create color swatches in order: primary, secondary, background, surface, text
+  const colorOrder: Array<keyof ThemeColors> = ['primary', 'secondary', 'background', 'surface', 'text'];
+  colorOrder.forEach(colorKey => {
+    const swatch = document.createElement('div');
+    swatch.className = 'webui-theme-profile-color-swatch';
+    swatch.style.backgroundColor = profile.colors[colorKey];
+    colors.appendChild(swatch);
+  });
+
+  card.appendChild(colors);
+
+  // Click handler to select profile
+  card.addEventListener('click', () => {
+    void handleSelectProfile(profile.id);
+  });
+
+  return card;
+}
+
+async function handleSelectProfile(profileId: string): Promise<void> {
+  const profile = currentProfiles.find(p => p.id === profileId);
+  if (!profile) {
+    return;
+  }
+
+  try {
+    // Update selected profile on server
+    await apiRequest<ApiResponse>('/api/webui/theme/profiles/select', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ profileId }),
+    });
+
+    // Update local state
+    selectedProfileId = profileId;
+
+    // Update active state on cards
+    const container = $('webui-theme-profiles');
+    container?.querySelectorAll('.webui-theme-profile-card').forEach(card => {
+      if (card instanceof HTMLElement && card.dataset.profileId === profileId) {
+        card.classList.add('active');
+      } else {
+        card.classList.remove('active');
+      }
+    });
+
+    // Load the profile's colors into the editor without applying
+    setThemeInputValues(profile.colors);
+
+    showToast(`Profile "${profile.name}" selected. Click Apply to save.`, 'info');
+  } catch (error) {
+    console.error('Error selecting profile:', error);
+    showToast('Error selecting profile', 'error');
+  }
+}
+
+async function handleDeleteProfile(profileId: string): Promise<void> {
+  const profile = currentProfiles.find(p => p.id === profileId);
+  if (!profile) {
+    return;
+  }
+
+  if (profile.isBuiltIn) {
+    showToast('Built-in profiles cannot be deleted', 'error');
+    return;
+  }
+
+  const confirmed = confirm(`Delete the "${profile.name}" profile?`);
+  if (!confirmed) {
+    return;
+  }
+
+  try {
+    await apiRequest<ApiResponse>(`/api/webui/theme/profiles/${profileId}`, {
+      method: 'DELETE',
+    });
+
+    // Reload profiles from server
+    await loadWebUIThemeProfiles();
+
+    showToast('Profile deleted successfully', 'success');
+  } catch (error) {
+    console.error('Error deleting profile:', error);
+    showToast('Error deleting profile', 'error');
+  }
+}
+
+async function handleSaveCustomProfile(): Promise<void> {
+  const name = prompt('Enter a name for this custom profile:');
+  if (!name || !name.trim()) {
+    return;
+  }
+
+  const colors = getThemeFromInputs();
+
+  try {
+    await apiRequest<ApiResponse>('/api/webui/theme/profiles', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name: name.trim(), colors }),
+    });
+
+    // Reload profiles from server
+    await loadWebUIThemeProfiles();
+
+    showToast('Custom profile created successfully', 'success');
+  } catch (error) {
+    console.error('Error creating profile:', error);
+    showToast('Error creating profile', 'error');
+  }
 }
 
 function teardownCameraStreamElements(): void {
