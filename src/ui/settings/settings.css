@@ -274,6 +274,121 @@ input[type="checkbox"] {
     background: #888;
 }
 
+/* Theme Profiles Grid Layout */
+.theme-profiles-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+    margin: 16px 0;
+}
+
+.theme-profile-card {
+    position: relative;
+    background: rgba(255, 255, 255, 0.03);
+    border: 2px solid var(--border-color);
+    border-radius: 8px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.theme-profile-card:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--button-bg);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.theme-profile-card.active {
+    border-color: var(--button-bg);
+    background: rgba(66, 133, 244, 0.1);
+    box-shadow: 0 0 0 1px var(--button-bg) inset;
+}
+
+.theme-profile-card.active::after {
+    content: '';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    background: var(--button-bg);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.theme-profile-card.active::before {
+    content: '✓';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 20px;
+    height: 20px;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1;
+}
+
+.theme-profile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 10px;
+    gap: 8px;
+}
+
+.theme-profile-name {
+    font-weight: 600;
+    font-size: 0.95em;
+    color: var(--text-color);
+    flex: 1;
+}
+
+.theme-profile-delete {
+    background: rgba(244, 67, 54, 0.8);
+    border: none;
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.2s, background 0.2s;
+}
+
+.theme-profile-card:hover .theme-profile-delete {
+    opacity: 1;
+}
+
+.theme-profile-delete:hover {
+    background: rgba(244, 67, 54, 1);
+}
+
+.theme-profile-colors {
+    display: flex;
+    gap: 4px;
+    height: 32px;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.theme-profile-color-swatch {
+    flex: 1;
+    min-width: 0;
+}
+
 /* Theme Colors Grid Layout */
 .theme-colors-grid {
     display: grid;

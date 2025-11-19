@@ -992,6 +992,118 @@ body {
   margin-left: 26px;
 }
 
+/* WebUI Theme Profiles Grid */
+.webui-theme-profiles-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.webui-theme-profile-card {
+  position: relative;
+  background: rgba(255, 255, 255, 0.03);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.webui-theme-profile-card:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--primary-color);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.webui-theme-profile-card.active {
+  border-color: var(--primary-color);
+  background: rgba(66, 133, 244, 0.1);
+  box-shadow: 0 0 0 1px var(--primary-color) inset;
+}
+
+.webui-theme-profile-card.active::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  background: var(--primary-color);
+  border-radius: 50%;
+}
+
+.webui-theme-profile-card.active::before {
+  content: '✓';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 18px;
+  height: 18px;
+  color: white;
+  font-size: 11px;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.webui-theme-profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+  gap: 6px;
+}
+
+.webui-theme-profile-name {
+  font-weight: 600;
+  font-size: 0.9em;
+  color: var(--text-color);
+  flex: 1;
+}
+
+.webui-theme-profile-delete {
+  background: rgba(244, 67, 54, 0.8);
+  border: none;
+  color: white;
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  line-height: 1;
+  opacity: 0;
+  transition: opacity 0.2s, background 0.2s;
+}
+
+.webui-theme-profile-card:hover .webui-theme-profile-delete {
+  opacity: 1;
+}
+
+.webui-theme-profile-delete:hover {
+  background: rgba(244, 67, 54, 1);
+}
+
+.webui-theme-profile-colors {
+  display: flex;
+  gap: 3px;
+  height: 28px;
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.webui-theme-profile-color-swatch {
+  flex: 1;
+  min-width: 0;
+}
+
 .theme-color-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

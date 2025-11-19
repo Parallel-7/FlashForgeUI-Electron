@@ -31,7 +31,16 @@
 
 // src/ui/settings/settings-renderer.ts
 
-import { AppConfig, ThemeColors, DEFAULT_THEME } from '../../types/config';
+import {
+  AppConfig,
+  ThemeColors,
+  ThemeProfile,
+  DEFAULT_THEME,
+  BUILT_IN_THEME_PROFILES,
+  createCustomProfile,
+  deleteCustomProfile,
+  addCustomProfile
+} from '../../types/config';
 import type { MutableSettings } from './types';
 import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI } from './types/external';
 import { DesktopThemeSection } from './sections/DesktopThemeSection';
@@ -158,7 +167,12 @@ class SettingsRenderer {
     this.desktopThemeSection = new DesktopThemeSection({
       document,
       defaultTheme: DEFAULT_THEME,
-      onThemeChange: (theme) => this.handleDesktopThemeUpdated(theme)
+      profiles: this.settings.global.ThemeProfiles || BUILT_IN_THEME_PROFILES,
+      selectedProfileId: this.settings.global.SelectedDesktopProfileId || 'default',
+      onThemeChange: (theme) => this.handleDesktopThemeUpdated(theme),
+      onProfileSelect: (profileId) => this.handleDesktopProfileSelected(profileId),
+      onProfileDelete: (profileId) => this.handleDesktopProfileDeleted(profileId),
+      onProfileCreate: (name, colors) => this.handleDesktopProfileCreated(name, colors)
     });
     this.desktopThemeSection.initialize();
 
@@ -559,6 +573,74 @@ class SettingsRenderer {
     this.hasUnsavedChanges = true;
     this.updateSaveButtonState();
     console.log('[Settings] Desktop theme updated:', theme);
+  }
+
+  private handleDesktopProfileSelected(profileId: string): void {
+    this.settings.global['SelectedDesktopProfileId'] = profileId;
+
+    // Find the selected profile and update the theme
+    const profiles = this.settings.global.ThemeProfiles || BUILT_IN_THEME_PROFILES;
+    const profile = profiles.find(p => p.id === profileId);
+
+    if (profile) {
+      this.settings.global['DesktopTheme'] = profile.colors;
+    }
+
+    this.hasUnsavedChanges = true;
+    this.updateSaveButtonState();
+    console.log('[Settings] Desktop profile selected:', profileId);
+  }
+
+  private handleDesktopProfileDeleted(profileId: string): void {
+    const currentProfiles = this.settings.global.ThemeProfiles || BUILT_IN_THEME_PROFILES;
+    const updatedProfiles = deleteCustomProfile(currentProfiles, profileId);
+
+    if (!updatedProfiles) {
+      console.warn('[Settings] Failed to delete profile:', profileId);
+      return;
+    }
+
+    this.settings.global['ThemeProfiles'] = updatedProfiles;
+
+    // If the deleted profile was selected, switch to default
+    if (this.settings.global.SelectedDesktopProfileId === profileId) {
+      this.settings.global['SelectedDesktopProfileId'] = 'default';
+      const defaultProfile = BUILT_IN_THEME_PROFILES.find(p => p.id === 'default');
+      if (defaultProfile) {
+        this.settings.global['DesktopTheme'] = defaultProfile.colors;
+      }
+    }
+
+    // Update the UI
+    this.desktopThemeSection.updateProfiles(
+      updatedProfiles,
+      this.settings.global.SelectedDesktopProfileId || 'default'
+    );
+
+    this.hasUnsavedChanges = true;
+    this.updateSaveButtonState();
+    console.log('[Settings] Desktop profile deleted:', profileId);
+  }
+
+  private handleDesktopProfileCreated(name: string, colors: ThemeColors): void {
+    const newProfile = createCustomProfile(name, colors);
+    const currentProfiles = this.settings.global.ThemeProfiles || BUILT_IN_THEME_PROFILES;
+
+    try {
+      const updatedProfiles = addCustomProfile(currentProfiles, newProfile);
+      this.settings.global['ThemeProfiles'] = updatedProfiles;
+      this.settings.global['SelectedDesktopProfileId'] = newProfile.id;
+
+      // Update the UI
+      this.desktopThemeSection.updateProfiles(updatedProfiles, newProfile.id);
+
+      this.hasUnsavedChanges = true;
+      this.updateSaveButtonState();
+      console.log('[Settings] Desktop profile created:', newProfile);
+    } catch (error) {
+      console.error('[Settings] Failed to create profile:', error);
+      alert('Failed to create custom profile. A profile with this name may already exist.');
+    }
   }
 
   private cleanup(): void {

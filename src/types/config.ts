@@ -20,7 +20,7 @@
  * - Camera: CustomCamera, CustomCameraUrl, CameraProxyPort
  * - WebUI: WebUIEnabled, WebUIPort, WebUIPassword
  * - Integrations: DiscordSync, Spoolman
- * - Themes: DesktopTheme, WebUITheme
+ * - Themes: DesktopTheme, WebUITheme, ThemeProfiles
  * - Advanced: ForceLegacyAPI, CustomLeds
  * - Auto-Update: CheckForUpdatesOnLaunch, UpdateChannel, AutoDownloadUpdates
  *
@@ -37,6 +37,17 @@ export interface ThemeColors {
   background: string; // Base background for content (not the window itself)
   surface: string;    // Card/panel background inside windows
   text: string;       // Primary text colour
+}
+
+/**
+ * Theme profile with metadata and colors
+ * Supports both built-in and user-created custom themes
+ */
+export interface ThemeProfile {
+  readonly id: string;         // Unique identifier (preset name or UUID for custom)
+  readonly name: string;       // Display name shown to users
+  readonly isBuiltIn: boolean; // True for system profiles, false for user-created
+  readonly colors: ThemeColors;
 }
 
 export interface AppConfig {
@@ -69,6 +80,9 @@ export interface AppConfig {
   readonly SpoolmanUpdateMode: 'length' | 'weight';
   readonly DesktopTheme: ThemeColors;
   readonly WebUITheme: ThemeColors;
+  readonly ThemeProfiles: ReadonlyArray<ThemeProfile>;
+  readonly SelectedDesktopProfileId: string;
+  readonly SelectedWebUIProfileId: string;
 }
 
 /**
@@ -104,6 +118,9 @@ export interface MutableAppConfig {
   SpoolmanUpdateMode: 'length' | 'weight';
   DesktopTheme: ThemeColors;
   WebUITheme: ThemeColors;
+  ThemeProfiles: ThemeProfile[];
+  SelectedDesktopProfileId: string;
+  SelectedWebUIProfileId: string;
 }
 
 /**
@@ -116,6 +133,83 @@ export const DEFAULT_THEME: ThemeColors = {
   surface: '#1e1e1e',     // card background
   text: '#e0e0e0',        // light text
 };
+
+/**
+ * Fluidd-inspired theme colors
+ * Purple and blue tones matching the Fluidd 3D printer interface
+ */
+export const FLUIDD_THEME: ThemeColors = {
+  primary: '#9c27b0',     // Fluidd purple
+  secondary: '#673ab7',   // Deep purple accent
+  background: '#0d0d0d',  // Very dark background
+  surface: '#1a1a1a',     // Dark surface
+  text: '#ececec',        // Light text
+};
+
+/**
+ * Mainsail-inspired theme colors
+ * Orange and red tones matching the Mainsail 3D printer interface
+ */
+export const MAINSAIL_THEME: ThemeColors = {
+  primary: '#ff6f00',     // Mainsail orange
+  secondary: '#d84315',   // Deep orange/red accent
+  background: '#0d0d0d',  // Very dark background
+  surface: '#1c1c1c',     // Dark surface
+  text: '#f5f5f5',        // Light text
+};
+
+/**
+ * Nord-inspired modern dark theme
+ * Cool tones using the Nord color palette
+ */
+export const NORD_THEME: ThemeColors = {
+  primary: '#88c0d0',     // Nord frost cyan
+  secondary: '#81a1c1',   // Nord frost blue
+  background: '#2e3440',  // Nord polar night darkest
+  surface: '#3b4252',     // Nord polar night dark
+  text: '#eceff4',        // Nord snow storm lightest
+};
+
+/**
+ * Built-in theme profile IDs (constants to prevent typos)
+ */
+export const THEME_PROFILE_IDS = {
+  DEFAULT: 'default',
+  FLUIDD: 'fluidd',
+  MAINSAIL: 'mainsail',
+  NORD: 'nord',
+} as const;
+
+/**
+ * Built-in theme profiles available to all users
+ * These profiles cannot be deleted or modified
+ */
+export const BUILT_IN_THEME_PROFILES: ReadonlyArray<ThemeProfile> = [
+  {
+    id: THEME_PROFILE_IDS.DEFAULT,
+    name: 'Default',
+    isBuiltIn: true,
+    colors: DEFAULT_THEME,
+  },
+  {
+    id: THEME_PROFILE_IDS.FLUIDD,
+    name: 'Fluidd',
+    isBuiltIn: true,
+    colors: FLUIDD_THEME,
+  },
+  {
+    id: THEME_PROFILE_IDS.MAINSAIL,
+    name: 'Mainsail',
+    isBuiltIn: true,
+    colors: MAINSAIL_THEME,
+  },
+  {
+    id: THEME_PROFILE_IDS.NORD,
+    name: 'Nord',
+    isBuiltIn: true,
+    colors: NORD_THEME,
+  },
+];
 
 /**
  * Default configuration values that match the legacy JS defaults
@@ -150,6 +244,9 @@ export const DEFAULT_CONFIG: AppConfig = {
   SpoolmanUpdateMode: 'weight', // Default to weight-based updates
   DesktopTheme: DEFAULT_THEME,
   WebUITheme: DEFAULT_THEME,
+  ThemeProfiles: BUILT_IN_THEME_PROFILES,
+  SelectedDesktopProfileId: THEME_PROFILE_IDS.DEFAULT,
+  SelectedWebUIProfileId: THEME_PROFILE_IDS.DEFAULT,
 } as const;
 
 /**
@@ -236,6 +333,69 @@ export function sanitizeTheme(theme: Partial<ThemeColors> | undefined): ThemeCol
 }
 
 /**
+ * Sanitizes a theme profile, ensuring all required fields are valid
+ */
+function sanitizeThemeProfile(profile: Partial<ThemeProfile> | undefined): ThemeProfile | null {
+  if (!profile || typeof profile !== 'object') {
+    return null;
+  }
+
+  const id = typeof profile.id === 'string' && profile.id.trim() ? profile.id.trim() : null;
+  const name = typeof profile.name === 'string' && profile.name.trim() ? profile.name.trim() : null;
+  const isBuiltIn = typeof profile.isBuiltIn === 'boolean' ? profile.isBuiltIn : false;
+
+  if (!id || !name) {
+    return null;
+  }
+
+  const colors = sanitizeTheme(profile.colors);
+
+  return {
+    id,
+    name,
+    isBuiltIn,
+    colors,
+  };
+}
+
+/**
+ * Sanitizes an array of theme profiles
+ * Ensures built-in profiles are always present and custom profiles are valid
+ */
+function sanitizeThemeProfiles(profiles: unknown): ThemeProfile[] {
+  const result: ThemeProfile[] = [...BUILT_IN_THEME_PROFILES];
+
+  if (!Array.isArray(profiles)) {
+    return result;
+  }
+
+  const builtInIds = new Set(BUILT_IN_THEME_PROFILES.map(p => p.id));
+  const customProfiles: ThemeProfile[] = [];
+
+  for (const profile of profiles) {
+    const sanitized = sanitizeThemeProfile(profile as Partial<ThemeProfile>);
+    if (sanitized && !builtInIds.has(sanitized.id)) {
+      customProfiles.push(sanitized);
+    }
+  }
+
+  return [...result, ...customProfiles];
+}
+
+/**
+ * Validates and sanitizes a profile ID
+ * Returns the ID if valid, otherwise returns the default profile ID
+ */
+function sanitizeProfileId(id: unknown, profiles: ThemeProfile[]): string {
+  if (typeof id !== 'string' || !id.trim()) {
+    return THEME_PROFILE_IDS.DEFAULT;
+  }
+
+  const profileExists = profiles.some(p => p.id === id);
+  return profileExists ? id : THEME_PROFILE_IDS.DEFAULT;
+}
+
+/**
  * Sanitizes and ensures a config object contains only valid keys with correct types
  */
 export function sanitizeConfig(config: Partial<AppConfig>): AppConfig {
@@ -289,6 +449,112 @@ export function sanitizeConfig(config: Partial<AppConfig>): AppConfig {
     sanitized.WebUITheme = sanitizeTheme(config.WebUITheme);
   }
 
+  // Sanitize theme profiles (always ensures built-in profiles are present)
+  sanitized.ThemeProfiles = sanitizeThemeProfiles(config.ThemeProfiles);
+
+  // Sanitize selected profile IDs (validate against available profiles)
+  sanitized.SelectedDesktopProfileId = sanitizeProfileId(
+    config.SelectedDesktopProfileId,
+    sanitized.ThemeProfiles
+  );
+  sanitized.SelectedWebUIProfileId = sanitizeProfileId(
+    config.SelectedWebUIProfileId,
+    sanitized.ThemeProfiles
+  );
+
   return sanitized;
+}
+
+/**
+ * Profile Management Utilities
+ */
+
+/**
+ * Generates a unique ID for a custom theme profile
+ */
+export function generateProfileId(): string {
+  return `custom-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+}
+
+/**
+ * Finds a theme profile by ID
+ */
+export function findProfileById(profiles: ReadonlyArray<ThemeProfile>, id: string): ThemeProfile | undefined {
+  return profiles.find(p => p.id === id);
+}
+
+/**
+ * Creates a new custom theme profile
+ */
+export function createCustomProfile(name: string, colors: ThemeColors): ThemeProfile {
+  return {
+    id: generateProfileId(),
+    name: name.trim(),
+    isBuiltIn: false,
+    colors: sanitizeTheme(colors),
+  };
+}
+
+/**
+ * Updates an existing custom profile
+ * Returns null if the profile is built-in or doesn't exist
+ */
+export function updateCustomProfile(
+  profiles: ReadonlyArray<ThemeProfile>,
+  profileId: string,
+  updates: Partial<Pick<ThemeProfile, 'name' | 'colors'>>
+): ThemeProfile[] | null {
+  const profile = findProfileById(profiles, profileId);
+
+  if (!profile || profile.isBuiltIn) {
+    return null;
+  }
+
+  return profiles.map(p => {
+    if (p.id === profileId) {
+      return {
+        ...p,
+        name: updates.name !== undefined ? updates.name.trim() : p.name,
+        colors: updates.colors !== undefined ? sanitizeTheme(updates.colors) : p.colors,
+      };
+    }
+    return p;
+  });
+}
+
+/**
+ * Deletes a custom theme profile
+ * Returns null if the profile is built-in or doesn't exist
+ */
+export function deleteCustomProfile(
+  profiles: ReadonlyArray<ThemeProfile>,
+  profileId: string
+): ThemeProfile[] | null {
+  const profile = findProfileById(profiles, profileId);
+
+  if (!profile || profile.isBuiltIn) {
+    return null;
+  }
+
+  return profiles.filter(p => p.id !== profileId);
+}
+
+/**
+ * Adds a new custom profile to the list
+ */
+export function addCustomProfile(
+  profiles: ReadonlyArray<ThemeProfile>,
+  profile: ThemeProfile
+): ThemeProfile[] {
+  if (profile.isBuiltIn) {
+    throw new Error('Cannot add built-in profiles');
+  }
+
+  const exists = findProfileById(profiles, profile.id);
+  if (exists) {
+    throw new Error(`Profile with ID ${profile.id} already exists`);
+  }
+
+  return [...profiles, profile];
 }
 

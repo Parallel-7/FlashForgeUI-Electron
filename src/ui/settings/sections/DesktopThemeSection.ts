@@ -1,12 +1,14 @@
 /**
  * @fileoverview Desktop theme section controller for the settings dialog renderer.
  *
- * Encapsulates all DOM bindings, color picker behavior, and theme value propagation for
- * the desktop theme customization area. Exposes a simple API for loading an initial theme,
- * reacting to user edits, and notifying the parent settings renderer whenever the theme
- * changes so global configuration state can stay in sync.
+ * Encapsulates all DOM bindings, color picker behavior, theme profile selection, and theme value
+ * propagation for the desktop theme customization area. Exposes a simple API for loading profiles,
+ * selecting profiles, creating custom profiles, and notifying the parent settings renderer whenever
+ * the theme or profiles change so global configuration state can stay in sync.
  *
  * Responsibilities:
+ * - Render theme profile cards with color previews
+ * - Handle profile selection, creation, and deletion
  * - Map DOM inputs (native color pickers, hex fields, swatches) to ThemeColors keys
  * - Drive the custom color picker modal with hue/SV field interactions
  * - Normalize and validate color input before emitting theme changes
@@ -15,12 +17,17 @@
 
 // src/ui/settings/sections/DesktopThemeSection.ts
 
-import type { ThemeColors } from '../../../types/config';
+import type { ThemeColors, ThemeProfile } from '../../../types/config';
 
 interface DesktopThemeSectionOptions {
   readonly document: Document;
   readonly defaultTheme: ThemeColors;
+  readonly profiles: ReadonlyArray<ThemeProfile>;
+  readonly selectedProfileId: string;
   readonly onThemeChange: (theme: ThemeColors) => void;
+  readonly onProfileSelect: (profileId: string) => void;
+  readonly onProfileDelete: (profileId: string) => void;
+  readonly onProfileCreate: (name: string, colors: ThemeColors) => void;
 }
 
 type ThemeColorKey = keyof ThemeColors;
@@ -35,17 +42,25 @@ const THEME_INPUT_CONFIG: Array<[ThemeColorKey, string]> = [
 
 /**
  * Dedicated controller for the Desktop Theme section. Keeps the massive settings renderer
- * leaner by encapsulating color picker state, DOM lookups, and change handling.
+ * leaner by encapsulating color picker state, profile management, DOM lookups, and change handling.
  */
 export class DesktopThemeSection {
   private readonly doc: Document;
   private readonly defaultTheme: ThemeColors;
   private readonly notifyThemeChange: (theme: ThemeColors) => void;
+  private readonly notifyProfileSelect: (profileId: string) => void;
+  private readonly notifyProfileDelete: (profileId: string) => void;
+  private readonly notifyProfileCreate: (name: string, colors: ThemeColors) => void;
+
+  private profiles: ReadonlyArray<ThemeProfile>;
+  private selectedProfileId: string;
 
   private readonly nativeColorInputs: Map<ThemeColorKey, HTMLInputElement> = new Map();
   private readonly hexInputs: Map<ThemeColorKey, HTMLInputElement> = new Map();
   private readonly colorSwatches: Map<ThemeColorKey, HTMLButtonElement> = new Map();
 
+  private profilesContainer: HTMLElement | null = null;
+  private saveCustomProfileButton: HTMLButtonElement | null = null;
   private resetButton: HTMLButtonElement | null = null;
   private colorPickerModal: HTMLElement | null = null;
   private colorFieldCanvas: HTMLCanvasElement | null = null;
@@ -85,7 +100,12 @@ export class DesktopThemeSection {
   constructor(options: DesktopThemeSectionOptions) {
     this.doc = options.document;
     this.defaultTheme = options.defaultTheme;
+    this.profiles = options.profiles;
+    this.selectedProfileId = options.selectedProfileId;
     this.notifyThemeChange = options.onThemeChange;
+    this.notifyProfileSelect = options.onProfileSelect;
+    this.notifyProfileDelete = options.onProfileDelete;
+    this.notifyProfileCreate = options.onProfileCreate;
     this.currentTheme = { ...options.defaultTheme };
   }
 
@@ -93,6 +113,7 @@ export class DesktopThemeSection {
     this.cacheElements();
     this.initializeColorPickerCanvas();
     this.registerEventListeners();
+    this.renderProfiles();
     this.applyTheme(this.currentTheme);
   }
 
@@ -144,6 +165,8 @@ export class DesktopThemeSection {
       }
     });
 
+    this.profilesContainer = this.doc.getElementById('desktop-theme-profiles');
+    this.saveCustomProfileButton = this.doc.getElementById('save-custom-profile') as HTMLButtonElement | null;
     this.resetButton = this.doc.getElementById('reset-desktop-theme') as HTMLButtonElement | null;
     this.colorPickerModal = this.doc.getElementById('custom-color-picker');
     this.colorFieldCanvas = this.doc.getElementById('color-picker-field') as HTMLCanvasElement | null;
@@ -177,6 +200,10 @@ export class DesktopThemeSection {
     this.colorSwatches.forEach((swatch, key) => {
       swatch.addEventListener('click', () => this.openColorPicker(key));
     });
+
+    if (this.saveCustomProfileButton) {
+      this.saveCustomProfileButton.addEventListener('click', () => this.handleSaveCustomProfile());
+    }
 
     if (this.resetButton) {
       this.resetButton.addEventListener('click', () => this.handleResetDesktopTheme());
@@ -596,5 +623,154 @@ export class DesktopThemeSection {
     };
 
     return `#${toHex(r)}${toHex(g)}${toHex(bl)}`.toUpperCase();
+  }
+
+  /**
+   * Updates the profiles list and re-renders the profile cards
+   */
+  updateProfiles(profiles: ReadonlyArray<ThemeProfile>, selectedProfileId: string): void {
+    this.profiles = profiles;
+    this.selectedProfileId = selectedProfileId;
+    this.renderProfiles();
+  }
+
+  /**
+   * Renders the profile cards in the profiles container
+   */
+  private renderProfiles(): void {
+    if (!this.profilesContainer) {
+      return;
+    }
+
+    // Clear existing profiles
+    this.profilesContainer.innerHTML = '';
+
+    // Render each profile
+    this.profiles.forEach(profile => {
+      const card = this.createProfileCard(profile);
+      this.profilesContainer!.appendChild(card);
+    });
+  }
+
+  /**
+   * Creates a profile card element
+   */
+  private createProfileCard(profile: ThemeProfile): HTMLElement {
+    const card = this.doc.createElement('div');
+    card.className = 'theme-profile-card';
+    card.dataset.profileId = profile.id;
+
+    if (profile.id === this.selectedProfileId) {
+      card.classList.add('active');
+    }
+
+    // Profile header with name and delete button
+    const header = this.doc.createElement('div');
+    header.className = 'theme-profile-header';
+
+    const name = this.doc.createElement('div');
+    name.className = 'theme-profile-name';
+    name.textContent = profile.name;
+    header.appendChild(name);
+
+    // Add delete button for custom profiles
+    if (!profile.isBuiltIn) {
+      const deleteBtn = this.doc.createElement('button');
+      deleteBtn.className = 'theme-profile-delete';
+      deleteBtn.innerHTML = '×';
+      deleteBtn.title = 'Delete profile';
+      deleteBtn.setAttribute('aria-label', `Delete ${profile.name} profile`);
+      deleteBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        this.handleDeleteProfile(profile.id);
+      });
+      header.appendChild(deleteBtn);
+    }
+
+    card.appendChild(header);
+
+    // Color preview strip
+    const colors = this.doc.createElement('div');
+    colors.className = 'theme-profile-colors';
+
+    // Create color swatches in order: primary, secondary, background, surface, text
+    const colorOrder: Array<keyof ThemeColors> = ['primary', 'secondary', 'background', 'surface', 'text'];
+    colorOrder.forEach(colorKey => {
+      const swatch = this.doc.createElement('div');
+      swatch.className = 'theme-profile-color-swatch';
+      swatch.style.backgroundColor = profile.colors[colorKey];
+      colors.appendChild(swatch);
+    });
+
+    card.appendChild(colors);
+
+    // Click handler to select profile
+    card.addEventListener('click', () => {
+      this.handleSelectProfile(profile.id);
+    });
+
+    return card;
+  }
+
+  /**
+   * Handles profile selection
+   */
+  private handleSelectProfile(profileId: string): void {
+    const profile = this.profiles.find(p => p.id === profileId);
+    if (!profile) {
+      return;
+    }
+
+    // Update selected profile ID
+    this.selectedProfileId = profileId;
+
+    // Update active state on cards
+    this.profilesContainer?.querySelectorAll('.theme-profile-card').forEach(card => {
+      if (card instanceof HTMLElement && card.dataset.profileId === profileId) {
+        card.classList.add('active');
+      } else {
+        card.classList.remove('active');
+      }
+    });
+
+    // Load the profile's colors into the editor without applying
+    this.applyTheme(profile.colors);
+
+    // Notify parent
+    this.notifyProfileSelect(profileId);
+  }
+
+  /**
+   * Handles profile deletion
+   */
+  private handleDeleteProfile(profileId: string): void {
+    const profile = this.profiles.find(p => p.id === profileId);
+    if (!profile) {
+      return;
+    }
+
+    if (profile.isBuiltIn) {
+      alert('Built-in profiles cannot be deleted.');
+      return;
+    }
+
+    const confirmed = confirm(`Delete the "${profile.name}" profile?`);
+    if (!confirmed) {
+      return;
+    }
+
+    this.notifyProfileDelete(profileId);
+  }
+
+  /**
+   * Handles saving current colors as a custom profile
+   */
+  private handleSaveCustomProfile(): void {
+    const name = prompt('Enter a name for this custom profile:');
+    if (!name || !name.trim()) {
+      return;
+    }
+
+    this.notifyProfileCreate(name.trim(), this.currentTheme);
   }
 }
