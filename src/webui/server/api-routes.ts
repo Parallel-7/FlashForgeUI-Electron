@@ -23,15 +23,18 @@ import { registerContextRoutes } from './routes/context-routes';
 import { registerThemeRoutes } from './routes/theme-routes';
 import { registerSpoolmanRoutes } from './routes/spoolman-routes';
 
-export function createAPIRoutes(): Router {
-  const router = Router();
-  const deps: RouteDependencies = {
+export function buildRouteDependencies(): RouteDependencies {
+  return {
     backendManager: getPrinterBackendManager(),
     connectionManager: getPrinterConnectionManager(),
     contextManager: getPrinterContextManager(),
     configManager: getConfigManager(),
     spoolmanService: getSpoolmanIntegrationService()
   };
+}
+
+export function createAPIRoutes(deps: RouteDependencies = buildRouteDependencies()): Router {
+  const router = Router();
 
   registerPrinterStatusRoutes(router, deps);
   registerPrinterControlRoutes(router, deps);
@@ -45,4 +48,3 @@ export function createAPIRoutes(): Router {
 
   return router;
 }
-

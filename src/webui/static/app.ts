@@ -30,6 +30,7 @@ import {
 import { $, hideElement, showElement } from './shared/dom.js';
 import { initializeLucideIcons } from './shared/icons.js';
 import {
+  applyDefaultTheme,
   applySettings,
   ensureSpoolmanVisibilityIfEnabled,
   initializeLayout,
@@ -366,6 +367,7 @@ async function initialize(): Promise<void> {
 
   setupAuthEventHandlers({
     onLoginSuccess: async () => {
+      await loadWebUITheme();
       await handlePostLoginTasks();
     },
   });
@@ -385,8 +387,9 @@ async function initialize(): Promise<void> {
 
   setupViewportListener();
 
-  await loadWebUITheme();
+  applyDefaultTheme();
   await loadAuthStatus();
+  await loadWebUITheme();
 
   const isAuthenticated = await checkAuthStatus();
 
