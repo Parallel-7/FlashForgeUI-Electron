@@ -41,12 +41,13 @@ import {
   WebUILoginRequestSchema
 } from '../schemas/web-api.schemas';
 import { StandardAPIResponse } from '../types/web-api.types';
-import { createAPIRoutes } from './api-routes';
+import { createAPIRoutes, buildRouteDependencies } from './api-routes';
 import { getWebSocketManager } from './WebSocketManager';
 import { getRtspStreamService } from '../../services/RtspStreamService';
 import type { PollingData } from '../../types/polling';
 import { isHeadlessMode } from '../../utils/HeadlessDetection';
 import type { WebUILoginResponse } from '../types/web-api.types';
+import { registerPublicThemeRoutes } from './routes/theme-routes';
 
 /**
  * Branded type for WebUIManager singleton
@@ -190,11 +191,16 @@ export class WebUIManager extends EventEmitter {
     // Authentication routes (no auth required)
     this.setupAuthRoutes();
 
+    const routeDependencies = buildRouteDependencies();
+
+    // Public routes that should be available without authentication (e.g., theme defaults)
+    registerPublicThemeRoutes(this.expressApp, routeDependencies);
+
     // Protected API routes (WebUI auth required)
     this.expressApp.use('/api', createAuthMiddleware());
 
     // Import and use API routes
-    const apiRoutes = createAPIRoutes();
+    const apiRoutes = createAPIRoutes(routeDependencies);
     this.expressApp.use('/api', apiRoutes);
 
     // Error handling (must be last)
