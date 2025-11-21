@@ -9,8 +9,8 @@ import { sanitizeTheme } from '../../../types/config';
 import { StandardAPIResponse } from '../../types/web-api.types';
 import { toAppError } from '../../../utils/error.utils';
 
-export function registerThemeRoutes(router: Router, deps: RouteDependencies): void {
-  router.get('/webui/theme', async (_req: AuthenticatedRequest, res: Response) => {
+export function registerPublicThemeRoutes(router: Router, deps: RouteDependencies): void {
+  router.get('/api/webui/theme', async (_req, res: Response) => {
     try {
       const config = deps.configManager.getConfig();
       return res.json(config.WebUITheme);
@@ -23,7 +23,9 @@ export function registerThemeRoutes(router: Router, deps: RouteDependencies): vo
       return res.status(500).json(response);
     }
   });
+}
 
+export function registerThemeRoutes(router: Router, deps: RouteDependencies): void {
   router.post('/webui/theme', async (req: AuthenticatedRequest, res: Response) => {
     try {
       const sanitizedTheme = sanitizeTheme(req.body);

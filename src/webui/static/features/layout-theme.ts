@@ -30,7 +30,7 @@ import {
   getCurrentContextId as getStoredContextId,
 } from '../core/AppState.js';
 import type { ApiResponse, PrinterFeatures, PrinterStatus, WebUISettings } from '../app.js';
-import { apiRequest } from '../core/Transport.js';
+import { apiRequest, apiRequestWithMetadata } from '../core/Transport.js';
 import { $, showToast } from '../shared/dom.js';
 import { updateEditModeToggle } from '../ui/header.js';
 
@@ -520,11 +520,19 @@ export function ensureSpoolmanVisibilityIfEnabled(): void {
 
 export async function loadWebUITheme(): Promise<void> {
   try {
-    const theme = await apiRequest<ThemeColors>('/api/webui/theme');
-    applyWebUITheme(theme);
+    const response = await apiRequestWithMetadata<unknown>('/api/webui/theme');
+
+    if (response.ok && isThemeColors(response.data)) {
+      applyWebUITheme(response.data);
+      return;
+    }
+
+    console.warn('WebUI theme endpoint returned unexpected payload. Falling back to default.', response.status);
   } catch (error) {
     console.error('Error loading WebUI theme:', error);
   }
+
+  applyDefaultTheme();
 }
 
 interface ThemeColors {
@@ -606,6 +614,10 @@ const DEFAULT_THEME_COLORS: ThemeColors = {
   text: '#e0e0e0',
 };
 
+export function applyDefaultTheme(): void {
+  applyWebUITheme(DEFAULT_THEME_COLORS);
+}
+
 function setThemeInputValues(theme: ThemeColors): void {
   const primaryInput = $('webui-theme-primary') as HTMLInputElement | null;
   const secondaryInput = $('webui-theme-secondary') as HTMLInputElement | null;
@@ -644,6 +656,21 @@ function getThemeFromInputs(): ThemeColors {
 
 function isValidHexColor(value: string): boolean {
   return /^#([0-9a-fA-F]{6})$/.test(value);
+}
+
+function isThemeColors(value: unknown): value is ThemeColors {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof candidate.primary === 'string' &&
+    typeof candidate.secondary === 'string' &&
+    typeof candidate.background === 'string' &&
+    typeof candidate.surface === 'string' &&
+    typeof candidate.text === 'string'
+  );
 }
 
 function teardownCameraStreamElements(): void {
