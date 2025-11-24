@@ -3,11 +3,11 @@
  */
 
 import type { Router, Response } from 'express';
-import type { AuthenticatedRequest } from '../auth-middleware';
-import type { RouteDependencies } from './route-helpers';
-import { sanitizeTheme } from '../../../types/config';
-import { StandardAPIResponse } from '../../types/web-api.types';
-import { toAppError } from '../../../utils/error.utils';
+import type { AuthenticatedRequest } from '../auth-middleware.js';
+import type { RouteDependencies } from './route-helpers.js';
+import { sanitizeTheme } from '../../../types/config.js';
+import { StandardAPIResponse } from '../../types/web-api.types.js';
+import { toAppError } from '../../../utils/error.utils.js';
 
 export function registerPublicThemeRoutes(router: Router, deps: RouteDependencies): void {
   router.get('/api/webui/theme', async (_req, res: Response) => {

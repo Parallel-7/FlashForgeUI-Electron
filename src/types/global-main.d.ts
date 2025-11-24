@@ -16,7 +16,7 @@
  * @module types/global-main
  */
 
-import { PrinterBackendManager } from '../managers/PrinterBackendManager';
+import { PrinterBackendManager } from '../managers/PrinterBackendManager.js';
 
 declare global {
   namespace NodeJS {

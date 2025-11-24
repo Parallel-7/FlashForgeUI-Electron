@@ -31,11 +31,11 @@
  */
 
 import { EventEmitter } from 'events';
-import { getPrinterContextManager } from '../managers/PrinterContextManager';
-import { TemperatureMonitoringService } from './TemperatureMonitoringService';
-import type { PrintStateMonitor } from './PrintStateMonitor';
-import type { PrinterPollingService } from './PrinterPollingService';
-import type { PrinterStatus } from '../types/polling';
+import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
+import { TemperatureMonitoringService } from './TemperatureMonitoringService.js';
+import type { PrintStateMonitor } from './PrintStateMonitor.js';
+import type { PrinterPollingService } from './PrinterPollingService.js';
+import type { PrinterStatus } from '../types/polling.js';
 
 // ============================================================================
 // TYPES

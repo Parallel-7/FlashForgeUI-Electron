@@ -27,9 +27,9 @@
  */
 
 import { EventEmitter } from 'events';
-import type { PrinterBackendManager } from '../managers/PrinterBackendManager';
-import type { PrinterModelType } from '../types/printer-backend';
-import { getPrinterContextManager } from '../managers/PrinterContextManager';
+import type { PrinterBackendManager } from '../managers/PrinterBackendManager.js';
+import type { PrinterModelType } from '../types/printer-backend/index.js';
+import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
 
 /**
  * Request item in the queue

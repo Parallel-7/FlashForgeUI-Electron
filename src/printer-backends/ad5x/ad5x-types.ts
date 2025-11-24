@@ -36,10 +36,10 @@ export {
 export { 
   MaterialStationStatus, 
   MaterialSlotInfo 
-} from '../../types/printer-backend';
+} from '../../types/printer-backend/index.js';
 
 // AD5X job info extends the base job info with material station data
-export { AD5XJobInfo } from '../../types/printer-backend';
+export { AD5XJobInfo } from '../../types/printer-backend/index.js';
 
 // Import MatlStationInfo for type definitions
 import type { MatlStationInfo as MatlStationInfoType } from '@ghosttypes/ff-api';

@@ -30,7 +30,11 @@ export interface AboutDialogInfo {
 contextBridge.exposeInMainWorld('aboutAPI', {
   getAppInfo: async (): Promise<AboutDialogInfo | null> => {
     try {
-      return await ipcRenderer.invoke('about-dialog:get-info');
+      const result = await ipcRenderer.invoke('about-dialog:get-info');
+      if (result !== null && typeof result === 'object') {
+        return result as AboutDialogInfo;
+      }
+      return null;
     } catch (error) {
       console.error('[AboutDialog] Failed to fetch app info', error);
       return null;

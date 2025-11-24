@@ -20,12 +20,12 @@
 
 import { EventEmitter } from 'events';
 import { BrowserWindow } from 'electron';
-import { getPrinterBackendManager } from '../managers/PrinterBackendManager';
-import { getPrinterContextManager } from '../managers/PrinterContextManager';
-import { getWebUIManager } from '../webui/server/WebUIManager';
-import { getPrinterNotificationCoordinator } from './notifications';
-import { printerDataTransformer } from './PrinterDataTransformer';
-import type { PollingData, PrinterStatus, MaterialStationStatus } from '../types/polling';
+import { getPrinterBackendManager } from '../managers/PrinterBackendManager.js';
+import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
+import { getWebUIManager } from '../webui/server/WebUIManager.js';
+import { getPrinterNotificationCoordinator } from './notifications/index.js';
+import { printerDataTransformer } from './PrinterDataTransformer.js';
+import type { PollingData, PrinterStatus, MaterialStationStatus } from '../types/polling.js';
 
 
 /**

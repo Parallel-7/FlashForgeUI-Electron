@@ -4,7 +4,7 @@
 
 // src/ui/settings/types/external.ts
 
-import type { AppConfig } from '../../../types/config';
+import type { AppConfig } from '../../../types/config.js';
 
 export interface ISettingsAPI {
   requestConfig: () => Promise<AppConfig>;

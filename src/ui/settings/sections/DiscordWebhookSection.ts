@@ -4,8 +4,8 @@
 
 // src/ui/settings/sections/DiscordWebhookSection.ts
 
-import type { SettingsSection } from './SettingsSection';
-import type { ISettingsAPI } from '../types/external';
+import type { SettingsSection } from './SettingsSection.js';
+import type { ISettingsAPI } from '../types/external.js';
 
 interface DiscordWebhookSectionOptions {
   readonly settingsAPI?: ISettingsAPI;

@@ -7,7 +7,7 @@
  * and maintain compatibility with existing IPC and polling data patterns.
  */
 
-import type { PollingData } from '../../../types/polling';
+import type { PollingData } from '../../../types/polling.js';
 
 /**
  * Configuration interface for component initialization

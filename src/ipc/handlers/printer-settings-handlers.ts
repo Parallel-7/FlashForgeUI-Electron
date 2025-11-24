@@ -6,8 +6,8 @@
  */
 
 import { ipcMain } from 'electron';
-import { getPrinterDetailsManager } from '../../managers/PrinterDetailsManager';
-import { getPrinterContextManager } from '../../managers/PrinterContextManager';
+import { getPrinterDetailsManager } from '../../managers/PrinterDetailsManager.js';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 
 /**
  * Per-printer settings interface

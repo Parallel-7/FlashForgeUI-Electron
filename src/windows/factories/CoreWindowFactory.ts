@@ -48,7 +48,7 @@
  * @exports createLogDialog - Create log dialog for application logging and debugging
  */
 
-import { getWindowManager } from '../WindowManager';
+import { getWindowManager } from '../WindowManager.js';
 import {
   getWindowDimensions,
   createUIPreloadPath,
@@ -58,8 +58,8 @@ import {
   validateParentWindow,
   focusExistingWindow,
   createModalWindow
-} from '../shared/WindowConfig';
-import { getUIWindowOptions } from '../../utils/CSSVariables';
+} from '../shared/WindowConfig.js';
+import { getUIWindowOptions } from '../../utils/CSSVariables.js';
 
 /**
  * Create the settings window with modal behavior and parent window relationship

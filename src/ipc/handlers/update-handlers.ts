@@ -15,10 +15,10 @@
  */
 
 import { app, ipcMain, type IpcMainInvokeEvent } from 'electron';
-import type { ConfigManager } from '../../managers/ConfigManager';
-import type { getWindowManager } from '../../windows/WindowManager';
-import { getAutoUpdateService, UpdateState, type UpdateStatePayload } from '../../services/AutoUpdateService';
-import { createUpdateAvailableDialog } from '../../windows/factories/DialogWindowFactory';
+import type { ConfigManager } from '../../managers/ConfigManager.js';
+import type { getWindowManager } from '../../windows/WindowManager.js';
+import { getAutoUpdateService, UpdateState, type UpdateStatePayload } from '../../services/AutoUpdateService.js';
+import { createUpdateAvailableDialog } from '../../windows/factories/DialogWindowFactory.js';
 
 type WindowManager = ReturnType<typeof getWindowManager>;
 

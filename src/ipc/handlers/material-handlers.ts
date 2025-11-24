@@ -20,7 +20,7 @@
  * - get-material-info: Query detailed material information
  */
 
-import type { PrinterBackendManager } from '../../managers/PrinterBackendManager';
+import type { PrinterBackendManager } from '../../managers/PrinterBackendManager.js';
 
 /**
  * Register all material station related IPC handlers

@@ -6,15 +6,15 @@
  */
 
 import type { Router, Response } from 'express';
-import type { AuthenticatedRequest } from '../auth-middleware';
+import type { AuthenticatedRequest } from '../auth-middleware.js';
 import {
   PrinterStatusResponse,
   PrinterFeatures,
   MaterialStationStatusResponse,
   StandardAPIResponse
-} from '../../types/web-api.types';
-import { toAppError } from '../../../utils/error.utils';
-import { resolveContext, sendErrorResponse, type RouteDependencies } from './route-helpers';
+} from '../../types/web-api.types.js';
+import { toAppError } from '../../../utils/error.utils.js';
+import { resolveContext, sendErrorResponse, type RouteDependencies } from './route-helpers.js';
 
 interface ExtendedPrinterStatus {
   readonly printerState: string;

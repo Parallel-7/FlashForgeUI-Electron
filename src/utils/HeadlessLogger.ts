@@ -5,7 +5,7 @@
  * connection status, WebUI status, errors, and general information.
  */
 
-import type { PrinterContext } from '../managers/PrinterContextManager';
+import type { PrinterContext } from '../managers/PrinterContextManager.js';
 
 /**
  * WebUI server status information

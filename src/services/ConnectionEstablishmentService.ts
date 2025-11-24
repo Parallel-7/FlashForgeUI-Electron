@@ -24,11 +24,11 @@ import {
   DiscoveredPrinter,
   TemporaryConnectionResult,
   ExtendedPrinterInfo
-} from '../types/printer';
+} from '../types/printer.js';
 import {
   detectPrinterFamily,
   getConnectionErrorMessage
-} from '../utils/PrinterUtils';
+} from '../utils/PrinterUtils.js';
 
 // Connection clients interface for dual API support
 interface ConnectionClients {

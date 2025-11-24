@@ -39,13 +39,15 @@ export function hydrateLucideIcons(iconNames: string[], root: Document | Element
   }
 
   const icons: Record<string, LucideIconNode[]> = {};
+  const iconRegistry = lucide.icons ?? {};
+
   iconNames.forEach((name) => {
     const pascal = toPascalCase(name);
     const iconNode =
-      lucide.icons?.[pascal] ??
-      lucide.icons?.[name] ??
-      lucide.icons?.[name.toUpperCase()] ??
-      lucide.icons?.[name.toLowerCase()];
+      iconRegistry[pascal] ??
+      iconRegistry[name] ??
+      iconRegistry[name.toUpperCase()] ??
+      iconRegistry[name.toLowerCase()];
 
     if (iconNode) {
       icons[pascal] = iconNode;

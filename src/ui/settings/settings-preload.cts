@@ -29,7 +29,7 @@
 // src/ui/settings/settings-preload.ts
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type { AppConfig } from '../../types/config';
+import type { AppConfig } from '../../types/config.js';
 
 // Ensure this file is treated as a module
 export {};

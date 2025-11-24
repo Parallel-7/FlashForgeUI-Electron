@@ -5,4 +5,4 @@
  * This component displays printer configuration and settings information.
  */
 
-export { AdditionalInfoComponent } from './additional-info';
+export { AdditionalInfoComponent } from './additional-info.js';

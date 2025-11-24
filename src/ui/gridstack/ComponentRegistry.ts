@@ -37,7 +37,7 @@
  * @module ui/gridstack/ComponentRegistry
  */
 
-import type { ComponentDefinition } from './types';
+import type { ComponentDefinition } from './types.js';
 
 /**
  * Registry of all available components with their metadata

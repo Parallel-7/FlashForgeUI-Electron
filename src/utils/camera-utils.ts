@@ -41,9 +41,9 @@ import {
   CameraUserConfig,
   CameraStreamType,
   DEFAULT_CAMERA_PATTERNS
-} from '../types/camera';
-import { getConfigManager } from '../managers/ConfigManager';
-import { getPrinterContextManager } from '../managers/PrinterContextManager';
+} from '../types/camera/index.js';
+import { getConfigManager } from '../managers/ConfigManager.js';
+import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
 
 /**
  * Detect stream type from camera URL

@@ -20,16 +20,19 @@
  */
 
 import { ipcMain, BrowserWindow } from 'electron';
-import * as path from 'path';
-import { getConfigManager } from '../../managers/ConfigManager';
-import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegrationService';
-import { SpoolmanService } from '../../services/SpoolmanService';
-import type { SpoolSearchQuery, ActiveSpoolData } from '../../types/spoolman';
-import { createModalWindow, loadWindowHTML, setupDevTools, setupWindowLifecycle, validateParentWindow } from '../../windows/shared/WindowConfig';
-import { createPreloadPath, createWindowWidth, createWindowHeight, createWindowMinWidth, createWindowMinHeight } from '../../windows/shared/WindowTypes';
-import type { WindowDimensions } from '../../windows/shared/WindowTypes';
-import { getPrinterContextManager } from '../../managers/PrinterContextManager';
-import { getSpoolmanHealthMonitor } from '../../services/SpoolmanHealthMonitor';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { getConfigManager } from '../../managers/ConfigManager.js';
+import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegrationService.js';
+import { SpoolmanService } from '../../services/SpoolmanService.js';
+import type { SpoolSearchQuery, ActiveSpoolData } from '../../types/spoolman.js';
+import { createModalWindow, loadWindowHTML, setupDevTools, setupWindowLifecycle, validateParentWindow } from '../../windows/shared/WindowConfig.js';
+import { createPreloadPath, createWindowWidth, createWindowHeight, createWindowMinWidth, createWindowMinHeight } from '../../windows/shared/WindowTypes.js';
+import type { WindowDimensions } from '../../windows/shared/WindowTypes.js';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
+import { getSpoolmanHealthMonitor } from '../../services/SpoolmanHealthMonitor.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let spoolmanDialogWindow: BrowserWindow | null = null;
 
@@ -63,7 +66,7 @@ export function registerSpoolmanHandlers(): void {
     spoolmanDialogWindow = createModalWindow(
       parentWindow,
       SPOOLMAN_DIALOG_SIZE,
-      createPreloadPath(path.join(__dirname, '../../ui/spoolman-dialog/spoolman-dialog-preload.js')),
+      createPreloadPath(path.join(__dirname, '../../ui/spoolman-dialog/spoolman-dialog-preload.cjs')),
       { resizable: false, frame: false }
     );
 

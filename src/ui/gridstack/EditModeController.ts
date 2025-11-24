@@ -47,10 +47,10 @@
  * @module ui/gridstack/EditModeController
  */
 
-import type { GridStackManager } from './GridStackManager';
-import type { LayoutPersistence } from './LayoutPersistence';
-import type { EditModeState } from './types';
-import { initializeLucideIcons, getLucideIcons } from '../../utils/icons';
+import type { GridStackManager } from './GridStackManager.js';
+import type { LayoutPersistence } from './LayoutPersistence.js';
+import type { EditModeState } from './types.js';
+import { initializeLucideIcons, getLucideIcons } from '../../utils/icons.js';
 
 /**
  * Edit mode controller

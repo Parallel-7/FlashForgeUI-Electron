@@ -29,7 +29,7 @@
 // Ensure this file is treated as a module
 export {};
 
-import { logVerbose } from '../../utils/logging';
+import { logVerbose } from '../../utils/logging.js';
 
 // Interface for discovered printer information (matches preload)
 interface PrinterInfo {

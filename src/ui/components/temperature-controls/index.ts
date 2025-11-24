@@ -5,4 +5,4 @@
  * This component handles temperature monitoring and control for bed and extruder.
  */
 
-export { TemperatureControlsComponent } from './temperature-controls';
+export { TemperatureControlsComponent } from './temperature-controls.js';

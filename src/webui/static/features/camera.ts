@@ -8,7 +8,7 @@
  */
 
 import type { CameraProxyConfigResponse } from '../app.js';
-import type { JSMpegPlayerInstance, JSMpegStatic } from '../../../types/jsmpeg';
+import type { JSMpegPlayerInstance, JSMpegStatic } from '../../../types/jsmpeg.d.ts';
 import { state } from '../core/AppState.js';
 import { apiRequest } from '../core/Transport.js';
 import { $, hideElement, showElement } from '../shared/dom.js';

@@ -4,7 +4,7 @@
  * manual IP entry and network scanning for printer connections.
  */
 
-import type { ConnectChoiceOption, ConnectChoiceData } from './connect-choice-dialog-preload';
+import type { ConnectChoiceOption, ConnectChoiceData } from './connect-choice-dialog-preload.cts';
 
 // Global state
 let isHandlingChoice = false;

@@ -23,9 +23,9 @@
  * @exports PrintStateMonitor - Main state monitoring class
  */
 
-import { EventEmitter } from '../utils/EventEmitter';
-import type { PrinterPollingService } from './PrinterPollingService';
-import type { PrinterStatus, PollingData } from '../types/polling';
+import { EventEmitter } from '../utils/EventEmitter.js';
+import type { PrinterPollingService } from './PrinterPollingService.js';
+import type { PrinterStatus, PollingData } from '../types/polling.js';
 
 // ============================================================================
 // TYPES

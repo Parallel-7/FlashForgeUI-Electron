@@ -17,7 +17,7 @@
 // src/types/printer.ts
 // TypeScript type definitions for printer connection system
 
-import { PrinterModelType } from './printer-backend';
+import { PrinterModelType } from './printer-backend/index.js';
 
 /**
  * Client type for printer connection
@@ -51,7 +51,7 @@ export interface PrinterDetails {
   rtspQuality?: number;       // 1-5 (1=best, 5=worst), default: 3
 
   // Spoolman integration (per-printer)
-  activeSpoolData?: import('../types/spoolman').ActiveSpoolData | null;
+  activeSpoolData?: import('./spoolman.js').ActiveSpoolData | null;
 }
 
 /**

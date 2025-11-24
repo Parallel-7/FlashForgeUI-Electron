@@ -7,4 +7,4 @@
  * toggle functionality.
  */
 
-export { JobInfoComponent } from './job-info';
+export { JobInfoComponent } from './job-info.js';

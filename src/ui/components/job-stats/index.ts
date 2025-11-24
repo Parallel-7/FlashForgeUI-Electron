@@ -15,7 +15,7 @@
  */
 
 // Export the main component class
-export { JobStatsComponent } from './job-stats';
+export { JobStatsComponent } from './job-stats.js';
 
 // Note: This component doesn't export additional types or interfaces
 // as it uses the standard component interfaces from the base system.

@@ -19,18 +19,18 @@
  */
 
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
-import { getCameraProxyService } from '../services/CameraProxyService';
-import { getRtspStreamService } from '../services/RtspStreamService';
+import { getCameraProxyService } from '../services/CameraProxyService.js';
+import { getRtspStreamService } from '../services/RtspStreamService.js';
 import {
   resolveCameraConfig,
   getCameraUserConfig,
   formatCameraProxyUrl
-} from '../utils/camera-utils';
-import { getConfigManager } from '../managers/ConfigManager';
-import { getPrinterBackendManager } from '../managers/PrinterBackendManager';
-import { getPrinterContextManager } from '../managers/PrinterContextManager';
-import { ResolvedCameraConfig, CameraProxyStatus } from '../types/camera';
-import { logVerbose } from '../utils/logging';
+} from '../utils/camera-utils.js';
+import { getConfigManager } from '../managers/ConfigManager.js';
+import { getPrinterBackendManager } from '../managers/PrinterBackendManager.js';
+import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
+import { ResolvedCameraConfig, CameraProxyStatus } from '../types/camera/index.js';
+import { logVerbose } from '../utils/logging.js';
 
 /**
  * Camera IPC handler class

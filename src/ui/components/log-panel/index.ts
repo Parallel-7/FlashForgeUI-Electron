@@ -12,7 +12,7 @@
 import './log-panel.css';
 
 // Export the main component class
-export { LogPanelComponent } from './log-panel';
+export { LogPanelComponent } from './log-panel.js';
 
 // Re-export common types from base component for convenience
-export type { ComponentUpdateData, ComponentState } from '../base/types';
+export type { ComponentUpdateData, ComponentState } from '../base/types.js';

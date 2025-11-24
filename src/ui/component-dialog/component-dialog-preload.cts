@@ -15,7 +15,7 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type {} from '../../types/global';
+import type {} from '../../types/global.d.ts';
 
 // ---------------------------------------------------------------------------
 // Shared type definitions

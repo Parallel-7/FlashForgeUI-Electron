@@ -8,16 +8,16 @@
  */
 
 import type { Response } from 'express';
-import type { AuthenticatedRequest } from '../auth-middleware';
-import type { PrinterBackendManager } from '../../../managers/PrinterBackendManager';
-import type { ConnectionFlowManager } from '../../../managers/ConnectionFlowManager';
+import type { AuthenticatedRequest } from '../auth-middleware.js';
+import type { PrinterBackendManager } from '../../../managers/PrinterBackendManager.js';
+import type { ConnectionFlowManager } from '../../../managers/ConnectionFlowManager.js';
 import type {
   PrinterContextManager,
   PrinterContext
-} from '../../../managers/PrinterContextManager';
-import type { ConfigManager } from '../../../managers/ConfigManager';
-import type { SpoolmanIntegrationService } from '../../../services/SpoolmanIntegrationService';
-import type { BasePrinterBackend } from '../../../printer-backends/BasePrinterBackend';
+} from '../../../managers/PrinterContextManager.js';
+import type { ConfigManager } from '../../../managers/ConfigManager.js';
+import type { SpoolmanIntegrationService } from '../../../services/SpoolmanIntegrationService.js';
+import type { BasePrinterBackend } from '../../../printer-backends/BasePrinterBackend.js';
 
 /**
  * Common manager dependencies shared across most route modules.

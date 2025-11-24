@@ -5,7 +5,7 @@
  * log events without duplicating DOM fallbacks or preload IPC wiring.
  */
 
-import { LogPanelComponent } from '../ui/components';
+import { LogPanelComponent } from '../ui/components/index.js';
 
 let logPanelComponent: LogPanelComponent | null = null;
 

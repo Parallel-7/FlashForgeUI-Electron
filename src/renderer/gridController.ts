@@ -19,23 +19,23 @@ import {
   SpoolmanComponent,
   type BaseComponent,
   type ComponentUpdateData
-} from '../ui/components';
-import { gridStackManager } from '../ui/gridstack/GridStackManager';
-import { layoutPersistence } from '../ui/gridstack/LayoutPersistence';
-import { editModeController } from '../ui/gridstack/EditModeController';
-import { getComponentDefinition } from '../ui/gridstack/ComponentRegistry';
-import type { GridStackWidgetConfig, LayoutConfig } from '../ui/gridstack/types';
-import type { ShortcutButtonConfig } from '../ui/shortcuts/types';
-import type { PollingData } from '../types/polling';
-import type { AppConfig } from '../types/config';
+} from '../ui/components/index.js';
+import { gridStackManager } from '../ui/gridstack/GridStackManager.js';
+import { layoutPersistence } from '../ui/gridstack/LayoutPersistence.js';
+import { editModeController } from '../ui/gridstack/EditModeController.js';
+import { getComponentDefinition } from '../ui/gridstack/ComponentRegistry.js';
+import type { GridStackWidgetConfig, LayoutConfig } from '../ui/gridstack/types.js';
+import type { ShortcutButtonConfig } from '../ui/shortcuts/types.js';
+import type { PollingData } from '../types/polling.js';
+import type { AppConfig } from '../types/config.js';
 import {
   getPinnedComponentIdsForSerial,
   loadLayoutForSerial,
   saveLayoutForSerial,
   loadShortcutsForSerial
-} from './perPrinterStorage';
-import { hydrateLogPanelWithHistory, logMessage, setLogPanelComponent } from './logging';
-import { logVerbose } from '../utils/logging';
+} from './perPrinterStorage.js';
+import { hydrateLogPanelWithHistory, logMessage, setLogPanelComponent } from './logging.js';
+import { logVerbose } from '../utils/logging.js';
 
 interface GridControllerOptions {
   getActiveSerial: () => string | null;

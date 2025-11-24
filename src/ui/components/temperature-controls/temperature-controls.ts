@@ -14,10 +14,10 @@
  * - Visual feedback for heating states
  */
 
-import { BaseComponent } from '../base/component';
-import type { ComponentUpdateData } from '../base/types';
-import type { PrinterTemperatures, FanStatus, PrinterState } from '../../../types/polling';
-import { formatTemperature, isActiveState } from '../../../types/polling';
+import { BaseComponent } from '../base/component.js';
+import type { ComponentUpdateData } from '../base/types.js';
+import type { PrinterTemperatures, FanStatus, PrinterState } from '../../../types/polling.js';
+import { formatTemperature, isActiveState } from '../../../types/polling.js';
 import './temperature-controls.css';
 
 /**

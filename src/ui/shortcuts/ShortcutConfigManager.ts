@@ -21,8 +21,8 @@ import type {
   ShortcutButtonConfig,
   SlotNumber,
   SlotAssignment,
-} from './types';
-import { DEFAULT_SHORTCUT_CONFIG } from './types';
+} from './types.js';
+import { DEFAULT_SHORTCUT_CONFIG } from './types.js';
 
 /**
  * Base storage key for shortcut button configuration in localStorage

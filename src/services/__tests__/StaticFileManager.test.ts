@@ -17,8 +17,8 @@
  * @module services/__tests__/StaticFileManager.test
  */
 
-import { StaticFileManager, getStaticFileManager } from '../StaticFileManager';
-import { getEnvironmentDetectionService } from '../EnvironmentDetectionService';
+import { StaticFileManager, getStaticFileManager } from '../StaticFileManager.js';
+import { getEnvironmentDetectionService } from '../EnvironmentDetectionService.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 
@@ -51,7 +51,7 @@ describe('StaticFileManager', () => {
     mockEnvironmentService.getWebUIPath.mockReturnValue('/app/dist/renderer/index.html');
     mockEnvironmentService.getAssetsPath.mockReturnValue('/app/dist/renderer');
     mockEnvironmentService.getStaticPath.mockReturnValue('/app/dist/static');
-    mockEnvironmentService.getPreloadPath.mockReturnValue('/app/lib/preload.js');
+    mockEnvironmentService.getPreloadPath.mockReturnValue('/app/lib/preload.cjs');
     mockEnvironmentService.getDiagnosticInfo.mockReturnValue({
       environment: 'development',
       isPackaged: false
@@ -89,7 +89,7 @@ describe('StaticFileManager', () => {
 
     it('should return correct preload script path', () => {
       const preloadPath = manager.getPreloadScriptPath();
-      expect(preloadPath).toBe('/app/lib/preload.js');
+      expect(preloadPath).toBe('/app/lib/preload.cjs');
       expect(mockEnvironmentService.getPreloadPath).toHaveBeenCalled();
     });
 
@@ -274,7 +274,7 @@ describe('StaticFileManager', () => {
       const isAvailable = await manager.isPreloadScriptAvailable();
       
       expect(isAvailable).toBe(true);
-      expect(mockFs.stat).toHaveBeenCalledWith('/app/lib/preload.js');
+      expect(mockFs.stat).toHaveBeenCalledWith('/app/lib/preload.cjs');
     });
   });
 

@@ -7,8 +7,8 @@
  * consistent visual experience and identical data-handling semantics.
  */
 
-import '../../shared/log-panel/log-panel.shared.css';
-import { initializeLucideIconsFromGlobal } from '../lucide';
+import '../../shared/log-panel/log-panel.shared.css' with { type: 'css' };
+import { initializeLucideIconsFromGlobal } from '../lucide.js';
 
 export interface LogEntry {
   readonly timestamp: string;

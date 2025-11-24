@@ -18,13 +18,13 @@
  */
 
 import * as crypto from 'crypto';
-import { getConfigManager } from '../../managers/ConfigManager';
+import { getConfigManager } from '../../managers/ConfigManager.js';
 import { 
   WebUILoginRequest, 
   WebUILoginResponse, 
   WebUIAuthStatus
-} from '../types/web-api.types';
-import { validateAuthToken } from '../schemas/web-api.schemas';
+} from '../types/web-api.types.js';
+import { validateAuthToken } from '../schemas/web-api.schemas.js';
 
 /**
  * Token payload structure

@@ -6,5 +6,5 @@
  * @module ui/components/spoolman
  */
 
-export { SpoolmanComponent } from './spoolman';
-export type { ActiveSpoolData } from './types';
+export { SpoolmanComponent } from './spoolman.js';
+export type { ActiveSpoolData } from './types.js';

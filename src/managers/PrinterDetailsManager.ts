@@ -32,9 +32,9 @@ import {
   StoredPrinterDetails,
   MultiPrinterConfig,
   ValidatedPrinterDetails
-} from '../types/printer';
-import { detectPrinterModelType } from '../utils/PrinterUtils';
-import { getPrinterContextManager } from './PrinterContextManager';
+} from '../types/printer.js';
+import { detectPrinterModelType } from '../utils/PrinterUtils.js';
+import { getPrinterContextManager } from './PrinterContextManager.js';
 
 /**
  * Manager for multi-printer details persistence

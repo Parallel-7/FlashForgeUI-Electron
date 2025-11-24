@@ -17,7 +17,7 @@
 // ifs-dialog-renderer.ts
 // IFS Dialog renderer process logic for material station display
 
-import type { MaterialSlotData, MaterialStationData } from './ifs-dialog-preload';
+import type { MaterialSlotData, MaterialStationData } from './ifs-dialog-preload.cts';
 
 
 // Initialize dialog when DOM is loaded

@@ -25,7 +25,7 @@
 
 import { EventEmitter } from 'events';
 import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
-import { getConfigManager } from '../managers/ConfigManager';
+import { getConfigManager } from '../managers/ConfigManager.js';
 import {
   PrinterModelType,
   PrinterFeatureSet,
@@ -42,14 +42,14 @@ import {
   FeatureStubInfo,
   BackendEvent,
   BackendEventType
-} from '../types/printer-backend';
+} from '../types/printer-backend/index.js';
 import {
   getModelDisplayName,
   getFeatureStubMessage,
   canOverrideFeature,
   getFeatureOverrideSettingsKey,
   supportsDualAPI
-} from '../utils/PrinterUtils';
+} from '../utils/PrinterUtils.js';
 
 /**
  * Abstract base class for all printer backends

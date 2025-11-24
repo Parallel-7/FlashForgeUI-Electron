@@ -8,5 +8,5 @@
  * @module types/camera
  */
 
-export * from './camera.types';
+export * from './camera.types.js';
 

@@ -21,23 +21,23 @@
 import { WebSocketServer, WebSocket, RawData } from 'ws';
 import * as http from 'http';
 import { EventEmitter } from 'events';
-import { getAuthManager } from './AuthManager';
-import { getWebUIManager } from './WebUIManager';
-import { getPrinterBackendManager } from '../../managers/PrinterBackendManager';
-import { getPrinterContextManager } from '../../managers/PrinterContextManager';
-import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegrationService';
-import type { SpoolmanChangedEvent } from '../../services/SpoolmanIntegrationService';
-import { AppError, toAppError, ErrorCode } from '../../utils/error.utils';
+import { getAuthManager } from './AuthManager.js';
+import { getWebUIManager } from './WebUIManager.js';
+import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.js';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
+import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegrationService.js';
+import type { SpoolmanChangedEvent } from '../../services/SpoolmanIntegrationService.js';
+import { AppError, toAppError, ErrorCode } from '../../utils/error.utils.js';
 import {
   WebSocketCommandSchema,
   createValidationError
-} from '../schemas/web-api.schemas';
+} from '../schemas/web-api.schemas.js';
 import {
   WebSocketMessage,
   WebSocketCommand,
   PrinterStatusData
-} from '../types/web-api.types';
-import type { PollingData } from '../../types/polling';
+} from '../types/web-api.types.js';
+import type { PollingData } from '../../types/polling.js';
 
 /**
  * Branded type for WebSocketManager singleton

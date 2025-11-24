@@ -4,7 +4,7 @@
  * different connection options when auto-connect discovery fails.
  */
 
-import type { AutoConnectChoiceOption, AutoConnectChoiceData } from './auto-connect-choice-preload';
+import type { AutoConnectChoiceOption, AutoConnectChoiceData } from './auto-connect-choice-preload.cts';
 
 // Global state
 let currentData: AutoConnectChoiceData | null = null;

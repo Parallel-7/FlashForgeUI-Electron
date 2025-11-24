@@ -23,9 +23,9 @@
  * ```
  */
 
-import { BaseComponent } from './base/component';
-import type { ComponentUpdateData, IComponentManager, IComponent } from './base/types';
-import { logVerbose } from '../../utils/logging';
+import { BaseComponent } from './base/component.js';
+import type { ComponentUpdateData, IComponentManager, IComponent } from './base/types.js';
+import { logVerbose } from '../../utils/logging.js';
 
 const COMPONENT_MANAGER_LOG_NAMESPACE = 'ComponentManager';
 

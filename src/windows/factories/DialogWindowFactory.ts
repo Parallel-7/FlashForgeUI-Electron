@@ -72,8 +72,9 @@
  */
 
 import { BrowserWindow, ipcMain } from 'electron';
-import * as path from 'path';
-import { getWindowManager } from '../WindowManager';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { getWindowManager } from '../WindowManager.js';
 import {
   InputDialogOptions,
   MaterialMatchingDialogData,
@@ -83,7 +84,7 @@ import {
   PrinterConnectedWarningData,
   createPreloadPath,
   WINDOW_SIZES
-} from '../shared/WindowTypes';
+} from '../shared/WindowTypes.js';
 import {
   createModalWindow,
   setupDevTools,
@@ -92,7 +93,9 @@ import {
   generateDialogId,
   createResponseChannelName,
   loadWindowHTML
-} from '../shared/WindowConfig';
+} from '../shared/WindowConfig.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Interface for window data storage to avoid any types
 interface WindowDataStorage<T> {
@@ -128,7 +131,7 @@ export const createInputDialog = (options: InputDialogOptions): Promise<string |
     const inputDialogWindow = createModalWindow(
       mainWindow,
       WINDOW_SIZES.INPUT_DIALOG,
-      createPreloadPath(path.join(__dirname, '../../ui/input-dialog/input-dialog-preload.js')),
+      createPreloadPath(path.join(__dirname, '../../ui/input-dialog/input-dialog-preload.cjs')),
       { resizable: false, frame: false }
     );
 
@@ -207,7 +210,7 @@ export const createMaterialMatchingDialog = (data: MaterialMatchingDialogData): 
     const materialMatchingDialogWindow = createModalWindow(
       parentWindow,
       WINDOW_SIZES.MATERIAL_MATCHING,
-      createPreloadPath(path.join(__dirname, '../../ui/material-matching-dialog/material-matching-dialog-preload.js')),
+      createPreloadPath(path.join(__dirname, '../../ui/material-matching-dialog/material-matching-dialog-preload.cjs')),
       { resizable: false, frame: false }
     ) as DialogWindow<unknown[] | null>;
 
@@ -260,7 +263,7 @@ export const createSingleColorConfirmationDialog = (data: SingleColorConfirmatio
     const singleColorConfirmationDialogWindow = createModalWindow(
       parentWindow,
       WINDOW_SIZES.SINGLE_COLOR_CONFIRMATION,
-      createPreloadPath(path.join(__dirname, '../../ui/single-color-confirmation-dialog/single-color-confirmation-dialog-preload.js')),
+      createPreloadPath(path.join(__dirname, '../../ui/single-color-confirmation-dialog/single-color-confirmation-dialog-preload.cjs')),
       { resizable: false, frame: false }
     ) as DialogWindow<boolean>;
 
@@ -311,7 +314,7 @@ export const createMaterialInfoDialog = (materialData: unknown): void => {
   const materialInfoDialogWindow = createModalWindow(
     parentWindow,
     WINDOW_SIZES.MATERIAL_INFO,
-    createPreloadPath(path.join(__dirname, '../../ui/material-info-dialog/material-info-dialog-preload.js')),
+    createPreloadPath(path.join(__dirname, '../../ui/material-info-dialog/material-info-dialog-preload.cjs')),
     { resizable: false, frame: false }
   );
 
@@ -353,7 +356,7 @@ export const createIFSDialog = (): void => {
   const ifsDialogWindow = createModalWindow(
     mainWindow,
     WINDOW_SIZES.IFS_DIALOG,
-    createPreloadPath(path.join(__dirname, '../../ui/ifs-dialog/ifs-dialog-preload.js')),
+    createPreloadPath(path.join(__dirname, '../../ui/ifs-dialog/ifs-dialog-preload.cjs')),
     { resizable: false, frame: false }
   );
 
@@ -403,7 +406,7 @@ export const createAutoConnectChoiceDialog = (data: AutoConnectChoiceDialogData)
     const autoConnectChoiceDialogWindow = createModalWindow(
       mainWindow,
       WINDOW_SIZES.AUTO_CONNECT_CHOICE,
-      createPreloadPath(path.join(__dirname, '../../ui/auto-connect-choice/auto-connect-choice-preload.js')),
+      createPreloadPath(path.join(__dirname, '../../ui/auto-connect-choice/auto-connect-choice-preload.cjs')),
       { resizable: false, frame: false }
     );
 
@@ -512,7 +515,7 @@ export const createConnectChoiceDialog = (data: ConnectChoiceDialogData): Promis
     const connectChoiceDialogWindow = createModalWindow(
       mainWindow,
       WINDOW_SIZES.CONNECT_CHOICE,
-      createPreloadPath(path.join(__dirname, '../../ui/connect-choice-dialog/connect-choice-dialog-preload.js')),
+      createPreloadPath(path.join(__dirname, '../../ui/connect-choice-dialog/connect-choice-dialog-preload.cjs')),
       { resizable: false, frame: false }
     );
 
@@ -614,7 +617,7 @@ export const createPrinterConnectedWarningDialog = (data: PrinterConnectedWarnin
     const printerWarningWindow = createModalWindow(
       mainWindow,
       WINDOW_SIZES.PRINTER_CONNECTED_WARNING,
-      createPreloadPath(path.join(__dirname, '../../ui/printer-connected-warning/printer-connected-warning-preload.js')),
+      createPreloadPath(path.join(__dirname, '../../ui/printer-connected-warning/printer-connected-warning-preload.cjs')),
       { resizable: false, frame: false }
     );
 
@@ -713,7 +716,7 @@ export const createUpdateAvailableDialog = async (): Promise<void> => {
   const updateDialogWindow = createModalWindow(
     mainWindow,
     WINDOW_SIZES.UPDATE_AVAILABLE_DIALOG,
-    createPreloadPath(path.join(__dirname, '../../ui/update-available/update-available-preload.js')),
+    createPreloadPath(path.join(__dirname, '../../ui/update-available/update-available-preload.cjs')),
     { resizable: false, frame: false }
   );
 

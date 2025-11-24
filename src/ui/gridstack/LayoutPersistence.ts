@@ -13,8 +13,8 @@
  * - Layout history and versioning support
  */
 
-import type { LayoutConfig, LayoutPersistenceOptions } from './types';
-import { getDefaultLayout, isValidLayout, mergeWithDefaults } from './defaults';
+import type { LayoutConfig, LayoutPersistenceOptions } from './types.js';
+import { getDefaultLayout, isValidLayout, mergeWithDefaults } from './defaults.js';
 
 /**
  * Default persistence options

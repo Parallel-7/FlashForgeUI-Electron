@@ -2,7 +2,7 @@
  * @fileoverview Renderer controller for the About dialog showing app metadata and resource links.
  */
 
-import type { AboutDialogInfo } from './about-dialog-preload';
+import type { AboutDialogInfo } from './about-dialog-preload.cts';
 
 declare global {
   interface Window {

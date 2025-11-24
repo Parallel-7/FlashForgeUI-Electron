@@ -30,7 +30,7 @@ import {
   sanitizeConfig,
   isValidConfig,
   isValidConfigKey
-} from '../types/config';
+} from '../types/config.js';
 
 /**
  * Centralized configuration manager with live access and automatic file syncing.
@@ -450,5 +450,5 @@ export class ConfigManager extends EventEmitter {
 export const getConfigManager = (): ConfigManager => ConfigManager.getInstance();
 
 // Export for type declarations
-export type { ConfigUpdateEvent } from '../types/config';
+export type { ConfigUpdateEvent } from '../types/config.js';
 

@@ -21,12 +21,12 @@
  * seamless design where camera and job info were integrated together.
  */
 
-import { BaseComponent } from '../base/component';
-import type { ComponentUpdateData } from '../base/types';
-import type { ResolvedCameraConfig } from '../../../types/camera/camera.types';
-import type { PollingData, PrinterState, CurrentJobInfo } from '../../../types/polling';
-import type { JSMpegPlayerInstance, JSMpegStatic } from '../../../types/jsmpeg';
-import { logVerbose } from '../../../utils/logging';
+import { BaseComponent } from '../base/component.js';
+import type { ComponentUpdateData } from '../base/types.js';
+import type { ResolvedCameraConfig } from '../../../types/camera/camera.types.js';
+import type { PollingData, PrinterState, CurrentJobInfo } from '../../../types/polling.js';
+import type { JSMpegPlayerInstance, JSMpegStatic } from '../../../types/jsmpeg.d.ts';
+import { logVerbose } from '../../../utils/logging.js';
 import './camera-preview.css';
 
 // Import JSMpeg library (no official types available)

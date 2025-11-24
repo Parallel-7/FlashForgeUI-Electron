@@ -15,7 +15,7 @@
 
 // src/ui/settings/sections/DesktopThemeSection.ts
 
-import type { ThemeColors } from '../../../types/config';
+import type { ThemeColors } from '../../../types/config.js';
 
 interface DesktopThemeSectionOptions {
   readonly document: Document;
@@ -554,9 +554,9 @@ export class DesktopThemeSection {
   }
 
   private hsbToHex(h: number, s: number, b: number): string {
-    let hue = h / 360;
-    let saturation = s / 100;
-    let brightness = b / 100;
+    const hue = h / 360;
+    const saturation = s / 100;
+    const brightness = b / 100;
 
     const i = Math.floor(hue * 6);
     const f = hue * 6 - i;

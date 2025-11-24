@@ -3,11 +3,11 @@
  */
 
 import type { Router, Response } from 'express';
-import type { AuthenticatedRequest } from '../auth-middleware';
+import type { AuthenticatedRequest } from '../auth-middleware.js';
 import { FiveMClient } from '@ghosttypes/ff-api';
-import { toAppError } from '../../../utils/error.utils';
-import { StandardAPIResponse } from '../../types/web-api.types';
-import { resolveContext, sendErrorResponse, type RouteDependencies } from './route-helpers';
+import { toAppError } from '../../../utils/error.utils.js';
+import { StandardAPIResponse } from '../../types/web-api.types.js';
+import { resolveContext, sendErrorResponse, type RouteDependencies } from './route-helpers.js';
 
 type JobControlExecutor = (contextId: string) => Promise<{ success: boolean; error?: string }>;
 

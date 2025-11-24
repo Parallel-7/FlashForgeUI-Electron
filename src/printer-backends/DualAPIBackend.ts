@@ -21,7 +21,7 @@
  */
 
 import { FiveMClient, FlashForgeClient, Product } from '@ghosttypes/ff-api';
-import { BasePrinterBackend } from './BasePrinterBackend';
+import { BasePrinterBackend } from './BasePrinterBackend.js';
 import {
   BackendInitOptions,
   CommandResult,
@@ -32,7 +32,7 @@ import {
   JobOperationParams,
   BasicJobInfo,
   PrinterFeatureSet
-} from '../types/printer-backend';
+} from '../types/printer-backend/index.js';
 
 /**
  * Abstract base class for dual-API printer backends

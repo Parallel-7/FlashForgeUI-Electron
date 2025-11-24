@@ -72,7 +72,7 @@
  */
 
 // Re-export shared types for backward compatibility
-export type { InputDialogOptions } from './shared/WindowTypes';
+export type { InputDialogOptions } from './shared/WindowTypes.js';
 
 // Re-export all functions from specialized factory modules to maintain API compatibility
 
@@ -82,7 +82,7 @@ export {
   createStatusWindow,
   createLogDialog,
   createAboutDialog
-} from './factories/CoreWindowFactory';
+} from './factories/CoreWindowFactory.js';
 
 // Dialog windows with user interaction
 export {
@@ -93,7 +93,7 @@ export {
   createIFSDialog,
   createConnectChoiceDialog,
   createPrinterConnectedWarningDialog
-} from './factories/DialogWindowFactory';
+} from './factories/DialogWindowFactory.js';
 
 // Utility and feature windows
 export {
@@ -101,4 +101,4 @@ export {
   createJobPickerWindow,
   createPrinterSelectionWindow,
   createSendCommandsWindow
-} from './factories/UtilityWindowFactory';
+} from './factories/UtilityWindowFactory.js';

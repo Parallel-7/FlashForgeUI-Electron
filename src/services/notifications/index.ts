@@ -23,20 +23,20 @@
  */
 
 // Core services
-export { NotificationService, getNotificationService, resetNotificationService } from './NotificationService';
+export { NotificationService, getNotificationService, resetNotificationService } from './NotificationService.js';
 export { 
   PrinterNotificationCoordinator, 
   getPrinterNotificationCoordinator, 
   resetPrinterNotificationCoordinator 
-} from './PrinterNotificationCoordinator';
+} from './PrinterNotificationCoordinator.js';
 
 // Import services for internal use
-import { getNotificationService, resetNotificationService } from './NotificationService';
-import { getPrinterNotificationCoordinator, resetPrinterNotificationCoordinator } from './PrinterNotificationCoordinator';
+import { getNotificationService, resetNotificationService } from './NotificationService.js';
+import { getPrinterNotificationCoordinator, resetPrinterNotificationCoordinator } from './PrinterNotificationCoordinator.js';
 
 // Type exports for external use
-export type { NotificationTrackingInfo } from './NotificationService';
-export type { CoordinatorEventMap } from './PrinterNotificationCoordinator';
+export type { NotificationTrackingInfo } from './NotificationService.js';
+export type { CoordinatorEventMap } from './PrinterNotificationCoordinator.js';
 
 // Re-export important types from notification types
 export type {
@@ -49,13 +49,13 @@ export type {
   NotificationSettings,
   NotificationStateTransition,
   NotificationEventPayloads
-} from '../../types/notification';
+} from '../../types/notification.js';
 
 // Import types for internal use
-import type { NotificationState, NotificationSettings } from '../../types/notification';
+import type { NotificationState, NotificationSettings } from '../../types/notification.js';
 
 // Import headless detection
-import { isHeadlessMode } from '../../utils/HeadlessDetection';
+import { isHeadlessMode } from '../../utils/HeadlessDetection.js';
 
 // Re-export factory functions for creating notifications
 export {
@@ -67,7 +67,7 @@ export {
   createUploadFailedNotification,
   createConnectionLostNotification,
   createConnectionErrorNotification
-} from '../../types/notification';
+} from '../../types/notification.js';
 
 // Re-export utility functions
 export {
@@ -77,7 +77,7 @@ export {
   shouldResetNotificationFlags,
   isTemperatureCooled,
   createInitialNotificationState
-} from '../../types/notification';
+} from '../../types/notification.js';
 
 // ============================================================================
 // NOTIFICATION SYSTEM INITIALIZATION

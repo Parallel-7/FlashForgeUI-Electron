@@ -7,8 +7,8 @@
  */
 
 import { BrowserWindow } from 'electron';
-import { getConfigManager } from '../managers/ConfigManager';
-import { isRoundedUISupported } from './RoundedUICompatibility';
+import { getConfigManager } from '../managers/ConfigManager.js';
+import { isRoundedUISupported } from './RoundedUICompatibility.js';
 
 /**
  * Injects CSS variables into a window based on the current RoundedUI configuration

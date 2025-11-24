@@ -13,7 +13,7 @@
  * while providing a dedicated dialog interface for viewing logs.
  */
 
-import { createLogPanel, type LogEntry, type LogPanelController } from '../shared/log-panel';
+import { createLogPanel, type LogEntry, type LogPanelController } from '../shared/log-panel/index.js';
 
 // Define interfaces for type safety
 interface LogMessage {

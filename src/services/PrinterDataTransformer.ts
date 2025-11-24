@@ -28,14 +28,14 @@ import {
   safeExtractArray,
   isValidObject,
   hasValue
-} from '../utils/extraction.utils';
-import { secondsToMinutes } from '../utils/time.utils';
+} from '../utils/extraction.utils.js';
+import { secondsToMinutes } from '../utils/time.utils.js';
 import type {
   PrinterStatus,
   CurrentJobInfo,
   MaterialStationStatus,
   MaterialSlot
-} from '../types/polling';
+} from '../types/polling.js';
 
 /**
  * Maps printer states from backend to UI-friendly states

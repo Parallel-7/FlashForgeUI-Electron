@@ -17,11 +17,11 @@
  * @module ui/components/spoolman
  */
 
-import { BaseComponent } from '../base/component';
-import type { ComponentUpdateData } from '../base/types';
-import type { ActiveSpoolData } from './types';
-import type { AppConfig } from '../../../types/config';
-import { initializeUniversalLucideIcons } from '../../../utils/icons';
+import { BaseComponent } from '../base/component.js';
+import type { ComponentUpdateData } from '../base/types.js';
+import type { ActiveSpoolData } from './types.js';
+import type { AppConfig } from '../../../types/config.js';
+import { initializeUniversalLucideIcons } from '../../../utils/icons.js';
 import './spoolman.css';
 
 /**

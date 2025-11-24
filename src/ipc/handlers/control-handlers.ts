@@ -20,9 +20,9 @@
 
 import { ipcMain } from 'electron';
 import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
-import type { PrinterBackendManager } from '../../managers/PrinterBackendManager';
-import type { BasePrinterBackend } from '../../printer-backends/BasePrinterBackend';
-import { getPrinterContextManager } from '../../managers/PrinterContextManager';
+import type { PrinterBackendManager } from '../../managers/PrinterBackendManager.js';
+import type { BasePrinterBackend } from '../../printer-backends/BasePrinterBackend.js';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 
 /**
  * Helper to get the legacy client (for G-code operations)

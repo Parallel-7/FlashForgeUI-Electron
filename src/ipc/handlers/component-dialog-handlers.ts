@@ -13,7 +13,7 @@
  */
 
 import { ipcMain } from 'electron';
-import { createComponentDialog } from '../../windows/factories/ComponentDialogWindowFactory';
+import { createComponentDialog } from '../../windows/factories/ComponentDialogWindowFactory.js';
 
 /**
  * Register all component dialog IPC handlers

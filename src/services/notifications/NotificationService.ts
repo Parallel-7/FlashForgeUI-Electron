@@ -34,12 +34,12 @@
 
 import { Notification as ElectronNotification, app } from 'electron';
 import path from 'path';
-import { EventEmitter } from '../../utils/EventEmitter';
+import { EventEmitter } from '../../utils/EventEmitter.js';
 import type {
   Notification,
   NotificationId,
   NotificationEventPayloads
-} from '../../types/notification';
+} from '../../types/notification.js';
 
 // ============================================================================
 // NOTIFICATION SERVICE EVENTS

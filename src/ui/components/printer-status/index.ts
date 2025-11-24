@@ -5,4 +5,4 @@
  * This component displays current printer state and cumulative statistics.
  */
 
-export { PrinterStatusComponent } from './printer-status';
+export { PrinterStatusComponent } from './printer-status.js';

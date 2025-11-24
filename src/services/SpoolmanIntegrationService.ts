@@ -20,15 +20,15 @@
  */
 
 import { EventEmitter } from 'events';
-import type { ConfigManager } from '../managers/ConfigManager';
-import type { PrinterContextManager } from '../managers/PrinterContextManager';
-import type { PrinterBackendManager } from '../managers/PrinterBackendManager';
-import { getPrinterDetailsManager } from '../managers/PrinterDetailsManager';
-import { SpoolmanService } from './SpoolmanService';
-import type { ActiveSpoolData, SpoolResponse, SpoolSearchQuery } from '../types/spoolman';
-import { toAppError } from '../utils/error.utils';
-import type { ConfigUpdateEvent } from '../types/config';
-import type { PrinterDetails } from '../types/printer';
+import type { ConfigManager } from '../managers/ConfigManager.js';
+import type { PrinterContextManager } from '../managers/PrinterContextManager.js';
+import type { PrinterBackendManager } from '../managers/PrinterBackendManager.js';
+import { getPrinterDetailsManager } from '../managers/PrinterDetailsManager.js';
+import { SpoolmanService } from './SpoolmanService.js';
+import type { ActiveSpoolData, SpoolResponse, SpoolSearchQuery } from '../types/spoolman.js';
+import { toAppError } from '../utils/error.utils.js';
+import type { ConfigUpdateEvent } from '../types/config.js';
+import type { PrinterDetails } from '../types/printer.js';
 
 /**
  * Event payload for spool selection changes

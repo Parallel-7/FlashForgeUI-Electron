@@ -62,13 +62,13 @@ import type {
   PollingData,
   PrinterStatus,
   MaterialStationStatus
-} from '../types/polling';
+} from '../types/polling.js';
 import {
   formatTemperature,
   formatWeight,
   formatLength
-} from '../types/polling';
-import { formatJobTime } from '../utils/time.utils';
+} from '../types/polling.js';
+import { formatJobTime } from '../utils/time.utils.js';
 
 // ============================================================================
 // UTILITY FUNCTIONS

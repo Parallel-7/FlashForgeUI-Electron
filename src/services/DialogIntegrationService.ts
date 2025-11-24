@@ -19,8 +19,8 @@
 
 import { EventEmitter } from 'events';
 import { ipcMain, type IpcMainEvent, type BrowserWindow } from 'electron';
-import { getWindowManager } from '../windows/WindowManager';
-import { SavedPrinterMatch, DiscoveredPrinter, ConnectionResult, StoredPrinterDetails } from '../types/printer';
+import { getWindowManager } from '../windows/WindowManager.js';
+import { SavedPrinterMatch, DiscoveredPrinter, ConnectionResult, StoredPrinterDetails } from '../types/printer.js';
 
 /**
  * Service responsible for dialog integration and user interaction
@@ -51,7 +51,7 @@ export class DialogIntegrationService extends EventEmitter {
     const printerName = currentPrinterName || 'Unknown Printer';
 
     // Dynamic import to avoid circular dependencies
-    return import('../windows/factories/DialogWindowFactory').then(async ({ createPrinterConnectedWarningDialog }) => {
+    return import('../windows/factories/DialogWindowFactory.js').then(async ({ createPrinterConnectedWarningDialog }) => {
       return await createPrinterConnectedWarningDialog({ printerName });
     }).catch(error => {
       console.error('Error importing DialogWindowFactory:', error);
@@ -66,7 +66,7 @@ export class DialogIntegrationService extends EventEmitter {
   public async showPrinterSelectionDialog(printers: DiscoveredPrinter[]): Promise<DiscoveredPrinter | null> {
     return new Promise((resolve) => {
       // Dynamic import to avoid circular dependencies
-      import('../windows/WindowFactory').then(({ createPrinterSelectionWindow }) => {
+      import('../windows/WindowFactory.js').then(({ createPrinterSelectionWindow }) => {
         createPrinterSelectionWindow();
         const printerSelectionWindow = this.windowManager.getPrinterSelectionWindow();
         
@@ -132,7 +132,7 @@ export class DialogIntegrationService extends EventEmitter {
   ): Promise<ConnectionResult> {
     return new Promise((resolve) => {
       // Dynamic import to avoid circular dependencies
-      import('../windows/WindowFactory').then(({ createPrinterSelectionWindow }) => {
+      import('../windows/WindowFactory.js').then(({ createPrinterSelectionWindow }) => {
         createPrinterSelectionWindow();
         const printerSelectionWindow = this.windowManager.getPrinterSelectionWindow();
         
@@ -199,7 +199,7 @@ export class DialogIntegrationService extends EventEmitter {
     savedPrinterCount: number
   ): Promise<string | null> {
     // Dynamic import to avoid circular dependencies
-    return import('../windows/factories/DialogWindowFactory').then(async ({ createAutoConnectChoiceDialog }) => {
+    return import('../windows/factories/DialogWindowFactory.js').then(async ({ createAutoConnectChoiceDialog }) => {
       const dialogData = {
         lastUsedPrinter: lastUsedPrinter ? {
           name: lastUsedPrinter.Name,
@@ -417,7 +417,7 @@ export class DialogIntegrationService extends EventEmitter {
       currentWindow.webContents.send('printer-selection:mode', 'saved');
       
       // Import saved printer service to prepare data
-      import('../services/SavedPrinterService').then(({ getSavedPrinterService }) => {
+      import('./SavedPrinterService.js').then(({ getSavedPrinterService }) => {
         const savedPrinterService = getSavedPrinterService();
         
         // Add comprehensive null checks for SavedPrinterMatch.discoveredPrinter

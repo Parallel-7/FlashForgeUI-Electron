@@ -18,8 +18,8 @@
  */
 
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
-import { getWebUIManager } from '../../webui/server/WebUIManager';
-import { toAppError } from '../../utils/error.utils';
+import { getWebUIManager } from '../../webui/server/WebUIManager.js';
+import { toAppError } from '../../utils/error.utils.js';
 
 /**
  * Result for WebUI operations

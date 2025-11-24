@@ -15,7 +15,7 @@
  * @module ui/spoolman-dialog/spoolman-dialog-renderer
  */
 
-import type { SpoolResponse, ActiveSpoolData } from '../../types/spoolman';
+import type { SpoolResponse, ActiveSpoolData } from '../../types/spoolman.js';
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -133,7 +133,7 @@ async function loadSpools(query: string): Promise<void> {
     }
 
     // Build search query with server-side filtering
-    const searchQuery: import('../../types/spoolman').SpoolSearchQuery = {
+    const searchQuery: import('../../types/spoolman.js').SpoolSearchQuery = {
       limit: 50,
       allow_archived: false,
     };

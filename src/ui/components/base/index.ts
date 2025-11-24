@@ -7,7 +7,7 @@
  */
 
 // Base component class
-export { BaseComponent } from './component';
+export { BaseComponent } from './component.js';
 
 // Type definitions
 export type {
@@ -17,7 +17,7 @@ export type {
   ComponentState,
   IComponent,
   IComponentManager
-} from './types';
+} from './types.js';
 
 // Enums
-export { ComponentEvents } from './types';
+export { ComponentEvents } from './types.js';

@@ -18,7 +18,7 @@
 // Material Info Dialog Renderer
 // Handles material information display with spool styling
 
-import type { MaterialInfoDialogData } from './material-info-dialog-preload';
+import type { MaterialInfoDialogData } from './material-info-dialog-preload.cts';
 
 // Global window type extension
 declare global {

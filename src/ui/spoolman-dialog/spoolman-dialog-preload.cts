@@ -12,7 +12,7 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type { SpoolSearchQuery, SpoolResponse, ActiveSpoolData } from '../../types/spoolman';
+import type { SpoolSearchQuery, SpoolResponse, ActiveSpoolData } from '../../types/spoolman.js';
 
 // Expose safe API to renderer
 contextBridge.exposeInMainWorld('spoolmanDialogAPI', {

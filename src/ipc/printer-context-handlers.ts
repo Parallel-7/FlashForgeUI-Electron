@@ -9,11 +9,11 @@
  */
 
 import { ipcMain, IpcMainInvokeEvent } from 'electron';
-import { getPrinterContextManager } from '../managers/PrinterContextManager';
-import { getPrinterConnectionManager } from '../managers/ConnectionFlowManager';
-import { getConnectionStateManager } from '../services/ConnectionStateManager';
-import { getCameraProxyService } from '../services/CameraProxyService';
-import type { PrinterDetails } from '../types/printer';
+import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
+import { getPrinterConnectionManager } from '../managers/ConnectionFlowManager.js';
+import { getConnectionStateManager } from '../services/ConnectionStateManager.js';
+import { getCameraProxyService } from '../services/CameraProxyService.js';
+import type { PrinterDetails } from '../types/printer.js';
 
 /**
  * Set up all printer context IPC handlers

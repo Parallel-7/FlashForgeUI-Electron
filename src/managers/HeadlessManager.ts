@@ -9,17 +9,17 @@
  */
 
 import { EventEmitter } from 'events';
-import type { HeadlessConfig, PrinterSpec } from '../utils/HeadlessArguments';
-import { HeadlessLogger } from '../utils/HeadlessLogger';
-import { getConfigManager } from './ConfigManager';
-import { getConnectionFlowManager } from './ConnectionFlowManager';
-import { getPrinterContextManager } from './PrinterContextManager';
-import { getWebUIManager } from '../webui/server/WebUIManager';
-import { getMultiContextPollingCoordinator } from '../services/MultiContextPollingCoordinator';
-import { getSavedPrinterService } from '../services/SavedPrinterService';
-import { cameraIPCHandler } from '../ipc/camera-ipc-handler';
-import type { PrinterDetails } from '../types/printer';
-import type { PrinterClientType } from '../types/printer';
+import type { HeadlessConfig, PrinterSpec } from '../utils/HeadlessArguments.js';
+import { HeadlessLogger } from '../utils/HeadlessLogger.js';
+import { getConfigManager } from './ConfigManager.js';
+import { getConnectionFlowManager } from './ConnectionFlowManager.js';
+import { getPrinterContextManager } from './PrinterContextManager.js';
+import { getWebUIManager } from '../webui/server/WebUIManager.js';
+import { getMultiContextPollingCoordinator } from '../services/MultiContextPollingCoordinator.js';
+import { getSavedPrinterService } from '../services/SavedPrinterService.js';
+import { cameraIPCHandler } from '../ipc/camera-ipc-handler.js';
+import type { PrinterDetails } from '../types/printer.js';
+import type { PrinterClientType } from '../types/printer.js';
 
 /**
  * HeadlessManager - Orchestrates all headless mode operations

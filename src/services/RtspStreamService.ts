@@ -39,14 +39,11 @@ const execAsync = promisify(exec);
 // Using custom type definitions from src/types/node-rtsp-stream.d.ts
 import type { ChildProcess } from 'child_process';
 
-// Import the Stream type - ts-expect-error is needed because TypeScript can't find the declaration
-// even though it exists in src/types/node-rtsp-stream.d.ts. This is a known limitation with
-// ambient module declarations for packages without native types.
-// @ts-expect-error TS7016 - Using custom type definitions
+// Import the Stream type via our custom declaration.
 type Stream = import('node-rtsp-stream').default;
+type StreamConstructor = { new(...args: unknown[]): Stream };
 
-// Import node-rtsp-stream library (no official types, using custom types)
-const StreamConstructor = require('node-rtsp-stream') as { new(...args: unknown[]): Stream };
+const isStreamConstructor = (value: unknown): value is StreamConstructor => typeof value === 'function';
 
 // ============================================================================
 // TYPES
@@ -94,6 +91,9 @@ export class RtspStreamService extends EventEmitter {
 
   /** Maximum number of concurrent streams */
   private readonly MAX_STREAMS = 10;
+
+  /** Cached node-rtsp-stream constructor */
+  private streamConstructor: StreamConstructor | null = null;
 
   private constructor() {
     super();
@@ -229,6 +229,25 @@ export class RtspStreamService extends EventEmitter {
     console.warn('[RtspStreamService]   - Windows: Download from ffmpeg.org');
   }
 
+  /**
+   * Lazy-load the node-rtsp-stream constructor when needed.
+   */
+  private async getStreamConstructor(): Promise<StreamConstructor> {
+    if (this.streamConstructor) {
+      return this.streamConstructor;
+    }
+
+    const module = (await import('node-rtsp-stream')) as { default?: unknown };
+    const candidate = module.default;
+
+    if (!isStreamConstructor(candidate)) {
+      throw new Error('node-rtsp-stream did not export a constructor function');
+    }
+
+    this.streamConstructor = candidate;
+    return this.streamConstructor;
+  }
+
   // ============================================================================
   // PUBLIC API
   // ============================================================================
@@ -283,8 +302,8 @@ export class RtspStreamService extends EventEmitter {
     console.log(`[RtspStreamService] Stream settings: ${frameRate} FPS, quality ${quality}`);
 
     try {
+      const StreamConstructor = await this.getStreamConstructor();
       // Create node-rtsp-stream instance
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const stream = new StreamConstructor({
         name: contextId,
         streamUrl: rtspUrl,
@@ -300,14 +319,12 @@ export class RtspStreamService extends EventEmitter {
 
       // Suppress ffmpeg stderr output (node-rtsp-stream emits it as 'ffmpegStderr' event)
       // This prevents ffmpeg logs from appearing in console
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
       stream.on('ffmpegStderr', () => {
         // Consume but don't log ffmpeg stderr output
       });
 
       // Get ffmpeg child process reference from node-rtsp-stream
       // The library exposes it as stream.mpeg1Muxer.stream
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access
       const ffmpegProcess = stream.mpeg1Muxer?.stream;
 
       // Store stream configuration with ffmpeg process reference
@@ -315,10 +332,8 @@ export class RtspStreamService extends EventEmitter {
         contextId,
         rtspUrl,
         wsPort,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         stream,
         isActive: true,
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         ffmpegProcess
       };
 
@@ -378,11 +393,8 @@ export class RtspStreamService extends EventEmitter {
       }
 
       // Then stop the stream (which will try to clean up WebSocket server)
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const stream = streamConfig.stream;
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (stream && typeof stream.stop === 'function') {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access
         stream.stop();
       }
     } catch (error) {

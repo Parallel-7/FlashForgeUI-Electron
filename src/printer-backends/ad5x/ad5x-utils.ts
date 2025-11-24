@@ -26,8 +26,8 @@ import {
   hasValidMaterialStationInfo,
   MaterialStationStatus,
   isAD5XMachineInfo
-} from './ad5x-types';
-import { transformMaterialStation, createEmptyMaterialStation } from './ad5x-transforms';
+} from './ad5x-types.js';
+import { transformMaterialStation, createEmptyMaterialStation } from './ad5x-transforms.js';
 
 /**
  * Type guard to check if a job is an AD5X job with material data

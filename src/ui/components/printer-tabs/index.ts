@@ -5,5 +5,5 @@
  * This component provides a tabbed interface for managing multiple printer connections.
  */
 
-export { PrinterTabsComponent } from './PrinterTabsComponent';
+export { PrinterTabsComponent } from './PrinterTabsComponent.js';
 

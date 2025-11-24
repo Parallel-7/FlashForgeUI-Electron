@@ -31,17 +31,17 @@
 
 // src/ui/settings/settings-renderer.ts
 
-import { AppConfig, ThemeColors, DEFAULT_THEME } from '../../types/config';
-import type { MutableSettings } from './types';
-import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI } from './types/external';
-import { DesktopThemeSection } from './sections/DesktopThemeSection';
-import { TabSection } from './sections/TabSection';
-import { InputDependencySection } from './sections/InputDependencySection';
-import { AutoUpdateSection } from './sections/AutoUpdateSection';
-import { SpoolmanTestSection } from './sections/SpoolmanTestSection';
-import { DiscordWebhookSection } from './sections/DiscordWebhookSection';
-import { PrinterContextSection } from './sections/PrinterContextSection';
-import { RoundedUISection } from './sections/RoundedUISection';
+import { AppConfig, ThemeColors, DEFAULT_THEME } from '../../types/config.js';
+import type { MutableSettings } from './types.js';
+import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI } from './types/external.js';
+import { DesktopThemeSection } from './sections/DesktopThemeSection.js';
+import { TabSection } from './sections/TabSection.js';
+import { InputDependencySection } from './sections/InputDependencySection.js';
+import { AutoUpdateSection } from './sections/AutoUpdateSection.js';
+import { SpoolmanTestSection } from './sections/SpoolmanTestSection.js';
+import { DiscordWebhookSection } from './sections/DiscordWebhookSection.js';
+import { PrinterContextSection } from './sections/PrinterContextSection.js';
+import { RoundedUISection } from './sections/RoundedUISection.js';
 
 declare global {
   interface Window {

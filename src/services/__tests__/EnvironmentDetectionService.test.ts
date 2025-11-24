@@ -37,7 +37,7 @@ jest.mock('electron', () => ({
   app: mockApp
 }));
 
-import { EnvironmentDetectionService, getEnvironmentDetectionService } from '../EnvironmentDetectionService';
+import { EnvironmentDetectionService, getEnvironmentDetectionService } from '../EnvironmentDetectionService.js';
 
 // Mock process properties
 const originalProcess = process;
@@ -306,7 +306,7 @@ describe('EnvironmentDetectionService', () => {
     it('should provide preload path', () => {
       const preloadPath = service.getPreloadPath();
       expect(preloadPath).toBeTruthy();
-      expect(preloadPath).toContain('preload.js');
+      expect(preloadPath).toContain('preload.cjs');
     });
   });
 });

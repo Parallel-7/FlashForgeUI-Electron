@@ -32,10 +32,10 @@
  */
 
 import { EventEmitter } from 'events';
-import type { PrinterStatus, PrinterState } from '../../types/polling';
-import type { DiscordEmbed, DiscordEmbedField, DiscordWebhookPayload, DiscordServiceConfig } from '../../types/discord';
-import { getConfigManager, type ConfigManager } from '../../managers/ConfigManager';
-import { getPrinterContextManager, type PrinterContextManager, type PrinterContext } from '../../managers/PrinterContextManager';
+import type { PrinterStatus, PrinterState } from '../../types/polling.js';
+import type { DiscordEmbed, DiscordEmbedField, DiscordWebhookPayload, DiscordServiceConfig } from '../../types/discord.js';
+import { getConfigManager, type ConfigManager } from '../../managers/ConfigManager.js';
+import { getPrinterContextManager, type PrinterContextManager, type PrinterContext } from '../../managers/PrinterContextManager.js';
 
 /**
  * Printer state for Discord notifications

@@ -16,7 +16,7 @@
  * @module ui/shortcut-config-dialog/shortcut-config-dialog
  */
 
-import type { LucideHelpers } from '../shared/lucide';
+import type { LucideHelpers } from '../shared/lucide.js';
 
 declare global {
   interface Window {

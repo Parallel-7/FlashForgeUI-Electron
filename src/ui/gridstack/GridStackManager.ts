@@ -53,8 +53,8 @@ import type {
   GridStackWidgetConfig,
   GridStackWidget,
   GridOptions,
-} from './types';
-import { logVerbose } from '../../utils/logging';
+} from './types.js';
+import { logVerbose } from '../../utils/logging.js';
 
 /**
  * Event callback types

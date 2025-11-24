@@ -3,14 +3,14 @@
  */
 
 import type { Router, Response } from 'express';
-import type { AuthenticatedRequest } from '../auth-middleware';
-import { JobStartRequestSchema } from '../../schemas/web-api.schemas';
-import { createValidationError } from '../../schemas/web-api.schemas';
-import { toAppError } from '../../../utils/error.utils';
-import { StandardAPIResponse } from '../../types/web-api.types';
-import { isAD5XJobInfo } from '../../../printer-backends/ad5x/ad5x-utils';
-import type { AD5XJobInfo, BasicJobInfo } from '../../../types/printer-backend/backend-operations';
-import { resolveContext, sendErrorResponse, type RouteDependencies } from './route-helpers';
+import type { AuthenticatedRequest } from '../auth-middleware.js';
+import { JobStartRequestSchema } from '../../schemas/web-api.schemas.js';
+import { createValidationError } from '../../schemas/web-api.schemas.js';
+import { toAppError } from '../../../utils/error.utils.js';
+import { StandardAPIResponse } from '../../types/web-api.types.js';
+import { isAD5XJobInfo } from '../../../printer-backends/ad5x/ad5x-utils.js';
+import type { AD5XJobInfo, BasicJobInfo } from '../../../types/printer-backend/backend-operations.js';
+import { resolveContext, sendErrorResponse, type RouteDependencies } from './route-helpers.js';
 
 type JobSource = 'local' | 'recent';
 

@@ -48,19 +48,19 @@
  */
 
 import { EventEmitter } from 'events';
-import { PrinterDetails } from '../types/printer';
-import type { BasePrinterBackend } from '../printer-backends/BasePrinterBackend';
-import type { PrinterPollingService } from '../services/PrinterPollingService';
-import type { PrinterNotificationCoordinator } from '../services/notifications/PrinterNotificationCoordinator';
+import { PrinterDetails } from '../types/printer.js';
+import type { BasePrinterBackend } from '../printer-backends/BasePrinterBackend.js';
+import type { PrinterPollingService } from '../services/PrinterPollingService.js';
+import type { PrinterNotificationCoordinator } from '../services/notifications/PrinterNotificationCoordinator.js';
 import type {
   PrinterContextInfo,
   ContextConnectionState,
   ContextSwitchEvent,
   ContextCreatedEvent,
   ContextRemovedEvent
-} from '../types/PrinterContext';
-import type { ActiveSpoolData } from '../types/spoolman';
-import { getSpoolmanIntegrationService } from '../services/SpoolmanIntegrationService';
+} from '../types/PrinterContext.js';
+import type { ActiveSpoolData } from '../types/spoolman.js';
+import { getSpoolmanIntegrationService } from '../services/SpoolmanIntegrationService.js';
 
 /**
  * Complete printer context containing all state for a single printer connection
@@ -475,7 +475,7 @@ export class PrinterContextManager extends EventEmitter {
    */
   public async setActiveSpool(contextId: string | undefined, spoolData: ActiveSpoolData | null): Promise<void> {
     try {
-      const { getSpoolmanIntegrationService } = await import('../services/SpoolmanIntegrationService');
+      const { getSpoolmanIntegrationService } = await import('../services/SpoolmanIntegrationService.js');
       const service = getSpoolmanIntegrationService();
 
       if (spoolData) {

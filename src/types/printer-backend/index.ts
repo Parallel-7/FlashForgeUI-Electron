@@ -32,7 +32,7 @@ export type {
   MaterialSlotInfo,
   MaterialStationStatus,
   FeatureDisableReason
-} from './printer-features';
+} from './printer-features.js';
 
 // Backend operation types
 export type {
@@ -56,5 +56,5 @@ export type {
   BackendEventType,
   BackendEvent,
   BackendFactoryOptions
-} from './backend-operations';
+} from './backend-operations.js';
 

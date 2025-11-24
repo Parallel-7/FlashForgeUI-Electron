@@ -24,7 +24,7 @@ import {
   FlashForgePrinter
 } from '@ghosttypes/ff-api';
 
-import { DiscoveredPrinter } from '../types/printer';
+import { DiscoveredPrinter } from '../types/printer.js';
 
 /**
  * Service responsible for discovering printers on the network

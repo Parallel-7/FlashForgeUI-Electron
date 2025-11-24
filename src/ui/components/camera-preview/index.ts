@@ -6,5 +6,5 @@
  * handles MJPEG camera streaming, camera configuration, and preview state management.
  */
 
-export { CameraPreviewComponent } from './camera-preview';
-export type { ResolvedCameraConfig } from '../../../types/camera/camera.types';
+export { CameraPreviewComponent } from './camera-preview.js';
+export type { ResolvedCameraConfig } from '../../../types/camera/camera.types.js';

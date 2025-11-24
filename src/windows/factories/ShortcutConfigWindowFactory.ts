@@ -23,15 +23,16 @@
  */
 
 import { BrowserWindow, ipcMain } from 'electron';
-import * as path from 'path';
-import { getWindowManager } from '../WindowManager';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { getWindowManager } from '../WindowManager.js';
 import {
   createPreloadPath,
   createWindowWidth,
   createWindowHeight,
   createWindowMinWidth,
   createWindowMinHeight,
-} from '../shared/WindowTypes';
+} from '../shared/WindowTypes.js';
 import {
   createModalWindow,
   setupDevTools,
@@ -40,7 +41,9 @@ import {
   generateDialogId,
   createResponseChannelName,
   loadWindowHTML,
-} from '../shared/WindowConfig';
+} from '../shared/WindowConfig.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Window data storage type
@@ -99,7 +102,7 @@ export const createShortcutConfigDialog = (): Promise<void> => {
       createPreloadPath(
         path.join(
           __dirname,
-          '../../ui/shortcut-config-dialog/shortcut-config-dialog-preload.js'
+          '../../ui/shortcut-config-dialog/shortcut-config-dialog-preload.cjs'
         )
       ),
       { resizable: false, frame: false }

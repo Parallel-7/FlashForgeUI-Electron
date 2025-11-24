@@ -52,8 +52,8 @@
 // src/utils/PrinterUtils.ts
 // Utility functions for printer connection and family detection
 
-import { PrinterFamilyInfo, PrinterClientType } from '../types/printer';
-import { PrinterModelType } from '../types/printer-backend';
+import { PrinterFamilyInfo, PrinterClientType } from '../types/printer.js';
+import { PrinterModelType } from '../types/printer-backend/index.js';
 
 /**
  * Enhanced printer family info with specific model type
