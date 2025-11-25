@@ -31,7 +31,7 @@
 
 // src/ui/settings/settings-renderer.ts
 
-import { AppConfig, ThemeColors, DEFAULT_THEME } from '../../types/config.js';
+import { AppConfig, ThemeColors, ThemeProfile, DEFAULT_THEME } from '../../types/config.js';
 import type { MutableSettings } from './types.js';
 import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI } from './types/external.js';
 import { DesktopThemeSection } from './sections/DesktopThemeSection.js';
@@ -121,7 +121,7 @@ class SettingsRenderer {
 
   private initialize(): void {
     document.addEventListener('DOMContentLoaded', () => {
-      window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x', 'alert-triangle']);
+      window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x', 'alert-triangle', 'plus', 'edit-2', 'trash-2']);
       this.initializeElements();
       this.setupEventListeners();
       void this.requestInitialConfig();
@@ -158,7 +158,9 @@ class SettingsRenderer {
     this.desktopThemeSection = new DesktopThemeSection({
       document,
       defaultTheme: DEFAULT_THEME,
-      onThemeChange: (theme) => this.handleDesktopThemeUpdated(theme)
+      onThemeChange: (theme) => this.handleDesktopThemeUpdated(theme),
+      onProfileOperation: (operation, profileData) => this.handleProfileOperation('desktop', operation, profileData),
+      getThemeProfiles: () => this.settings.global['desktopThemeProfiles'] as readonly ThemeProfile[] || []
     });
     this.desktopThemeSection.initialize();
 
@@ -244,6 +246,11 @@ class SettingsRenderer {
       this.webUIEnabledToggle.addEventListener('change', () => this.handleWebUIEnabledToggle());
     }
 
+    window.settingsAPI?.onConfigUpdated((config) => {
+      console.log('[Settings] Received config update from main process:', config);
+      this.settings.global = { ...config };
+      this.loadConfiguration();
+    });
   }
 
   private async requestInitialConfig(): Promise<void> {
@@ -561,6 +568,10 @@ class SettingsRenderer {
     console.log('[Settings] Desktop theme updated:', theme);
   }
 
+  private handleProfileOperation(uiType: 'desktop' | 'web', operation: 'add' | 'update' | 'delete', profileData: any): void {
+    window.settingsAPI?.performThemeProfileOperation(uiType, operation, profileData);
+  }
+
   private cleanup(): void {
     if (this.statusTimeout) {
       clearTimeout(this.statusTimeout);
@@ -577,4 +588,3 @@ class SettingsRenderer {
 
 // Initialize the settings renderer
 new SettingsRenderer();
-

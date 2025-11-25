@@ -40,6 +40,7 @@ import { registerShortcutConfigHandlers } from './shortcut-config-handlers.js';
 import { registerComponentDialogHandlers } from './component-dialog-handlers.js';
 import { registerUpdateHandlers } from './update-handlers.js';
 import { registerSpoolmanHandlers } from './spoolman-handlers.js';
+import { registerThemeHandlers } from './theme-handlers.js';
 
 /**
  * Application managers required by IPC handlers
