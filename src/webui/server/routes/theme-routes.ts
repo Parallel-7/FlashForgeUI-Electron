@@ -23,6 +23,20 @@ export function registerPublicThemeRoutes(router: Router, deps: RouteDependencie
       return res.status(500).json(response);
     }
   });
+
+  router.get('/api/webui/theme/profiles', async (_req, res: Response) => {
+    try {
+      const config = deps.configManager.getConfig();
+      return res.json(config.webUIThemeProfiles);
+    } catch (error) {
+      const appError = toAppError(error);
+      const response: StandardAPIResponse = {
+        success: false,
+        error: appError.message
+      };
+      return res.status(500).json(response);
+    }
+  });
 }
 
 export function registerThemeRoutes(router: Router, deps: RouteDependencies): void {
@@ -47,6 +61,32 @@ export function registerThemeRoutes(router: Router, deps: RouteDependencies): vo
         error: appError.message
       };
       return res.status(500).json(response);
+    }
+  });
+
+  router.post('/webui/theme/profiles', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const { operation, data } = req.body;
+      const configManager = deps.configManager;
+
+      switch (operation) {
+        case 'add':
+          configManager.addThemeProfile('web', data.name, data.colors);
+          break;
+        case 'update':
+          configManager.updateThemeProfile('web', data.originalName, data.updatedProfile);
+          break;
+        case 'delete':
+          configManager.deleteThemeProfile('web', data.name);
+          break;
+        default:
+          return res.status(400).json({ success: false, error: 'Invalid operation' });
+      }
+
+      return res.json({ success: true, message: `Profile ${operation}ed successfully` });
+    } catch (error) {
+      const appError = toAppError(error);
+      return res.status(500).json({ success: false, error: appError.message });
     }
   });
 }

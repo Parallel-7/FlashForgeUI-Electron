@@ -11,7 +11,9 @@ export interface ISettingsAPI {
   saveConfig: (config: Partial<AppConfig>) => Promise<boolean>;
   closeWindow: () => void;
   receiveConfig: (callback: (config: AppConfig) => void) => void;
+  onConfigUpdated: (callback: (config: AppConfig) => void) => void;
   removeListeners: () => void;
+  performThemeProfileOperation: (uiType: 'desktop' | 'web', operation: 'add' | 'update' | 'delete', data: any) => void;
   testSpoolmanConnection: (url: string) => Promise<{ connected: boolean; error?: string }>;
   testDiscordWebhook: (url: string) => Promise<{ success: boolean; error?: string }>;
   getRoundedUISupportInfo: () => Promise<RoundedUISupportInfo>;

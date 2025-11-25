@@ -42,8 +42,15 @@ contextBridge.exposeInMainWorld('settingsAPI', {
   receiveConfig: (callback: (config: AppConfig) => void) => {
     ipcRenderer.on('settings-config-data', (_event, config) => callback(config));
   },
+  onConfigUpdated: (callback: (config: AppConfig) => void) => {
+    ipcRenderer.on('config-updated-event', (_event, config) => callback(config));
+  },
+  performThemeProfileOperation: (uiType: 'desktop' | 'web', operation: 'add' | 'update' | 'delete', data: any) => {
+    ipcRenderer.send('theme-profile-operation', { uiType, operation, data });
+  },
   removeListeners: () => {
     ipcRenderer.removeAllListeners('settings-config-data');
+    ipcRenderer.removeAllListeners('config-updated-event');
   },
   testSpoolmanConnection: (url: string) => ipcRenderer.invoke('spoolman:test-connection', url),
   testDiscordWebhook: (url: string) => ipcRenderer.invoke('discord:test-webhook', url),
