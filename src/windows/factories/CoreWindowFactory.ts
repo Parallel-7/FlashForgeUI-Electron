@@ -39,9 +39,9 @@
  * 9. Register window with WindowManager for state tracking
  *
  * Window Specifications:
- * - Settings Window: 600x500 (min 500x400), resizable, frameless, transparent
- * - Status Window: 650x600 (min 500x500), resizable, frameless, configurable transparency
- * - Log Dialog: 800x600 (min 600x400), resizable, frameless, configurable transparency
+ * - Settings Window: 820x820 (min 760x780), resizable, frameless, transparent
+ * - Status Window: 750x900 (min 750x800), resizable, frameless, configurable transparency
+ * - Log Dialog: 900x750 (min 600x400), resizable, frameless, configurable transparency
  *
  * @exports createSettingsWindow - Create settings window for application configuration
  * @exports createStatusWindow - Create status window for detailed printer status
@@ -237,7 +237,7 @@ export const createAboutDialog = (): void => {
     mainWindow,
     dimensions,
     preloadPath,
-    { resizable: false, frame: false, transparent: uiOptions.transparent }
+    { resizable: true, frame: false, transparent: uiOptions.transparent }
   );
 
   void loadWindowHTML(aboutDialog, 'about-dialog');

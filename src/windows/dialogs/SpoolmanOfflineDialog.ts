@@ -44,7 +44,7 @@ export const showSpoolmanOfflineDialog = (message?: string | null): void => {
     parentWindow,
     DIALOG_SIZE,
     createPreloadPath(path.join(__dirname, '../../ui/spoolman-offline-dialog/spoolman-offline-dialog-preload.js')),
-    { resizable: false, frame: false }
+    { resizable: true, frame: false }
   );
 
   void loadWindowHTML(offlineDialogWindow, 'spoolman-offline-dialog');

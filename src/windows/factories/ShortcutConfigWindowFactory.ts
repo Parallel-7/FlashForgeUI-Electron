@@ -6,11 +6,11 @@
  * provides dropdowns for slot assignment and displays current configuration status.
  *
  * Dialog specifications:
- * - Size: 540x680 (min 500x620)
+ * - Size: 620x740 (min 500x620)
  * - Modal: true (blocks main window)
  * - Frameless: true
  * - Transparent: true
- * - Resizable: false
+ * - Resizable: true
  *
  * Communication pattern:
  * - Uses unique dialog ID and response channel for each instance
@@ -91,8 +91,8 @@ export const createShortcutConfigDialog = (): Promise<void> => {
     const configDialogWindow: ShortcutConfigDialogWindow = createModalWindow(
       mainWindow,
       {
-        width: createWindowWidth(540),
-        height: createWindowHeight(680),
+        width: createWindowWidth(620),
+        height: createWindowHeight(740),
         minWidth: createWindowMinWidth(500),
         minHeight: createWindowMinHeight(620),
       },
@@ -102,7 +102,7 @@ export const createShortcutConfigDialog = (): Promise<void> => {
           '../../ui/shortcut-config-dialog/shortcut-config-dialog-preload.js'
         )
       ),
-      { resizable: false, frame: false }
+      { resizable: true, frame: false }
     );
 
     // Set up response handler

@@ -52,8 +52,8 @@
  * - Send Commands: Resizable window for direct printer command execution and debugging
  *
  * Window Specifications:
- * - Job Uploader: 950x720 (min 875x650), non-resizable, frameless, transparent
- * - Job Picker: 600x500 (min 500x400), resizable, frameless, transparent
+ * - Job Uploader: 950x720 (min 875x650), resizable, frameless, transparent
+ * - Job Picker: 700x700 (min 700x700), resizable, frameless, transparent
  * - Printer Selection: 500x400 (min 450x350), resizable, frameless, transparent
  * - Send Commands: 600x500 (min 500x400), resizable, frameless, transparent
  *
@@ -106,7 +106,7 @@ export const createJobUploaderWindow = (): void => {
     mainWindow,
     dimensions,
     preloadPath,
-    { resizable: false, frame: false }
+    { resizable: true, frame: false }
   );
 
   // Load HTML content
