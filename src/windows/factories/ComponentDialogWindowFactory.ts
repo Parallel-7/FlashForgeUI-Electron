@@ -53,12 +53,12 @@ const COMPONENT_DIALOG_SIZES: Record<
   { width: number; height: number }
 > = {
   'temperature-controls': { width: 500, height: 400 },
-  'camera-preview': { width: 800, height: 600 },
-  'job-stats': { width: 600, height: 500 },
+  'camera-preview': { width: 960, height: 720 },
+  'job-stats': { width: 700, height: 600 },
   'printer-status': { width: 550, height: 450 },
-  'model-preview': { width: 700, height: 600 },
+  'model-preview': { width: 840, height: 720 },
   'additional-info': { width: 500, height: 400 },
-  'log-panel': { width: 700, height: 500 },
+  'log-panel': { width: 850, height: 650 },
   'controls-grid': { width: 600, height: 500 },
   'filtration-controls': { width: 500, height: 400 },
   // Default size for unknown components

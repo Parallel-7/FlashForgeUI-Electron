@@ -94,8 +94,8 @@ export const createShortcutConfigDialog = (): Promise<void> => {
     const configDialogWindow: ShortcutConfigDialogWindow = createModalWindow(
       mainWindow,
       {
-        width: createWindowWidth(540),
-        height: createWindowHeight(680),
+        width: createWindowWidth(620),
+        height: createWindowHeight(740),
         minWidth: createWindowMinWidth(500),
         minHeight: createWindowMinHeight(620),
       },
@@ -105,7 +105,7 @@ export const createShortcutConfigDialog = (): Promise<void> => {
           '../../ui/shortcut-config-dialog/shortcut-config-dialog-preload.cjs'
         )
       ),
-      { resizable: false, frame: false }
+      { resizable: true, frame: false }
     );
 
     // Set up response handler

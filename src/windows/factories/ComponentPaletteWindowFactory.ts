@@ -101,7 +101,7 @@ export const createComponentPaletteWindow = (): void => {
     backgroundColor: '#2a2a2a',
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: false,
+    resizable: true,
     show: false,
     webPreferences: createSecureWebPreferences(preloadPath)
   });

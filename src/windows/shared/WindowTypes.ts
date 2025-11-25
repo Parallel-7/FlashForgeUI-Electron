@@ -202,8 +202,8 @@ export type WindowType =
 // Common window size constants
 export const WINDOW_SIZES = {
   SETTINGS: {
-    width: createWindowWidth(760),
-    height: createWindowHeight(780),
+    width: createWindowWidth(820),
+    height: createWindowHeight(820),
     minWidth: createWindowMinWidth(760),
     minHeight: createWindowMinHeight(780)
   },
@@ -214,8 +214,8 @@ export const WINDOW_SIZES = {
     minHeight: createWindowMinHeight(800)
   },
   LOG_DIALOG: {
-    width: createWindowWidth(800),
-    height: createWindowHeight(700),
+    width: createWindowWidth(900),
+    height: createWindowHeight(750),
     minWidth: createWindowMinWidth(600),
     minHeight: createWindowMinHeight(400)
   },
@@ -256,14 +256,14 @@ export const WINDOW_SIZES = {
     minHeight: createWindowMinHeight(650)
   },
   MATERIAL_INFO: {
-    width: createWindowWidth(600),
-    height: createWindowHeight(500),
+    width: createWindowWidth(700),
+    height: createWindowHeight(620),
     minWidth: createWindowMinWidth(450),
     minHeight: createWindowMinHeight(400)
   },
   MATERIAL_MATCHING: {
-    width: createWindowWidth(700),
-    height: createWindowHeight(650),
+    width: createWindowWidth(800),
+    height: createWindowHeight(720),
     minWidth: createWindowMinWidth(600),
     minHeight: createWindowMinHeight(550)
   },
@@ -304,8 +304,8 @@ export const WINDOW_SIZES = {
     minHeight: createWindowMinHeight(700)
   },
   UPDATE_AVAILABLE_DIALOG: {
-    width: createWindowWidth(680),
-    height: createWindowHeight(650),
+    width: createWindowWidth(740),
+    height: createWindowHeight(720),
     minWidth: createWindowMinWidth(640),
     minHeight: createWindowMinHeight(610)
   }
