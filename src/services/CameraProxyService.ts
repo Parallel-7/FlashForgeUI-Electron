@@ -52,9 +52,9 @@ import {
   CameraProxyStatus,
   CameraProxyClient,
   CameraProxyEventType
-} from '../types/camera';
-import { PortAllocator } from '../utils/PortAllocator';
-import { getPrinterContextManager } from '../managers/PrinterContextManager';
+} from '../types/camera/index.js';
+import { PortAllocator } from '../utils/PortAllocator.js';
+import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
 
 // ============================================================================
 // TYPES

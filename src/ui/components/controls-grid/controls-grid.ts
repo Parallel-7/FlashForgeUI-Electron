@@ -29,8 +29,8 @@
  *   controlsGrid.update({ printerState: 'Printing', connectionState: true });
  */
 
-import { BaseComponent } from '../base/component';
-import type { ComponentUpdateData } from '../base/types';
+import { BaseComponent } from '../base/component.js';
+import type { ComponentUpdateData } from '../base/types.js';
 import './controls-grid.css';
 
 /**

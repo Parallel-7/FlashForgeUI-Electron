@@ -17,8 +17,8 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { getAuthManager } from './AuthManager';
-import { StandardAPIResponse } from '../types/web-api.types';
+import { getAuthManager } from './AuthManager.js';
+import { StandardAPIResponse } from '../types/web-api.types.js';
 
 /**
  * Extended Express Request with auth info

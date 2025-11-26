@@ -2,7 +2,7 @@
  * @fileoverview Tests for PortAllocator utility
  */
 
-import { PortAllocator } from '../PortAllocator';
+import { PortAllocator } from '../PortAllocator.js';
 
 describe('PortAllocator', () => {
   describe('constructor', () => {

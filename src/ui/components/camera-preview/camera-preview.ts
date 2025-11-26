@@ -21,12 +21,13 @@
  * seamless design where camera and job info were integrated together.
  */
 
-import { BaseComponent } from '../base/component';
-import type { ComponentUpdateData } from '../base/types';
-import type { ResolvedCameraConfig } from '../../../types/camera/camera.types';
-import type { PollingData, PrinterState, CurrentJobInfo } from '../../../types/polling';
-import type { JSMpegPlayerInstance, JSMpegStatic } from '../../../types/jsmpeg';
-import { logVerbose } from '../../../utils/logging';
+import { BaseComponent } from '../base/component.js';
+import type { ComponentUpdateData } from '../base/types.js';
+import type { CameraProxyStatus, ResolvedCameraConfig } from '../../../types/camera/camera.types.js';
+import type { PrinterContextInfo } from '../../../types/PrinterContext.js';
+import type { PollingData, PrinterState, CurrentJobInfo } from '../../../types/polling.js';
+import type { JSMpegPlayerInstance, JSMpegStatic } from '../../../types/jsmpeg.d.ts';
+import { logVerbose } from '../../../utils/logging.js';
 import './camera-preview.css';
 
 // Import JSMpeg library (no official types available)
@@ -87,11 +88,20 @@ export class CameraPreviewComponent extends BaseComponent {
   /** Current printer state for progress bar styling */
   private currentPrinterState: PrinterState | null = null;
 
-  /** Heartbeat interval identifier */
-  private heartbeatIntervalId: number | null = null;
+  /** Active printer context ID */
+  private activeContextId: string | null = null;
 
-  /** Timestamp when the last MJPEG frame rendered */
-  private lastFrameTimestamp: number | null = null;
+  /** Backend heartbeat monitoring interval */
+  private backendHeartbeatIntervalId: number | null = null;
+
+  /** Last byte count reported by the backend */
+  private lastBackendBytesReceived: number | null = null;
+
+  /** Timestamp of the last confirmed backend activity */
+  private lastBackendActivityTimestamp: number | null = null;
+
+  /** Prevent overlapping heartbeat polls */
+  private isHeartbeatPolling = false;
 
   /** True while a watchdog restart is in progress */
   private isRestartingStream = false;
@@ -117,7 +127,23 @@ export class CameraPreviewComponent extends BaseComponent {
   protected async onInitialized(): Promise<void> {
     this.updateComponentState('disabled');
     this.logDebug('Camera preview component initialized');
+    await this.initializeActiveContext();
     document.addEventListener('visibilitychange', this.visibilityChangeHandler);
+  }
+
+  /**
+   * Determine the currently active printer context for heartbeat monitoring
+   */
+  private async initializeActiveContext(): Promise<void> {
+    try {
+      const activeContext = await window.api.printerContexts.getActive() as PrinterContextInfo | null;
+      this.activeContextId = activeContext && typeof activeContext.id === 'string'
+        ? activeContext.id
+        : null;
+    } catch (error) {
+      console.warn('[CameraPreview] Failed to determine active context:', error);
+      this.activeContextId = null;
+    }
   }
 
   /**
@@ -145,6 +171,8 @@ export class CameraPreviewComponent extends BaseComponent {
    */
   private async handleContextSwitch(contextId: string): Promise<void> {
     this.logDebug(`[CameraPreview] Context switched to ${contextId}`);
+    this.activeContextId = contextId;
+    this.resetHeartbeatTracking();
 
     const button = this.findElementById<HTMLButtonElement>('btn-preview');
     const cameraView = this.findElement('.camera-view');
@@ -253,6 +281,10 @@ export class CameraPreviewComponent extends BaseComponent {
 
     this.logDebug('[CameraPreview] Enabling camera preview...');
 
+    if (!this.activeContextId) {
+      await this.initializeActiveContext();
+    }
+
     // Check camera availability
     this.logDebug('[CameraPreview] Calling window.api.camera.getConfig()...');
     const cameraConfigRaw = await window.api.camera.getConfig();
@@ -294,8 +326,8 @@ export class CameraPreviewComponent extends BaseComponent {
 
       this.logDebug('[CameraPreview] RTSP stream WebSocket URL:', rtspStreamInfo.wsUrl);
       this.createRtspStream(rtspStreamInfo.wsUrl, cameraView);
-      this.stopHeartbeat();
-      this.lastFrameTimestamp = null;
+      this.stopBackendHeartbeat();
+      this.resetHeartbeatTracking();
     } else {
       // MJPEG: Use proxy URL
       this.logDebug('[CameraPreview] Calling window.api.camera.getProxyUrl()...');
@@ -304,6 +336,9 @@ export class CameraPreviewComponent extends BaseComponent {
       const streamUrl = `${proxyUrl}`; // The proxy URL already includes /camera
       this.logDebug('[CameraPreview] Final stream URL:', streamUrl);
       this.createMjpegStream(streamUrl, cameraView);
+      this.resetHeartbeatTracking();
+      this.lastBackendActivityTimestamp = Date.now();
+      this.startBackendHeartbeat();
     }
 
     // Update button state
@@ -319,8 +354,7 @@ export class CameraPreviewComponent extends BaseComponent {
 
     // Clean up stream
     this.cleanupCameraStream();
-    this.stopHeartbeat();
-    this.lastFrameTimestamp = null;
+    this.stopBackendHeartbeat();
 
     // Restore the no-camera message
     cameraView.innerHTML = '<div class="no-camera">Preview Disabled</div>';
@@ -349,7 +383,6 @@ export class CameraPreviewComponent extends BaseComponent {
     imgElement.alt = 'Camera Stream';
 
     imgElement.onload = () => {
-      this.lastFrameTimestamp = Date.now();
       this.updateComponentState('streaming');
     };
 
@@ -364,8 +397,6 @@ export class CameraPreviewComponent extends BaseComponent {
     // Add to view
     cameraView.appendChild(imgElement);
     this.cameraStreamElement = imgElement;
-    this.lastFrameTimestamp = Date.now();
-    this.startHeartbeat();
   }
 
   /**
@@ -437,7 +468,6 @@ export class CameraPreviewComponent extends BaseComponent {
       this.cameraStreamElement = null;
     }
 
-    this.lastFrameTimestamp = null;
   }
 
   /**
@@ -448,6 +478,7 @@ export class CameraPreviewComponent extends BaseComponent {
     button.textContent = 'Preview On';
     cameraView.innerHTML = `<div class="no-camera">${message}</div>`;
     this.updateComponentState('error');
+    this.stopBackendHeartbeat();
     this.logDebug(`Camera error: ${message}`);
   }
 
@@ -472,6 +503,10 @@ export class CameraPreviewComponent extends BaseComponent {
   private async restartMjpegStream(reason: string): Promise<void> {
     if (this.isRestartingStream || !this.previewEnabled) {
       return;
+    }
+
+    if (!this.activeContextId) {
+      await this.initializeActiveContext();
     }
 
     const cameraView = this.findElement('.camera-view');
@@ -503,6 +538,9 @@ export class CameraPreviewComponent extends BaseComponent {
         button.textContent = 'Preview Off';
       }
       this.updateComponentState('streaming');
+      this.resetHeartbeatTracking();
+      this.lastBackendActivityTimestamp = Date.now();
+      this.startBackendHeartbeat();
     } catch (error) {
       console.error('[CameraPreview] Failed to restart MJPEG stream:', error);
       if (button && originalText) {
@@ -515,55 +553,106 @@ export class CameraPreviewComponent extends BaseComponent {
   }
 
   /**
-   * Start heartbeat interval to monitor MJPEG freshness
+   * Start backend-driven heartbeat monitoring for MJPEG streams
    */
-  private startHeartbeat(): void {
-    if (this.heartbeatIntervalId !== null) {
+  private startBackendHeartbeat(): void {
+    if (this.backendHeartbeatIntervalId !== null || !this.previewEnabled || !this.activeContextId) {
       return;
     }
 
-    this.heartbeatIntervalId = window.setInterval(() => {
-      if (document.hidden || !this.previewEnabled || this.isRestartingStream) {
-        return;
-      }
-
-      if (!this.lastFrameTimestamp) {
-        return;
-      }
-
-      const elapsed = Date.now() - this.lastFrameTimestamp;
-      if (elapsed >= this.heartbeatTimeoutMs) {
-        void this.restartMjpegStream('heartbeat-timeout');
-      }
+    this.backendHeartbeatIntervalId = window.setInterval(() => {
+      void this.pollBackendHeartbeat();
     }, this.heartbeatCheckIntervalMs);
+
+    void this.pollBackendHeartbeat();
   }
 
   /**
-   * Stop the heartbeat when the preview is disabled
+   * Stop backend heartbeat monitoring and reset tracking state
    */
-  private stopHeartbeat(): void {
-    if (this.heartbeatIntervalId !== null) {
-      window.clearInterval(this.heartbeatIntervalId);
-      this.heartbeatIntervalId = null;
+  private stopBackendHeartbeat(): void {
+    if (this.backendHeartbeatIntervalId !== null) {
+      window.clearInterval(this.backendHeartbeatIntervalId);
+      this.backendHeartbeatIntervalId = null;
+    }
+
+    this.resetHeartbeatTracking();
+  }
+
+  /**
+   * Reset backend heartbeat counters
+   */
+  private resetHeartbeatTracking(): void {
+    this.lastBackendBytesReceived = null;
+    this.lastBackendActivityTimestamp = null;
+  }
+
+  /**
+   * Poll backend statistics to determine if the MJPEG stream is stale
+   */
+  private async pollBackendHeartbeat(reason: string = 'backend-heartbeat-timeout'): Promise<void> {
+    if (this.isHeartbeatPolling || !this.previewEnabled || this.isRestartingStream || this.backendHeartbeatIntervalId === null) {
+      return;
+    }
+
+    const contextId = this.activeContextId;
+    if (!contextId) {
+      return;
+    }
+
+    this.isHeartbeatPolling = true;
+
+    try {
+      const status: CameraProxyStatus | null = await window.api.camera.getStatus(contextId);
+      if (!status || !status.stats) {
+        this.resetHeartbeatTracking();
+        return;
+      }
+
+      const bytesReceived = typeof status.stats.bytesReceived === 'number'
+        ? status.stats.bytesReceived
+        : null;
+
+      if (bytesReceived === null) {
+        return;
+      }
+
+      if (this.lastBackendBytesReceived === null || bytesReceived > this.lastBackendBytesReceived) {
+        this.lastBackendBytesReceived = bytesReceived;
+        this.lastBackendActivityTimestamp = Date.now();
+        return;
+      }
+
+      if (!this.lastBackendActivityTimestamp) {
+        this.lastBackendActivityTimestamp = Date.now();
+        return;
+      }
+
+      const elapsed = Date.now() - this.lastBackendActivityTimestamp;
+      if (elapsed >= this.heartbeatTimeoutMs) {
+        await this.restartMjpegStream(reason);
+        this.resetHeartbeatTracking();
+      }
+    } catch (error) {
+      console.warn('[CameraPreview] Failed to poll camera status:', error);
+    } finally {
+      this.isHeartbeatPolling = false;
     }
   }
 
   /**
-   * When the window regains focus, ensure the MJPEG stream is still alive
+   * Trigger a heartbeat check when the window regains focus
    */
   private handleVisibilityChange(): void {
     if (document.hidden || !this.previewEnabled || this.isRestartingStream) {
       return;
     }
 
-    if (!this.lastFrameTimestamp) {
+    if (this.backendHeartbeatIntervalId === null) {
       return;
     }
 
-    const elapsed = Date.now() - this.lastFrameTimestamp;
-    if (elapsed >= this.heartbeatTimeoutMs) {
-      void this.restartMjpegStream('visibility-change');
-    }
+    void this.pollBackendHeartbeat('visibility-change');
   }
 
   /**
@@ -689,10 +778,10 @@ export class CameraPreviewComponent extends BaseComponent {
   protected cleanup(): void {
     this.logDebug('Cleaning up camera preview component');
     
-    this.stopHeartbeat();
+    this.stopBackendHeartbeat();
     document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
-    this.lastFrameTimestamp = null;
     this.isRestartingStream = false;
+    this.resetHeartbeatTracking();
 
     // Clean up camera stream
     this.cleanupCameraStream();

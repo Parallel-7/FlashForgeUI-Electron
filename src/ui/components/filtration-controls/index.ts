@@ -5,4 +5,4 @@
  * This component handles filtration mode control and TVOC level monitoring.
  */
 
-export { FiltrationControlsComponent } from './filtration-controls';
+export { FiltrationControlsComponent } from './filtration-controls.js';

@@ -24,7 +24,9 @@
 
 import type { ParseResult, FilamentInfo } from '@parallel-7/slicer-meta';
 import type { AD5XMaterialMapping } from '@ghosttypes/ff-api';
-import type { UploadProgress, UploadCompletionResult } from './job-uploader-preload';
+import type { UploadProgress, UploadCompletionResult } from './job-uploader-preload.cts';
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 // Import types from ff-api for material station functionality
 type FFGcodeToolData = {

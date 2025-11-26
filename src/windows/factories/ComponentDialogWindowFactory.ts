@@ -23,23 +23,26 @@
  */
 
 import { BrowserWindow } from 'electron';
-import * as path from 'path';
-import { getWindowManager } from '../WindowManager';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { getWindowManager } from '../WindowManager.js';
 import {
   createPreloadPath,
   createWindowWidth,
   createWindowHeight,
   createWindowMinWidth,
   createWindowMinHeight,
-} from '../shared/WindowTypes';
+} from '../shared/WindowTypes.js';
 import {
   createModalWindow,
   setupDevTools,
   setupWindowLifecycle,
   validateParentWindow,
   loadWindowHTML,
-} from '../shared/WindowConfig';
-import { getLogService, type LogMessage } from '../../services/LogService';
+} from '../shared/WindowConfig.js';
+import { getLogService, type LogMessage } from '../../services/LogService.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Component dialog size configuration
@@ -50,12 +53,12 @@ const COMPONENT_DIALOG_SIZES: Record<
   { width: number; height: number }
 > = {
   'temperature-controls': { width: 500, height: 400 },
-  'camera-preview': { width: 800, height: 600 },
-  'job-stats': { width: 600, height: 500 },
+  'camera-preview': { width: 960, height: 720 },
+  'job-stats': { width: 700, height: 600 },
   'printer-status': { width: 550, height: 450 },
-  'model-preview': { width: 700, height: 600 },
+  'model-preview': { width: 840, height: 720 },
   'additional-info': { width: 500, height: 400 },
-  'log-panel': { width: 700, height: 500 },
+  'log-panel': { width: 850, height: 650 },
   'controls-grid': { width: 600, height: 500 },
   'filtration-controls': { width: 500, height: 400 },
   // Default size for unknown components
@@ -104,7 +107,7 @@ export function createComponentDialog(componentId: string): BrowserWindow {
     createPreloadPath(
       path.join(
         __dirname,
-        '../../ui/component-dialog/component-dialog-preload.js'
+        '../../ui/component-dialog/component-dialog-preload.cjs'
       )
     ),
     {

@@ -3,12 +3,15 @@
  */
 
 import { BrowserWindow } from 'electron';
-import * as path from 'path';
-import { getWindowManager } from '../WindowManager';
-import { createModalWindow, loadWindowHTML, setupDevTools, setupWindowLifecycle, validateParentWindow } from '../shared/WindowConfig';
-import { createPreloadPath, createWindowHeight, createWindowMinHeight, createWindowMinWidth, createWindowWidth } from '../shared/WindowTypes';
-import type { WindowDimensions } from '../shared/WindowTypes';
-import { isHeadlessMode } from '../../utils/HeadlessDetection';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { getWindowManager } from '../WindowManager.js';
+import { createModalWindow, loadWindowHTML, setupDevTools, setupWindowLifecycle, validateParentWindow } from '../shared/WindowConfig.js';
+import { createPreloadPath, createWindowHeight, createWindowMinHeight, createWindowMinWidth, createWindowWidth } from '../shared/WindowTypes.js';
+import type { WindowDimensions } from '../shared/WindowTypes.js';
+import { isHeadlessMode } from '../../utils/HeadlessDetection.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let offlineDialogWindow: BrowserWindow | null = null;
 
@@ -43,7 +46,7 @@ export const showSpoolmanOfflineDialog = (message?: string | null): void => {
   offlineDialogWindow = createModalWindow(
     parentWindow,
     DIALOG_SIZE,
-    createPreloadPath(path.join(__dirname, '../../ui/spoolman-offline-dialog/spoolman-offline-dialog-preload.js')),
+    createPreloadPath(path.join(__dirname, '../../ui/spoolman-offline-dialog/spoolman-offline-dialog-preload.cjs')),
     { resizable: false, frame: false }
   );
 

@@ -24,40 +24,40 @@
 // Core styles and dependencies
 import './index.css';
 
-import { initializeLucideIcons, getLucideIcons } from './utils/icons';
-import { logVerbose } from './utils/logging';
+import { initializeLucideIcons, getLucideIcons } from './utils/icons.js';
+import { logVerbose } from './utils/logging.js';
 
 // Component system imports
 import {
   componentManager,
   PrinterTabsComponent,
   type ComponentUpdateData
-} from './ui/components';
-import { logMessage, setLogPanelComponent } from './renderer/logging';
-import { LegacyUiController } from './ui/legacy/LegacyUiController';
+} from './ui/components/index.js';
+import { logMessage, setLogPanelComponent } from './renderer/logging.js';
+import { LegacyUiController } from './ui/legacy/LegacyUiController.js';
 
 // GridStack system imports
-import { gridStackManager } from './ui/gridstack/GridStackManager';
-import { layoutPersistence } from './ui/gridstack/LayoutPersistence';
-import { editModeController } from './ui/gridstack/EditModeController';
+import { gridStackManager } from './ui/gridstack/GridStackManager.js';
+import { layoutPersistence } from './ui/gridstack/LayoutPersistence.js';
+import { editModeController } from './ui/gridstack/EditModeController.js';
 
 // Shortcut system imports
-import { DEFAULT_SHORTCUT_CONFIG } from './ui/shortcuts/types';
+import { DEFAULT_SHORTCUT_CONFIG } from './ui/shortcuts/types.js';
 import {
   loadLayoutForSerial,
   saveLayoutForSerial,
   loadShortcutsForSerial,
   saveShortcutsForSerial
-} from './renderer/perPrinterStorage';
+} from './renderer/perPrinterStorage.js';
 
 // Existing service imports
-import { getGlobalStateTracker, STATE_EVENTS } from './services/printer-state';
-import { resetUI, handleUIError } from './services/ui-updater';
-import type { PollingData } from './types/polling';
-import type { ThemeColors, AppConfig } from './types/config';
-import { DEFAULT_THEME } from './types/config';
-import { RendererGridController } from './renderer/gridController';
-import { ShortcutButtonController } from './renderer/shortcutButtons';
+import { getGlobalStateTracker, STATE_EVENTS } from './services/printer-state.js';
+import { resetUI, handleUIError } from './services/ui-updater.js';
+import type { PollingData } from './types/polling.js';
+import type { ThemeColors, AppConfig } from './types/config.js';
+import { DEFAULT_THEME } from './types/config.js';
+import { RendererGridController } from './renderer/gridController.js';
+import { ShortcutButtonController } from './renderer/shortcutButtons.js';
 
 
 // ============================================================================
@@ -204,7 +204,7 @@ async function initializePrinterTabs(): Promise<void> {
 
     // Listen for context events from main process
     window.api.receive('printer-context-created', (...args: unknown[]) => {
-      const event = args[0] as import('./types/PrinterContext').ContextCreatedEvent;
+      const event = args[0] as import('./types/PrinterContext.js').ContextCreatedEvent;
       logDebug('Renderer received context-created event:', event);
       logDebug('Event contextId:', event?.contextId);
       logDebug('Event contextInfo:', event?.contextInfo);
@@ -223,7 +223,7 @@ async function initializePrinterTabs(): Promise<void> {
     });
 
     window.api.receive('printer-context-switched', async (...args: unknown[]) => {
-      const event = args[0] as import('./types/PrinterContext').ContextSwitchEvent;
+      const event = args[0] as import('./types/PrinterContext.js').ContextSwitchEvent;
       logDebug('Renderer received context-switched event:', event);
 
       try {
@@ -284,7 +284,7 @@ async function initializePrinterTabs(): Promise<void> {
     });
 
     window.api.receive('printer-context-updated', (...args: unknown[]) => {
-      const event = args[0] as { contextId: string; updates: Partial<import('./types/PrinterContext').PrinterContextInfo> };
+      const event = args[0] as { contextId: string; updates: Partial<import('./types/PrinterContext.js').PrinterContextInfo> };
       logDebug('Renderer received context-updated event:', event);
       if (printerTabsComponent) {
         printerTabsComponent.updateTab(event.contextId, event.updates);
@@ -447,6 +447,14 @@ function initializeStateAndEventListeners(): void {
       if (updatedConfig.DesktopTheme) {
         logDebug('Config updated, reapplying desktop theme');
         applyDesktopTheme(updatedConfig.DesktopTheme);
+      }
+    });
+
+    window.api.receive('desktop-theme-preview', (...args: unknown[]) => {
+      const previewTheme = args[0] as ThemeColors | undefined;
+      if (previewTheme) {
+        logDebug('Previewing desktop theme from settings dialog');
+        applyDesktopTheme(previewTheme);
       }
     });
   }

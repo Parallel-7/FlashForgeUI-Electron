@@ -28,7 +28,7 @@ FlashForgeUI is an Electron-based desktop application for monitoring and control
 - `npm start` - Build and run the application
 - `npm run lint` - Run ESLint on TypeScript files
 - `npm run type-check` - TypeScript type checking without emit
-- `npm run linecount` - Generate line count statistics
+- `npm run linecount` - Generate line count statistics (use `-- --min-lines=N` to show only files with N+ lines)
 - `npm run docs:check` - Check for @fileoverview documentation
 
 ### Code Quality Standards

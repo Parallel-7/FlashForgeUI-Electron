@@ -20,8 +20,8 @@
 
 import { EventEmitter } from 'events';
 import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
-import { PrinterDetails, PrinterConnectionState } from '../types/printer';
-import { getPrinterContextManager } from '../managers/PrinterContextManager';
+import { PrinterDetails, PrinterConnectionState } from '../types/printer.js';
+import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
 
 /**
  * Internal connection state structure

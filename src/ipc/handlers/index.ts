@@ -20,26 +20,27 @@
  * consistent initialization order and dependency injection for all handler modules.
  */
 
-import type { ConfigManager } from '../../managers/ConfigManager';
-import type { ConnectionFlowManager } from '../../managers/ConnectionFlowManager';
-import type { PrinterBackendManager } from '../../managers/PrinterBackendManager';
-import type { getWindowManager } from '../../windows/WindowManager';
+import type { ConfigManager } from '../../managers/ConfigManager.js';
+import type { ConnectionFlowManager } from '../../managers/ConnectionFlowManager.js';
+import type { PrinterBackendManager } from '../../managers/PrinterBackendManager.js';
+import type { getWindowManager } from '../../windows/WindowManager.js';
 
 type WindowManager = ReturnType<typeof getWindowManager>;
-import { registerConnectionHandlers } from './connection-handlers';
-import { registerBackendHandlers } from './backend-handlers';
-import { registerJobHandlers } from './job-handlers';
-import { registerDialogHandlers } from './dialog-handlers';
-import { registerMaterialHandlers } from './material-handlers';
-import { registerControlHandlers } from './control-handlers';
-import { registerWebUIHandlers } from './webui-handlers';
-import { registerCameraHandlers } from './camera-handlers';
-import { initializePrinterSettingsHandlers } from './printer-settings-handlers';
-import { registerPaletteHandlers } from './palette-handlers';
-import { registerShortcutConfigHandlers } from './shortcut-config-handlers';
-import { registerComponentDialogHandlers } from './component-dialog-handlers';
-import { registerUpdateHandlers } from './update-handlers';
-import { registerSpoolmanHandlers } from './spoolman-handlers';
+import { registerConnectionHandlers } from './connection-handlers.js';
+import { registerBackendHandlers } from './backend-handlers.js';
+import { registerJobHandlers } from './job-handlers.js';
+import { registerDialogHandlers } from './dialog-handlers.js';
+import { registerMaterialHandlers } from './material-handlers.js';
+import { registerControlHandlers } from './control-handlers.js';
+import { registerWebUIHandlers } from './webui-handlers.js';
+import { registerCameraHandlers } from './camera-handlers.js';
+import { initializePrinterSettingsHandlers } from './printer-settings-handlers.js';
+import { registerPaletteHandlers } from './palette-handlers.js';
+import { registerShortcutConfigHandlers } from './shortcut-config-handlers.js';
+import { registerComponentDialogHandlers } from './component-dialog-handlers.js';
+import { registerUpdateHandlers } from './update-handlers.js';
+import { registerSpoolmanHandlers } from './spoolman-handlers.js';
+import { registerThemeHandlers } from './theme-handlers.js';
 
 /**
  * Application managers required by IPC handlers
@@ -73,5 +74,6 @@ export function registerAllIpcHandlers(managers: AppManagers): void {
   registerComponentDialogHandlers();
   registerUpdateHandlers(configManager, windowManager);
   registerSpoolmanHandlers();
+  registerThemeHandlers();
 }
 

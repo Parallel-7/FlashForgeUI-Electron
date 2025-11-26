@@ -38,17 +38,17 @@
  * @exports CoordinatorEventMap - Type for coordinator event emissions
  */
 
-import { EventEmitter } from '../../utils/EventEmitter';
-import { getNotificationService, NotificationService } from './NotificationService';
-import { getConfigManager, ConfigManager } from '../../managers/ConfigManager';
-import type { TemperatureMonitoringService } from '../TemperatureMonitoringService';
-import type { PrinterCooledEvent } from '../MultiContextTemperatureMonitor';
-import type { PrintStateMonitor } from '../PrintStateMonitor';
-import type { PrinterPollingService } from '../PrinterPollingService';
+import { EventEmitter } from '../../utils/EventEmitter.js';
+import { getNotificationService, NotificationService } from './NotificationService.js';
+import { getConfigManager, ConfigManager } from '../../managers/ConfigManager.js';
+import type { TemperatureMonitoringService } from '../TemperatureMonitoringService.js';
+import type { PrinterCooledEvent } from '../MultiContextTemperatureMonitor.js';
+import type { PrintStateMonitor } from '../PrintStateMonitor.js';
+import type { PrinterPollingService } from '../PrinterPollingService.js';
 import type {
   PollingData,
   PrinterStatus
-} from '../../types/polling';
+} from '../../types/polling.js';
 import {
   NotificationState,
   NotificationSettings,
@@ -66,7 +66,7 @@ import {
   createNotificationTemperature,
   NotificationType,
   COOLED_TEMPERATURE_THRESHOLD
-} from '../../types/notification';
+} from '../../types/notification.js';
 
 // ============================================================================
 // COORDINATOR EVENTS

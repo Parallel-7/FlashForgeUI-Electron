@@ -19,7 +19,7 @@
  * - 'add-printer-clicked': Emitted when the add printer button is clicked
  */
 
-import type { PrinterContextInfo } from '../../../types/PrinterContext';
+import type { PrinterContextInfo } from '../../../types/PrinterContext.js';
 import './printer-tabs.css';
 
 /**

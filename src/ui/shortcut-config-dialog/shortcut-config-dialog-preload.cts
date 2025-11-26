@@ -9,37 +9,12 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
-
-/**
- * Dialog initialization data
- */
-interface DialogInitData {
-  responseChannel: string;
-}
-
-/**
- * Shortcut configuration data structure
- */
-interface ShortcutButtonConfig {
-  version: number;
-  slots: {
-    slot1: string | null;
-    slot2: string | null;
-    slot3: string | null;
-  };
-  lastModified: string;
-}
-
-/**
- * Component info with pinned status
- */
-interface ComponentInfo {
-  id: string;
-  name: string;
-  icon: string;
-  isPinned: boolean;
-  category: string;
-}
+import type {
+  ShortcutButtonConfig,
+  ShortcutComponentInfo,
+  ShortcutDialogInitData,
+  ShortcutSaveConfigResult
+} from '../../types/shortcut-config.js';
 
 /**
  * Validate payload for shortcut button configuration
@@ -96,7 +71,7 @@ function isSaveConfigResult(
  * @param value - Unknown value received from IPC
  * @returns True when array members match ComponentInfo structure
  */
-function isComponentInfoArray(value: unknown): value is ComponentInfo[] {
+function isComponentInfoArray(value: unknown): value is ShortcutComponentInfo[] {
   if (!Array.isArray(value)) {
     return false;
   }
@@ -124,8 +99,8 @@ contextBridge.exposeInMainWorld('shortcutConfigAPI', {
   /**
    * Receive dialog initialization data
    */
-  onDialogInit: (callback: (data: DialogInitData) => void) => {
-    ipcRenderer.on('dialog-init', (_event, data: DialogInitData) => {
+  onDialogInit: (callback: (data: ShortcutDialogInitData) => void) => {
+    ipcRenderer.on('dialog-init', (_event, data: ShortcutDialogInitData) => {
       callback(data);
     });
   },
@@ -161,7 +136,7 @@ contextBridge.exposeInMainWorld('shortcutConfigAPI', {
    */
   saveConfig: async (
     config: ShortcutButtonConfig
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<ShortcutSaveConfigResult> => {
     const response = await ipcRenderer.invoke('shortcut-config:save', config) as unknown;
 
     if (isSaveConfigResult(response)) {
@@ -175,7 +150,7 @@ contextBridge.exposeInMainWorld('shortcutConfigAPI', {
   /**
    * Get available components with pinned status
    */
-  getAvailableComponents: async (): Promise<ComponentInfo[]> => {
+  getAvailableComponents: async (): Promise<ShortcutComponentInfo[]> => {
     const result = await ipcRenderer.invoke('shortcut-config:get-available-components') as unknown;
 
     if (isComponentInfoArray(result)) {
@@ -198,21 +173,15 @@ contextBridge.exposeInMainWorld('shortcutConfigAPI', {
   closeDialog: (responseChannel: string) => {
     void ipcRenderer.invoke(responseChannel);
   },
+
+  /**
+   * Listen for theme changes
+   */
+  receive: (channel: string, func: (...args: unknown[]) => void): void => {
+    const validChannels = ['theme-changed'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (_event, ...args) => func(...args));
+    }
+  }
 });
 
-/**
- * Type declaration for window.shortcutConfigAPI
- */
-declare global {
-  interface Window {
-    shortcutConfigAPI: {
-      onDialogInit: (callback: (data: DialogInitData) => void) => void;
-      getCurrentConfig: () => Promise<ShortcutButtonConfig | null>;
-      saveConfig: (
-        config: ShortcutButtonConfig
-      ) => Promise<{ success: boolean; error?: string }>;
-      getAvailableComponents: () => Promise<ComponentInfo[]>;
-      closeDialog: (responseChannel: string) => void;
-    };
-  }
-}

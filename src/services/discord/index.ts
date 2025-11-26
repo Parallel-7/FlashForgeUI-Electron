@@ -10,4 +10,4 @@ export {
   DiscordNotificationService,
   getDiscordNotificationService,
   resetDiscordNotificationService
-} from './DiscordNotificationService';
+} from './DiscordNotificationService.js';

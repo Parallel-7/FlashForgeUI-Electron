@@ -3,10 +3,10 @@
  */
 
 import type { Router, Response } from 'express';
-import type { AuthenticatedRequest } from '../auth-middleware';
-import { StandardAPIResponse } from '../../types/web-api.types';
-import { toAppError } from '../../../utils/error.utils';
-import type { RouteDependencies } from './route-helpers';
+import type { AuthenticatedRequest } from '../auth-middleware.js';
+import { StandardAPIResponse } from '../../types/web-api.types.js';
+import { toAppError } from '../../../utils/error.utils.js';
+import type { RouteDependencies } from './route-helpers.js';
 
 export function registerContextRoutes(router: Router, deps: RouteDependencies): void {
   router.get('/contexts', async (_req: AuthenticatedRequest, res: Response) => {

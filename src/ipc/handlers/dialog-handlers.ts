@@ -21,20 +21,21 @@
 
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import * as os from 'os';
-import type { ConfigManager } from '../../managers/ConfigManager';
-import type { getWindowManager } from '../../windows/WindowManager';
-import { getPrinterBackendManager } from '../../managers/PrinterBackendManager';
-import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager';
-import { getWebUIManager } from '../../webui/server/WebUIManager';
-import { getCameraProxyService } from '../../services/CameraProxyService';
-import { getModelDisplayName } from '../../utils/PrinterUtils';
-import { getRoundedUISupportInfo } from '../../utils/RoundedUICompatibility';
+import type { ConfigManager } from '../../managers/ConfigManager.js';
+import type { getWindowManager } from '../../windows/WindowManager.js';
+import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.js';
+import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager.js';
+import { getWebUIManager } from '../../webui/server/WebUIManager.js';
+import { getCameraProxyService } from '../../services/CameraProxyService.js';
+import { getModelDisplayName } from '../../utils/PrinterUtils.js';
+import { getRoundedUISupportInfo } from '../../utils/RoundedUICompatibility.js';
 import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
-import { getLogService } from '../../services/LogService';
-import { getPrinterContextManager } from '../../managers/PrinterContextManager';
+import { getLogService } from '../../services/LogService.js';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 
 type WindowManager = ReturnType<typeof getWindowManager>;
-import type { AppConfig } from '../../types/config';
+import type { AppConfig, ThemeColors } from '../../types/config.js';
+import { sanitizeTheme } from '../../types/config.js';
 import { 
   createSettingsWindow, 
   createStatusWindow, 
@@ -49,7 +50,7 @@ import {
   createSingleColorConfirmationDialog,
   createAboutDialog,
   type InputDialogOptions
-} from '../../windows/WindowFactory';
+} from '../../windows/WindowFactory.js';
 
 // Type definitions for window data structures
 interface WindowWithResolver<T> extends BrowserWindow {
@@ -199,6 +200,23 @@ export function registerDialogHandlers(
   // Status dialog handlers
   ipcMain.on('open-status-dialog', () => {
     createStatusWindow();
+  });
+
+  ipcMain.handle('settings:save-desktop-theme', async (_event, theme: ThemeColors): Promise<boolean> => {
+    try {
+      configManager.updateConfig({ DesktopTheme: sanitizeTheme(theme) });
+      await configManager.forceSave();
+
+      const mainWindow = windowManager.getMainWindow();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('config-updated', configManager.getConfig());
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[DialogHandlers] Failed to save desktop theme:', error);
+      return false;
+    }
   });
 
   ipcMain.on('open-about-dialog', () => {
@@ -393,7 +411,7 @@ export function registerDialogHandlers(
     
     if (logDialog) {
       // Forward new log messages to the dialog
-      const messageHandler = (message: import('../../services/LogService').LogMessage) => {
+      const messageHandler = (message: import('../../services/LogService.js').LogMessage) => {
         if (logDialog && !logDialog.isDestroyed()) {
           logDialog.webContents.send('log-dialog-new-message', message);
         }

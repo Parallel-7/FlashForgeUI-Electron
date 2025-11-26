@@ -26,8 +26,8 @@
  * @module ui/gridstack/defaults
  */
 
-import type { LayoutConfig, GridStackWidgetConfig, GridOptions } from './types';
-import { getComponentDefinition } from './ComponentRegistry';
+import type { LayoutConfig, GridStackWidgetConfig, GridOptions } from './types.js';
+import { getComponentDefinition } from './ComponentRegistry.js';
 
 /**
  * Default grid options matching current layout behavior

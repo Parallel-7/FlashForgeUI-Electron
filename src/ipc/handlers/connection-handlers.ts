@@ -16,8 +16,8 @@
  */
 
 import { ipcMain } from 'electron';
-import type { ConnectionFlowManager } from '../../managers/ConnectionFlowManager';
-import type { getWindowManager } from '../../windows/WindowManager';
+import type { ConnectionFlowManager } from '../../managers/ConnectionFlowManager.js';
+import type { getWindowManager } from '../../windows/WindowManager.js';
 
 type WindowManager = ReturnType<typeof getWindowManager>;
 

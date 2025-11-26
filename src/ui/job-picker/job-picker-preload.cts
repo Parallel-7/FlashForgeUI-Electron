@@ -162,6 +162,16 @@ const jobPickerAPI = {
     showSingleColorConfirmation: async (data: { fileName: string; leveling: boolean }): Promise<boolean> => {
         const result: unknown = await ipcRenderer.invoke('show-single-color-confirmation-dialog', data);
         return result as boolean;
+    },
+
+    /**
+     * Listen for theme changes
+     */
+    receive: (channel: string, func: (...args: unknown[]) => void): void => {
+        const validChannels = ['theme-changed'];
+        if (validChannels.includes(channel)) {
+            ipcRenderer.on(channel, (_event, ...args) => func(...args));
+        }
     }
 } as const;
 

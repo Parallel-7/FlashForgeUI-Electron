@@ -39,9 +39,9 @@
  */
 
 // Managers and Controllers
-export { GridStackManager, gridStackManager } from './GridStackManager';
-export { LayoutPersistence, layoutPersistence } from './LayoutPersistence';
-export { EditModeController, editModeController } from './EditModeController';
+export { GridStackManager, gridStackManager } from './GridStackManager.js';
+export { LayoutPersistence, layoutPersistence } from './LayoutPersistence.js';
+export { EditModeController, editModeController } from './EditModeController.js';
 
 // Types
 export type {
@@ -56,7 +56,7 @@ export type {
   LayoutPersistenceOptions,
   EditModeState,
   GridEventData,
-} from './types';
+} from './types.js';
 
 // Defaults and Configuration
 export {
@@ -68,7 +68,7 @@ export {
   getDefaultWidgets,
   isValidLayout,
   mergeWithDefaults,
-} from './defaults';
+} from './defaults.js';
 
 // Component Registry
 export {
@@ -82,4 +82,4 @@ export {
   getComponentIcon,
   validateComponentSize,
   getRecommendedComponents,
-} from './ComponentRegistry';
+} from './ComponentRegistry.js';

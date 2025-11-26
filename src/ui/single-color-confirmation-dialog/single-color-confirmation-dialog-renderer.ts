@@ -40,6 +40,9 @@
 // Single Color Confirmation Dialog Renderer
 // Shows active IFS slot material before starting single-color print
 
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
+
 // Type definitions (inlined to avoid require errors)
 interface MaterialStationStatus {
   readonly connected: boolean;
@@ -71,6 +74,7 @@ interface SingleColorConfirmAPI {
   readonly closeDialog: () => void;
   readonly confirmPrint: (leveling: boolean) => void;
   readonly getMaterialStationStatus: () => Promise<MaterialStationStatus | null>;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
 interface SingleColorConfirmInitData {
@@ -272,7 +276,16 @@ function cleanup(): void {
 }
 
 // Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', initializeDialog);
+document.addEventListener('DOMContentLoaded', () => {
+    initializeDialog();
+    registerThemeListener();
+});
+
+function registerThemeListener(): void {
+    window.singleColorConfirmAPI?.receive?.('theme-changed', (data: unknown) => {
+        applyDialogTheme(data as ThemeColors);
+    });
+}
 
 // Cleanup when window is unloaded
 window.addEventListener('unload', cleanup);

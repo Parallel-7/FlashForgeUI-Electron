@@ -23,7 +23,7 @@ import type {
   SpoolSearchQuery,
   SpoolUsageUpdate,
   SpoolmanConnectionTest,
-} from '../types/spoolman';
+} from '../types/spoolman.js';
 
 /**
  * Service for interacting with Spoolman REST API

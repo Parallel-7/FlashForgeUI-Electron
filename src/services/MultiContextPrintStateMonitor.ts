@@ -13,8 +13,8 @@
  * @exports MultiContextPrintStateMonitor - Multi-context state monitor coordinator
  */
 
-import { PrintStateMonitor } from './PrintStateMonitor';
-import type { PrinterPollingService } from './PrinterPollingService';
+import { PrintStateMonitor } from './PrintStateMonitor.js';
+import type { PrinterPollingService } from './PrinterPollingService.js';
 
 /**
  * Multi-context coordinator for print state monitoring

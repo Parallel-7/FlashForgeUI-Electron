@@ -21,11 +21,11 @@
  * - Formatting utilities from polling types
  */
 
-import { BaseComponent } from '../base/component';
-import type { ComponentUpdateData } from '../base/types';
-import type { PollingData } from '../../../types/polling';
-import { formatWeight, formatLength } from '../../../types/polling';
-import { formatJobTime } from '../../../utils/time.utils';
+import { BaseComponent } from '../base/component.js';
+import type { ComponentUpdateData } from '../base/types.js';
+import type { PollingData } from '../../../types/polling.js';
+import { formatWeight, formatLength } from '../../../types/polling.js';
+import { formatJobTime } from '../../../utils/time.utils.js';
 import './job-stats.css';
 
 /**

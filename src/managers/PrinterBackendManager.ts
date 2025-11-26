@@ -27,15 +27,15 @@
 
 import { EventEmitter } from 'events';
 import { FiveMClient, FlashForgeClient, AD5XMaterialMapping } from '@ghosttypes/ff-api';
-import { BasePrinterBackend } from '../printer-backends/BasePrinterBackend';
-import { GenericLegacyBackend } from '../printer-backends/GenericLegacyBackend';
-import { Adventurer5MBackend } from '../printer-backends/Adventurer5MBackend';
-import { Adventurer5MProBackend } from '../printer-backends/Adventurer5MProBackend';
-import { AD5XBackend } from '../printer-backends/AD5XBackend';
-import { getConfigManager } from './ConfigManager';
-import { getLoadingManager } from './LoadingManager';
-import { getPrinterContextManager } from './PrinterContextManager';
-import { PrinterDetails } from '../types/printer';
+import { BasePrinterBackend } from '../printer-backends/BasePrinterBackend.js';
+import { GenericLegacyBackend } from '../printer-backends/GenericLegacyBackend.js';
+import { Adventurer5MBackend } from '../printer-backends/Adventurer5MBackend.js';
+import { Adventurer5MProBackend } from '../printer-backends/Adventurer5MProBackend.js';
+import { AD5XBackend } from '../printer-backends/AD5XBackend.js';
+import { getConfigManager } from './ConfigManager.js';
+import { getLoadingManager } from './LoadingManager.js';
+import { getPrinterContextManager } from './PrinterContextManager.js';
+import { PrinterDetails } from '../types/printer.js';
 import {
   PrinterModelType,
   PrinterFeatureType,
@@ -51,11 +51,11 @@ import {
   FeatureStubInfo,
   BackendStatus,
   BackendCapabilities
-} from '../types/printer-backend';
+} from '../types/printer-backend/index.js';
 import {
   detectPrinterModelType,
   getModelDisplayName
-} from '../utils/PrinterUtils';
+} from '../utils/PrinterUtils.js';
 
 /**
  * Branded type for PrinterBackendManager to ensure singleton pattern

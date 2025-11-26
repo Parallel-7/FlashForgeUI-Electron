@@ -2,7 +2,9 @@
  * @fileoverview Renderer controller for the About dialog showing app metadata and resource links.
  */
 
-import type { AboutDialogInfo } from './about-dialog-preload';
+import type { AboutDialogInfo } from './about-dialog-preload.cts';
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 declare global {
   interface Window {
@@ -17,6 +19,7 @@ interface AboutAPI {
   readonly getAppInfo: () => Promise<AboutDialogInfo | null>;
   readonly openExternalLink: (url: string) => Promise<void>;
   readonly closeWindow: () => void;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
 class AboutDialogRenderer {
@@ -30,6 +33,13 @@ class AboutDialogRenderer {
   async initialize(): Promise<void> {
     this.registerCloseHandlers();
     await this.populateAppInfo();
+    this.registerThemeListener();
+  }
+
+  private registerThemeListener(): void {
+    this.api?.receive?.('theme-changed', (data: unknown) => {
+      applyDialogTheme(data as ThemeColors);
+    });
   }
 
   private get api(): AboutAPI | undefined {

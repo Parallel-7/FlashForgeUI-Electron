@@ -56,9 +56,9 @@ import { ipcMain } from 'electron';
 import {
   createComponentPaletteWindow,
   closeComponentPaletteWindow
-} from '../../windows/factories/ComponentPaletteWindowFactory';
-import { getWindowManager } from '../../windows/WindowManager';
-import { getAllComponents } from '../../ui/gridstack/ComponentRegistry';
+} from '../../windows/factories/ComponentPaletteWindowFactory.js';
+import { getWindowManager } from '../../windows/WindowManager.js';
+import { getAllComponents } from '../../ui/gridstack/ComponentRegistry.js';
 
 /**
  * Component definition interface (matches palette-preload.ts and ComponentRegistry)

@@ -63,7 +63,7 @@
  * @exports createSendCommandsWindow - Create send commands window for direct printer control
  */
 
-import { getWindowManager } from '../WindowManager';
+import { getWindowManager } from '../WindowManager.js';
 import {
   getWindowDimensions,
   createUIPreloadPath,
@@ -73,10 +73,10 @@ import {
   createModalWindow,
   focusExistingWindow,
   validateParentWindow
-} from '../shared/WindowConfig';
-import { JobPickerInitData } from '../shared/WindowTypes';
-import { getMainProcessPollingCoordinator } from '../../services/MainProcessPollingCoordinator';
-import { getThumbnailRequestQueue } from '../../services/ThumbnailRequestQueue';
+} from '../shared/WindowConfig.js';
+import { JobPickerInitData } from '../shared/WindowTypes.js';
+import { getMainProcessPollingCoordinator } from '../../services/MainProcessPollingCoordinator.js';
+import { getThumbnailRequestQueue } from '../../services/ThumbnailRequestQueue.js';
 
 /**
  * Create the job uploader window with modal behavior and WindowManager integration

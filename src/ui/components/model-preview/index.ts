@@ -7,5 +7,5 @@
  * and other parts of the application.
  */
 
-export { ModelPreviewComponent } from './model-preview';
-export type { IComponent } from '../base/types';
+export { ModelPreviewComponent } from './model-preview.js';
+export type { IComponent } from '../base/types.js';

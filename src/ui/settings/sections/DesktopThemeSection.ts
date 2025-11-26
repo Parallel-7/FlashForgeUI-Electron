@@ -15,12 +15,21 @@
 
 // src/ui/settings/sections/DesktopThemeSection.ts
 
-import type { ThemeColors } from '../../../types/config';
+import type { ThemeColors, ThemeProfile } from '../../../types/config.js';
+import type { ThemeProfileOperationData, ISettingsAPI } from '../types/external.js';
+
+declare global {
+  interface Window {
+    settingsAPI?: ISettingsAPI;
+  }
+}
 
 interface DesktopThemeSectionOptions {
   readonly document: Document;
   readonly defaultTheme: ThemeColors;
-  readonly onThemeChange: (theme: ThemeColors) => void;
+  readonly onThemeChange: (theme: ThemeColors, saveImmediately: boolean, context?: string) => void;
+  readonly onProfileOperation: (operation: 'add' | 'update' | 'delete', profileData: ThemeProfileOperationData) => void;
+  getThemeProfiles: () => readonly ThemeProfile[];
 }
 
 type ThemeColorKey = keyof ThemeColors;
@@ -40,7 +49,9 @@ const THEME_INPUT_CONFIG: Array<[ThemeColorKey, string]> = [
 export class DesktopThemeSection {
   private readonly doc: Document;
   private readonly defaultTheme: ThemeColors;
-  private readonly notifyThemeChange: (theme: ThemeColors) => void;
+  private readonly notifyThemeChange: (theme: ThemeColors, saveImmediately: boolean, context?: string) => void;
+  private readonly notifyProfileOperation: (operation: 'add' | 'update' | 'delete', profileData: ThemeProfileOperationData) => void;
+  private readonly getThemeProfiles: () => readonly ThemeProfile[];
 
   private readonly nativeColorInputs: Map<ThemeColorKey, HTMLInputElement> = new Map();
   private readonly hexInputs: Map<ThemeColorKey, HTMLInputElement> = new Map();
@@ -57,6 +68,9 @@ export class DesktopThemeSection {
   private pickerPreviewLabel: HTMLElement | null = null;
   private colorPickerClose: HTMLButtonElement | null = null;
   private currentPickerColorKey: ThemeColorKey | null = null;
+
+  private themeProfilesContainer: HTMLElement | null = null;
+  private addThemeProfileButton: HTMLButtonElement | null = null;
 
   private colorFieldPointerMoveHandler: ((event: PointerEvent) => void) | null = null;
   private colorFieldPointerUpHandler: ((event: PointerEvent) => void) | null = null;
@@ -86,6 +100,8 @@ export class DesktopThemeSection {
     this.doc = options.document;
     this.defaultTheme = options.defaultTheme;
     this.notifyThemeChange = options.onThemeChange;
+    this.notifyProfileOperation = options.onProfileOperation;
+    this.getThemeProfiles = options.getThemeProfiles;
     this.currentTheme = { ...options.defaultTheme };
   }
 
@@ -94,6 +110,7 @@ export class DesktopThemeSection {
     this.initializeColorPickerCanvas();
     this.registerEventListeners();
     this.applyTheme(this.currentTheme);
+    this.renderThemeProfiles();
   }
 
   /**
@@ -109,6 +126,8 @@ export class DesktopThemeSection {
       this.updateHexInputValue(key, value);
       this.updateColorSwatch(key, value);
     });
+
+    this.renderThemeProfiles(); // Re-render to update active state
   }
 
   dispose(): void {
@@ -153,6 +172,9 @@ export class DesktopThemeSection {
     this.pickerPreviewSwatch = this.doc.getElementById('picker-preview-swatch');
     this.pickerPreviewLabel = this.doc.getElementById('picker-preview-label');
     this.colorPickerClose = this.doc.querySelector('.color-picker-close') as HTMLButtonElement | null;
+
+    this.themeProfilesContainer = this.doc.getElementById('desktop-theme-profiles-container');
+    this.addThemeProfileButton = this.doc.getElementById('add-desktop-theme-profile') as HTMLButtonElement | null;
   }
 
   private initializeColorPickerCanvas(): void {
@@ -180,6 +202,10 @@ export class DesktopThemeSection {
 
     if (this.resetButton) {
       this.resetButton.addEventListener('click', () => this.handleResetDesktopTheme());
+    }
+
+    if (this.addThemeProfileButton) {
+        this.addThemeProfileButton.addEventListener('click', () => this.handleAddNewProfile());
     }
 
     if (this.colorPickerClose) {
@@ -213,7 +239,7 @@ export class DesktopThemeSection {
     this.applyTheme(this.defaultTheme);
     // Remove invalid states
     this.hexInputs.forEach((input) => input.classList.remove('invalid'));
-    this.emitThemeChange();
+    this.emitThemeChange(true, 'reset');
   }
 
   private updateColorFromNativePicker(key: ThemeColorKey): void {
@@ -267,11 +293,18 @@ export class DesktopThemeSection {
     this.updateNativeInputValue(key, hexColor);
     this.updateHexInputValue(key, hexColor);
     this.updateColorSwatch(key, hexColor);
-    this.emitThemeChange();
+    this.emitThemeChange(false);
   }
 
-  private emitThemeChange(): void {
-    this.notifyThemeChange({ ...this.currentTheme });
+  private emitThemeChange(saveImmediately: boolean, context?: string): void {
+    const theme = { ...this.currentTheme };
+    this.notifyThemeChange(theme, saveImmediately, context);
+    this.renderThemeProfiles();
+
+    // Broadcast theme change to all open windows (main window + dialogs)
+    if (window.settingsAPI?.send) {
+      window.settingsAPI.send('theme-updated', theme);
+    }
   }
 
   private updateNativeInputValue(key: ThemeColorKey, value: string): void {
@@ -554,9 +587,9 @@ export class DesktopThemeSection {
   }
 
   private hsbToHex(h: number, s: number, b: number): string {
-    let hue = h / 360;
-    let saturation = s / 100;
-    let brightness = b / 100;
+    const hue = h / 360;
+    const saturation = s / 100;
+    const brightness = b / 100;
 
     const i = Math.floor(hue * 6);
     const f = hue * 6 - i;
@@ -596,5 +629,109 @@ export class DesktopThemeSection {
     };
 
     return `#${toHex(r)}${toHex(g)}${toHex(bl)}`.toUpperCase();
+  }
+
+  public renderThemeProfiles(): void {
+    if (!this.themeProfilesContainer) {
+      return;
+    }
+
+    const profiles = this.getThemeProfiles();
+    this.themeProfilesContainer.innerHTML = '';
+
+    profiles.forEach(profile => {
+      const card = this.createProfileCard(profile);
+      this.themeProfilesContainer?.appendChild(card);
+    });
+  }
+
+  private createProfileCard(profile: ThemeProfile): HTMLElement {
+    const card = this.doc.createElement('div');
+    card.className = 'theme-profile-card';
+    card.style.setProperty('--theme-primary', profile.colors.primary);
+
+    const isActive = this.areThemesEqual(this.currentTheme, profile.colors);
+    if (isActive) {
+      card.classList.add('active');
+    }
+
+    card.innerHTML = `
+      <div class="profile-card-header">
+        <span class="profile-name"></span>
+        <div class="profile-actions">
+        </div>
+      </div>
+      <div class="profile-color-previews">
+        <div class="profile-color-swatch"></div>
+        <div class="profile-color-swatch"></div>
+        <div class="profile-color-swatch"></div>
+      </div>
+    `;
+
+    const nameEl = card.querySelector('.profile-name') as HTMLElement;
+    nameEl.textContent = profile.name;
+
+    const previews = card.querySelectorAll('.profile-color-swatch');
+    (previews[0] as HTMLElement).style.backgroundColor = profile.colors.primary;
+    (previews[1] as HTMLElement).style.backgroundColor = profile.colors.background;
+    (previews[2] as HTMLElement).style.backgroundColor = profile.colors.text;
+
+    card.addEventListener('click', () => this.handleProfileSelect(profile));
+
+    const actionsContainer = card.querySelector('.profile-actions') as HTMLElement;
+    if (!profile.isSystem) {
+      const editBtn = this.createActionButton('edit-2', 'Rename Profile', () => this.handleRenameProfile(profile));
+      const deleteBtn = this.createActionButton('trash-2', 'Delete Profile', () => this.handleDeleteProfile(profile));
+      actionsContainer.append(editBtn, deleteBtn);
+    }
+
+    return card;
+  }
+
+  private createActionButton(icon: string, title: string, onClick: () => void): HTMLElement {
+    const btn = this.doc.createElement('button');
+    btn.className = 'profile-action-btn';
+    btn.title = title;
+    btn.innerHTML = `<i data-lucide="${icon}" class="lucide"></i>`;
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      onClick();
+    });
+    return btn;
+  }
+
+  private handleProfileSelect(profile: ThemeProfile): void {
+    this.applyTheme(profile.colors);
+    this.emitThemeChange(true, profile.name);
+  }
+
+  private handleAddNewProfile(): void {
+    const profileName = prompt('Enter a name for the new profile:');
+    if (profileName) {
+      this.notifyProfileOperation('add', { name: profileName, colors: this.currentTheme });
+    }
+  }
+
+  private handleRenameProfile(profile: ThemeProfile): void {
+    const newName = prompt('Enter a new name for the profile:', profile.name);
+    if (newName && newName !== profile.name) {
+      this.notifyProfileOperation('update', { originalName: profile.name, updatedProfile: { name: newName, colors: profile.colors } });
+    }
+  }
+
+  private handleDeleteProfile(profile: ThemeProfile): void {
+    if (confirm(`Are you sure you want to delete the "${profile.name}" profile?`)) {
+      this.notifyProfileOperation('delete', { name: profile.name });
+    }
+  }
+
+  private areThemesEqual(themeA: ThemeColors, themeB: ThemeColors): boolean {
+    return (
+      themeA.primary === themeB.primary &&
+      themeA.secondary === themeB.secondary &&
+      themeA.background === themeB.background &&
+      themeA.surface === themeB.surface &&
+      themeA.text === themeB.text
+    );
   }
 }

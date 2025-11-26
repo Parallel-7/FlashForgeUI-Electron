@@ -4,7 +4,7 @@
 
 // src/ui/settings/sections/PrinterContextSection.ts
 
-import type { SettingsSection } from './SettingsSection';
+import type { SettingsSection } from './SettingsSection.js';
 
 interface PrinterContextSectionOptions {
   readonly document: Document;

@@ -15,7 +15,7 @@
  * - Type-safe helper methods for common operations
  */
 
-import type { ComponentUpdateData, ComponentState, IComponent } from './types';
+import type { ComponentUpdateData, ComponentState, IComponent } from './types.js';
 
 /**
  * Abstract base class for all UI components

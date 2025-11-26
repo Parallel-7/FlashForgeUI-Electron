@@ -25,6 +25,7 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
+import type { CameraProxyStatus } from './types/camera/camera.types.js';
 
 // IPC event listener function type
 type IPCListener = (...args: unknown[]) => void;
@@ -54,7 +55,7 @@ interface ElectronAPI {
 // Camera API interface
 interface CameraAPI {
   getProxyPort: () => Promise<number>;
-  getStatus: () => Promise<unknown>;
+  getStatus: (contextId?: string) => Promise<CameraProxyStatus | null>;
   setEnabled: (enabled: boolean) => Promise<void>;
   getConfig: () => Promise<unknown>;
   getProxyUrl: () => Promise<string>;
@@ -234,7 +235,9 @@ const validReceiveChannels = [
   'spoolman:spool-selected',
   'spoolman:spool-updated',
   'config-updated',
-  'config-loaded'
+  'config-loaded',
+  'desktop-theme-preview',
+  'theme-changed'
 ];
 
 // Expose camera URL for renderer
@@ -457,8 +460,13 @@ contextBridge.exposeInMainWorld('api', {
       return typeof result === 'number' ? result : 8181;
     },
 
-    getStatus: async (): Promise<unknown> => {
-      return await ipcRenderer.invoke('camera:get-status');
+    getStatus: async (contextId?: string): Promise<CameraProxyStatus | null> => {
+      const result: unknown = await ipcRenderer.invoke('camera:get-status', contextId);
+      if (result === null) {
+        return null;
+      }
+
+      return typeof result === 'object' ? (result as CameraProxyStatus) : null;
     },
 
     setEnabled: async (enabled: boolean): Promise<void> => {

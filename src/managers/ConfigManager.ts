@@ -29,8 +29,10 @@ import {
   ConfigUpdateEvent,
   sanitizeConfig,
   isValidConfig,
-  isValidConfigKey
-} from '../types/config';
+  isValidConfigKey,
+  ThemeProfile,
+  ThemeColors
+} from '../types/config.js';
 
 /**
  * Centralized configuration manager with live access and automatic file syncing.
@@ -213,6 +215,55 @@ export class ConfigManager extends EventEmitter {
    */
   public getConfigPath(): string {
     return this.configPath;
+  }
+
+  /**
+   * Adds a new theme profile to the specified UI's profile list.
+   * @param uiType - The UI type ('desktop' or 'web').
+   * @param name - The name of the new profile.
+   * @param colors - The color palette for the new profile.
+   */
+  public addThemeProfile(uiType: 'desktop' | 'web', name: string, colors: ThemeColors): void {
+    const profileKey = uiType === 'desktop' ? 'desktopThemeProfiles' : 'webUIThemeProfiles';
+    const newProfile: ThemeProfile = { name, colors, isSystem: false };
+
+    const updatedProfiles = [...this.currentConfig[profileKey], newProfile];
+
+    this.updateConfig({ [profileKey]: updatedProfiles });
+  }
+
+  /**
+   * Updates an existing theme profile.
+   * @param uiType - The UI type ('desktop' or 'web').
+   * @param originalName - The original name of the profile to update.
+   * @param updatedProfile - The updated profile data.
+   */
+  public updateThemeProfile(uiType: 'desktop' | 'web', originalName: string, updatedProfile: Omit<ThemeProfile, 'isSystem'>): void {
+    const profileKey = uiType === 'desktop' ? 'desktopThemeProfiles' : 'webUIThemeProfiles';
+
+    const updatedProfiles = this.currentConfig[profileKey].map(profile => {
+      if (profile.name === originalName && !profile.isSystem) {
+        return { ...profile, ...updatedProfile };
+      }
+      return profile;
+    });
+
+    this.updateConfig({ [profileKey]: updatedProfiles });
+  }
+
+  /**
+   * Deletes a theme profile.
+   * @param uiType - The UI type ('desktop' or 'web').
+   * @param name - The name of the profile to delete.
+   */
+  public deleteThemeProfile(uiType: 'desktop' | 'web', name: string): void {
+    const profileKey = uiType === 'desktop' ? 'desktopThemeProfiles' : 'webUIThemeProfiles';
+
+    const updatedProfiles = this.currentConfig[profileKey].filter(profile => {
+      return profile.name !== name || profile.isSystem;
+    });
+
+    this.updateConfig({ [profileKey]: updatedProfiles });
   }
 
   /**
@@ -450,5 +501,4 @@ export class ConfigManager extends EventEmitter {
 export const getConfigManager = (): ConfigManager => ConfigManager.getInstance();
 
 // Export for type declarations
-export type { ConfigUpdateEvent } from '../types/config';
-
+export type { ConfigUpdateEvent } from '../types/config.js';

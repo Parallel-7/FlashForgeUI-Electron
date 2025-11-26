@@ -19,8 +19,8 @@
  * without maintaining transition history or complex validation rules.
  */
 
-import { EventEmitter } from '../utils/EventEmitter';
-import type { PrinterState } from '../types/polling';
+import { EventEmitter } from '../utils/EventEmitter.js';
+import type { PrinterState } from '../types/polling.js';
 
 // ============================================================================
 // SIMPLE STATE EVENTS

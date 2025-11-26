@@ -18,11 +18,11 @@
  * RTSP camera and filtration control capabilities.
  */
 
-import { DualAPIBackend } from './DualAPIBackend';
+import { DualAPIBackend } from './DualAPIBackend.js';
 import {
   PrinterFeatureSet,
   MaterialStationStatus
-} from '../types/printer-backend';
+} from '../types/printer-backend/index.js';
 
 /**
  * Backend implementation for Adventurer 5M Pro

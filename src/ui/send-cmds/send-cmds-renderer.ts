@@ -28,6 +28,9 @@
 
 export {}; // Ensure this file is treated as a module
 
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
+
 // Define types for command results
 interface CommandResult {
     readonly success: boolean;
@@ -42,6 +45,7 @@ declare global {
             readonly sendCommand: (command: string) => Promise<CommandResult>;
             readonly close: () => void;
             readonly removeListeners: () => void;
+            receive?: (channel: string, func: (...args: unknown[]) => void) => void;
         };
     }
 }
@@ -152,7 +156,10 @@ document.addEventListener('DOMContentLoaded', (): void => {
     
     // Set initial focus to command input
     commandInput.focus();
-    
+
+    // Register theme listener
+    registerThemeListener();
+
     // Cleanup listeners when window is about to unload
     window.addEventListener('beforeunload', (): void => {
         if (api) {
@@ -160,4 +167,10 @@ document.addEventListener('DOMContentLoaded', (): void => {
         }
     });
 });
+
+function registerThemeListener(): void {
+    window.sendCmdsApi?.receive?.('theme-changed', (data: unknown) => {
+        applyDialogTheme(data as ThemeColors);
+    });
+}
 

@@ -3,7 +3,7 @@
  */
 
 import type { Router, Response } from 'express';
-import type { AuthenticatedRequest } from '../auth-middleware';
+import type { AuthenticatedRequest } from '../auth-middleware.js';
 import {
   SpoolmanConfigResponse,
   SpoolSearchResponse,
@@ -11,14 +11,14 @@ import {
   SpoolSelectResponse,
   StandardAPIResponse,
   SpoolSummary
-} from '../../types/web-api.types';
+} from '../../types/web-api.types.js';
 import {
   SpoolSelectRequestSchema,
   SpoolClearRequestSchema,
   createValidationError
-} from '../../schemas/web-api.schemas';
-import { toAppError } from '../../../utils/error.utils';
-import { resolveContext, sendErrorResponse, type RouteDependencies } from './route-helpers';
+} from '../../schemas/web-api.schemas.js';
+import { toAppError } from '../../../utils/error.utils.js';
+import { resolveContext, sendErrorResponse, type RouteDependencies } from './route-helpers.js';
 
 export function registerSpoolmanRoutes(router: Router, deps: RouteDependencies): void {
   router.get('/spoolman/config', async (req: AuthenticatedRequest, res: Response) => {
@@ -72,7 +72,7 @@ export function registerSpoolmanRoutes(router: Router, deps: RouteDependencies):
       const searchParam =
         typeof req.query?.search === 'string' ? req.query.search.trim() : undefined;
 
-      const searchQuery: import('../../../types/spoolman').SpoolSearchQuery = {
+      const searchQuery: import('../../../types/spoolman.js').SpoolSearchQuery = {
         limit: 50,
         allow_archived: false
       };

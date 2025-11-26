@@ -22,6 +22,7 @@ export interface ConnectChoiceAPI {
   onDialogInit: (callback: (data: ConnectChoiceData & { responseChannel: string }) => void) => void;
   sendChoice: (choice: ConnectChoiceOption) => Promise<void>;
   removeAllListeners: () => void;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
 // Listener management
@@ -61,6 +62,13 @@ const connectChoiceAPI: ConnectChoiceAPI = {
       ipcRenderer.removeListener(channel, handler);
     });
     listeners.clear();
+  },
+
+  receive: (channel: string, func: (...args: unknown[]) => void): void => {
+    const validChannels = ['theme-changed'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (_event, ...args) => func(...args));
+    }
   }
 };
 

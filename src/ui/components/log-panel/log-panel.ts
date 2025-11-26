@@ -19,9 +19,9 @@
  *   logPanel.addLogMessage('Status update: Printer connected');
  */
 
-import { BaseComponent } from '../base/component';
-import type { ComponentUpdateData } from '../base/types';
-import { createLogPanel, type LogEntry, type LogPanelController } from '../../shared/log-panel';
+import { BaseComponent } from '../base/component.js';
+import type { ComponentUpdateData } from '../base/types.js';
+import { createLogPanel, type LogEntry, type LogPanelController } from '../../shared/log-panel/index.js';
 import './log-panel.css';
 
 /**

@@ -20,14 +20,15 @@
 import { EventEmitter } from 'events';
 import { app, shell } from 'electron';
 import log from 'electron-log';
-import {
-  autoUpdater,
+import electronUpdater, {
   type UpdateInfo,
   type ProgressInfo,
   type UpdateDownloadedEvent
 } from 'electron-updater';
-import { getConfigManager } from '../managers/ConfigManager';
-import type { ConfigManager } from '../managers/ConfigManager';
+import { getConfigManager } from '../managers/ConfigManager.js';
+import type { ConfigManager } from '../managers/ConfigManager.js';
+
+const { autoUpdater } = electronUpdater;
 
 /**
  * Update lifecycle states exposed to renderers.

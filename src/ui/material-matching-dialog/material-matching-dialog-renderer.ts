@@ -20,6 +20,9 @@
 // Material Matching Dialog Renderer
 // Handles material mapping between print requirements and IFS slots
 
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
+
 // Type definitions (inlined to avoid require errors)
 interface MaterialStationStatus {
   readonly connected: boolean;
@@ -82,6 +85,7 @@ interface MaterialMatchingAPI {
   readonly closeDialog: () => void;
   readonly confirmMappings: (mappings: AD5XMaterialMapping[]) => void;
   readonly getMaterialStationStatus: () => Promise<MaterialStationStatus | null>;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
 interface MaterialMatchingInitData {
@@ -571,7 +575,16 @@ function cleanup(): void {
 }
 
 // Initialize when DOM is ready
-document.addEventListener('DOMContentLoaded', initializeDialog);
+document.addEventListener('DOMContentLoaded', () => {
+    initializeDialog();
+    registerThemeListener();
+});
+
+function registerThemeListener(): void {
+    window.materialMatchingAPI?.receive?.('theme-changed', (data: unknown) => {
+        applyDialogTheme(data as ThemeColors);
+    });
+}
 
 // Cleanup when window is unloaded
 window.addEventListener('unload', cleanup);

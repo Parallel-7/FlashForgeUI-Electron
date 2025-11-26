@@ -17,8 +17,8 @@
  */
 
 import { EventEmitter } from 'events';
-import { getConfigManager } from '../managers/ConfigManager';
-import { SavedPrinterMatch, AutoConnectDecision } from '../types/printer';
+import { getConfigManager } from '../managers/ConfigManager.js';
+import { SavedPrinterMatch, AutoConnectDecision } from '../types/printer.js';
 export class AutoConnectService extends EventEmitter {
   private static instance: AutoConnectService | null = null;
   private readonly configManager = getConfigManager();

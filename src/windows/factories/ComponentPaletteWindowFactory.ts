@@ -51,7 +51,7 @@
  */
 
 import { BrowserWindow } from 'electron';
-import { getWindowManager } from '../WindowManager';
+import { getWindowManager } from '../WindowManager.js';
 import {
   createUIPreloadPath,
   loadWindowHTML,
@@ -60,8 +60,8 @@ import {
   validateParentWindow,
   focusExistingWindow,
   createSecureWebPreferences
-} from '../shared/WindowConfig';
-import { WINDOW_SIZES } from '../shared/WindowTypes';
+} from '../shared/WindowConfig.js';
+import { WINDOW_SIZES } from '../shared/WindowTypes.js';
 
 /**
  * Create the component palette window with always-on-top floating behavior
@@ -101,7 +101,7 @@ export const createComponentPaletteWindow = (): void => {
     backgroundColor: '#2a2a2a',
     alwaysOnTop: true,
     skipTaskbar: true,
-    resizable: false,
+    resizable: true,
     show: false,
     webPreferences: createSecureWebPreferences(preloadPath)
   });

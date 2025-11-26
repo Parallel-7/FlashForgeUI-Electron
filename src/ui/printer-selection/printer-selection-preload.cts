@@ -137,6 +137,13 @@ contextBridge.exposeInMainWorld('printerSelectionAPI', {
         ipcRenderer.removeAllListeners('printer-selection:discovery-started');
         ipcRenderer.removeAllListeners('printer-selection:discovery-error');
     }
+,
+  receive: (channel: string, func: (...args: unknown[]) => void): void => {
+    const validChannels = ['theme-changed'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (_event, ...args) => func(...args));
+    }
+  }
 } as PrinterSelectionAPI);
 
 // Generic window controls for sub-windows

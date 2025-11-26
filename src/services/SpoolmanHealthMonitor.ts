@@ -14,8 +14,8 @@
  */
 
 import { EventEmitter } from 'events';
-import { toAppError } from '../utils/error.utils';
-import type { SpoolmanIntegrationService } from './SpoolmanIntegrationService';
+import { toAppError } from '../utils/error.utils.js';
+import type { SpoolmanIntegrationService } from './SpoolmanIntegrationService.js';
 
 export interface SpoolmanOfflineEvent {
   reason?: string;

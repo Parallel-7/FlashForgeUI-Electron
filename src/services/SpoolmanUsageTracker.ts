@@ -36,11 +36,11 @@
  */
 
 import { EventEmitter } from 'events';
-import { getConfigManager } from '../managers/ConfigManager';
-import { getSpoolmanIntegrationService } from './SpoolmanIntegrationService';
-import { SpoolmanService } from './SpoolmanService';
-import type { PrintStateMonitor } from './PrintStateMonitor';
-import type { PrinterStatus } from '../types/polling';
+import { getConfigManager } from '../managers/ConfigManager.js';
+import { getSpoolmanIntegrationService } from './SpoolmanIntegrationService.js';
+import { SpoolmanService } from './SpoolmanService.js';
+import type { PrintStateMonitor } from './PrintStateMonitor.js';
+import type { PrinterStatus } from '../types/polling.js';
 
 // ============================================================================
 // SPOOLMAN USAGE TRACKER

@@ -19,7 +19,7 @@
 // MAJOR REWRITE: Fixed to match actual API behavior - no more fake jobId concept
 
 import { FiveMClient, FlashForgeClient, FFGcodeToolData } from '@ghosttypes/ff-api';
-import { PrinterFeatureSet, MaterialStationStatus } from './printer-features';
+import { PrinterFeatureSet, MaterialStationStatus } from './printer-features.js';
 
 /**
  * Printer model types supported by the backend system

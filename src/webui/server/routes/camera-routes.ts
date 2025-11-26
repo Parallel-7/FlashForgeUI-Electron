@@ -3,10 +3,10 @@
  */
 
 import type { Router, Response } from 'express';
-import type { AuthenticatedRequest } from '../auth-middleware';
-import { CameraStatusResponse, StandardAPIResponse } from '../../types/web-api.types';
-import { toAppError } from '../../../utils/error.utils';
-import { resolveContext, sendErrorResponse, type RouteDependencies } from './route-helpers';
+import type { AuthenticatedRequest } from '../auth-middleware.js';
+import { CameraStatusResponse, StandardAPIResponse } from '../../types/web-api.types.js';
+import { toAppError } from '../../../utils/error.utils.js';
+import { resolveContext, sendErrorResponse, type RouteDependencies } from './route-helpers.js';
 
 export function registerCameraRoutes(router: Router, deps: RouteDependencies): void {
   router.get('/camera/status', async (req: AuthenticatedRequest, res: Response) => {
@@ -59,7 +59,7 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
       }
 
       const { resolveCameraConfig, getCameraUserConfig } = await import(
-        '../../../utils/camera-utils'
+        '../../../utils/camera-utils.js'
       );
       const backendStatus = backend.getBackendStatus();
       const cameraConfig = resolveCameraConfig({
@@ -77,7 +77,7 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
       }
 
       if (cameraConfig.streamType === 'rtsp') {
-        const { getRtspStreamService } = await import('../../../services/RtspStreamService');
+        const { getRtspStreamService } = await import('../../../services/RtspStreamService.js');
         const rtspStreamService = getRtspStreamService();
         const ffmpegStatus = rtspStreamService.getFfmpegStatus();
 
@@ -121,7 +121,7 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
         return res.json(response);
       }
 
-      const { getCameraProxyService } = await import('../../../services/CameraProxyService');
+      const { getCameraProxyService } = await import('../../../services/CameraProxyService.js');
       const cameraProxyService = getCameraProxyService();
       let status = cameraProxyService.getStatusForContext(contextId);
 

@@ -6,8 +6,8 @@
  * available before any windows are created.
  */
 
-import { cameraIPCHandler } from '../camera-ipc-handler';
-import type { AppManagers } from './index';
+import { cameraIPCHandler } from '../camera-ipc-handler.js';
+import type { AppManagers } from './index.js';
 
 /**
  * Register camera IPC handlers

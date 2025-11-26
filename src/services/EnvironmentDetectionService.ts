@@ -122,7 +122,7 @@ class EnvironmentDetectionService {
         webUI: path.join(resourcesPath, 'renderer', 'index.html'),
         assets: path.join(resourcesPath, 'renderer'),
         static: path.join(resourcesPath, 'renderer'),
-        preload: path.join(appPath, 'lib', 'preload.js'),
+        preload: path.join(appPath, 'lib', 'preload.cjs'),
         webUIStatic: path.join(resourcesPath, 'webui', 'static')
       };
     } else {
@@ -131,7 +131,7 @@ class EnvironmentDetectionService {
         webUI: path.join(appPath, 'dist', 'renderer', 'index.html'),
         assets: path.join(appPath, 'dist', 'renderer'),
         static: path.join(appPath, 'dist', 'static'),
-        preload: path.join(appPath, 'lib', 'preload.js'),
+        preload: path.join(appPath, 'lib', 'preload.cjs'),
         webUIStatic: path.join(appPath, 'dist', 'webui', 'static')
       };
     }

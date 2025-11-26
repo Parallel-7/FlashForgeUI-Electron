@@ -19,8 +19,10 @@
 // Job Picker Dialog Renderer
 // Handles file grid display, selection, and thumbnail loading
 
-import type { AD5XJobInfo } from '../../types/printer-backend';
-import { logVerbose } from '../../utils/logging';
+import type { AD5XJobInfo } from '../../types/printer-backend/index.js';
+import { logVerbose } from '../../utils/logging.js';
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 // Global window type extension
 declare global {

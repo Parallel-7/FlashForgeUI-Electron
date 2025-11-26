@@ -55,7 +55,7 @@
 
 import * as path from 'path';
 import * as fs from 'fs/promises';
-import { getEnvironmentDetectionService, type PathResolutionResult } from './EnvironmentDetectionService';
+import { getEnvironmentDetectionService, type PathResolutionResult } from './EnvironmentDetectionService.js';
 
 /**
  * Types of static assets managed by the service

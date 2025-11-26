@@ -23,10 +23,10 @@
  * @exports TemperatureMonitoringService - Main temperature monitoring class
  */
 
-import { EventEmitter } from '../utils/EventEmitter';
-import type { PrinterPollingService } from './PrinterPollingService';
-import type { PrintStateMonitor } from './PrintStateMonitor';
-import type { PrinterStatus } from '../types/polling';
+import { EventEmitter } from '../utils/EventEmitter.js';
+import type { PrinterPollingService } from './PrinterPollingService.js';
+import type { PrintStateMonitor } from './PrintStateMonitor.js';
+import type { PrinterStatus } from '../types/polling.js';
 
 // ============================================================================
 // CONSTANTS

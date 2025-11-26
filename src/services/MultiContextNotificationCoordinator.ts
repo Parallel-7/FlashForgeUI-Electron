@@ -31,11 +31,11 @@
  */
 
 import { EventEmitter } from 'events';
-import { getPrinterContextManager } from '../managers/PrinterContextManager';
-import { getNotificationService, NotificationService } from './notifications/NotificationService';
-import { PrinterNotificationCoordinator } from './notifications/PrinterNotificationCoordinator';
-import type { PrintStateMonitor } from './PrintStateMonitor';
-import type { PrinterPollingService } from './PrinterPollingService';
+import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
+import { getNotificationService, NotificationService } from './notifications/NotificationService.js';
+import { PrinterNotificationCoordinator } from './notifications/PrinterNotificationCoordinator.js';
+import type { PrintStateMonitor } from './PrintStateMonitor.js';
+import type { PrinterPollingService } from './PrinterPollingService.js';
 
 /**
  * Manages notification coordinators for all printer contexts

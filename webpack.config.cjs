@@ -57,7 +57,12 @@ module.exports = {
   resolve: {
     extensions: ['.ts', '.tsx', '.js', '.jsx', '.json'],
     // Ensure node_modules are resolved correctly
-    modules: ['node_modules', path.resolve(__dirname, 'src')]
+    modules: ['node_modules', path.resolve(__dirname, 'src')],
+    extensionAlias: {
+      '.js': ['.ts', '.tsx', '.js'],
+      '.mjs': ['.mts', '.mjs'],
+      '.cjs': ['.cts', '.cjs']
+    }
   },
   
   // TypeScript and other loaders

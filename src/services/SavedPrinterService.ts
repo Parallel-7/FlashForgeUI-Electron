@@ -21,13 +21,13 @@
  */
 
 import { EventEmitter } from 'events';
-import { getPrinterDetailsManager } from '../managers/PrinterDetailsManager';
+import { getPrinterDetailsManager } from '../managers/PrinterDetailsManager.js';
 import {
   PrinterDetails,
   StoredPrinterDetails,
   SavedPrinterMatch,
   DiscoveredPrinter
-} from '../types/printer';
+} from '../types/printer.js';
 
 /**
  * Service responsible for managing saved printer configurations

@@ -15,11 +15,15 @@
  * @module ui/component-dialog/component-dialog
  */
 
+/// <reference types="../../types/global.d.ts" />
+
 // Component system imports
-import './component-dialog.css';
-import { ComponentManager } from '../components/ComponentManager';
-import { getComponentDefinition } from '../gridstack/ComponentRegistry';
-import { initializeLucideIconsFromGlobal } from '../shared/lucide';
+import './component-dialog.css' with { type: 'css' };
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
+import { ComponentManager } from '../components/ComponentManager.js';
+import { getComponentDefinition } from '../gridstack/ComponentRegistry.js';
+import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
 import {
   BaseComponent,
   CameraPreviewComponent,
@@ -32,10 +36,10 @@ import {
   ControlsGridComponent,
   FiltrationControlsComponent,
   SpoolmanComponent,
-} from '../components';
-import { parseLogEntry } from '../shared/log-panel';
-import type { ComponentUpdateData } from '../components/base/types';
-import type { PollingData } from '../../types/polling';
+} from '../components/index.js';
+import { parseLogEntry } from '../shared/log-panel/index.js';
+import type { ComponentUpdateData } from '../components/base/types.js';
+import type { PollingData } from '../../types/polling.js';
 
 // ============================================================================
 // STATE MANAGEMENT
@@ -256,7 +260,14 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('[ComponentDialog] DOM ready, setting up event listeners');
   window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
   setupEventListeners();
+  registerThemeListener();
 });
+
+function registerThemeListener(): void {
+  window.componentDialogAPI?.receive?.('theme-changed', (data: unknown) => {
+    applyDialogTheme(data as ThemeColors);
+  });
+}
 
 /**
  * Cleanup on window unload

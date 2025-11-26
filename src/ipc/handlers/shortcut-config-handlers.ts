@@ -16,9 +16,9 @@
  */
 
 import { ipcMain } from 'electron';
-import { createShortcutConfigDialog } from '../../windows/factories/ShortcutConfigWindowFactory';
-import { getWindowManager } from '../../windows/WindowManager';
-import type { ShortcutButtonConfig } from '../../ui/shortcuts/types';
+import { createShortcutConfigDialog } from '../../windows/factories/ShortcutConfigWindowFactory.js';
+import { getWindowManager } from '../../windows/WindowManager.js';
+import type { ShortcutButtonConfig } from '../../ui/shortcuts/types.js';
 
 // Import these will be implemented in renderer context
 // For now we'll handle them via IPC to renderer

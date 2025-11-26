@@ -43,6 +43,13 @@ contextBridge.exposeInMainWorld('logDialogAPI', {
   removeListeners: (): void => {
     ipcRenderer.removeAllListeners('log-dialog-new-message');
   }
+,
+  receive: (channel: string, func: (...args: unknown[]) => void): void => {
+    const validChannels = ['theme-changed'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (_event, ...args) => func(...args));
+    }
+  }
 });
 
 // Generic window controls for sub-windows (matches IFS dialog interface)

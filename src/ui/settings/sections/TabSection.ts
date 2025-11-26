@@ -7,7 +7,7 @@
 
 // src/ui/settings/sections/TabSection.ts
 
-import type { SettingsSection } from './SettingsSection';
+import type { SettingsSection } from './SettingsSection.js';
 
 interface TabSectionOptions {
   readonly document: Document;
@@ -20,8 +20,8 @@ export class TabSection implements SettingsSection {
   private tabButtons: HTMLButtonElement[] = [];
   private readonly tabPanels: Map<string, HTMLElement> = new Map();
   private activeTabId: string | null = null;
-  private buttonClickHandlers: Map<HTMLButtonElement, EventListener> = new Map();
-  private buttonKeyHandlers: Map<HTMLButtonElement, EventListener> = new Map();
+  private readonly buttonClickHandlers: Map<HTMLButtonElement, EventListener> = new Map();
+  private readonly buttonKeyHandlers: Map<HTMLButtonElement, EventListener> = new Map();
 
   constructor(options: TabSectionOptions) {
     this.doc = options.document;

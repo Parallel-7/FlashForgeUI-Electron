@@ -166,7 +166,7 @@ When adding new settings sections:
 | `npm run specs:list -- --type active|completed` | Lists AI spec Markdown files (top-level or archive) | Defaults to active specs; pass `--type completed` for `ai_specs/archive` |
 | `npm run knip` (+variants) | Dead code/dependency analysis | Expect intentional false positives (Electron patterns) |
 | `npm run build:*` | Build main / renderer / WebUI / platform packages | Only when user asks or when structural build impacts occur |
-| `npm run linecount` | PowerShell LOC summary | Informational only |
+| `npm run linecount` / `linecount -- --min-lines=N` | TypeScript LOC summary; optionally filter files with N+ lines | Informational only |
 
 ## Testing & Runtime Constraints
 
@@ -182,6 +182,14 @@ Agents **cannot**:
 - Perform visual/UI regression testing or multi-window click-throughs
 
 Call out unverified runtime assumptions explicitly in deliverables.
+
+In order to verify you are complete with a task, you go through this checklist:
+1. Run type checking, if there's errors iterate until they are fixed properly (no band-aids, etc)
+2. Once type checking passes, run build:renderer. This ensure webpack compiles without errors, and if there are any, iterate until they are fixed properly (no band-aids, etc)
+3. Once build:renderer passes, the final check is running lint. It's important to never ignore the errors, the more they pile up the harder it becomes to do cleanups/maintain the codebase.
+
+Do not say you are done with something despite not having run one/any of these checks, and the same if one fails. All must be ran and pass to ensure codebase quality and produciton readiness
+
 
 ## Recent Lessons
 

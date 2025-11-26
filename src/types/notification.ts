@@ -35,8 +35,8 @@
  * @module types/notification
  */
 
-import type { PrinterState } from './polling';
-import type { AppConfig } from './config';
+import type { PrinterState } from './polling.js';
+import type { AppConfig } from './config.js';
 
 // ============================================================================
 // BRANDED TYPES FOR TYPE SAFETY

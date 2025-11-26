@@ -24,7 +24,7 @@
  * @module types/camera/camera.types
  */
 
-import { PrinterFeatureSet } from '../printer-backend';
+import { PrinterFeatureSet } from '../printer-backend/index.js';
 
 /**
  * Camera source types

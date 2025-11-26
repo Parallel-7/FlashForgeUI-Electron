@@ -13,10 +13,10 @@
  * - No user interactions (display-only component)
  */
 
-import { BaseComponent } from '../base/component';
-import type { ComponentUpdateData } from '../base/types';
-import type { PrinterState, CumulativeStats } from '../../../types/polling';
-import { formatLength } from '../../../types/polling';
+import { BaseComponent } from '../base/component.js';
+import type { ComponentUpdateData } from '../base/types.js';
+import type { PrinterState, CumulativeStats } from '../../../types/polling.js';
+import { formatLength } from '../../../types/polling.js';
 import './printer-status.css';
 
 /**

@@ -29,7 +29,7 @@
 // src/ui/settings/settings-preload.ts
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type { AppConfig } from '../../types/config';
+import type { AppConfig, ThemeColors } from '../../types/config.js';
 
 // Ensure this file is treated as a module
 export {};
@@ -38,12 +38,25 @@ export {};
 contextBridge.exposeInMainWorld('settingsAPI', {
   requestConfig: () => ipcRenderer.invoke('settings-request-config'),
   saveConfig: (config: AppConfig) => ipcRenderer.invoke('settings-save-config', config),
+  saveDesktopTheme: (theme: ThemeColors) => ipcRenderer.invoke('settings:save-desktop-theme', theme),
   closeWindow: () => ipcRenderer.send('settings-close-window'),
+  send: (channel: string, data?: unknown) => ipcRenderer.send(channel, data),
+  receive: (channel: string, func: (...args: unknown[]) => void) => {
+    ipcRenderer.on(channel, (_event, ...args) => func(...args));
+  },
   receiveConfig: (callback: (config: AppConfig) => void) => {
     ipcRenderer.on('settings-config-data', (_event, config) => callback(config));
   },
+  onConfigUpdated: (callback: (config: AppConfig) => void) => {
+    ipcRenderer.on('config-updated-event', (_event, config) => callback(config));
+  },
+  performThemeProfileOperation: (uiType: 'desktop' | 'web', operation: 'add' | 'update' | 'delete', data: any) => {
+    ipcRenderer.send('theme-profile-operation', { uiType, operation, data });
+  },
   removeListeners: () => {
     ipcRenderer.removeAllListeners('settings-config-data');
+    ipcRenderer.removeAllListeners('config-updated-event');
+    ipcRenderer.removeAllListeners('theme-changed');
   },
   testSpoolmanConnection: (url: string) => ipcRenderer.invoke('spoolman:test-connection', url),
   testDiscordWebhook: (url: string) => ipcRenderer.invoke('discord:test-webhook', url),

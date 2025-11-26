@@ -63,7 +63,7 @@
  */
 
 import { z, ZodError, ZodSchema, ZodObject } from 'zod';
-import { AppError, fromZodError } from './error.utils';
+import { AppError, fromZodError } from './error.utils.js';
 
 // ============================================================================
 // VALIDATION RESULT TYPES

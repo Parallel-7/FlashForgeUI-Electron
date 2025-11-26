@@ -18,11 +18,11 @@
  */
 
 // Export all types
-export * from './ad5x-types';
+export * from './ad5x-types.js';
 
 // Export transformation functions
-export * from './ad5x-transforms';
+export * from './ad5x-transforms.js';
 
 // Export utility functions
-export * from './ad5x-utils';
+export * from './ad5x-utils.js';
 

@@ -15,7 +15,7 @@
  */
 
 import { ipcMain, app } from 'electron';
-import { getWindowManager } from '../windows/WindowManager';
+import { getWindowManager } from '../windows/WindowManager.js';
 
 /**
  * Setup window control IPC handlers for minimize, maximize, and close operations.

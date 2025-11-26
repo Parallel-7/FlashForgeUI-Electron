@@ -75,7 +75,7 @@ This document provides essential architectural information, development commands
 
 ### Utility Commands
 - `npm start` - Build and run the application
-- `npm run linecount` - Generate line count statistics
+- `npm run linecount` - Generate line count statistics (supports `-- --min-lines=N` to show only files with N+ lines)
 - `npm run clean` - Remove build artifacts
 
 ---

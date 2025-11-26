@@ -21,11 +21,14 @@
 // Ensure this file is treated as a module
 export {};
 
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
+
 // Extend Window interface to include our dialog API
 declare global {
     interface Window {
         dialogAPI?: {
-            receive: (channel: string, func: (options: DialogInitOptions) => void) => void;
+            receive?: (channel: string, func: (...args: unknown[]) => void) => void;
             submit: (result: string) => Promise<void>;
             cancel: () => Promise<void>;
         };
@@ -78,12 +81,15 @@ document.addEventListener('DOMContentLoaded', (): void => {
     }
 
     // Initialize dialog with options from main process
-    window.dialogAPI.receive('dialog-init', (options: DialogInitOptions): void => {
-        initializeDialog(elements, options);
+    window.dialogAPI.receive?.('dialog-init', (data: unknown): void => {
+        initializeDialog(elements, data as DialogInitOptions);
     });
 
     // Set up event handlers
     setupEventHandlers(elements);
+
+    // Register theme listener
+    registerThemeListener();
 });
 
 /**
@@ -219,5 +225,14 @@ function cancelDialog(): void {
     window.dialogAPI.cancel().catch((error) => {
         console.error('Error cancelling dialog:', error);
         // Dialog should still close even if cancellation fails
+    });
+}
+
+/**
+ * Register theme change listener
+ */
+function registerThemeListener(): void {
+    window.dialogAPI?.receive?.('theme-changed', (data: unknown) => {
+        applyDialogTheme(data as ThemeColors);
     });
 }

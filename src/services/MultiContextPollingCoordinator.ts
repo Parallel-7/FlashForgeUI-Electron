@@ -46,11 +46,11 @@
  */
 
 import { EventEmitter } from 'events';
-import { PrinterPollingService, POLLING_EVENTS } from './PrinterPollingService';
-import { getPrinterContextManager } from '../managers/PrinterContextManager';
-import type { PollingData, PollingConfig } from '../types/polling';
-import type { ContextSwitchEvent, ContextRemovedEvent } from '../types/PrinterContext';
-import { logVerbose } from '../utils/logging';
+import { PrinterPollingService, POLLING_EVENTS } from './PrinterPollingService.js';
+import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
+import type { PollingData, PollingConfig } from '../types/polling.js';
+import type { ContextSwitchEvent, ContextRemovedEvent } from '../types/PrinterContext.js';
+import { logVerbose } from '../utils/logging.js';
 
 // ============================================================================
 // CONFIGURATION CONSTANTS

@@ -21,17 +21,17 @@
  * to adhere to single responsibility principle.
  */
 
-import { EventEmitter } from '../utils/EventEmitter';
-import { printerDataTransformer } from './PrinterDataTransformer';
+import { EventEmitter } from '../utils/EventEmitter.js';
+import { printerDataTransformer } from './PrinterDataTransformer.js';
 import type { 
   PollingData, 
   PollingConfig, 
   PrinterStatus, 
   CurrentJobInfo, 
   MaterialStationStatus
-} from '../types/polling';
-import { DEFAULT_POLLING_CONFIG, createEmptyPollingData } from '../types/polling';
-import { logVerbose } from '../utils/logging';
+} from '../types/polling.js';
+import { DEFAULT_POLLING_CONFIG, createEmptyPollingData } from '../types/polling.js';
+import { logVerbose } from '../utils/logging.js';
 
 const POLLING_LOG_NAMESPACE = 'PrinterPollingService';
 

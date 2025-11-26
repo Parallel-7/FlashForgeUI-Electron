@@ -15,7 +15,11 @@
  * @module ui/spoolman-dialog/spoolman-dialog-renderer
  */
 
-import type { SpoolResponse, ActiveSpoolData } from '../../types/spoolman';
+/// <reference types="../../types/global.d.ts" />
+
+import type { SpoolResponse, ActiveSpoolData } from '../../types/spoolman.js';
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -40,7 +44,14 @@ let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
 let currentQuery = '';
 
 // Initialize on DOM load
+
+function registerThemeListener(): void {
+  window.dialogAPI?.receive?.('theme-changed', (data: unknown) => {
+    applyDialogTheme(data as ThemeColors);
+  });
+}
 document.addEventListener('DOMContentLoaded', () => {
+  registerThemeListener();
   console.log('[SpoolmanDialog] Renderer loaded');
 
   // Initialize Lucide icons
@@ -133,7 +144,7 @@ async function loadSpools(query: string): Promise<void> {
     }
 
     // Build search query with server-side filtering
-    const searchQuery: import('../../types/spoolman').SpoolSearchQuery = {
+    const searchQuery: import('../../types/spoolman.js').SpoolSearchQuery = {
       limit: 50,
       allow_archived: false,
     };

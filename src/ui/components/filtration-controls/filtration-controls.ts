@@ -14,10 +14,10 @@
  * - Visual feedback for active filtration mode
  */
 
-import { BaseComponent } from '../base/component';
-import type { ComponentUpdateData } from '../base/types';
-import type { FiltrationStatus, PrinterState } from '../../../types/polling';
-import { isActiveState } from '../../../types/polling';
+import { BaseComponent } from '../base/component.js';
+import type { ComponentUpdateData } from '../base/types.js';
+import type { FiltrationStatus, PrinterState } from '../../../types/polling.js';
+import { isActiveState } from '../../../types/polling.js';
 import './filtration-controls.css';
 
 /**

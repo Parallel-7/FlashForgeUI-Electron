@@ -4,6 +4,9 @@
 
 export {};
 
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
+
 interface RetryResult {
   connected: boolean;
   error?: string;
@@ -31,7 +34,14 @@ interface DialogElements {
 
 const ICONS = ['server-off', 'refresh-ccw', 'x'];
 
+
+function registerThemeListener(): void {
+  window.dialogAPI?.receive?.('theme-changed', (data: unknown) => {
+    applyDialogTheme(data as ThemeColors);
+  });
+}
 document.addEventListener('DOMContentLoaded', () => {
+  registerThemeListener();
   window.lucideHelpers?.initializeLucideIconsFromGlobal?.(ICONS);
   const elements: DialogElements = {
     statusMessage: document.getElementById('status-message'),

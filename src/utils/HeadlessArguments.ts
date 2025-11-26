@@ -11,7 +11,7 @@
  *   --headless --webui-port=3001 --webui-password=mypassword
  */
 
-import type { PrinterClientType } from '../types/printer';
+import type { PrinterClientType } from '../types/printer.js';
 
 /**
  * Specification for a single printer connection in headless mode

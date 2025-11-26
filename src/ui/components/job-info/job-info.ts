@@ -18,11 +18,11 @@
  * its own UI state while communicating with other components for camera control.
  */
 
-import { BaseComponent } from '../base/component';
-import type { ComponentUpdateData } from '../base/types';
-import type { PollingData, PrinterState, CurrentJobInfo } from '../../../types/polling';
-import { componentManager } from '../ComponentManager';
-import type { CameraPreviewComponent } from '../camera-preview/camera-preview';
+import { BaseComponent } from '../base/component.js';
+import type { ComponentUpdateData } from '../base/types.js';
+import type { PollingData, PrinterState, CurrentJobInfo } from '../../../types/polling.js';
+import { componentManager } from '../ComponentManager.js';
+import type { CameraPreviewComponent } from '../camera-preview/camera-preview.js';
 import './job-info.css';
 
 /**

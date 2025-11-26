@@ -6,4 +6,4 @@
  * the main 6x2 button interface for printer control operations.
  */
 
-export { ControlsGridComponent } from './controls-grid';
+export { ControlsGridComponent } from './controls-grid.js';

@@ -64,7 +64,7 @@ body {
 
 /* Header with gradient background - use responsive padding */
 .dialog-header {
-    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
+    background: var(--theme-surface);
     color: white;
     padding: 16px 24px; /* Default to compact size for title-only dialogs */
     text-align: center;
@@ -158,7 +158,7 @@ body {
     justify-content: flex-end;
     align-items: center;
     border-top: var(--ui-border);
-    background: #353535;
+    background: var(--theme-surface);
     flex-shrink: 0;
     gap: 10px;
     border-bottom-left-radius: var(--footer-border-radius-bottom);
@@ -175,8 +175,8 @@ body {
 button,
 .btn-secondary,
 .dialog-button {
-    background: #666;
-    color: white;
+    background: var(--theme-surface);
+    color: var(--theme-text);
     border: 1px solid #777;
     padding: 8px 16px;
     border-radius: 6px;

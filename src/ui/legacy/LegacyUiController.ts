@@ -7,7 +7,7 @@
  * controller only keeps the shared chrome responsibilities.
  */
 
-import { initializeUIAnimations } from '../../services/ui-updater';
+import { initializeUIAnimations } from '../../services/ui-updater.js';
 
 const MAIN_MENU_ACTIONS = ['connect', 'settings', 'status', 'ifs', 'pin-config', 'about'] as const;
 type MainMenuAction = typeof MAIN_MENU_ACTIONS[number];

@@ -12,7 +12,7 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type { SpoolSearchQuery, SpoolResponse, ActiveSpoolData } from '../../types/spoolman';
+import type { SpoolSearchQuery, SpoolResponse, ActiveSpoolData } from '../../types/spoolman.js';
 
 // Expose safe API to renderer
 contextBridge.exposeInMainWorld('spoolmanDialogAPI', {
@@ -33,14 +33,11 @@ contextBridge.exposeInMainWorld('spoolmanDialogAPI', {
   selectSpool: (spool: ActiveSpoolData): Promise<void> => {
     return ipcRenderer.invoke('spoolman:select-spool', spool);
   },
-});
 
-// Type augmentation for window
-declare global {
-  interface Window {
-    spoolmanDialogAPI: {
-      searchSpools: (query: SpoolSearchQuery) => Promise<SpoolResponse[]>;
-      selectSpool: (spool: ActiveSpoolData) => Promise<void>;
-    };
+  receive: (channel: string, func: (...args: unknown[]) => void): void => {
+    const validChannels = ['theme-changed'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (_event, ...args) => func(...args));
+    }
   }
-}
+});

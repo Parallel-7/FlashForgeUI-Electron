@@ -28,17 +28,17 @@
 import { EventEmitter } from 'events';
 import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
 
-import { getConfigManager } from './ConfigManager';
-import { getLoadingManager } from './LoadingManager';
-import { getPrinterBackendManager } from './PrinterBackendManager';
-import { getPrinterContextManager } from './PrinterContextManager';
-import { getPrinterDiscoveryService } from '../services/PrinterDiscoveryService';
-import { getThumbnailRequestQueue } from '../services/ThumbnailRequestQueue';
-import { getSavedPrinterService } from '../services/SavedPrinterService';
-import { getAutoConnectService } from '../services/AutoConnectService';
-import { getConnectionStateManager } from '../services/ConnectionStateManager';
-import { getDialogIntegrationService } from '../services/DialogIntegrationService';
-import { getConnectionEstablishmentService } from '../services/ConnectionEstablishmentService';
+import { getConfigManager } from './ConfigManager.js';
+import { getLoadingManager } from './LoadingManager.js';
+import { getPrinterBackendManager } from './PrinterBackendManager.js';
+import { getPrinterContextManager } from './PrinterContextManager.js';
+import { getPrinterDiscoveryService } from '../services/PrinterDiscoveryService.js';
+import { getThumbnailRequestQueue } from '../services/ThumbnailRequestQueue.js';
+import { getSavedPrinterService } from '../services/SavedPrinterService.js';
+import { getAutoConnectService } from '../services/AutoConnectService.js';
+import { getConnectionStateManager } from '../services/ConnectionStateManager.js';
+import { getDialogIntegrationService } from '../services/DialogIntegrationService.js';
+import { getConnectionEstablishmentService } from '../services/ConnectionEstablishmentService.js';
 
 import {
   PrinterDetails,
@@ -46,7 +46,7 @@ import {
   ConnectionResult,
   PrinterConnectionState,
   ConnectionOptions
-} from '../types/printer';
+} from '../types/printer.js';
 
 import {
   detectPrinterFamily,
@@ -56,7 +56,7 @@ import {
   shouldPromptForCheckCode,
   getDefaultCheckCode,
   detectPrinterModelType
-} from '../utils/PrinterUtils';
+} from '../utils/PrinterUtils.js';
 
 // Input dialog options interface (matching preload.ts)
 interface InputDialogOptions {
@@ -385,7 +385,7 @@ export class ConnectionFlowManager extends EventEmitter {
           case 'show-saved-printers': {
             // Create mock matches for all saved printers (they're offline)
             const allSavedPrinters = this.savedPrinterService.getSavedPrinters();
-            const savedMatches = allSavedPrinters.map((savedPrinter: import('../types/printer').StoredPrinterDetails) => ({
+            const savedMatches = allSavedPrinters.map((savedPrinter: import('../types/printer.js').StoredPrinterDetails) => ({
               savedDetails: savedPrinter,
               discoveredPrinter: null, // Not discovered online
               ipAddressChanged: false
@@ -496,7 +496,7 @@ export class ConnectionFlowManager extends EventEmitter {
   }
 
   /** Auto-connect to a matched saved printer */
-  private async autoConnectToMatch(match: import('../types/printer').SavedPrinterMatch): Promise<ConnectionResult> {
+  private async autoConnectToMatch(match: import('../types/printer.js').SavedPrinterMatch): Promise<ConnectionResult> {
     const { savedDetails, discoveredPrinter, ipAddressChanged } = match;
     
     // If discoveredPrinter is null, this printer is offline
@@ -797,7 +797,7 @@ export class ConnectionFlowManager extends EventEmitter {
       }
 
       // Validate IP address format
-      const { IPAddressSchema } = await import('../utils/validation.utils');
+      const { IPAddressSchema } = await import('../utils/validation.utils.js');
       const validation = IPAddressSchema.safeParse(ipAddress.trim());
       if (!validation.success) {
         this.loadingManager.showError('Invalid IP address format', 3000);
@@ -848,7 +848,7 @@ export class ConnectionFlowManager extends EventEmitter {
     try {
       // Find all saved printers and create mock matches (they're not online)
       const allSavedPrinters = this.savedPrinterService.getSavedPrinters();
-      const savedMatches = allSavedPrinters.map((savedPrinter: import('../types/printer').StoredPrinterDetails) => ({
+      const savedMatches = allSavedPrinters.map((savedPrinter: import('../types/printer.js').StoredPrinterDetails) => ({
         savedDetails: savedPrinter,
         discoveredPrinter: null, // Not discovered online
         ipAddressChanged: false
@@ -1130,7 +1130,7 @@ export class ConnectionFlowManager extends EventEmitter {
    * @returns Array of successfully connected contexts with their IDs
    */
   public async connectHeadlessDirect(
-    printerSpecs: Array<{ ip: string; type: import('../types/printer').PrinterClientType; checkCode?: string }>
+    printerSpecs: Array<{ ip: string; type: import('../types/printer.js').PrinterClientType; checkCode?: string }>
   ): Promise<{ contextId: string; ip: string }[]> {
     const connectedContexts: { contextId: string; ip: string }[] = [];
 

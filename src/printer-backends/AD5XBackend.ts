@@ -19,7 +19,7 @@
  * multi-color job preparation using the integrated filament feeding system.
  */
 
-import { DualAPIBackend } from './DualAPIBackend';
+import { DualAPIBackend } from './DualAPIBackend.js';
 import {
   PrinterFeatureSet,
   MaterialStationStatus,
@@ -28,11 +28,11 @@ import {
   JobListResult,
   JobStartResult,
   JobOperationParams
-} from '../types/printer-backend';
+} from '../types/printer-backend/index.js';
 import {
   isAD5XMachineInfo,
   extractMaterialStationStatus
-} from './ad5x';
+} from './ad5x/index.js';
 import type { AD5XMaterialMapping, AD5XUploadParams } from '@ghosttypes/ff-api';
 import * as path from 'path';
 

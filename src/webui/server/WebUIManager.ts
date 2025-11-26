@@ -23,31 +23,31 @@ import * as http from 'http';
 import express from 'express';
 import * as os from 'os';
 import { app, dialog, BrowserWindow } from 'electron';
-import { getConfigManager } from '../../managers/ConfigManager';
-import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager';
-import { getPrinterBackendManager } from '../../managers/PrinterBackendManager';
-import { getEnvironmentDetectionService } from '../../services/EnvironmentDetectionService';
+import { getConfigManager } from '../../managers/ConfigManager.js';
+import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager.js';
+import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.js';
+import { getEnvironmentDetectionService } from '../../services/EnvironmentDetectionService.js';
 
-import { AppError, ErrorCode } from '../../utils/error.utils';
-import { getAuthManager } from './AuthManager';
+import { AppError, ErrorCode } from '../../utils/error.utils.js';
+import { getAuthManager } from './AuthManager.js';
 import {
   createAuthMiddleware,
   createErrorMiddleware,
   createRequestLogger,
   createLoginRateLimiter,
   AuthenticatedRequest
-} from './auth-middleware';
+} from './auth-middleware.js';
 import { 
   WebUILoginRequestSchema
-} from '../schemas/web-api.schemas';
-import { StandardAPIResponse } from '../types/web-api.types';
-import { createAPIRoutes, buildRouteDependencies } from './api-routes';
-import { getWebSocketManager } from './WebSocketManager';
-import { getRtspStreamService } from '../../services/RtspStreamService';
-import type { PollingData } from '../../types/polling';
-import { isHeadlessMode } from '../../utils/HeadlessDetection';
-import type { WebUILoginResponse } from '../types/web-api.types';
-import { registerPublicThemeRoutes } from './routes/theme-routes';
+} from '../schemas/web-api.schemas.js';
+import { StandardAPIResponse } from '../types/web-api.types.js';
+import { createAPIRoutes, buildRouteDependencies } from './api-routes.js';
+import { getWebSocketManager } from './WebSocketManager.js';
+import { getRtspStreamService } from '../../services/RtspStreamService.js';
+import type { PollingData } from '../../types/polling.js';
+import { isHeadlessMode } from '../../utils/HeadlessDetection.js';
+import type { WebUILoginResponse } from '../types/web-api.types.js';
+import { registerPublicThemeRoutes } from './routes/theme-routes.js';
 
 /**
  * Branded type for WebUIManager singleton
@@ -673,7 +673,7 @@ export class WebUIManager extends EventEmitter {
    */
   private async handleStartupError(error: unknown): Promise<void> {
     const { app, dialog } = await import('electron');
-    const { AppError, ErrorCode } = await import('../../utils/error.utils');
+    const { AppError, ErrorCode } = await import('../../utils/error.utils.js');
     
     // Convert to AppError for consistent handling
     const appError = error instanceof AppError ? error : new AppError(

@@ -16,9 +16,9 @@
  * - Follows component-scoped CSS patterns
  */
 
-import { BaseComponent } from '../base/component';
-import type { ComponentUpdateData } from '../base/types';
-import type { PollingData } from '../../../types/polling';
+import { BaseComponent } from '../base/component.js';
+import type { ComponentUpdateData } from '../base/types.js';
+import type { PollingData } from '../../../types/polling.js';
 import './model-preview.css';
 
 /**

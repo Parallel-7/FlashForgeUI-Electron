@@ -18,47 +18,47 @@
  */
 
 // CRITICAL: Bootstrap must be imported FIRST to set app name before any singletons are created
-import './bootstrap';
+import './bootstrap.js';
 
 import { app, BrowserWindow, dialog, powerSaveBlocker, ipcMain } from 'electron';
-import { getConfigManager } from './managers/ConfigManager';
-import { getPrinterConnectionManager } from './managers/ConnectionFlowManager';
-import { getPrinterBackendManager } from './managers/PrinterBackendManager';
-import { getPrinterContextManager } from './managers/PrinterContextManager';
-import { getWindowManager } from './windows/WindowManager';
-import { setupWindowControlHandlers } from './ipc/WindowControlHandlers';
-import { setupDialogHandlers } from './ipc/DialogHandlers';
-import { registerAllIpcHandlers } from './ipc/handlers';
-import { setupPrinterContextHandlers, setupConnectionStateHandlers, setupCameraContextHandlers } from './ipc/printer-context-handlers';
-import type { PollingData } from './types/polling';
+import { getConfigManager } from './managers/ConfigManager.js';
+import { getPrinterConnectionManager } from './managers/ConnectionFlowManager.js';
+import { getPrinterBackendManager } from './managers/PrinterBackendManager.js';
+import { getPrinterContextManager } from './managers/PrinterContextManager.js';
+import { getWindowManager } from './windows/WindowManager.js';
+import { setupWindowControlHandlers } from './ipc/WindowControlHandlers.js';
+import { setupDialogHandlers } from './ipc/DialogHandlers.js';
+import { registerAllIpcHandlers } from './ipc/handlers/index.js';
+import { setupPrinterContextHandlers, setupConnectionStateHandlers, setupCameraContextHandlers } from './ipc/printer-context-handlers.js';
+import type { PollingData } from './types/polling.js';
 // import { getMainProcessPollingCoordinator } from './services/MainProcessPollingCoordinator';
-import { getMultiContextPollingCoordinator } from './services/MultiContextPollingCoordinator';
-import { getMultiContextPrintStateMonitor } from './services/MultiContextPrintStateMonitor';
-import { getMultiContextNotificationCoordinator } from './services/MultiContextNotificationCoordinator';
-import { getMultiContextTemperatureMonitor } from './services/MultiContextTemperatureMonitor';
-import { getMultiContextSpoolmanTracker } from './services/MultiContextSpoolmanTracker';
-import { getCameraProxyService } from './services/CameraProxyService';
-import { getRtspStreamService } from './services/RtspStreamService';
-import { cameraIPCHandler } from './ipc/camera-ipc-handler';
-import { getWebUIManager } from './webui/server/WebUIManager';
-import { getEnvironmentDetectionService } from './services/EnvironmentDetectionService';
-import { getStaticFileManager } from './services/StaticFileManager';
-import { initializeNotificationSystem, disposeNotificationSystem } from './services/notifications';
-import { getThumbnailCacheService } from './services/ThumbnailCacheService';
-import { injectUIStyleVariables } from './utils/CSSVariables';
-import { getRoundedUIUnsupportedReason, isRoundedUISupported, type RoundedUIUnsupportedReason } from './utils/RoundedUICompatibility';
-import { parseHeadlessArguments, validateHeadlessConfig } from './utils/HeadlessArguments';
-import type { SpoolmanOfflineEvent, SpoolmanOnlineEvent } from './services/SpoolmanHealthMonitor';
-import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection';
-import { getHeadlessManager } from './managers/HeadlessManager';
-import { getLoadingManager } from './managers/LoadingManager';
-import { getAutoUpdateService } from './services/AutoUpdateService';
-import { initializeSpoolmanIntegrationService, getSpoolmanIntegrationService } from './services/SpoolmanIntegrationService';
-import type { SpoolmanIntegrationService } from './services/SpoolmanIntegrationService';
-import { getDiscordNotificationService } from './services/discord';
-import { getSpoolmanHealthMonitor } from './services/SpoolmanHealthMonitor';
-import { showSpoolmanOfflineDialog, hideSpoolmanOfflineDialog } from './windows/dialogs/SpoolmanOfflineDialog';
-import type { PrinterCooledEvent } from './services/MultiContextTemperatureMonitor';
+import { getMultiContextPollingCoordinator } from './services/MultiContextPollingCoordinator.js';
+import { getMultiContextPrintStateMonitor } from './services/MultiContextPrintStateMonitor.js';
+import { getMultiContextNotificationCoordinator } from './services/MultiContextNotificationCoordinator.js';
+import { getMultiContextTemperatureMonitor } from './services/MultiContextTemperatureMonitor.js';
+import { getMultiContextSpoolmanTracker } from './services/MultiContextSpoolmanTracker.js';
+import { getCameraProxyService } from './services/CameraProxyService.js';
+import { getRtspStreamService } from './services/RtspStreamService.js';
+import { cameraIPCHandler } from './ipc/camera-ipc-handler.js';
+import { getWebUIManager } from './webui/server/WebUIManager.js';
+import { getEnvironmentDetectionService } from './services/EnvironmentDetectionService.js';
+import { getStaticFileManager } from './services/StaticFileManager.js';
+import { initializeNotificationSystem, disposeNotificationSystem } from './services/notifications/index.js';
+import { getThumbnailCacheService } from './services/ThumbnailCacheService.js';
+import { injectUIStyleVariables } from './utils/CSSVariables.js';
+import { getRoundedUIUnsupportedReason, isRoundedUISupported, type RoundedUIUnsupportedReason } from './utils/RoundedUICompatibility.js';
+import { parseHeadlessArguments, validateHeadlessConfig } from './utils/HeadlessArguments.js';
+import type { SpoolmanOfflineEvent, SpoolmanOnlineEvent } from './services/SpoolmanHealthMonitor.js';
+import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection.js';
+import { getHeadlessManager } from './managers/HeadlessManager.js';
+import { getLoadingManager } from './managers/LoadingManager.js';
+import { getAutoUpdateService } from './services/AutoUpdateService.js';
+import { initializeSpoolmanIntegrationService, getSpoolmanIntegrationService } from './services/SpoolmanIntegrationService.js';
+import type { SpoolmanIntegrationService } from './services/SpoolmanIntegrationService.js';
+import { getDiscordNotificationService } from './services/discord/index.js';
+import { getSpoolmanHealthMonitor } from './services/SpoolmanHealthMonitor.js';
+import { showSpoolmanOfflineDialog, hideSpoolmanOfflineDialog } from './windows/dialogs/SpoolmanOfflineDialog.js';
+import type { PrinterCooledEvent } from './services/MultiContextTemperatureMonitor.js';
 
 /**
  * Main Electron process entry point. Handles app lifecycle, creates the main window,
@@ -391,7 +391,7 @@ const setupSpoolmanEventForwarding = (): void => {
 
   // Forward spoolman-changed events to all renderer windows
   spoolmanService.on('spoolman-changed', (event: unknown) => {
-    const spoolmanEvent = event as import('./services/SpoolmanIntegrationService').SpoolmanChangedEvent;
+    const spoolmanEvent = event as import('./services/SpoolmanIntegrationService.js').SpoolmanChangedEvent;
 
     // Forward to main window
     const mainWindow = windowManager.getMainWindow();
@@ -448,7 +448,7 @@ const setupPrinterContextEventForwarding = (): void => {
 
   // Forward context-created events to renderer
   contextManager.on('context-created', (event: unknown) => {
-    const contextEvent = event as import('./types/PrinterContext').ContextCreatedEvent;
+    const contextEvent = event as import('./types/PrinterContext.js').ContextCreatedEvent;
 
     console.log('[Context Event] Received context-created:', JSON.stringify(contextEvent, null, 2));
 

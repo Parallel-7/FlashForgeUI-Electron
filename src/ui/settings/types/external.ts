@@ -4,14 +4,30 @@
 
 // src/ui/settings/types/external.ts
 
-import type { AppConfig } from '../../../types/config';
+import type {
+  AppConfig,
+  ThemeColors,
+  ThemeProfileAddData,
+  ThemeProfileUpdateData,
+  ThemeProfileDeleteData,
+} from '../../../types/config.js';
+
+export type ThemeProfileOperationData =
+  | ThemeProfileAddData
+  | ThemeProfileUpdateData
+  | ThemeProfileDeleteData;
 
 export interface ISettingsAPI {
   requestConfig: () => Promise<AppConfig>;
   saveConfig: (config: Partial<AppConfig>) => Promise<boolean>;
+  saveDesktopTheme?: (theme: ThemeColors) => Promise<boolean>;
   closeWindow: () => void;
+  send?: (channel: string, data?: unknown) => void;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
   receiveConfig: (callback: (config: AppConfig) => void) => void;
+  onConfigUpdated: (callback: (config: AppConfig) => void) => void;
   removeListeners: () => void;
+  performThemeProfileOperation: (uiType: 'desktop' | 'web', operation: 'add' | 'update' | 'delete', data: ThemeProfileOperationData) => void;
   testSpoolmanConnection: (url: string) => Promise<{ connected: boolean; error?: string }>;
   testDiscordWebhook: (url: string) => Promise<{ success: boolean; error?: string }>;
   getRoundedUISupportInfo: () => Promise<RoundedUISupportInfo>;

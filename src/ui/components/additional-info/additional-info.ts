@@ -14,9 +14,9 @@
  * - No user interactions (display-only component)
  */
 
-import { BaseComponent } from '../base/component';
-import type { ComponentUpdateData } from '../base/types';
-import type { PrinterSettings } from '../../../types/polling';
+import { BaseComponent } from '../base/component.js';
+import type { ComponentUpdateData } from '../base/types.js';
+import type { PrinterSettings } from '../../../types/polling.js';
 import './additional-info.css';
 
 /**

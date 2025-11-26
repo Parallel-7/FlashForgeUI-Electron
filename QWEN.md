@@ -38,7 +38,7 @@ The project uses TypeScript for both main and renderer processes with separate t
 - `docs:check` - Check file overview documentation
 - `docs:combine` - Combine file overview documentation
 - `docs:clean` - Clean file overview documentation
-- `linecount` - Count lines of code
+- `linecount` - Count lines of code (supports `-- --min-lines=N` to filter by minimum line count)
 
 ### Project Structure
 The project follows a modular architecture with separate directories for different concerns:

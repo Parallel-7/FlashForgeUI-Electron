@@ -8,7 +8,7 @@ You MUST follow these steps:
    - `npm run type-check` to collect TypeScript errors
    - `npm run lint` to collect linting errors/warnings
    - `npm run docs:check` to collect files missing documentation
-   - `npm run linecount` to collect information about oversized files
+   - `npm run linecount -- --min-lines=200` to collect information about oversized files (adjust threshold as needed)
 
 2. Analyze results and present findings:
 

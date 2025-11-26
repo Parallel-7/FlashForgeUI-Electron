@@ -26,7 +26,7 @@ import {
   MaterialStationStatus, 
   MaterialSlotInfo, 
   AD5XMaterialMapping 
-} from './ad5x-types';
+} from './ad5x-types.js';
 
 /**
  * Transform ff-api MatlStationInfo to our MaterialStationStatus

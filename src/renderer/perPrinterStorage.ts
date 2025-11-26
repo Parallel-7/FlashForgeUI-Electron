@@ -2,10 +2,10 @@
  * @fileoverview Helper utilities for per-printer layout and shortcut persistence.
  */
 
-import { layoutPersistence } from '../ui/gridstack/LayoutPersistence';
-import { shortcutConfigManager } from '../ui/shortcuts/ShortcutConfigManager';
-import type { LayoutConfig } from '../ui/gridstack/types';
-import type { ShortcutButtonConfig } from '../ui/shortcuts/types';
+import { layoutPersistence } from '../ui/gridstack/LayoutPersistence.js';
+import { shortcutConfigManager } from '../ui/shortcuts/ShortcutConfigManager.js';
+import type { LayoutConfig } from '../ui/gridstack/types.js';
+import type { ShortcutButtonConfig } from '../ui/shortcuts/types.js';
 
 const toStorageKey = (serial?: string | null): string | undefined => serial ?? undefined;
 

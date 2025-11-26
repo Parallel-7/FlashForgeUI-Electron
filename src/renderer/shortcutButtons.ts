@@ -5,18 +5,18 @@
  * and grid reloads when pins change.
  */
 
-import { componentManager } from '../ui/components';
-import { gridStackManager } from '../ui/gridstack/GridStackManager';
-import { getComponentDefinition, getAllComponents } from '../ui/gridstack/ComponentRegistry';
-import { DEFAULT_SHORTCUT_CONFIG, type ShortcutButtonConfig } from '../ui/shortcuts/types';
-import { logMessage } from './logging';
+import { componentManager } from '../ui/components/index.js';
+import { gridStackManager } from '../ui/gridstack/GridStackManager.js';
+import { getComponentDefinition, getAllComponents } from '../ui/gridstack/ComponentRegistry.js';
+import { DEFAULT_SHORTCUT_CONFIG, type ShortcutButtonConfig } from '../ui/shortcuts/types.js';
+import { logMessage } from './logging.js';
 import {
   loadLayoutForSerial,
   loadShortcutsForSerial,
   saveLayoutForSerial,
   saveShortcutsForSerial
-} from './perPrinterStorage';
-import type { RendererGridController } from './gridController';
+} from './perPrinterStorage.js';
+import type { RendererGridController } from './gridController.js';
 
 interface ShortcutButtonDependencies {
   getActiveSerial: () => string | null;

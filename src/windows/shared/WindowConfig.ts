@@ -72,14 +72,17 @@
  */
 
 import { BrowserWindow, WebPreferences } from 'electron';
-import * as path from 'path';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { 
   WindowDimensions, 
   PreloadPath, 
   createPreloadPath,
   WINDOW_SIZES 
-} from './WindowTypes';
-import { getUIWindowOptions, injectUIStyleVariables } from '../../utils/CSSVariables';
+} from './WindowTypes.js';
+import { getUIWindowOptions, injectUIStyleVariables } from '../../utils/CSSVariables.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Create standardized secure web preferences for all windows
@@ -161,7 +164,7 @@ export const createModalWindow = (
  */
 export const createUIPreloadPath = (componentName: string): PreloadPath => {
   return createPreloadPath(
-    path.join(__dirname, `../../ui/${componentName}/${componentName}-preload.js`)
+    path.join(__dirname, `../../ui/${componentName}/${componentName}-preload.cjs`)
   );
 };
 
