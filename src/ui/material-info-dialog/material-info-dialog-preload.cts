@@ -65,4 +65,8 @@ const materialInfoDialogAPI = {
 } as const;
 
 // Expose secure API to renderer process
-contextBridge.exposeInMainWorld('materialInfoDialogAPI', materialInfoDialogAPI); 
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    materialInfo: materialInfoDialogAPI
+  }
+});

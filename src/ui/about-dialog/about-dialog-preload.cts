@@ -27,7 +27,7 @@ export interface AboutDialogInfo {
   readonly links: readonly AboutDialogLink[];
 }
 
-contextBridge.exposeInMainWorld('aboutAPI', {
+const aboutDialogAPI = {
   getAppInfo: async (): Promise<AboutDialogInfo | null> => {
     try {
       const result = await ipcRenderer.invoke('about-dialog:get-info');
@@ -55,5 +55,11 @@ contextBridge.exposeInMainWorld('aboutAPI', {
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
+  }
+} as const;
+
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    about: aboutDialogAPI
   }
 });

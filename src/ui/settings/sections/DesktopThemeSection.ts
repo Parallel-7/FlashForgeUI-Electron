@@ -18,18 +18,13 @@
 import type { ThemeColors, ThemeProfile } from '../../../types/config.js';
 import type { ThemeProfileOperationData, ISettingsAPI } from '../types/external.js';
 
-declare global {
-  interface Window {
-    settingsAPI?: ISettingsAPI;
-  }
-}
-
 interface DesktopThemeSectionOptions {
   readonly document: Document;
   readonly defaultTheme: ThemeColors;
   readonly onThemeChange: (theme: ThemeColors, saveImmediately: boolean, context?: string) => void;
   readonly onProfileOperation: (operation: 'add' | 'update' | 'delete', profileData: ThemeProfileOperationData) => void;
   getThemeProfiles: () => readonly ThemeProfile[];
+  readonly settingsAPI?: ISettingsAPI;
 }
 
 type ThemeColorKey = keyof ThemeColors;
@@ -49,6 +44,7 @@ const THEME_INPUT_CONFIG: Array<[ThemeColorKey, string]> = [
 export class DesktopThemeSection {
   private readonly doc: Document;
   private readonly defaultTheme: ThemeColors;
+  private readonly settingsAPI?: ISettingsAPI;
   private readonly notifyThemeChange: (theme: ThemeColors, saveImmediately: boolean, context?: string) => void;
   private readonly notifyProfileOperation: (operation: 'add' | 'update' | 'delete', profileData: ThemeProfileOperationData) => void;
   private readonly getThemeProfiles: () => readonly ThemeProfile[];
@@ -99,6 +95,7 @@ export class DesktopThemeSection {
   constructor(options: DesktopThemeSectionOptions) {
     this.doc = options.document;
     this.defaultTheme = options.defaultTheme;
+    this.settingsAPI = options.settingsAPI;
     this.notifyThemeChange = options.onThemeChange;
     this.notifyProfileOperation = options.onProfileOperation;
     this.getThemeProfiles = options.getThemeProfiles;
@@ -302,9 +299,7 @@ export class DesktopThemeSection {
     this.renderThemeProfiles();
 
     // Broadcast theme change to all open windows (main window + dialogs)
-    if (window.settingsAPI?.send) {
-      window.settingsAPI.send('theme-updated', theme);
-    }
+    this.settingsAPI?.send?.('theme-updated', theme);
   }
 
   private updateNativeInputValue(key: ThemeColorKey, value: string): void {

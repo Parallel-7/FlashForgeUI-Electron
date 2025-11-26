@@ -41,6 +41,20 @@ import { parseLogEntry } from '../shared/log-panel/index.js';
 import type { ComponentUpdateData } from '../components/base/types.js';
 import type { PollingData } from '../../types/polling.js';
 
+interface ComponentDialogBridge {
+  receive: (channel: 'component-dialog:init' | 'polling-update' | 'theme-changed', func: (data: unknown) => void) => (() => void) | undefined;
+  send: (channel: 'component-dialog:close', ...data: unknown[]) => void;
+  invoke: (channel: 'component-dialog:get-info', ...data: unknown[]) => Promise<unknown>;
+}
+
+const getComponentDialogAPI = (): ComponentDialogBridge => {
+  const api = window.api?.dialog?.component as ComponentDialogBridge | undefined;
+  if (!api) {
+    throw new Error('[ComponentDialog] API bridge is not available');
+  }
+  return api;
+};
+
 // ============================================================================
 // STATE MANAGEMENT
 // ============================================================================
@@ -114,7 +128,10 @@ async function initializeDialog(componentId: string): Promise<void> {
     await initializeComponentIntegrations(componentId, component);
 
     // Send initial config update to component
-    const config = await window.api.requestConfig();
+    if (!window.api?.config) {
+      throw new Error('Config API unavailable');
+    }
+    const config = await window.api.config.get();
     const updateData: ComponentUpdateData = {
       config: config,
       timestamp: new Date().toISOString()
@@ -172,7 +189,6 @@ function createComponentInstance(componentId: string, container: HTMLElement) {
 function setupEventListeners(): void {
   console.log('[ComponentDialog] Setting up event listeners');
 
-  // Close button
   const closeBtn = document.getElementById('btn-close');
   if (closeBtn) {
     closeBtn.addEventListener('click', () => {
@@ -181,9 +197,10 @@ function setupEventListeners(): void {
     });
   }
 
-  // Listen for polling updates from main process
-  if (window.componentDialogAPI) {
-    window.componentDialogAPI.receive('polling-update', (payload: unknown) => {
+  try {
+    const api = getComponentDialogAPI();
+
+    const pollingDisposer = api.receive('polling-update', (payload: unknown) => {
       if (!isPollingData(payload)) {
         console.warn('[ComponentDialog] Ignoring invalid polling update payload', payload);
         return;
@@ -200,15 +217,18 @@ function setupEventListeners(): void {
         };
 
         dialogComponentManager.updateAll(updateData);
+        if (pollingData?.logMessages && Array.isArray(pollingData.logMessages)) {
+          updateLogPanelComponent(pollingData.logMessages);
+        }
+      } else {
+        console.log('[ComponentDialog] Components not initialized, ignoring polling data');
       }
     });
-  } else {
-    console.warn('[ComponentDialog] window.componentDialogAPI not available');
-  }
+    if (pollingDisposer) {
+      cleanupCallbacks.push(pollingDisposer);
+    }
 
-  // Listen for initialization from main process
-  if (window.componentDialogAPI) {
-    window.componentDialogAPI.receive('component-dialog:init', async (data: unknown) => {
+    const initDisposer = api.receive('component-dialog:init', async (data: unknown) => {
       const componentId = data as string;
       if (typeof componentId === 'string') {
         await initializeDialog(componentId);
@@ -216,6 +236,18 @@ function setupEventListeners(): void {
         console.error('[ComponentDialog] Invalid component ID received:', data);
       }
     });
+    if (initDisposer) {
+      cleanupCallbacks.push(initDisposer);
+    }
+
+    const themeDisposer = api.receive('theme-changed', (payload: unknown) => {
+      applyDialogTheme(payload as ThemeColors);
+    });
+    if (themeDisposer) {
+      cleanupCallbacks.push(themeDisposer);
+    }
+  } catch (error) {
+    console.error('[ComponentDialog] API unavailable:', error);
   }
 }
 
@@ -260,14 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('[ComponentDialog] DOM ready, setting up event listeners');
   window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
   setupEventListeners();
-  registerThemeListener();
 });
-
-function registerThemeListener(): void {
-  window.componentDialogAPI?.receive?.('theme-changed', (data: unknown) => {
-    applyDialogTheme(data as ThemeColors);
-  });
-}
 
 /**
  * Cleanup on window unload
@@ -355,6 +380,25 @@ async function setupLogPanelIntegration(logPanel: LogPanelComponent): Promise<vo
   cleanupCallbacks.push(() => window.api.removeListener('log-dialog-cleared'));
 }
 
+function updateLogPanelComponent(logMessages: unknown[]): void {
+  const logPanel = dialogComponentManager.getComponent<LogPanelComponent>('log-panel');
+  if (!logPanel || !(logPanel instanceof LogPanelComponent)) {
+    return;
+  }
+
+  const entries = logMessages
+    .map((entry) => parseLogEntry(entry))
+    .filter((entry): entry is NonNullable<ReturnType<typeof parseLogEntry>> => entry !== null);
+
+  if (entries.length === 0) {
+    return;
+  }
+
+  entries.forEach((entry) => {
+    logPanel.addLogEntry(entry);
+  });
+}
+
 /**
  * Minimal type guard for polling data payloads
  * @param payload - Incoming data from the main process
@@ -363,4 +407,3 @@ async function setupLogPanelIntegration(logPanel: LogPanelComponent): Promise<vo
 function isPollingData(payload: unknown): payload is PollingData {
   return typeof payload === 'object' && payload !== null && 'isConnected' in payload;
 }
-

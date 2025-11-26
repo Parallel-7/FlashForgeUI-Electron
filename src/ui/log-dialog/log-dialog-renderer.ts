@@ -32,11 +32,13 @@ interface ILogDialogAPI {
   receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
-declare global {
-  interface Window {
-    logDialogAPI?: ILogDialogAPI;
+const getLogDialogAPI = (): ILogDialogAPI => {
+  const api = window.api?.dialog?.log as ILogDialogAPI | undefined;
+  if (!api) {
+    throw new Error('[LogDialog] dialog API bridge is not available');
   }
-}
+  return api;
+};
 
 // Ensure this file is treated as a module
 export {};
@@ -97,13 +99,13 @@ class LogDialogRenderer {
     });
 
     // Listen for new log messages from main process
-    window.logDialogAPI?.onLogMessage((message: LogMessage) => {
+    getLogDialogAPI().onLogMessage((message: LogMessage) => {
       this.appendLogEntry(message);
     });
 
     // Handle window close event
     window.addEventListener('beforeunload', () => {
-      window.logDialogAPI?.removeListeners();
+      getLogDialogAPI().removeListeners();
     });
 
     console.log('Log Dialog: Event listeners set up successfully');
@@ -111,12 +113,7 @@ class LogDialogRenderer {
 
   private async loadInitialLogs(): Promise<void> {
     try {
-      if (!window.logDialogAPI) {
-        console.warn('Log Dialog: API not available');
-        return;
-      }
-
-      const logs = await window.logDialogAPI.requestLogs();
+      const logs = await getLogDialogAPI().requestLogs();
       
       if (logs && logs.length > 0) {
         this.logPanel?.load(logs, { scrollToLatest: true });
@@ -149,12 +146,7 @@ class LogDialogRenderer {
 
   private async handleClearLogs(): Promise<void> {
     try {
-      if (!window.logDialogAPI) {
-        console.warn('Log Dialog: API not available for clearing logs');
-        return;
-      }
-
-      const success = await window.logDialogAPI.clearLogs();
+      const success = await getLogDialogAPI().clearLogs();
       
       if (success) {
         this.logPanel?.clear();
@@ -169,7 +161,7 @@ class LogDialogRenderer {
 
   private handleClose(): void {
     try {
-      window.logDialogAPI?.closeWindow();
+      getLogDialogAPI().closeWindow();
     } catch (error) {
       console.error('Log Dialog: Failed to close window:', error);
       // Fallback to generic window close
@@ -189,14 +181,14 @@ class LogDialogRenderer {
   }
 
   public registerThemeListener(): void {
-    window.logDialogAPI?.receive?.('theme-changed', (data: unknown) => {
+    getLogDialogAPI().receive?.('theme-changed', (data: unknown) => {
       applyDialogTheme(data as ThemeColors);
     });
   }
 
   public dispose(): void {
     // Clean up event listeners
-    window.logDialogAPI?.removeListeners();
+    getLogDialogAPI().removeListeners();
     console.log('Log Dialog: Renderer disposed');
   }
 }

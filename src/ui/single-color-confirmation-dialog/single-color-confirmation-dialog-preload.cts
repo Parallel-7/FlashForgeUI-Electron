@@ -53,7 +53,7 @@ interface MaterialStationStatus {
 }
 
 // Expose protected methods to the renderer process
-contextBridge.exposeInMainWorld('singleColorConfirmAPI', {
+const singleColorConfirmDialogAPI = {
   // Listen for initialization data
   onInit: (callback: (data: SingleColorConfirmInitData) => void) => {
     ipcRenderer.on('single-color-confirm:init', (_event, data: SingleColorConfirmInitData) => {
@@ -81,6 +81,12 @@ contextBridge.exposeInMainWorld('singleColorConfirmAPI', {
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
+  }
+} as const;
+
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    singleColor: singleColorConfirmDialogAPI
   }
 });
 

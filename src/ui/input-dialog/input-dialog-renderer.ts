@@ -23,27 +23,15 @@ export {};
 
 import type { ThemeColors } from '../../types/config.js';
 import { applyDialogTheme } from '../shared/theme-utils.js';
+import type { DialogAPI as InputDialogAPI, DialogInitOptions } from './input-dialog-preload.cts';
 
-// Extend Window interface to include our dialog API
-declare global {
-    interface Window {
-        dialogAPI?: {
-            receive?: (channel: string, func: (...args: unknown[]) => void) => void;
-            submit: (result: string) => Promise<void>;
-            cancel: () => Promise<void>;
-        };
+const getInputDialogAPI = (): InputDialogAPI => {
+    const api = window.api?.dialog?.input as InputDialogAPI | undefined;
+    if (!api) {
+        throw new Error('[InputDialog] dialog API bridge is not available');
     }
-}
-
-// Interface for dialog initialization options
-interface DialogInitOptions {
-    title?: string;
-    message?: string;
-    defaultValue?: string;
-    inputType?: 'text' | 'password' | 'hidden';
-    placeholder?: string;
-    responseChannel: string;
-}
+    return api;
+};
 
 // DOM element references
 interface DialogElements {
@@ -74,22 +62,18 @@ document.addEventListener('DOMContentLoaded', (): void => {
         return;
     }
 
-    // Check if dialog API is available
-    if (!window.dialogAPI) {
-        console.error('Input dialog: Dialog API not available');
-        return;
-    }
+    const api = getInputDialogAPI();
 
     // Initialize dialog with options from main process
-    window.dialogAPI.receive?.('dialog-init', (data: unknown): void => {
+    api.receive?.('dialog-init', (data: unknown): void => {
         initializeDialog(elements, data as DialogInitOptions);
     });
 
     // Set up event handlers
-    setupEventHandlers(elements);
+    setupEventHandlers(elements, api);
 
     // Register theme listener
-    registerThemeListener();
+    registerThemeListener(api);
 });
 
 /**
@@ -141,20 +125,18 @@ function initializeDialog(elements: DialogElements, options: DialogInitOptions):
 /**
  * Set up all event handlers for dialog interaction
  */
-function setupEventHandlers(elements: DialogElements): void {
-    if (!window.dialogAPI) return;
-
+function setupEventHandlers(elements: DialogElements, api: InputDialogAPI): void {
     // OK button click handler
     if (elements.okButton) {
         elements.okButton.addEventListener('click', (): void => {
-            submitDialog(elements);
+            submitDialog(elements, api);
         });
 
         // OK button keyboard handler
         elements.okButton.addEventListener('keydown', (event: KeyboardEvent): void => {
             if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                submitDialog(elements);
+                submitDialog(elements, api);
             }
         });
     }
@@ -162,14 +144,14 @@ function setupEventHandlers(elements: DialogElements): void {
     // Cancel button click handler
     if (elements.cancelButton) {
         elements.cancelButton.addEventListener('click', (): void => {
-            cancelDialog();
+            cancelDialog(api);
         });
 
         // Cancel button keyboard handler
         elements.cancelButton.addEventListener('keydown', (event: KeyboardEvent): void => {
             if (event.key === 'Enter' || event.key === ' ') {
                 event.preventDefault();
-                cancelDialog();
+                cancelDialog(api);
             }
         });
     }
@@ -177,7 +159,7 @@ function setupEventHandlers(elements: DialogElements): void {
     // Close button handler
     if (elements.closeButton) {
         elements.closeButton.addEventListener('click', (): void => {
-            cancelDialog();
+            cancelDialog(api);
         });
     }
 
@@ -186,10 +168,10 @@ function setupEventHandlers(elements: DialogElements): void {
         elements.inputElement.addEventListener('keydown', (event: KeyboardEvent): void => {
             if (event.key === 'Enter' && !elements.inputElement?.classList.contains('hidden')) {
                 event.preventDefault();
-                submitDialog(elements);
+                submitDialog(elements, api);
             } else if (event.key === 'Escape') {
                 event.preventDefault();
-                cancelDialog();
+                cancelDialog(api);
             }
         });
     }
@@ -198,7 +180,7 @@ function setupEventHandlers(elements: DialogElements): void {
     document.addEventListener('keydown', (event: KeyboardEvent): void => {
         if (event.key === 'Escape') {
             event.preventDefault();
-            cancelDialog();
+            cancelDialog(api);
         }
     });
 }
@@ -206,11 +188,9 @@ function setupEventHandlers(elements: DialogElements): void {
 /**
  * Submit dialog with current input value
  */
-function submitDialog(elements: DialogElements): void {
-    if (!window.dialogAPI) return;
-
+function submitDialog(elements: DialogElements, api: InputDialogAPI): void {
     const inputValue = elements.inputElement?.value || '';
-    window.dialogAPI.submit(inputValue).catch((error) => {
+    api.submit(inputValue).catch((error) => {
         console.error('Error submitting dialog:', error);
         // Dialog should still close even if submission fails
     });
@@ -219,10 +199,8 @@ function submitDialog(elements: DialogElements): void {
 /**
  * Cancel dialog (close without result)
  */
-function cancelDialog(): void {
-    if (!window.dialogAPI) return;
-
-    window.dialogAPI.cancel().catch((error) => {
+function cancelDialog(api: InputDialogAPI): void {
+    api.cancel().catch((error) => {
         console.error('Error cancelling dialog:', error);
         // Dialog should still close even if cancellation fails
     });
@@ -231,8 +209,8 @@ function cancelDialog(): void {
 /**
  * Register theme change listener
  */
-function registerThemeListener(): void {
-    window.dialogAPI?.receive?.('theme-changed', (data: unknown) => {
+function registerThemeListener(api: InputDialogAPI): void {
+    api.receive?.('theme-changed', (data: unknown) => {
         applyDialogTheme(data as ThemeColors);
     });
 }

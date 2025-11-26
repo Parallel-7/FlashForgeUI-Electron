@@ -38,7 +38,7 @@
 import type { ThemeColors } from '../../types/config.js';
 import { applyDialogTheme } from '../shared/theme-utils.js';
 
-interface IStatusAPI {
+interface StatusDialogAPI {
   readonly requestStats: () => Promise<StatusStats | null>;
   readonly closeWindow: () => void;
   readonly receiveStats: (callback: (stats: StatusStats) => void) => void;
@@ -46,11 +46,9 @@ interface IStatusAPI {
   receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
-declare global {
-  interface Window {
-    statusAPI?: IStatusAPI;
-  }
-}
+const resolveStatusDialogAPI = (): StatusDialogAPI | undefined => {
+  return window.api?.dialog?.status as StatusDialogAPI | undefined;
+};
 
 // Ensure this file is treated as a module
 export {};
@@ -83,6 +81,7 @@ class StatusDialogRenderer {
   private static readonly AUTO_REFRESH_DELAY = 5000;
   private static readonly TAB_STORAGE_KEY = 'statusDialogActiveTab';
 
+  private readonly statusAPI = resolveStatusDialogAPI();
   private autoRefreshInterval: NodeJS.Timeout | null = null;
   private tabButtons: HTMLButtonElement[] = [];
   private readonly tabPanels: Map<string, HTMLElement> = new Map();
@@ -104,8 +103,8 @@ class StatusDialogRenderer {
     this.setupCloseButtons();
     this.registerThemeListener();
 
-    if (window.statusAPI) {
-      window.statusAPI.receiveStats((stats) => this.updateStats(stats));
+    if (this.statusAPI) {
+      this.statusAPI.receiveStats((stats) => this.updateStats(stats));
       void this.requestStats();
       this.startAutoRefresh();
     } else {
@@ -125,7 +124,7 @@ class StatusDialogRenderer {
         return;
       }
       button.addEventListener('click', () => {
-        window.statusAPI?.closeWindow();
+        this.statusAPI?.closeWindow();
       });
     });
   }
@@ -238,7 +237,7 @@ class StatusDialogRenderer {
 
   private async requestStats(): Promise<void> {
     try {
-      await window.statusAPI?.requestStats();
+      await this.statusAPI?.requestStats();
     } catch (error) {
       console.error('[StatusDialog] Failed to fetch stats:', error);
     }
@@ -344,14 +343,14 @@ class StatusDialogRenderer {
   }
 
   private registerThemeListener(): void {
-    window.statusAPI?.receive?.('theme-changed', (data: unknown) => {
+    this.statusAPI?.receive?.('theme-changed', (data: unknown) => {
       applyDialogTheme(data as ThemeColors);
     });
   }
 
   private cleanup(): void {
     this.stopAutoRefresh();
-    window.statusAPI?.removeListeners();
+    this.statusAPI?.removeListeners();
   }
 
   private createFallbackStats(): StatusStats {

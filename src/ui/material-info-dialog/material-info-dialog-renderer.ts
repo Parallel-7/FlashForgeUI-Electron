@@ -22,15 +22,19 @@ import type { MaterialInfoDialogData } from './material-info-dialog-preload.cts'
 import type { ThemeColors } from '../../types/config.js';
 import { applyDialogTheme } from '../shared/theme-utils.js';
 
-// Global window type extension
-declare global {
-  interface Window {
-    materialInfoDialogAPI: {
-      readonly onInit: (callback: (data: MaterialInfoDialogData) => void) => void;
-      readonly closeDialog: () => void;
-    };
-  }
+interface MaterialInfoDialogAPI {
+  readonly onInit: (callback: (data: MaterialInfoDialogData) => void) => void;
+  readonly closeDialog: () => void;
+  readonly receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
+
+const getMaterialInfoDialogAPI = (): MaterialInfoDialogAPI => {
+  const api = window.api?.dialog?.materialInfo as MaterialInfoDialogAPI | undefined;
+  if (!api) {
+    throw new Error('[MaterialInfoDialog] dialog API bridge is not available');
+  }
+  return api;
+};
 
 
 // Initialize dialog when DOM is loaded
@@ -38,17 +42,15 @@ document.addEventListener('DOMContentLoaded', (): void => {
     console.log('Material Info Dialog renderer loaded');
     window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
     
-    // Check if material info dialog API is available
-    if (!window.materialInfoDialogAPI) {
-        console.error('Material Info Dialog: API not available');
-        return;
-    }
+    const api = getMaterialInfoDialogAPI();
 
     // Set up event handlers
-    setupEventHandlers();
+    setupEventHandlers(api);
     
     // Set up IPC listeners
-    setupIPCListeners();
+    setupIPCListeners(api);
+
+    registerThemeListener(api);
     
     console.log('Material Info Dialog initialized');
 });
@@ -56,28 +58,28 @@ document.addEventListener('DOMContentLoaded', (): void => {
 /**
  * Set up event handlers for user interactions
  */
-function setupEventHandlers(): void {
+function setupEventHandlers(api: MaterialInfoDialogAPI): void {
     // Close button
     const closeButton = document.getElementById('btn-close');
     closeButton?.addEventListener('click', () => {
-        window.materialInfoDialogAPI.closeDialog();
+        api.closeDialog();
     });
 }
 
 /**
  * Set up IPC listeners for communication with main process
  */
-function setupIPCListeners(): void {
-    const api = window.materialInfoDialogAPI;
-    if (!api) {
-        console.error('Material Info Dialog: API not available for IPC setup');
-        return;
-    }
-
+function setupIPCListeners(api: MaterialInfoDialogAPI): void {
     // Listen for initialization data
     api.onInit((data: MaterialInfoDialogData) => {
         console.log('Material Info Dialog: Received init data', data);
         displayMaterialInfo(data);
+    });
+}
+
+function registerThemeListener(api: MaterialInfoDialogAPI): void {
+    api.receive?.('theme-changed', (data: unknown) => {
+        applyDialogTheme(data as ThemeColors);
     });
 }
 

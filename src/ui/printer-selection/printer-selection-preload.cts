@@ -62,10 +62,11 @@ interface PrinterSelectionAPI {
     onDiscoveryStarted: (func: () => void) => void;
     onDiscoveryError: (func: (data: { error: string; message: string }) => void) => void;
     removeListeners: () => void;
+    receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
-// Expose the printer selection API to the renderer process
-contextBridge.exposeInMainWorld('printerSelectionAPI', {
+// Expose the printer selection API to the renderer process via dialog namespace
+const printerSelectionDialogAPI: PrinterSelectionAPI = {
     // Renderer to Main Process
     selectPrinter: (printer: PrinterInfo | SavedPrinterInfo): void => {
         console.log('Preload - Forwarding printer select:', JSON.stringify(printer));
@@ -144,7 +145,13 @@ contextBridge.exposeInMainWorld('printerSelectionAPI', {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
   }
-} as PrinterSelectionAPI);
+};
+
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    printerSelection: printerSelectionDialogAPI
+  }
+});
 
 // Generic window controls for sub-windows
 contextBridge.exposeInMainWorld('windowControls', {

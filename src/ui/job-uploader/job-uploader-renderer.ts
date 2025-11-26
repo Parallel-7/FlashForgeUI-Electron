@@ -24,9 +24,7 @@
 
 import type { ParseResult, FilamentInfo } from '@parallel-7/slicer-meta';
 import type { AD5XMaterialMapping } from '@ghosttypes/ff-api';
-import type { UploadProgress, UploadCompletionResult } from './job-uploader-preload.cts';
-import type { ThemeColors } from '../../types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
+import type { JobUploaderAPI, UploadProgress, UploadCompletionResult } from './job-uploader-preload.cts';
 
 // Import types from ff-api for material station functionality
 type FFGcodeToolData = {
@@ -84,6 +82,19 @@ interface DialogElements {
 // Global state for material mappings (for 3MF multi-color uploads)
 let savedMaterialMappings: AD5XMaterialMapping[] | null = null;
 let currentFilePath: string | null = null;
+let cachedJobUploaderAPI: JobUploaderAPI | null = null;
+
+const getJobUploaderAPI = (): JobUploaderAPI => {
+    if (cachedJobUploaderAPI) {
+        return cachedJobUploaderAPI;
+    }
+    const api = window.api?.dialog?.jobUploader as JobUploaderAPI | undefined;
+    if (!api) {
+        throw new Error('[JobUploader] dialog API not available');
+    }
+    cachedJobUploaderAPI = api;
+    return api;
+};
 
 /**
  * Convert FilamentInfo array from slicer-meta to FFGcodeToolData format
@@ -102,12 +113,8 @@ function convertFilamentsToToolData(filaments: FilamentInfo[]): FFGcodeToolData[
 /**
  * Determine if file is a 3MF and should use enhanced upload flow
  */
-async function shouldUseEnhanced3MFFlow(filePath: string): Promise<boolean> {
-    if (!window.uploaderAPI?.isAD5XPrinter) {
-        return false;
-    }
-    
-    const isAD5X = await window.uploaderAPI.isAD5XPrinter();
+async function shouldUseEnhanced3MFFlow(api: JobUploaderAPI, filePath: string): Promise<boolean> {
+    const isAD5X = await api.isAD5XPrinter();
     if (!isAD5X) {
         return false;
     }
@@ -174,17 +181,19 @@ document.addEventListener('DOMContentLoaded', (): void => {
         return;
     }
 
-    // Check if uploader API is available
-    if (!window.uploaderAPI) {
-        console.error('Job Uploader: Uploader API not available');
+    let api: JobUploaderAPI;
+    try {
+        api = getJobUploaderAPI();
+    } catch (error) {
+        console.error('Job Uploader: Uploader API not available', error);
         return;
     }
 
     // Set up event handlers
-    setupEventHandlers(elements);
+    setupEventHandlers(elements, api);
 
     // Set up IPC message handlers
-    setupIPCHandlers(elements);
+    setupIPCHandlers(elements, api);
 
     // Initialize UI state
     resetMetadata(elements);
@@ -196,35 +205,33 @@ document.addEventListener('DOMContentLoaded', (): void => {
 /**
  * Set up all event handlers for dialog interaction
  */
-function setupEventHandlers(elements: DialogElements): void {
-    if (!window.uploaderAPI) return;
-
+function setupEventHandlers(elements: DialogElements, api: JobUploaderAPI): void {
     // Browse button click handler
     if (elements.browseButton) {
         elements.browseButton.addEventListener('click', (): void => {
             resetMetadata(elements);
-            window.uploaderAPI!.browseFile();
+            api.browseFile();
         });
     }
 
     // OK button click handler
     if (elements.okButton) {
         elements.okButton.addEventListener('click', (): void => {
-            void handleUploadJob(elements);
+            void handleUploadJob(elements, api);
         });
     }
 
     // Cancel button click handler
     if (elements.cancelButton) {
         elements.cancelButton.addEventListener('click', (): void => {
-            handleCancel();
+            handleCancel(api);
         });
     }
 
     // Close button click handler
     if (elements.closeButton) {
         elements.closeButton.addEventListener('click', (): void => {
-            handleCancel();
+            handleCancel(api);
         });
     }
 }
@@ -232,27 +239,25 @@ function setupEventHandlers(elements: DialogElements): void {
 /**
  * Set up IPC message handlers for communication with main process
  */
-function setupIPCHandlers(elements: DialogElements): void {
-    if (!window.uploaderAPI) return;
-
+function setupIPCHandlers(elements: DialogElements, api: JobUploaderAPI): void {
     // Handle file selection result
-    window.uploaderAPI.receiveFile((filePath: string | null): void => {
+    api.receiveFile((filePath: string | null): void => {
         handleFileSelected(elements, filePath);
     });
 
     // Handle metadata parsing result
-    window.uploaderAPI.receiveMetadata((result: MetadataResult): void => {
-        void handleMetadataResult(elements, result);
+    api.receiveMetadata((result: MetadataResult): void => {
+        void handleMetadataResult(elements, result, api);
     });
 
     // Handle upload progress updates
-    window.uploaderAPI.receiveUploadProgress((progress: UploadProgress): void => {
+    api.receiveUploadProgress((progress: UploadProgress): void => {
         updateUploadProgress(elements, progress);
     });
 
     // Handle upload completion
-    window.uploaderAPI.receiveUploadComplete((result: UploadCompletionResult): void => {
-        void handleUploadComplete(elements, result);
+    api.receiveUploadComplete((result: UploadCompletionResult): void => {
+        void handleUploadComplete(elements, result, api);
     });
 }
 
@@ -296,7 +301,7 @@ function handleFileSelected(elements: DialogElements, filePath: string | null): 
 /**
  * Handle metadata parsing result from main process
  */
-async function handleMetadataResult(elements: DialogElements, result: MetadataResult): Promise<void> {
+async function handleMetadataResult(elements: DialogElements, result: MetadataResult, api: JobUploaderAPI): Promise<void> {
     console.log('Metadata received:', result);
     
     // Hide loading overlay
@@ -304,7 +309,7 @@ async function handleMetadataResult(elements: DialogElements, result: MetadataRe
 
     if (result && !result.error) {
         // Check if this is an AD5X printer with a non-3MF file
-        const isAD5X = await window.uploaderAPI?.isAD5XPrinter();
+        const isAD5X = await api.isAD5XPrinter();
         const is3MF = currentFilePath?.toLowerCase().endsWith('.3mf');
         
         if (isAD5X && !is3MF) {
@@ -328,7 +333,7 @@ async function handleMetadataResult(elements: DialogElements, result: MetadataRe
         populateMetadata(elements, result);
         
         // Check if this is a 3MF file for AD5X that should use enhanced upload flow
-        if (currentFilePath && await shouldUseEnhanced3MFFlow(currentFilePath)) {
+        if (currentFilePath && await shouldUseEnhanced3MFFlow(api, currentFilePath)) {
             try {
                 // ✅ NEW: Check both threeMf.filaments and file.filaments as fallback
                 const filaments = result.threeMf?.filaments || result.file?.filaments || [];
@@ -344,8 +349,8 @@ async function handleMetadataResult(elements: DialogElements, result: MetadataRe
                 console.log(`3MF file detected with ${filaments.length} filament(s)`);
                 const toolData = convertFilamentsToToolData(filaments);
 
-                if (window.uploaderAPI?.showMaterialMatchingDialog) {
-                    const mappings = await window.uploaderAPI.showMaterialMatchingDialog(currentFilePath, toolData);
+                if (api.showMaterialMatchingDialog) {
+                    const mappings = await api.showMaterialMatchingDialog(currentFilePath, toolData);
                     if (mappings && Array.isArray(mappings)) {
                         // Save material mappings for later use
                         savedMaterialMappings = mappings;
@@ -388,11 +393,11 @@ async function handleMetadataResult(elements: DialogElements, result: MetadataRe
 /**
  * Handle upload job button click
  */
-async function handleUploadJob(elements: DialogElements): Promise<void> {
-    if (!window.uploaderAPI || !currentFilePath) return;
+async function handleUploadJob(elements: DialogElements, api: JobUploaderAPI): Promise<void> {
+    if (!currentFilePath) return;
 
     // Check if this should use AD5X upload path
-    const isAD5X = await window.uploaderAPI.isAD5XPrinter();
+    const isAD5X = await api.isAD5XPrinter();
     const is3MF = currentFilePath.toLowerCase().endsWith('.3mf');
     const useAD5XUpload = isAD5X && is3MF;
 
@@ -401,7 +406,7 @@ async function handleUploadJob(elements: DialogElements): Promise<void> {
         console.log('Using AD5X upload for 3MF file');
         
         try {
-            const result = await window.uploaderAPI.uploadFileAD5X(
+            const result = await api.uploadFileAD5X(
                 currentFilePath,
                 elements.startNowCheckbox?.checked || false,
                 elements.autoLevelCheckbox?.checked || false,
@@ -428,17 +433,15 @@ async function handleUploadJob(elements: DialogElements): Promise<void> {
         };
 
         console.log('Uploading job with regular upload:', payload);
-        window.uploaderAPI.uploadJob(payload);
+        api.uploadJob(payload);
     }
 }
 
 /**
  * Handle cancel/close actions
  */
-function handleCancel(): void {
-    if (!window.uploaderAPI) return;
-    
-    window.uploaderAPI.cancelUpload();
+function handleCancel(api: JobUploaderAPI): void {
+    api.cancelUpload();
 }
 
 /**
@@ -646,7 +649,7 @@ function updateUploadProgress(elements: DialogElements, progress: UploadProgress
 /**
  * Handle upload completion and auto-close functionality
  */
-async function handleUploadComplete(elements: DialogElements, result: UploadCompletionResult): Promise<void> {
+async function handleUploadComplete(elements: DialogElements, result: UploadCompletionResult, api: JobUploaderAPI): Promise<void> {
     console.log('Upload complete:', result);
     
     if (result.success) {
@@ -659,9 +662,7 @@ async function handleUploadComplete(elements: DialogElements, result: UploadComp
         
         // Auto-close after 2 seconds
         setTimeout(() => {
-            if (window.uploaderAPI) {
-                window.uploaderAPI.cancelUpload();
-            }
+            api.cancelUpload();
         }, 2000);
     } else {
         // Show error state
@@ -688,7 +689,9 @@ window.addEventListener('beforeunload', (): void => {
     // Clear saved material mappings
     savedMaterialMappings = null;
     
-    if (window.uploaderAPI) {
-        window.uploaderAPI.removeListeners();
+    try {
+        getJobUploaderAPI().removeListeners();
+    } catch (error) {
+        console.warn('Job Uploader: Unable to remove listeners during cleanup', error);
     }
 });

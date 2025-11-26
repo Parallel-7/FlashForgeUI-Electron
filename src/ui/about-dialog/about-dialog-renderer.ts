@@ -5,15 +5,7 @@
 import type { AboutDialogInfo } from './about-dialog-preload.cts';
 import type { ThemeColors } from '../../types/config.js';
 import { applyDialogTheme } from '../shared/theme-utils.js';
-
-declare global {
-  interface Window {
-    aboutAPI?: AboutAPI;
-    lucide?: { createIcons: () => void };
-  }
-}
-
-export {};
+import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
 
 interface AboutAPI {
   readonly getAppInfo: () => Promise<AboutDialogInfo | null>;
@@ -21,6 +13,14 @@ interface AboutAPI {
   readonly closeWindow: () => void;
   receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
+
+const getAboutAPI = (): AboutAPI => {
+  const api = window.api?.dialog?.about as AboutAPI | undefined;
+  if (!api) {
+    throw new Error('[AboutDialog] API bridge is not available');
+  }
+  return api;
+};
 
 class AboutDialogRenderer {
   private readonly appNameEl = document.getElementById('about-app-name');
@@ -37,17 +37,13 @@ class AboutDialogRenderer {
   }
 
   private registerThemeListener(): void {
-    this.api?.receive?.('theme-changed', (data: unknown) => {
+    getAboutAPI().receive?.('theme-changed', (data: unknown) => {
       applyDialogTheme(data as ThemeColors);
     });
   }
 
-  private get api(): AboutAPI | undefined {
-    return window.aboutAPI;
-  }
-
   private async populateAppInfo(): Promise<void> {
-    const info = await this.api?.getAppInfo();
+    const info = await getAboutAPI().getAppInfo();
     if (!info) {
       return;
     }
@@ -70,7 +66,6 @@ class AboutDialogRenderer {
     }
 
     this.renderLinks(info.links);
-    this.refreshIcons();
   }
 
   private renderLinks(links: AboutDialogInfo['links']): void {
@@ -80,6 +75,7 @@ class AboutDialogRenderer {
     }
 
     grid.innerHTML = '';
+    const iconNames: string[] = [];
 
     links.forEach((link) => {
       const button = document.createElement('button');
@@ -88,7 +84,7 @@ class AboutDialogRenderer {
       button.setAttribute('role', 'listitem');
       button.dataset.url = link.url;
       button.addEventListener('click', () => {
-        void this.api?.openExternalLink(link.url);
+        void getAboutAPI().openExternalLink(link.url);
       });
 
       const icon = document.createElement('i');
@@ -109,22 +105,20 @@ class AboutDialogRenderer {
       copy.append(title, description);
       button.append(icon, copy);
       grid.appendChild(button);
+      iconNames.push(link.icon);
     });
+
+    if (iconNames.length > 0) {
+      initializeLucideIconsFromGlobal(iconNames, grid);
+    }
   }
 
   private registerCloseHandlers(): void {
     this.closeButtons.forEach((button) => {
-      button.addEventListener('click', () => this.api?.closeWindow());
+      button.addEventListener('click', () => getAboutAPI().closeWindow());
     });
   }
 
-  private refreshIcons(): void {
-    try {
-      window.lucide?.createIcons();
-    } catch (error) {
-      console.warn('[AboutDialog] Failed to refresh Lucide icons', error);
-    }
-  }
 }
 
 void document.addEventListener('DOMContentLoaded', () => {

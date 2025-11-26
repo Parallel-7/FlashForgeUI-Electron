@@ -55,6 +55,18 @@ declare global {
 // Ensure this file is treated as a module
 export {};
 
+const resolveSettingsAPI = (): ISettingsAPI | undefined => {
+  return window.api?.dialog?.settings as ISettingsAPI | undefined;
+};
+
+const resolvePrinterSettingsAPI = (): IPrinterSettingsAPI | undefined => {
+  return window.api?.dialog?.printerSettings as IPrinterSettingsAPI | undefined;
+};
+
+const resolveAutoUpdateAPI = (): IAutoUpdateAPI | undefined => {
+  return window.api?.dialog?.autoUpdate as IAutoUpdateAPI | undefined;
+};
+
 /**
  * Mapping from HTML input IDs to AppConfig property names
  * This ensures exact compatibility with legacy config format
@@ -113,6 +125,9 @@ class SettingsRenderer {
   private printerContextSection: PrinterContextSection | null = null;
   private roundedUISection: RoundedUISection | null = null;
   private webUIEnabledToggle: HTMLInputElement | null = null;
+  private readonly settingsAPI?: ISettingsAPI = resolveSettingsAPI();
+  private readonly printerSettingsAPI?: IPrinterSettingsAPI = resolvePrinterSettingsAPI();
+  private readonly autoUpdateAPI?: IAutoUpdateAPI = resolveAutoUpdateAPI();
 
   private static readonly TAB_STORAGE_KEY = 'settingsDialogActiveTab';
 
@@ -162,7 +177,8 @@ class SettingsRenderer {
       defaultTheme: DEFAULT_THEME,
       onThemeChange: (theme, saveImmediately, context) => this.handleDesktopThemeUpdated(theme, saveImmediately, context),
       onProfileOperation: (operation, profileData) => this.handleProfileOperation('desktop', operation, profileData),
-      getThemeProfiles: () => this.settings.global['desktopThemeProfiles'] as readonly ThemeProfile[] || []
+      getThemeProfiles: () => this.settings.global['desktopThemeProfiles'] as readonly ThemeProfile[] || [],
+      settingsAPI: this.settingsAPI
     });
     this.desktopThemeSection.initialize();
 
@@ -187,7 +203,7 @@ class SettingsRenderer {
     this.printerContextSection.initialize();
 
     this.spoolmanTestSection = new SpoolmanTestSection({
-      settingsAPI: window.settingsAPI,
+      settingsAPI: this.settingsAPI,
       testButton: this.testSpoolmanButton,
       resultElement: this.spoolmanTestResultElement,
       serverUrlInput: this.inputs.get('spoolman-server-url')
@@ -195,7 +211,7 @@ class SettingsRenderer {
     this.spoolmanTestSection.initialize();
 
     this.discordWebhookSection = new DiscordWebhookSection({
-      settingsAPI: window.settingsAPI,
+      settingsAPI: this.settingsAPI,
       testButton: this.testDiscordButton,
       resultElement: this.discordTestResultElement,
       webhookInput: this.inputs.get('webhook-url')
@@ -203,7 +219,7 @@ class SettingsRenderer {
     this.discordWebhookSection.initialize();
 
     this.autoUpdateSection = new AutoUpdateSection({
-      autoUpdateAPI: window.autoUpdateAPI,
+      autoUpdateAPI: this.autoUpdateAPI,
       updateCheckButton: this.updateCheckButton,
       updateStatusElement: this.updateStatusElement,
       autoDownloadInput: this.inputs.get('auto-download-updates'),
@@ -211,7 +227,7 @@ class SettingsRenderer {
     });
 
     this.roundedUISection = new RoundedUISection({
-      settingsAPI: window.settingsAPI,
+      settingsAPI: this.settingsAPI,
       roundedUIInput: this.inputs.get('rounded-ui'),
       document,
       settings: this.settings
@@ -248,7 +264,7 @@ class SettingsRenderer {
       this.webUIEnabledToggle.addEventListener('change', () => this.handleWebUIEnabledToggle());
     }
 
-    window.settingsAPI?.onConfigUpdated((config) => {
+    this.settingsAPI?.onConfigUpdated((config) => {
       console.log('[Settings] Received config update from main process:', config);
       this.settings.global = { ...config };
       this.loadConfiguration();
@@ -256,18 +272,18 @@ class SettingsRenderer {
   }
 
   private async requestInitialConfig(): Promise<void> {
-    if (window.settingsAPI) {
+    if (this.settingsAPI) {
       try {
-        const config = await window.settingsAPI.requestConfig();
+        const config = await this.settingsAPI.requestConfig();
         console.log('[Settings] Loaded config from config.json:', config);
 
         // Load global settings
         this.settings.global = { ...config };
 
         // Also load per-printer settings if available
-        if (window.printerSettingsAPI) {
-          const printerSettings = await window.printerSettingsAPI.get() as Record<string, unknown> | null;
-          this.printerName = await window.printerSettingsAPI.getPrinterName();
+        if (this.printerSettingsAPI) {
+          const printerSettings = await this.printerSettingsAPI.get() as Record<string, unknown> | null;
+          this.printerName = await this.printerSettingsAPI.getPrinterName();
           console.log('[Settings] Loaded per-printer settings:', printerSettings);
           console.log('[Settings] Printer name:', this.printerName);
 
@@ -444,16 +460,16 @@ class SettingsRenderer {
       return;
     }
 
-    if (window.settingsAPI) {
+    if (this.settingsAPI) {
       try {
         // Save global config
         console.log('[Settings] Saving global config:', this.settings.global);
-        const success = await window.settingsAPI.saveConfig(this.settings.global as Partial<AppConfig>);
+        const success = await this.settingsAPI.saveConfig(this.settings.global as Partial<AppConfig>);
 
         // Save per-printer settings if we have any and a printer is connected
-        if (Object.keys(this.settings.perPrinter).length > 0 && window.printerSettingsAPI && this.printerName) {
+        if (Object.keys(this.settings.perPrinter).length > 0 && this.printerSettingsAPI && this.printerName) {
           console.log('[Settings] Saving per-printer settings:', this.settings.perPrinter);
-          const perPrinterSuccess = await window.printerSettingsAPI.update(this.settings.perPrinter);
+          const perPrinterSuccess = await this.printerSettingsAPI.update(this.settings.perPrinter);
           console.log('[Settings] Per-printer save result:', perPrinterSuccess);
 
           if (!perPrinterSuccess) {
@@ -466,11 +482,10 @@ class SettingsRenderer {
           this.hasUnsavedChanges = false;
           this.updateSaveButtonState();
           this.showSaveStatus('Settings saved successfully');
-
           const channelValue = this.settings.global['UpdateChannel'];
-          if (typeof channelValue === 'string' && window.autoUpdateAPI) {
+          if (typeof channelValue === 'string' && this.autoUpdateAPI) {
             const normalizedChannel = channelValue === 'alpha' ? 'alpha' : 'stable';
-            void window.autoUpdateAPI.setUpdateChannel(normalizedChannel);
+            void this.autoUpdateAPI.setUpdateChannel(normalizedChannel);
           }
         } else {
           this.showSaveStatus('Failed to save settings', true);
@@ -492,8 +507,8 @@ class SettingsRenderer {
       }
     }
 
-    if (window.settingsAPI) {
-      window.settingsAPI.closeWindow();
+    if (this.settingsAPI) {
+      this.settingsAPI.closeWindow();
     }
   }
 
@@ -578,7 +593,7 @@ class SettingsRenderer {
   }
 
   private async saveDesktopThemeImmediately(theme: ThemeColors, context?: string): Promise<void> {
-    const api = window.settingsAPI;
+    const api = this.settingsAPI;
     if (!api?.saveDesktopTheme) {
       console.warn('[Settings] saveDesktopTheme API is not available');
       return;
@@ -608,13 +623,14 @@ class SettingsRenderer {
   }
 
   private handleProfileOperation(uiType: 'desktop' | 'web', operation: 'add' | 'update' | 'delete', profileData: ThemeProfileOperationData): void {
-    window.settingsAPI?.performThemeProfileOperation(uiType, operation, profileData);
+    this.settingsAPI?.performThemeProfileOperation(uiType, operation, profileData);
   }
 
   private cleanup(): void {
     if (this.statusTimeout) {
       clearTimeout(this.statusTimeout);
     }
+    this.settingsAPI?.removeListeners?.();
     this.desktopThemeSection?.dispose();
     this.tabSection?.dispose();
     this.spoolmanTestSection?.dispose();
@@ -625,7 +641,7 @@ class SettingsRenderer {
   }
 
   private registerThemeListener(): void {
-    window.settingsAPI?.receive?.('theme-changed', (data: unknown) => {
+    this.settingsAPI?.receive?.('theme-changed', (data: unknown) => {
       applyDialogTheme(data as ThemeColors);
     });
   }

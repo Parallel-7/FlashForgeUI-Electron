@@ -17,30 +17,33 @@
 // ifs-dialog-renderer.ts
 // IFS Dialog renderer process logic for material station display
 
-import type { MaterialSlotData, MaterialStationData } from './ifs-dialog-preload.cts';
+import type { IFSDialogAPI, MaterialSlotData, MaterialStationData } from './ifs-dialog-preload.cts';
 import type { ThemeColors } from '../../types/config.js';
 import { applyDialogTheme } from '../shared/theme-utils.js';
 
+const getIfsDialogAPI = (): IFSDialogAPI => {
+    const api = window.api?.dialog?.ifs as IFSDialogAPI | undefined;
+    if (!api) {
+        throw new Error('[IFSDIalog] dialog API bridge is not available');
+    }
+    return api;
+};
 
 // Initialize dialog when DOM is loaded
 document.addEventListener('DOMContentLoaded', (): void => {
     console.log('IFS Dialog renderer loaded');
     window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
-    
-    // Check if IFS dialog API is available
-    if (!window.ifsDialogAPI) {
-        console.error('IFS Dialog: API not available');
-        return;
-    }
+
+    const api = getIfsDialogAPI();
 
     // Set up event handlers
-    setupEventHandlers();
+    setupEventHandlers(api);
     
     // Set up IPC listeners
-    setupIPCListeners();
+    setupIPCListeners(api);
     
     // Request initial material station data
-    window.ifsDialogAPI.requestMaterialStation();
+    api.requestMaterialStation();
     
     console.log('IFS Dialog initialized');
 });
@@ -48,14 +51,12 @@ document.addEventListener('DOMContentLoaded', (): void => {
 /**
  * Set up all event handlers for dialog interaction
  */
-function setupEventHandlers(): void {
+function setupEventHandlers(api: IFSDialogAPI): void {
     // Close button handler
     const closeButton = document.getElementById('btn-close');
     if (closeButton) {
         closeButton.addEventListener('click', (): void => {
-            if (window.ifsDialogAPI) {
-                window.ifsDialogAPI.closeDialog();
-            }
+            api.closeDialog();
         });
     }
 
@@ -63,9 +64,7 @@ function setupEventHandlers(): void {
     document.addEventListener('keydown', (event: KeyboardEvent): void => {
         if (event.key === 'Escape') {
             event.preventDefault();
-            if (window.ifsDialogAPI) {
-                window.ifsDialogAPI.closeDialog();
-            }
+            api.closeDialog();
         }
     });
 }
@@ -73,21 +72,19 @@ function setupEventHandlers(): void {
 /**
  * Set up IPC listeners for receiving data from main process
  */
-function setupIPCListeners(): void {
-    if (!window.ifsDialogAPI) return;
-
+function setupIPCListeners(api: IFSDialogAPI): void {
     // Listen for material station updates
-    window.ifsDialogAPI.receive('ifs-dialog-update-material-station', (data: unknown) => {
+    api.receive('ifs-dialog-update-material-station', (data: unknown) => {
         const materialStationData = data as MaterialStationData;
         console.log('Received material station data:', materialStationData);
         updateMaterialStationDisplay(materialStationData);
     });
 
     // Listen for dialog initialization
-    window.ifsDialogAPI.receive('ifs-dialog-init', () => {
+    api.receive('ifs-dialog-init', () => {
         console.log('IFS Dialog initialized by main process');
         // Request fresh material station data
-        window.ifsDialogAPI?.requestMaterialStation();
+        api.requestMaterialStation();
     });
 }
 

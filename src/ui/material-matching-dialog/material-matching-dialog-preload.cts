@@ -53,7 +53,7 @@ interface MaterialStationStatus {
 }
 
 // Expose protected methods to the renderer process
-contextBridge.exposeInMainWorld('materialMatchingAPI', {
+const materialMatchingDialogAPI = {
   // Listen for initialization data
   onInit: (callback: (data: MaterialMatchingInitData) => void) => {
     ipcRenderer.on('material-matching:init', (_event, data: MaterialMatchingInitData) => {
@@ -81,6 +81,12 @@ contextBridge.exposeInMainWorld('materialMatchingAPI', {
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
+  }
+} as const;
+
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    materialMatching: materialMatchingDialogAPI
   }
 });
 

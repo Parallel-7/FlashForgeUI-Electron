@@ -86,17 +86,35 @@ interface JobUploaderAPI {
     // Progress reporting methods
     receiveUploadProgress: (func: (progress: UploadProgress) => void) => void;
     receiveUploadComplete: (func: (result: UploadCompletionResult) => void) => void;
+    receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
-// Augment the global Window interface
-declare global {
-    interface Window {
-        uploaderAPI: JobUploaderAPI;
+const uploadFileAD5X = async (
+    filePath: string,
+    startNow: boolean,
+    autoLevel: boolean,
+    materialMappings?: AD5XMaterialMapping[]
+): Promise<AD5XUploadResult> => {
+    try {
+        const result = await ipcRenderer.invoke('upload-file-ad5x', {
+            filePath,
+            startPrint: startNow,
+            levelingBeforePrint: autoLevel,
+            materialMappings
+        }) as AD5XUploadResult;
+        return result;
+    } catch (error) {
+        return {
+            success: false,
+            fileName: '',
+            started: false,
+            error: error instanceof Error ? error.message : String(error),
+            timestamp: new Date()
+        };
     }
-}
+};
 
-// Expose the job uploader API to the renderer process
-contextBridge.exposeInMainWorld('uploaderAPI', {
+const jobUploaderAPI: JobUploaderAPI = {
     // Renderer to Main Process
     browseFile: (): void => {
         ipcRenderer.send('uploader:browse-file');
@@ -164,7 +182,7 @@ contextBridge.exposeInMainWorld('uploaderAPI', {
                 if (confirmed === true) {
                     // User confirmed - proceed with upload
                     console.log('Single-color print confirmed');
-                    void window.uploaderAPI?.uploadFileAD5X?.(filePath, true, true);
+                    void uploadFileAD5X(filePath, true, true);
                 } else {
                     // User cancelled - no action needed
                     console.log('Single-color print cancelled by user');
@@ -176,30 +194,7 @@ contextBridge.exposeInMainWorld('uploaderAPI', {
             });
     },
 
-    uploadFileAD5X: async (
-        filePath: string,
-        startNow: boolean,
-        autoLevel: boolean,
-        materialMappings?: AD5XMaterialMapping[]
-    ): Promise<AD5XUploadResult> => {
-        try {
-            const result = await ipcRenderer.invoke('upload-file-ad5x', {
-                filePath,
-                startPrint: startNow,
-                levelingBeforePrint: autoLevel,
-                materialMappings
-            }) as AD5XUploadResult;
-            return result;
-        } catch (error) {
-            return {
-                success: false,
-                fileName: '',
-                started: false,
-                error: error instanceof Error ? error.message : String(error),
-                timestamp: new Date()
-            };
-        }
-    },
+    uploadFileAD5X,
 
     isAD5XPrinter: async (): Promise<boolean> => {
         try {
@@ -231,15 +226,21 @@ contextBridge.exposeInMainWorld('uploaderAPI', {
         ipcRenderer.removeAllListeners('uploader:metadata-result');
         ipcRenderer.removeAllListeners('uploader:upload-progress');
         ipcRenderer.removeAllListeners('uploader:upload-complete');
+    },
+
+    receive: (channel: string, func: (...args: unknown[]) => void): void => {
+        const validChannels = ['theme-changed'];
+        if (validChannels.includes(channel)) {
+            ipcRenderer.on(channel, (_event, ...args) => func(...args));
+        }
     }
-,
-  receive: (channel: string, func: (...args: unknown[]) => void): void => {
-    const validChannels = ['theme-changed'];
-    if (validChannels.includes(channel)) {
-      ipcRenderer.on(channel, (_event, ...args) => func(...args));
-    }
+};
+
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    jobUploader: jobUploaderAPI
   }
-} as JobUploaderAPI);
+});
 
 // Export types for use in renderer
 export { UploadJobPayload, MetadataResult, JobUploaderAPI, FFGcodeToolData, AD5XUploadResult, UploadProgress, UploadCompletionResult };

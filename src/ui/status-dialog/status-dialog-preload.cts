@@ -73,7 +73,7 @@ interface StatusWindow extends Window {
 let statusPushListener: ((event: IpcRendererEvent, stats: StatusStats) => void) | null = null;
 
 // Expose status dialog API to renderer process
-contextBridge.exposeInMainWorld('statusAPI', {
+const statusDialogAPI = {
   requestStats: async (): Promise<StatusStats | null> => {
     try {
       const stats = await ipcRenderer.invoke('status-request-stats') as StatusStats;
@@ -116,6 +116,12 @@ contextBridge.exposeInMainWorld('statusAPI', {
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
+  }
+} as const;
+
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    status: statusDialogAPI
   }
 });
 

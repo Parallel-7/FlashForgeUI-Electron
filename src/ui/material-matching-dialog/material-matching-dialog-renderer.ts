@@ -73,14 +73,7 @@ function hasColorDifference(toolColor: string, slotColor: string | null): boolea
   return toolColor.toLowerCase() !== slotColor.toLowerCase();
 }
 
-// Global window type extension
-declare global {
-  interface Window {
-    materialMatchingAPI: MaterialMatchingAPI;
-  }
-}
-
-interface MaterialMatchingAPI {
+interface MaterialMatchingDialogAPI {
   readonly onInit: (callback: (data: MaterialMatchingInitData) => void) => void;
   readonly closeDialog: () => void;
   readonly confirmMappings: (mappings: AD5XMaterialMapping[]) => void;
@@ -94,6 +87,20 @@ interface MaterialMatchingInitData {
   readonly leveling: boolean;
   readonly context?: 'job-start' | 'file-upload'; // Context to determine button text
 }
+
+let cachedMaterialMatchingAPI: MaterialMatchingDialogAPI | null = null;
+
+const getMaterialMatchingAPI = (): MaterialMatchingDialogAPI => {
+  if (cachedMaterialMatchingAPI) {
+    return cachedMaterialMatchingAPI;
+  }
+  const api = window.api?.dialog?.materialMatching as MaterialMatchingDialogAPI | undefined;
+  if (!api) {
+    throw new Error('[MaterialMatchingDialog] dialog API bridge is not available');
+  }
+  cachedMaterialMatchingAPI = api;
+  return api;
+};
 
 // Global state
 let initData: MaterialMatchingInitData | null = null;
@@ -130,7 +137,9 @@ function initializeDialog(): void {
   }
 
   setupEventListeners();
-  setupIpcListeners();
+  const api = getMaterialMatchingAPI();
+  setupIpcListeners(api);
+  registerThemeListener(api);
 }
 
 /**
@@ -152,13 +161,7 @@ function setupEventListeners(): void {
 /**
  * Set up IPC listeners
  */
-function setupIpcListeners(): void {
-  const api = window.materialMatchingAPI;
-  if (!api) {
-    console.error('Material matching: API not available');
-    return;
-  }
-
+function setupIpcListeners(api: MaterialMatchingDialogAPI): void {
   api.onInit(async (data: MaterialMatchingInitData) => {
     console.log('Material matching: Received init data', data);
     initData = data;
@@ -172,7 +175,7 @@ function setupIpcListeners(): void {
       }
     }
     
-    await loadMaterialStation();
+    await loadMaterialStation(api);
     displayPrintRequirements();
     displayIFSSlots();
     updateMappingsDisplay();
@@ -182,10 +185,7 @@ function setupIpcListeners(): void {
 /**
  * Load material station status
  */
-async function loadMaterialStation(): Promise<void> {
-  const api = window.materialMatchingAPI;
-  if (!api) return;
-
+async function loadMaterialStation(api: MaterialMatchingDialogAPI): Promise<void> {
   try {
     materialStation = await api.getMaterialStationStatus();
     if (!materialStation || !materialStation.connected) {
@@ -538,18 +538,14 @@ function hideMessages(): void {
  * Handle close
  */
 function handleClose(): void {
-  const api = window.materialMatchingAPI;
-  if (api) {
-    api.closeDialog();
-  }
+  getMaterialMatchingAPI().closeDialog();
 }
 
 /**
  * Handle confirm
  */
 function handleConfirm(): void {
-  const api = window.materialMatchingAPI;
-  if (!api || !initData) return;
+  if (!initData) return;
 
   // Convert mappings to array
   const mappings = Array.from(currentMappings.values());
@@ -560,7 +556,7 @@ function handleConfirm(): void {
     return;
   }
 
-  api.confirmMappings(mappings);
+  getMaterialMatchingAPI().confirmMappings(mappings);
 }
 
 /**
@@ -577,11 +573,10 @@ function cleanup(): void {
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     initializeDialog();
-    registerThemeListener();
 });
 
-function registerThemeListener(): void {
-    window.materialMatchingAPI?.receive?.('theme-changed', (data: unknown) => {
+function registerThemeListener(api: MaterialMatchingDialogAPI): void {
+    api.receive?.('theme-changed', (data: unknown) => {
         applyDialogTheme(data as ThemeColors);
     });
 }

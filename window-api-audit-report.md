@@ -4,9 +4,9 @@
 **Scope:** Complete audit of `window.api.*` and `window.*` usage across the FlashForgeUI-Electron codebase  
 **Purpose:** Identify areas for API namespace organization and cleanup of `window.*` usage patterns
 
-**Latest Scan Command:** `npm run find:window -- --context=1`  
-**Result:** 398 `window.*` references across 55 files (via the new TypeScript helper script described below).  
-**Most common identifiers:** `window.api` (113 refs), `window.lucideHelpers` (26), `window.uploaderAPI` (24), `window.addEventListener` / `window.localStorage` (17), `window.printerSelectionAPI` (15), `window.settingsAPI` (14), `window.ifsDialogAPI` / `window.dialogAPI` / `window.updateDialogAPI` / `window.logDialogAPI` (≈10 each). Use the helper to keep these counts fresh before remediation.
+**Latest Targeted Scan:** `npm run find:window -- --pattern='window\\.[A-Za-z0-9_]+API'`  
+**Result:** ✅ `0` legacy dialog globals remain. Every dialog now resolves its API through `window.api.dialog.<name>`, so the namespace cleanup is complete.  
+**General Usage:** Run `npm run find:window -- --context=1` to refresh the full `window.*` inventory before future edits (expect ~400 entries, dominated by `window.api.*`, `window.lucideHelpers`, and browser APIs like `window.addEventListener`).
 
 ---
 
@@ -16,7 +16,7 @@
 
 - Run `npm run find:window -- --context=2` for full context.
 - Filter to specific namespaces with `--pattern=<regex>` (e.g., `--pattern=window\.api`, `--pattern=window\.uploaderAPI`).
-- Limit search roots via `--root=src,src/webui/static`.
+- Limit search roots via `--root=src,src/webui/static` (or the new `--roots=` alias) and extend file coverage with `--extensions=.ts,.tsx,.html`.
 
 The script executes via `ts-node --esm` (no TMPDIR hacks) and avoids comment-only matches. Re-run it before each cleanup sweep to spot new globals quickly.
 
@@ -30,13 +30,12 @@ This report catalogs all usage of `window.api.*` and other `window.*` patterns a
 3. **Dialog Windows & Settings** - All dialog windows and settings UI
 4. **WebUI Static Client** - Headless WebUI browser code
 
-**Key Findings:**
-- **Total `window.api.*` calls:** 113 across renderer + dialog windows (per latest helper run)
-- **Total `window.*` references overall:** 398 across 55 files (includes BrowserWindow usage in the main process)
-- **WebUI uses NO `window.api.*`** - relies on REST/WebSocket transport instead
-- **Browser standard APIs:** Extensively used (`localStorage`, timers, viewport APIs)
-- **Custom globals:** `window.lucideHelpers`, `window.lucide`, `window.GridStack`, dialog-specific APIs for each window
-- **New helper script:** `npm run find:window` surfaces every occurrence with line context + identifier counts
+**Key Findings (current state):**
+- **Legacy dialog globals removed:** All dialogs (settings, job uploader, material dialogs, etc.) now use `window.api.dialog.<name>` with preload-registered bridges.
+- **`window.api.*` still dominates legitimate IPC usage** in the renderer and component layers (~100 references). These are intentional and organized by namespace (config, camera, printerContexts, spoolman, etc.).
+- **Browser APIs + helpers remain common:** `window.lucideHelpers`, `window.addEventListener`, `window.localStorage`, and other platform APIs account for the rest of the list.
+- **WebUI client** continues to avoid `window.api.*`; it communicates over HTTP/WebSockets only.
+- **Helper script** should be rerun before future cleanup to keep counts fresh.
 
 ---
 
@@ -64,8 +63,10 @@ This report catalogs all usage of `window.api.*` and other `window.*` patterns a
 #### Scoped API Namespaces
 | Namespace | Count | Files | Methods |
 |-----------|-------|-------|---------|
-| `window.api.requestConfig()` | 4 | renderer.ts, gridController.ts | Request app configuration |
+| `window.api.config.*` | 5 | renderer.ts, gridController.ts, component-dialog.ts | `get()`, `onLoaded()`, `onUpdated()`, `onThemePreview()` |
 | `window.api.printerContexts.*` | 3 | renderer.ts | `switch()`, `remove()`, `getAll()` |
+
+`window.api.config` replaces direct `'config-*'` channel listeners. The renderer now subscribes through `onLoaded()`, `onUpdated()`, and `onThemePreview()` helpers, reducing the amount of ad-hoc `window.api.receive('config-*')` calls.
 
 ### Key IPC Channels
 
@@ -183,6 +184,8 @@ This report catalogs all usage of `window.api.*` and other `window.*` patterns a
 
 ## Section 3: Dialog Windows & Settings
 
+> **Status:** All dialog bridges (settings, shortcut config, printer selection, job uploader, material dialogs, spoolman, status, etc.) now register under `window.api.dialog.<namespace>`. The legacy globals (`window.shortcutConfigAPI`, `window.uploaderAPI`, `window.dialogAPI`, etc.) were fully removed and verified via `npm run find:window -- --pattern='window\\.[A-Za-z0-9_]+API'`.
+
 ### Files Audited
 **Settings:**
 - `src/ui/settings/settings-renderer.ts`
@@ -200,14 +203,21 @@ This report catalogs all usage of `window.api.*` and other `window.*` patterns a
 
 | Namespace | Files | Methods |
 |-----------|-------|---------|
-| `window.settingsAPI` | settings-renderer.ts | `requestConfig()`, `saveConfig()`, `closeWindow()`, `onConfigUpdated()`, `removeListeners()`, `performThemeProfileOperation()`, `testSpoolmanConnection()`, `testDiscordWebhook()`, `getRoundedUISupportInfo()` |
-| `window.printerSettingsAPI` | settings-renderer.ts | `get()`, `update()`, `getPrinterName()` |
-| `window.autoUpdateAPI` | settings-renderer.ts | `checkForUpdates()`, `getStatus()`, `setUpdateChannel()` |
+| `window.api.dialog.settings` | settings-renderer.ts, sections | `requestConfig()`, `saveConfig()`, `saveDesktopTheme()`, `closeWindow()`, `send()/receive()`, `onConfigUpdated()`, `removeListeners()`, `performThemeProfileOperation()`, `testSpoolmanConnection()`, `testDiscordWebhook()`, `getRoundedUISupportInfo()` |
+| `window.api.dialog.printerSettings` | settings-renderer.ts | `get()`, `update()`, `getPrinterName()` |
+| `window.api.dialog.autoUpdate` | settings-renderer.ts | `checkForUpdates()`, `getStatus()`, `setUpdateChannel()` |
+| `window.settingsAPI` (legacy) | settings-renderer.ts | Points to `window.api.dialog.settings` for backward compatibility |
+| `window.printerSettingsAPI` (legacy) | settings-renderer.ts | Legacy alias for `window.api.dialog.printerSettings` |
+| `window.autoUpdateAPI` (legacy) | settings-renderer.ts | Legacy alias for `window.api.dialog.autoUpdate` |
+| `window.api.dialog.log` | log-dialog-renderer.ts | `requestLogs()`, `clearLogs()`, `onLogMessage()`, `closeWindow()` |
+| `window.api.dialog.jobPicker` | job-picker-renderer.ts | `onInit()`, `onJobList()`, `startJob()`, `showMaterialMatching()`, `showSingleColorConfirmation()` |
+| `window.api.dialog.spoolman` | spoolman-dialog-renderer.ts | `searchSpools()`, `selectSpool()`, theme listener |
+| `window.api.dialog.spoolmanOffline` | spoolman-offline-dialog-renderer.ts | `retryConnection()`, `onStatusUpdate()` |
 | `window.componentDialogAPI` | component-dialog.ts | `receive()` (polling-update, init events) |
-| `window.spoolmanDialogAPI` | spoolman-dialog-renderer.ts | `searchSpools()`, `selectSpool()` |
-| `window.spoolmanOfflineAPI` | spoolman-offline-dialog-renderer.ts | `retryConnection()`, `onStatusUpdate()` |
 | `window.shortcutConfigAPI` | shortcut-config-dialog.ts | `getCurrentConfig()`, `getAvailableComponents()`, `saveConfig()`, `closeDialog()`, `onDialogInit()` |
 | `window.lucideHelpers` | All dialogs | `initializeLucideIconsFromGlobal()` |
+
+The new `window.api.dialog.*` namespace mirrors the renderer preload so dialogs can reuse the same APIs without bespoke globals. Legacy `window.settingsAPI` / `window.printerSettingsAPI` / `window.autoUpdateAPI` still exist as aliases during the migration.
 
 ### Newly Cataloged Dialog Bridges
 
@@ -222,13 +232,13 @@ This report catalogs all usage of `window.api.*` and other `window.*` patterns a
 | Printer Warning | `src/ui/printer-connected-warning/printer-connected-warning-renderer.ts` | `window.printerWarningDialogAPI` | Continue/cancel flows plus theme listener. |
 | IFS Dialog | `src/ui/ifs-dialog/ifs-dialog-renderer.ts` | `window.ifsDialogAPI` | Requests material station data, closes dialog via API. |
 | Send Commands | `src/ui/send-cmds/send-cmds-renderer.ts` | `window.sendCmdsApi` | Manual G-code send dialog with theme events. |
-| Job Picker | `src/ui/job-picker/job-picker-renderer.ts` | `window.jobPickerAPI` | Handles job lists, thumbnails, and spawn of downstream dialogs (`materialMatching`, `materialInfo`, `singleColorConfirm`). |
+| Job Picker | `src/ui/job-picker/job-picker-renderer.ts` | `window.api.dialog.jobPicker` | Handles job lists, thumbnails, and spawn of downstream dialogs (`materialMatching`, `materialInfo`, `singleColorConfirm`). |
 | Job Uploader (renderer + preload) | `src/ui/job-uploader/*.ts` | `window.uploaderAPI` | Upload flow, metadata parsing, AD5X helpers; preload calls `.uploadFileAD5X()` during compatibility prompts. |
 | Material Matching | `src/ui/material-matching-dialog/material-matching-dialog-renderer.ts` | `window.materialMatchingAPI` | Mapping UI for AD5X multi-color prints. |
 | Material Info | `src/ui/material-info-dialog/material-info-dialog-renderer.ts` | `window.materialInfoDialogAPI` | Presents tool/material metadata. |
 | Single-Color Confirmation | `src/ui/single-color-confirmation-dialog/single-color-confirmation-dialog-renderer.ts` | `window.singleColorConfirmAPI` | Validates IFS slots before running AD5X jobs. |
-| Log Dialog | `src/ui/log-dialog/log-dialog-renderer.ts` | `window.logDialogAPI`, `window.windowControls` fallback | Streams logs, clears them, watches theme events. |
-| Status + Spoolman Offline Dialogs | `src/ui/status-dialog/*`, `src/ui/spoolman-offline-dialog/*` | `window.statusAPI`, `window.spoolmanOfflineAPI` | Provide diagnostics + offline retry flows. |
+| Log Dialog | `src/ui/log-dialog/log-dialog-renderer.ts` | `window.api.dialog.log`, `window.windowControls` fallback | Streams logs, clears them, watches theme events. |
+| Status + Spoolman Offline Dialogs | `src/ui/status-dialog/*`, `src/ui/spoolman-offline-dialog/*` | `window.statusAPI`, `window.api.dialog.spoolmanOffline` | Provide diagnostics + offline retry flows. |
 
 ### Browser API Usage (Dialogs)
 | Pattern | Files | Purpose |

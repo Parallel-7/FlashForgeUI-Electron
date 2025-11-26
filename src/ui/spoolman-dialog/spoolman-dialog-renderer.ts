@@ -17,9 +17,23 @@
 
 /// <reference types="../../types/global.d.ts" />
 
-import type { SpoolResponse, ActiveSpoolData } from '../../types/spoolman.js';
+import type { SpoolResponse, ActiveSpoolData, SpoolSearchQuery } from '../../types/spoolman.js';
 import type { ThemeColors } from '../../types/config.js';
 import { applyDialogTheme } from '../shared/theme-utils.js';
+
+interface SpoolmanDialogAPI {
+  searchSpools: (query: SpoolSearchQuery) => Promise<SpoolResponse[]>;
+  selectSpool: (spool: ActiveSpoolData) => Promise<void>;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
+}
+
+const getSpoolmanAPI = (): SpoolmanDialogAPI => {
+  const api = window.api?.dialog?.spoolman as SpoolmanDialogAPI | undefined;
+  if (!api) {
+    throw new Error('[SpoolmanDialog] dialog API bridge is not available');
+  }
+  return api;
+};
 
 // ============================================================================
 // UTILITY FUNCTIONS
@@ -46,7 +60,8 @@ let currentQuery = '';
 // Initialize on DOM load
 
 function registerThemeListener(): void {
-  window.dialogAPI?.receive?.('theme-changed', (data: unknown) => {
+  const api = getSpoolmanAPI();
+  api.receive?.('theme-changed', (data: unknown) => {
     applyDialogTheme(data as ThemeColors);
   });
 }
@@ -139,12 +154,10 @@ async function loadSpools(query: string): Promise<void> {
   showLoadingState();
 
   try {
-    if (!window.spoolmanDialogAPI) {
-      throw new Error('Spoolman dialog API not available');
-    }
+    const api = getSpoolmanAPI();
 
     // Build search query with server-side filtering
-    const searchQuery: import('../../types/spoolman.js').SpoolSearchQuery = {
+    const searchQuery: SpoolSearchQuery = {
       limit: 50,
       allow_archived: false,
     };
@@ -156,14 +169,14 @@ async function loadSpools(query: string): Promise<void> {
     }
 
     // Fetch spools from main process (server-side filtering)
-    const spools = await window.spoolmanDialogAPI.searchSpools(searchQuery);
+    const spools = await api.searchSpools(searchQuery);
 
     // If server-side search returned no results, try client-side filtering as fallback
     // This helps find spools by vendor or material when user doesn't know exact name
     let displaySpools = spools;
     if (spools.length === 0 && query && query.trim()) {
       // Fetch all spools and filter client-side
-      const allSpools = await window.spoolmanDialogAPI.searchSpools({
+      const allSpools = await api.searchSpools({
         limit: 200,
         allow_archived: false,
       });
@@ -242,7 +255,7 @@ function createSpoolCard(spool: SpoolResponse): HTMLElement {
  * Handle spool selection
  */
 async function handleSpoolSelect(spool: SpoolResponse): Promise<void> {
-  if (!window.spoolmanDialogAPI) return;
+  const api = getSpoolmanAPI();
 
   // Transform to ActiveSpoolData
   const activeSpoolData: ActiveSpoolData = {
@@ -257,7 +270,7 @@ async function handleSpoolSelect(spool: SpoolResponse): Promise<void> {
   };
 
   // Send selection to main process
-  await window.spoolmanDialogAPI.selectSpool(activeSpoolData);
+  await api.selectSpool(activeSpoolData);
 
   // Close dialog
   window.close();

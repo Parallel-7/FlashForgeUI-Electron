@@ -4,9 +4,17 @@
  * manual IP entry and network scanning for printer connections.
  */
 
-import type { ConnectChoiceOption, ConnectChoiceData } from './connect-choice-dialog-preload.cts';
+import type { ConnectChoiceOption, ConnectChoiceData, ConnectChoiceAPI } from './connect-choice-dialog-preload.cts';
 import type { ThemeColors } from '../../types/config.js';
 import { applyDialogTheme } from '../shared/theme-utils.js';
+
+const getConnectChoiceAPI = (): ConnectChoiceAPI => {
+  const api = window.api?.dialog?.connectChoice as ConnectChoiceAPI | undefined;
+  if (!api) {
+    throw new Error('[ConnectChoiceDialog] API bridge is not available');
+  }
+  return api;
+};
 
 // Global state
 let isHandlingChoice = false;
@@ -21,14 +29,14 @@ document.addEventListener('DOMContentLoaded', (): void => {
   registerThemeListener();
 
   // Listen for initialization data from main process
-  window.connectChoiceAPI.onDialogInit((data: ConnectChoiceData & { responseChannel: string }) => {
+  getConnectChoiceAPI().onDialogInit((data: ConnectChoiceData & { responseChannel: string }) => {
     console.log('Received connect choice dialog data:', data);
     updateDialogUI(data);
   });
 });
 
 function registerThemeListener(): void {
-  window.connectChoiceAPI.receive?.('theme-changed', (data: unknown) => {
+  getConnectChoiceAPI().receive?.('theme-changed', (data: unknown) => {
     applyDialogTheme(data as ThemeColors);
   });
 }
@@ -70,7 +78,7 @@ function setupEventListeners(): void {
 
   // Handle window beforeunload
   window.addEventListener('beforeunload', () => {
-    window.connectChoiceAPI.removeAllListeners();
+    getConnectChoiceAPI().removeAllListeners();
   });
 }
 
@@ -161,7 +169,7 @@ async function handleChoice(action: ConnectChoiceOption['action']): Promise<void
 
   try {
     const choice: ConnectChoiceOption = { action };
-    await window.connectChoiceAPI.sendChoice(choice);
+    await getConnectChoiceAPI().sendChoice(choice);
     console.log('Choice sent successfully');
     
     // Disable all buttons to prevent multiple selections

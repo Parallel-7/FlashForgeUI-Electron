@@ -41,9 +41,7 @@ interface AutoUpdateActionResult {
   error?: string;
 }
 
-export {};
-
-contextBridge.exposeInMainWorld('updateDialogAPI', {
+const updateDialogAPI = {
   async getStatus(): Promise<UpdateStatusResponse> {
     return await ipcRenderer.invoke('get-update-status') as UpdateStatusResponse;
   },
@@ -80,15 +78,23 @@ contextBridge.exposeInMainWorld('updateDialogAPI', {
 
   closeWindow(): void {
     ipcRenderer.send('close-current-window');
-  }
-,
+  },
+
   receive: (channel: string, func: (...args: unknown[]) => void): void => {
     const validChannels = ['theme-changed'];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
   }
+};
+
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    update: updateDialogAPI
+  }
 });
 
 contextBridge.exposeInMainWorld('platform', process.platform);
+
+export {};
 

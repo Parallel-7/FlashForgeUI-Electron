@@ -24,13 +24,6 @@ import { logVerbose } from '../../utils/logging.js';
 import type { ThemeColors } from '../../types/config.js';
 import { applyDialogTheme } from '../shared/theme-utils.js';
 
-// Global window type extension
-declare global {
-  interface Window {
-    jobPickerAPI: JobPickerAPI;
-  }
-}
-
 interface JobPickerAPI {
     readonly onInit: (callback: (data: JobPickerInitData) => void) => void;
     readonly onJobList: (callback: (data: JobListData) => void) => void;
@@ -83,6 +76,14 @@ interface MaterialInfoData {
     readonly useMatlStation?: boolean;
 }
 
+
+const getJobPickerAPI = (): JobPickerAPI => {
+  const api = window.api?.dialog?.jobPicker as JobPickerAPI | undefined;
+  if (!api) {
+    throw new Error('[JobPickerDialog] API bridge is not available');
+  }
+  return api;
+};
 const JOB_PICKER_LOG_NAMESPACE = 'JobPickerRenderer';
 const logDebug = (message: string, ...args: unknown[]): void => {
   logVerbose(JOB_PICKER_LOG_NAMESPACE, message, ...args);
@@ -215,7 +216,7 @@ async function initializeDialog(isRecentFiles: boolean): Promise<void> {
  */
 async function checkPrinterCapabilities(): Promise<void> {
     try {
-        const api = window.jobPickerAPI;
+        const api = getJobPickerAPI();
         if (!api) {
             console.error('Job picker: API not available for capabilities check');
             return;
@@ -272,7 +273,7 @@ function setupEventListeners(): void {
  * Set up IPC listeners for communication with main process
  */
 function setupIpcListeners(): void {
-    const api = window.jobPickerAPI;
+    const api = getJobPickerAPI();
     if (!api) {
         console.error('Job picker: API not available');
         return;
@@ -436,7 +437,7 @@ function showMaterialInfoDialog(jobData: AD5XJobInfo): void {
         useMatlStation: jobData.useMatlStation
     };
 
-    const api = window.jobPickerAPI;
+    const api = getJobPickerAPI();
     if (api) {
         api.showMaterialInfo(materialInfoData);
     }
@@ -513,7 +514,7 @@ function handleFileSelection(filename: string, fileItem: HTMLElement): void {
  * Request thumbnail for a specific file from main process
  */
 function requestThumbnailForFile(filename: string): void {
-    const api = window.jobPickerAPI;
+    const api = getJobPickerAPI();
     if (!api) {
         console.error('Job picker: Cannot request thumbnail - API not available');
         return;
@@ -551,7 +552,7 @@ function updateThumbnail(filename: string, thumbnail: string | null): void {
  * Handle dialog close action
  */
 function handleCloseDialog(): void {
-    const api = window.jobPickerAPI;
+    const api = getJobPickerAPI();
     if (!api) {
         console.error('Job picker: Cannot close dialog - API not available');
         return;
@@ -581,7 +582,7 @@ async function handleSelectJob(): Promise<void> {
         return;
     }
 
-    const api = window.jobPickerAPI;
+    const api = getJobPickerAPI();
     if (!api) {
         console.error('Job picker: Cannot select job - API not available');
         return;
@@ -721,7 +722,7 @@ async function handleSelectJob(): Promise<void> {
  * Load local jobs from printer
  */
 async function loadLocalJobs(): Promise<void> {
-    const api = window.jobPickerAPI;
+    const api = getJobPickerAPI();
     if (!api) return;
     
     try {
@@ -749,7 +750,7 @@ async function loadLocalJobs(): Promise<void> {
  * Load recent jobs from printer
  */
 async function loadRecentJobs(): Promise<void> {
-    const api = window.jobPickerAPI;
+    const api = getJobPickerAPI();
     if (!api) return;
     
     try {

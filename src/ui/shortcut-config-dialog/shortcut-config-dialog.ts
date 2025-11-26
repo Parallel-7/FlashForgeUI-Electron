@@ -18,7 +18,12 @@
 
 /// <reference types="../../types/global.d.ts" />
 
-import type { ShortcutButtonConfig, ShortcutComponentInfo } from '../../types/shortcut-config.js';
+import type {
+  ShortcutButtonConfig,
+  ShortcutComponentInfo,
+  ShortcutDialogInitData,
+  ShortcutSaveConfigResult
+} from '../../types/shortcut-config.js';
 import type { LucideHelpers } from '../shared/lucide.js';
 import type { ThemeColors } from '../../types/config.js';
 import { applyDialogTheme } from '../shared/theme-utils.js';
@@ -31,8 +36,24 @@ declare global {
 
 export {};
 
-const shortcutConfigAPI =
-  window.shortcutConfigAPI ?? (() => { throw new Error('[ShortcutConfigDialog] shortcutConfigAPI not available'); })();
+interface ShortcutConfigDialogAPI {
+  onDialogInit: (callback: (data: ShortcutDialogInitData) => void) => void;
+  getCurrentConfig: () => Promise<ShortcutButtonConfig | null>;
+  saveConfig: (config: ShortcutButtonConfig) => Promise<ShortcutSaveConfigResult>;
+  getAvailableComponents: () => Promise<ShortcutComponentInfo[]>;
+  closeDialog: (responseChannel: string) => void;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
+}
+
+const getShortcutConfigAPI = (): ShortcutConfigDialogAPI => {
+  const api = window.api?.dialog?.shortcutConfig as ShortcutConfigDialogAPI | undefined;
+  if (!api) {
+    throw new Error('[ShortcutConfigDialog] dialog API bridge is not available');
+  }
+  return api;
+};
+
+const shortcutConfigAPI = getShortcutConfigAPI();
 
 /**
  * Response channel for closing dialog

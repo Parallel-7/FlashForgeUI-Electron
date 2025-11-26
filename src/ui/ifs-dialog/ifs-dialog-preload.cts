@@ -52,7 +52,7 @@ interface IFSDialogAPI {
 }
 
 // Expose the IFS dialog API to the renderer process
-contextBridge.exposeInMainWorld('ifsDialogAPI', {
+const ifsDialogAPI: IFSDialogAPI = {
   // Receive data from main process
   receive: (channel: string, func: (...args: unknown[]) => void): void => {
     if (validReceiveChannels.includes(channel)) {
@@ -76,7 +76,13 @@ contextBridge.exposeInMainWorld('ifsDialogAPI', {
   closeDialog: (): void => {
     ipcRenderer.send('ifs-close-window');
   }
-} as IFSDialogAPI);
+};
+
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    ifs: ifsDialogAPI
+  }
+});
 
 // Generic window controls for sub-windows
 contextBridge.exposeInMainWorld('windowControls', {
@@ -84,12 +90,5 @@ contextBridge.exposeInMainWorld('windowControls', {
   close: () => ipcRenderer.send('dialog-window-close'),
   closeGeneric: () => ipcRenderer.send('close-current-window')
 });
-
-// Type definitions for the global window object
-declare global {
-  interface Window {
-    ifsDialogAPI: IFSDialogAPI;
-  }
-}
 
 export type { MaterialSlotData, MaterialStationData, IFSDialogAPI }; 

@@ -102,6 +102,9 @@ let activeContextId: string | null = null;
 /** Current active printer serial number (stable identifier for layouts/shortcuts) */
 let activeContextSerial: string | null = null;
 
+/** Track disposers for config-related IPC listeners */
+const configEventDisposers: Array<() => void> = [];
+
 const handleConfigLoadedEvent = (): void => {
   if (configLoaded) {
     return;
@@ -110,13 +113,15 @@ const handleConfigLoadedEvent = (): void => {
   logDebug('[Config] Renderer marked configuration as loaded');
 };
 
-if (window.api?.receive) {
-  window.api.receive('config-loaded', () => {
-    logDebug('[Config] Renderer received config-loaded IPC event');
-    handleConfigLoadedEvent();
-  });
+if (window.api?.config) {
+  configEventDisposers.push(
+    window.api.config.onLoaded(() => {
+      logDebug('[Config] Renderer received config-loaded IPC event');
+      handleConfigLoadedEvent();
+    })
+  );
 } else {
-  console.warn('[Config] Unable to register config-loaded listener (api unavailable)');
+  console.warn('[Config] Unable to register config-loaded listener (config API unavailable)');
 }
 
 function showConnectPlaceholder(): void {
@@ -441,25 +446,29 @@ function initializeStateAndEventListeners(): void {
       stateTracker.onConnected();
     });
 
-    // Listen for config updates to reapply theme
-    window.api.receive('config-updated', async (...args: unknown[]) => {
-      const updatedConfig = args[0] as { DesktopTheme?: ThemeColors };
-      if (updatedConfig.DesktopTheme) {
+  }
+
+  logDebug('State tracking and event listeners initialized');
+}
+
+if (window.api?.config) {
+  configEventDisposers.push(
+    window.api.config.onUpdated((updatedConfig) => {
+      if (updatedConfig?.DesktopTheme) {
         logDebug('Config updated, reapplying desktop theme');
         applyDesktopTheme(updatedConfig.DesktopTheme);
       }
-    });
+    })
+  );
 
-    window.api.receive('desktop-theme-preview', (...args: unknown[]) => {
-      const previewTheme = args[0] as ThemeColors | undefined;
+  configEventDisposers.push(
+    window.api.config.onThemePreview((previewTheme) => {
       if (previewTheme) {
         logDebug('Previewing desktop theme from settings dialog');
         applyDesktopTheme(previewTheme);
       }
-    });
-  }
-
-  logDebug('State tracking and event listeners initialized');
+    })
+  );
 }
 
 // ============================================================================
@@ -515,12 +524,12 @@ function lightenColor(hex: string, percent: number): string {
  */
 async function loadAndApplyDesktopTheme(): Promise<void> {
   try {
-    if (!window.api?.requestConfig) {
+    if (!window.api?.config) {
       console.warn('Cannot load theme: API not available');
       return;
     }
 
-    const config = await window.api.requestConfig() as AppConfig;
+    const config = await window.api.config.get();
     if (config.DesktopTheme) {
       applyDesktopTheme(config.DesktopTheme);
     }
@@ -662,6 +671,17 @@ window.addEventListener('beforeunload', () => {
   }
 
   // Clean up IPC listeners (preserve existing functionality)
+  if (configEventDisposers.length > 0) {
+    configEventDisposers.forEach((dispose) => {
+      try {
+        dispose();
+      } catch (error) {
+        console.error('Error removing config event listener:', error);
+      }
+    });
+    configEventDisposers.length = 0;
+  }
+
   if (window.api) {
     try {
       window.api.removeAllListeners();

@@ -123,7 +123,11 @@ export class RendererGridController {
 
     let printerConfig: AppConfig | null = null;
     try {
-      printerConfig = (await window.api.requestConfig()) as AppConfig;
+      if (!window.api?.config) {
+        console.warn('[PerPrinter] Config API unavailable for context reload');
+      } else {
+        printerConfig = await window.api.config.get();
+      }
     } catch (error) {
       console.warn('[PerPrinter] Failed to load printer config for context reload:', error);
     }
@@ -203,8 +207,8 @@ export class RendererGridController {
       }
 
       const lastPollingData = this.options.getLastPollingData();
-      if (lastPollingData) {
-        const configData = await window.api.requestConfig();
+      if (lastPollingData && window.api?.config) {
+        const configData = await window.api.config.get();
         const updateData: ComponentUpdateData = {
           pollingData: lastPollingData,
           config: configData,
@@ -324,8 +328,8 @@ export class RendererGridController {
     this.logDebug(`GridStack: Created ${widgetCount}/${layout.widgets.length} widgets`);
 
     const lastPollingData = this.options.getLastPollingData();
-    if (lastPollingData) {
-      const config = await window.api.requestConfig();
+    if (lastPollingData && window.api?.config) {
+      const config = await window.api.config.get();
       const updateData: ComponentUpdateData = {
         pollingData: lastPollingData,
         config,

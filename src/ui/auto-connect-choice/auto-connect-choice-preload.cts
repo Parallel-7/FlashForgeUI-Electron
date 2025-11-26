@@ -56,12 +56,8 @@ const autoConnectChoiceAPI = {
   }
 };
 
-// Expose the API to the renderer process
-contextBridge.exposeInMainWorld('autoConnectChoiceAPI', autoConnectChoiceAPI);
-
-// Type declaration for the exposed API
-declare global {
-  interface Window {
-    autoConnectChoiceAPI: typeof autoConnectChoiceAPI;
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    autoConnectChoice: autoConnectChoiceAPI
   }
-}
+});

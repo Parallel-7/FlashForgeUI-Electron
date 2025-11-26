@@ -15,7 +15,7 @@ interface PrinterConnectedWarningData {
 }
 
 // Expose secure dialog API to renderer process
-contextBridge.exposeInMainWorld('printerWarningDialogAPI', {
+const printerWarningDialogAPI = {
     /**
      * Receive dialog initialization data from main process
      * @param channel The IPC channel to listen on
@@ -52,6 +52,12 @@ contextBridge.exposeInMainWorld('printerWarningDialogAPI', {
     cancel: async (): Promise<void> => {
         return ipcRenderer.invoke('printer-connected-warning-cancel') as Promise<void>;
     }
+} as const;
+
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    printerWarning: printerWarningDialogAPI
+  }
 });
 
 // Handle platform information for styling
@@ -64,3 +70,5 @@ ipcRenderer.once('platform-info', (_event, platform: string) => {
 
 // Log preload completion for debugging
 console.log('Printer connected warning dialog preload script loaded');
+
+export {};

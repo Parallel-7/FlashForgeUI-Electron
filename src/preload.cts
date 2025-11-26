@@ -26,11 +26,35 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 import type { CameraProxyStatus } from './types/camera/camera.types.js';
+import type { AppConfig, ThemeColors } from './types/config.js';
+import type {
+  ISettingsAPI,
+  IPrinterSettingsAPI,
+  IAutoUpdateAPI,
+  ThemeProfileOperationData,
+  UpdateStatusResponse
+} from './ui/settings/types/external.js';
 
 // IPC event listener function type
 type IPCListener = (...args: unknown[]) => void;
 
 // API interface for type safety
+type EventDisposer = () => void;
+
+interface ConfigAPI {
+  get: () => Promise<AppConfig>;
+  onLoaded: (callback: () => void) => EventDisposer;
+  onUpdated: (callback: (config: AppConfig) => void) => EventDisposer;
+  onThemePreview: (callback: (theme: ThemeColors) => void) => EventDisposer;
+}
+
+interface DialogNamespace {
+  settings: ISettingsAPI;
+  printerSettings: PrinterSettingsAPI;
+  autoUpdate: IAutoUpdateAPI;
+  [key: string]: unknown;
+}
+
 interface ElectronAPI {
   send: (channel: string, data?: unknown) => void;
   receive: (channel: string, func: IPCListener) => void;
@@ -44,6 +68,8 @@ interface ElectronAPI {
   requestBackendStatus: () => Promise<unknown>;
   requestConfig: () => Promise<unknown>;
   onPlatformInfo: (callback: (platform: string) => void) => void;
+  config: ConfigAPI;
+  dialog: DialogNamespace;
   loading: LoadingAPI;
   camera: CameraAPI;
   printerContexts: PrinterContextsAPI;
@@ -124,6 +150,110 @@ interface LoadingAPI {
 }
 
 const listeners = new Map<string, { original: IPCListener; wrapped: IPCListener }>();
+
+const registerVoidEventListener = (channel: string, callback: () => void): EventDisposer => {
+  const wrapped: IPCListener = () => {
+    callback();
+  };
+  ipcRenderer.on(channel, wrapped);
+  return () => {
+    ipcRenderer.removeListener(channel, wrapped);
+  };
+};
+
+const registerPayloadEventListener = <T,>(channel: string, callback: (payload: T) => void): EventDisposer => {
+  const wrapped: IPCListener = (_event: unknown, payload: unknown) => {
+    callback(payload as T);
+  };
+  ipcRenderer.on(channel, wrapped);
+  return () => {
+    ipcRenderer.removeListener(channel, wrapped);
+  };
+};
+
+const settingsDialogBridge: ISettingsAPI = {
+  requestConfig: async (): Promise<AppConfig> => {
+    const config = await ipcRenderer.invoke('settings-request-config');
+    return config as AppConfig;
+  },
+  saveConfig: async (config: Partial<AppConfig>): Promise<boolean> => {
+    const result = await ipcRenderer.invoke('settings-save-config', config);
+    return Boolean(result);
+  },
+  saveDesktopTheme: async (theme: ThemeColors): Promise<boolean> => {
+    const result = await ipcRenderer.invoke('settings:save-desktop-theme', theme);
+    return Boolean(result);
+  },
+  closeWindow: () => {
+    ipcRenderer.send('settings-close-window');
+  },
+  send: (channel: string, data?: unknown) => {
+    ipcRenderer.send(channel, data);
+  },
+  receive: (channel: string, func: (...args: unknown[]) => void) => {
+    const wrapped: IPCListener = (_event: unknown, ...args: unknown[]) => func(...args);
+    ipcRenderer.on(channel, wrapped);
+  },
+  receiveConfig: (callback: (config: AppConfig) => void) => {
+    ipcRenderer.on('settings-config-data', (_event, config: AppConfig) => callback(config));
+  },
+  onConfigUpdated: (callback: (config: AppConfig) => void) => {
+    ipcRenderer.on('config-updated-event', (_event, config: AppConfig) => callback(config));
+  },
+  removeListeners: () => {
+    ['settings-config-data', 'config-updated-event', 'theme-changed'].forEach((channel) => {
+      ipcRenderer.removeAllListeners(channel);
+    });
+  },
+  performThemeProfileOperation: (
+    uiType: 'desktop' | 'web',
+    operation: 'add' | 'update' | 'delete',
+    data: ThemeProfileOperationData
+  ) => {
+    ipcRenderer.send('theme-profile-operation', { uiType, operation, data });
+  },
+  testSpoolmanConnection: async (url: string) => {
+    return await ipcRenderer.invoke('spoolman:test-connection', url) as { connected: boolean; error?: string };
+  },
+  testDiscordWebhook: async (url: string) => {
+    return await ipcRenderer.invoke('discord:test-webhook', url) as { success: boolean; error?: string };
+  },
+  getRoundedUISupportInfo: async () => {
+    return await ipcRenderer.invoke('rounded-ui:get-support-info');
+  }
+};
+
+const printerSettingsBridge: PrinterSettingsAPI & IPrinterSettingsAPI = {
+  get: async (): Promise<unknown> => {
+    return await ipcRenderer.invoke('printer-settings:get');
+  },
+  update: async (settings: unknown): Promise<boolean> => {
+    const result: unknown = await ipcRenderer.invoke('printer-settings:update', settings);
+    return typeof result === 'boolean' ? result : false;
+  },
+  getPrinterName: async (): Promise<string | null> => {
+    const result: unknown = await ipcRenderer.invoke('printer-settings:get-printer-name');
+    return typeof result === 'string' ? result : null;
+  }
+};
+
+const autoUpdateBridge: IAutoUpdateAPI = {
+  checkForUpdates: async (): Promise<{ success: boolean; error?: string }> => {
+    return await ipcRenderer.invoke('check-for-updates') as { success: boolean; error?: string };
+  },
+  getStatus: async (): Promise<UpdateStatusResponse> => {
+    return await ipcRenderer.invoke('get-update-status') as UpdateStatusResponse;
+  },
+  setUpdateChannel: async (channel: 'stable' | 'alpha'): Promise<{ success: boolean }> => {
+    return await ipcRenderer.invoke('set-update-channel', channel) as { success: boolean };
+  }
+};
+
+const dialogBridge = {
+  settings: settingsDialogBridge,
+  printerSettings: printerSettingsBridge,
+  autoUpdate: autoUpdateBridge
+};
 
 // Valid IPC channels for security
 const validSendChannels = [
@@ -260,6 +390,30 @@ try {
 
 // Expose platform directly (no IPC needed) - available synchronously to renderer
 contextBridge.exposeInMainWorld('PLATFORM', process.platform);
+
+const configAPI: ConfigAPI = {
+  get: async (): Promise<AppConfig> => {
+    const config = await ipcRenderer.invoke('request-config');
+    return config as AppConfig;
+  },
+  onLoaded: (callback: () => void): EventDisposer => {
+    return registerVoidEventListener('config-loaded', callback);
+  },
+  onUpdated: (callback: (config: AppConfig) => void): EventDisposer => {
+    return registerPayloadEventListener<AppConfig>('config-updated', (config) => {
+      if (config) {
+        callback(config);
+      }
+    });
+  },
+  onThemePreview: (callback: (theme: ThemeColors) => void): EventDisposer => {
+    return registerPayloadEventListener<ThemeColors>('desktop-theme-preview', (theme) => {
+      if (theme) {
+        callback(theme);
+      }
+    });
+  }
+};
 
 // Expose the API to the renderer process
 contextBridge.exposeInMainWorld('api', {
@@ -408,8 +562,11 @@ contextBridge.exposeInMainWorld('api', {
   },
 
   requestConfig: async (): Promise<unknown> => {
-    return await ipcRenderer.invoke('request-config');
+    return await configAPI.get();
   },
+
+  config: configAPI,
+  dialog: dialogBridge,
 
   onPlatformInfo: (callback: (platform: string) => void) => {
     const wrappedCallback: IPCListener = (event: unknown, platform: unknown) => {
@@ -527,21 +684,7 @@ contextBridge.exposeInMainWorld('api', {
     }
   },
 
-  printerSettings: {
-    get: async (): Promise<unknown> => {
-      return await ipcRenderer.invoke('printer-settings:get');
-    },
-
-    update: async (settings: unknown): Promise<boolean> => {
-      const result: unknown = await ipcRenderer.invoke('printer-settings:update', settings);
-      return typeof result === 'boolean' ? result : false;
-    },
-
-    getPrinterName: async (): Promise<string | null> => {
-      const result: unknown = await ipcRenderer.invoke('printer-settings:get-printer-name');
-      return typeof result === 'string' ? result : null;
-    }
-  },
+  printerSettings: printerSettingsBridge,
 
   spoolman: {
     openSpoolSelection: async (): Promise<void> => {

@@ -62,23 +62,29 @@ interface SavedPrinterInfo {
 // Selection dialog mode
 type SelectionMode = 'discovered' | 'saved';
 
-// Extend Window interface to include our printer selection API
-declare global {
-    interface Window {
-        printerSelectionAPI?: {
-            selectPrinter: (printer: PrinterInfo | SavedPrinterInfo) => void;
-            cancelSelection: () => void;
-            receivePrinters: (func: (printers: PrinterInfo[]) => void) => void;
-            receiveSavedPrinters: (func: (printers: SavedPrinterInfo[], lastUsedSerial: string | null) => void) => void;
-            receiveMode: (func: (mode: SelectionMode) => void) => void;
-            onConnecting?: (func: (printerName: string) => void) => void;
-            onConnectionFailed?: (func: (error: string) => void) => void;
-            onDiscoveryStarted?: (func: () => void) => void;
-            onDiscoveryError?: (func: (data: { error: string; message: string }) => void) => void;
-            removeListeners: () => void;
-        };
-    }
+interface PrinterSelectionDialogAPI {
+    selectPrinter: (printer: PrinterInfo | SavedPrinterInfo) => void;
+    cancelSelection: () => void;
+    receivePrinters: (func: (printers: PrinterInfo[]) => void) => void;
+    receiveSavedPrinters: (func: (printers: SavedPrinterInfo[], lastUsedSerial: string | null) => void) => void;
+    receiveMode: (func: (mode: SelectionMode) => void) => void;
+    onConnecting?: (func: (printerName: string) => void) => void;
+    onConnectionFailed?: (func: (error: string) => void) => void;
+    onDiscoveryStarted?: (func: () => void) => void;
+    onDiscoveryError?: (func: (data: { error: string; message: string }) => void) => void;
+    removeListeners: () => void;
+    receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
+
+const getPrinterSelectionAPI = (): PrinterSelectionDialogAPI => {
+    const api = window.api?.dialog?.printerSelection as PrinterSelectionDialogAPI | undefined;
+    if (!api) {
+        throw new Error('[PrinterSelectionDialog] dialog API bridge is not available');
+    }
+    return api;
+};
+
+const printerSelectionAPI = getPrinterSelectionAPI();
 
 // DOM element references with proper typing
 interface DialogElements {
@@ -307,16 +313,11 @@ const addRowEventListeners = (row: HTMLTableRowElement, printer: PrinterInfo | S
 
 // Handle printer selection via double-click
 const handlePrinterSelection = (printer: PrinterInfo | SavedPrinterInfo): void => {
-    if (!window.printerSelectionAPI) {
-        console.error('Printer selection API not available');
-        return;
-    }
-    
     logDebug('Printer selected via double-click:', printer);
     currentState.selectedPrinter = printer;
     
     // Both saved and discovered printers use the same selection method
-    window.printerSelectionAPI.selectPrinter(printer);
+    printerSelectionAPI.selectPrinter(printer);
 };
 
 // Visual row selection (highlight selected row)
@@ -474,13 +475,8 @@ const updateSavedPrinterTable = (printers: readonly SavedPrinterInfo[], lastUsed
 
 // Handle cancel/close actions
 const handleCancel = (): void => {
-    if (!window.printerSelectionAPI) {
-        console.error('Printer selection API not available');
-        return;
-    }
-    
     logDebug('Printer selection cancelled');
-    window.printerSelectionAPI.cancelSelection();
+    printerSelectionAPI.cancelSelection();
 };
 
 // Setup event listeners for dialog controls
@@ -506,20 +502,15 @@ const setupEventListeners = (): void => {
 
 // Setup IPC communication
 const setupIPCListeners = (): void => {
-    if (!window.printerSelectionAPI) {
-        console.error('Printer selection API not available - some features may not work');
-        return;
-    }
-    
     // Listen for mode changes
-    window.printerSelectionAPI.receiveMode((mode: SelectionMode) => {
+    printerSelectionAPI.receiveMode((mode: SelectionMode) => {
         logDebug('Received mode:', mode);
         currentState.mode = mode;
         updateDialogForMode(mode);
     });
     
     // Listen for discovery started event
-    window.printerSelectionAPI.onDiscoveryStarted?.(() => {
+    printerSelectionAPI.onDiscoveryStarted?.(() => {
         logDebug('Discovery started');
         currentState.isLoading = true;
         currentState.discoveryStartTime = Date.now();
@@ -544,7 +535,7 @@ const setupIPCListeners = (): void => {
     });
     
     // Listen for discovery errors
-    window.printerSelectionAPI.onDiscoveryError?.((data: { error: string; message: string }) => {
+    printerSelectionAPI.onDiscoveryError?.((data: { error: string; message: string }) => {
         console.error('Discovery error:', data);
         clearDiscoveryTimeout();
         currentState.isLoading = false;
@@ -564,7 +555,7 @@ const setupIPCListeners = (): void => {
     });
     
     // Listen for discovered printer data
-    window.printerSelectionAPI.receivePrinters((printers: PrinterInfo[]) => {
+    printerSelectionAPI.receivePrinters((printers: PrinterInfo[]) => {
         logDebug('Received discovered printers from main process:', printers);
         if (currentState.mode === 'discovered') {
             updateDiscoveredPrinterTable(printers);
@@ -572,7 +563,7 @@ const setupIPCListeners = (): void => {
     });
     
     // Listen for saved printer data
-    window.printerSelectionAPI.receiveSavedPrinters((printers: SavedPrinterInfo[], lastUsedSerial: string | null) => {
+    printerSelectionAPI.receiveSavedPrinters((printers: SavedPrinterInfo[], lastUsedSerial: string | null) => {
         logDebug('Received saved printers from main process:', printers, 'Last used:', lastUsedSerial);
         if (currentState.mode === 'saved') {
             updateSavedPrinterTable(printers, lastUsedSerial);
@@ -580,12 +571,12 @@ const setupIPCListeners = (): void => {
     });
     
     // Listen for connection status updates
-    window.printerSelectionAPI.onConnecting?.((printerName: string) => {
+    printerSelectionAPI.onConnecting?.((printerName: string) => {
         logDebug('Connecting to printer:', printerName);
         showConnectingMessage(printerName);
     });
     
-    window.printerSelectionAPI.onConnectionFailed?.((error: string) => {
+    printerSelectionAPI.onConnectionFailed?.((error: string) => {
         logDebug('Connection failed:', error);
         hideConnectingMessage();
         showErrorMessage(error);
@@ -623,11 +614,7 @@ const initializeDialog = (): void => {
     logDebug('Initializing printer selection dialog');
     
     // Verify API availability
-    if (!window.printerSelectionAPI) {
-        console.error('ERROR: Printer selection API not available - preload script may not be loaded correctly');
-    } else {
-        logDebug('Printer selection API available - ready for IPC communication');
-    }
+    logDebug('Printer selection API available - ready for IPC communication');
     
     // Setup UI components
     setupEventListeners();
@@ -646,9 +633,7 @@ const cleanup = (): void => {
     // Clear any active timeout
     clearDiscoveryTimeout();
     
-    if (window.printerSelectionAPI) {
-        window.printerSelectionAPI.removeListeners();
-    }
+    printerSelectionAPI.removeListeners();
     
     // Reset state
     currentState = {

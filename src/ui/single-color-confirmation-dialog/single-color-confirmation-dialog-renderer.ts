@@ -62,14 +62,7 @@ function getSlotDisplayName(slotId: number): string {
   return `Slot ${slotId + 1}`;
 }
 
-// Global window type extension
-declare global {
-  interface Window {
-    singleColorConfirmAPI: SingleColorConfirmAPI;
-  }
-}
-
-interface SingleColorConfirmAPI {
+interface SingleColorConfirmDialogAPI {
   readonly onInit: (callback: (data: SingleColorConfirmInitData) => void) => void;
   readonly closeDialog: () => void;
   readonly confirmPrint: (leveling: boolean) => void;
@@ -81,6 +74,20 @@ interface SingleColorConfirmInitData {
   readonly fileName: string;
   readonly leveling: boolean;
 }
+
+let cachedSingleColorAPI: SingleColorConfirmDialogAPI | null = null;
+
+const getSingleColorConfirmAPI = (): SingleColorConfirmDialogAPI => {
+  if (cachedSingleColorAPI) {
+    return cachedSingleColorAPI;
+  }
+  const api = window.api?.dialog?.singleColor as SingleColorConfirmDialogAPI | undefined;
+  if (!api) {
+    throw new Error('[SingleColorConfirmDialog] dialog API bridge is not available');
+  }
+  cachedSingleColorAPI = api;
+  return api;
+};
 
 // Global state
 let initData: SingleColorConfirmInitData | null = null;
@@ -116,7 +123,9 @@ function initializeDialog(): void {
   }
 
   setupEventListeners();
-  setupIpcListeners();
+  const api = getSingleColorConfirmAPI();
+  setupIpcListeners(api);
+  registerThemeListener(api);
 }
 
 /**
@@ -138,17 +147,11 @@ function setupEventListeners(): void {
 /**
  * Set up IPC listeners
  */
-function setupIpcListeners(): void {
-  const api = window.singleColorConfirmAPI;
-  if (!api) {
-    console.error('Single color confirm: API not available');
-    return;
-  }
-
+function setupIpcListeners(api: SingleColorConfirmDialogAPI): void {
   api.onInit(async (data: SingleColorConfirmInitData) => {
     console.log('Single color confirm: Received init data', data);
     initData = data;
-    await loadActiveSlotInfo();
+    await loadActiveSlotInfo(api);
     displayFileInfo();
     displayMaterialInfo();
   });
@@ -157,10 +160,7 @@ function setupIpcListeners(): void {
 /**
  * Load active slot information
  */
-async function loadActiveSlotInfo(): Promise<void> {
-  const api = window.singleColorConfirmAPI;
-  if (!api) return;
-
+async function loadActiveSlotInfo(api: SingleColorConfirmDialogAPI): Promise<void> {
   try {
     const materialStation = await api.getMaterialStationStatus();
     
@@ -246,25 +246,21 @@ function showError(message: string): void {
  * Handle close
  */
 function handleClose(): void {
-  const api = window.singleColorConfirmAPI;
-  if (api) {
-    api.closeDialog();
-  }
+  getSingleColorConfirmAPI().closeDialog();
 }
 
 /**
  * Handle start print
  */
 function handleStart(): void {
-  const api = window.singleColorConfirmAPI;
-  if (!api || !levelingCheckbox) return;
+  if (!levelingCheckbox) return;
 
   if (!activeSlotInfo || activeSlotInfo.isEmpty) {
     showError('Cannot start print without active material');
     return;
   }
 
-  api.confirmPrint(levelingCheckbox.checked);
+  getSingleColorConfirmAPI().confirmPrint(levelingCheckbox.checked);
 }
 
 /**
@@ -278,11 +274,10 @@ function cleanup(): void {
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     initializeDialog();
-    registerThemeListener();
 });
 
-function registerThemeListener(): void {
-    window.singleColorConfirmAPI?.receive?.('theme-changed', (data: unknown) => {
+function registerThemeListener(api: SingleColorConfirmDialogAPI): void {
+    api.receive?.('theme-changed', (data: unknown) => {
         applyDialogTheme(data as ThemeColors);
     });
 }

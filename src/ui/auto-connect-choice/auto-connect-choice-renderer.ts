@@ -8,6 +8,21 @@ import type { AutoConnectChoiceOption, AutoConnectChoiceData } from './auto-conn
 import type { ThemeColors } from '../../types/config.js';
 import { applyDialogTheme } from '../shared/theme-utils.js';
 
+interface AutoConnectChoiceAPI {
+  onDialogInit: (callback: (data: AutoConnectChoiceData) => void) => void;
+  sendChoice: (choice: AutoConnectChoiceOption) => Promise<void>;
+  removeAllListeners: () => void;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
+}
+
+const getAutoConnectChoiceAPI = (): AutoConnectChoiceAPI => {
+  const api = window.api?.dialog?.autoConnectChoice as AutoConnectChoiceAPI | undefined;
+  if (!api) {
+    throw new Error('[AutoConnectChoiceDialog] API bridge is not available');
+  }
+  return api;
+};
+
 // Global state
 let currentData: AutoConnectChoiceData | null = null;
 let isHandlingChoice = false;
@@ -21,7 +36,7 @@ document.addEventListener('DOMContentLoaded', (): void => {
   setupEventListeners();
   
   // Listen for initialization data from main process
-  window.autoConnectChoiceAPI.onDialogInit((data: AutoConnectChoiceData) => {
+  getAutoConnectChoiceAPI().onDialogInit((data: AutoConnectChoiceData) => {
     console.log('Received auto-connect choice dialog data:', data);
     currentData = data;
     updateDialogUI(data);
@@ -65,7 +80,7 @@ function setupEventListeners(): void {
 
   // Handle window beforeunload
   window.addEventListener('beforeunload', () => {
-    window.autoConnectChoiceAPI.removeAllListeners();
+    getAutoConnectChoiceAPI().removeAllListeners();
   });
 }
 
@@ -142,7 +157,7 @@ async function handleChoice(action: AutoConnectChoiceOption['action']): Promise<
       data: currentData?.lastUsedPrinter || null
     };
 
-    await window.autoConnectChoiceAPI.sendChoice(choice);
+    await getAutoConnectChoiceAPI().sendChoice(choice);
     console.log('Choice sent successfully');
   } catch (error) {
     console.error('Error sending choice:', error);

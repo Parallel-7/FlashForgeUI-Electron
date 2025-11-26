@@ -72,12 +72,8 @@ const connectChoiceAPI: ConnectChoiceAPI = {
   }
 };
 
-// Expose API to renderer
-contextBridge.exposeInMainWorld('connectChoiceAPI', connectChoiceAPI);
-
-// Global declaration for TypeScript
-declare global {
-  interface Window {
-    connectChoiceAPI: ConnectChoiceAPI;
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    connectChoice: connectChoiceAPI
   }
-}
+});

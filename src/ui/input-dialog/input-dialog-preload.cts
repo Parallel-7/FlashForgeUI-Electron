@@ -41,7 +41,7 @@ interface DialogAPI {
 }
 
 // Expose the dialog API to the renderer process
-contextBridge.exposeInMainWorld('dialogAPI', {
+const inputDialogAPI: DialogAPI = {
     // Receive initialization data from main process
     receive: (channel: string, func: (options: DialogInitOptions) => void): void => {
         if (validReceiveChannels.includes(channel)) {
@@ -86,7 +86,13 @@ contextBridge.exposeInMainWorld('dialogAPI', {
             throw error;
         }
     }
-} as DialogAPI);
+};
+
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    input: inputDialogAPI
+  }
+});
 
 // Export type for use in renderer
 export { DialogInitOptions, DialogAPI };

@@ -16,6 +16,7 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 import type { CameraProxyStatus } from '../../types/camera/camera.types.js';
+import type { AppConfig, ThemeColors } from '../../types/config.js';
 import type {} from '../../types/global.d.ts';
 
 // ---------------------------------------------------------------------------
@@ -28,6 +29,7 @@ import type {} from '../../types/global.d.ts';
 // ---------------------------------------------------------------------------
 
 type DialogIPCListener = (...args: unknown[]) => void;
+type DialogEventDisposer = () => void;
 
 interface DialogInputDialogOptions {
   readonly title?: string;
@@ -82,6 +84,13 @@ interface DialogSpoolmanAPI {
   onSpoolUpdated: (callback: (spool: unknown) => void) => void;
 }
 
+interface DialogConfigAPI {
+  get: () => Promise<AppConfig>;
+  onLoaded: (callback: () => void) => DialogEventDisposer;
+  onUpdated: (callback: (config: AppConfig) => void) => DialogEventDisposer;
+  onThemePreview: (callback: (theme: ThemeColors) => void) => DialogEventDisposer;
+}
+
 interface DialogLoadingAPI {
   show: (options: DialogLoadingOptions) => void;
   hide: () => void;
@@ -106,6 +115,7 @@ interface DialogElectronAPI {
   requestBackendStatus: () => Promise<unknown>;
   requestConfig: () => Promise<unknown>;
   onPlatformInfo: (callback: (platform: string) => void) => void;
+  readonly config: DialogConfigAPI;
   readonly loading: DialogLoadingAPI;
   readonly camera: DialogCameraAPI;
   readonly printerContexts: DialogPrinterContextsAPI;
@@ -115,6 +125,53 @@ interface DialogElectronAPI {
 }
 
 const listeners = new Map<string, { original: DialogIPCListener; wrapped: DialogIPCListener }>();
+
+const componentDialogAPI = {
+  receive: (channel: string, func: (data: unknown) => void): (() => void) | undefined => {
+    const validChannels = ['component-dialog:init', 'polling-update', 'theme-changed'];
+    if (validChannels.includes(channel)) {
+      const subscription = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => {
+        func(args.length === 1 ? args[0] : args);
+      };
+      ipcRenderer.on(channel, subscription);
+      return () => {
+        ipcRenderer.removeListener(channel, subscription);
+      };
+    }
+    return undefined;
+  },
+  send: (channel: string, ...data: unknown[]) => {
+    const validChannels = ['component-dialog:close'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.send(channel, ...data);
+    }
+  },
+  invoke: async (channel: string, ...data: unknown[]): Promise<unknown> => {
+    const validChannels = ['component-dialog:get-info'];
+    if (validChannels.includes(channel)) {
+      return ipcRenderer.invoke(channel, ...data);
+    }
+    return null;
+  }
+};
+
+const registerDialogVoidListener = (channel: string, callback: () => void): DialogEventDisposer => {
+  const wrapped: DialogIPCListener = () => callback();
+  ipcRenderer.on(channel, wrapped);
+  return () => {
+    ipcRenderer.removeListener(channel, wrapped);
+  };
+};
+
+const registerDialogPayloadListener = <T,>(channel: string, callback: (payload: T) => void): DialogEventDisposer => {
+  const wrapped: DialogIPCListener = (_event: unknown, payload: unknown) => {
+    callback(payload as T);
+  };
+  ipcRenderer.on(channel, wrapped);
+  return () => {
+    ipcRenderer.removeListener(channel, wrapped);
+  };
+};
 
 const validSendChannels = [
   'request-printer-data',
@@ -282,6 +339,30 @@ const validInvokeChannels = [
 
 contextBridge.exposeInMainWorld('PLATFORM', process.platform as string);
 
+const dialogConfigAPI: DialogConfigAPI = {
+  get: async (): Promise<AppConfig> => {
+    const result = await ipcRenderer.invoke('request-config');
+    return result as AppConfig;
+  },
+  onLoaded: (callback: () => void): DialogEventDisposer => {
+    return registerDialogVoidListener('config-loaded', callback);
+  },
+  onUpdated: (callback: (config: AppConfig) => void): DialogEventDisposer => {
+    return registerDialogPayloadListener<AppConfig>('config-updated', (config) => {
+      if (config) {
+        callback(config);
+      }
+    });
+  },
+  onThemePreview: (callback: (theme: ThemeColors) => void): DialogEventDisposer => {
+    return registerDialogPayloadListener<ThemeColors>('desktop-theme-preview', (theme) => {
+      if (theme) {
+        callback(theme);
+      }
+    });
+  }
+};
+
 contextBridge.exposeInMainWorld('api', {
   isProxyAvailable: true,
 
@@ -349,6 +430,7 @@ contextBridge.exposeInMainWorld('api', {
   },
   requestBackendStatus: async (): Promise<unknown> => ipcRenderer.invoke('request-backend-status'),
   requestConfig: async (): Promise<unknown> => ipcRenderer.invoke('request-config'),
+  config: dialogConfigAPI,
 
   onPlatformInfo: (callback: (platform: string) => void) => {
     const wrapped: DialogIPCListener = (_event: unknown, platform: unknown) => {
@@ -464,41 +546,13 @@ contextBridge.exposeInMainWorld('api', {
       listeners.set('spoolman:spool-updated', { original: callback as DialogIPCListener, wrapped });
       ipcRenderer.on('spoolman:spool-updated', wrapped);
     }
+  },
+  dialog: {
+    component: componentDialogAPI
   }
 } as DialogElectronAPI);
 
 // ---------------------------------------------------------------------------
 // Component dialog specific API
 // ---------------------------------------------------------------------------
-
-contextBridge.exposeInMainWorld('componentDialogAPI', {
-  receive: (channel: string, func: (data: unknown) => void): (() => void) | undefined => {
-    const validChannels = ['component-dialog:init', 'polling-update', 'theme-changed'];
-    if (validChannels.includes(channel)) {
-      const subscription = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => {
-        func(args.length === 1 ? args[0] : args);
-      };
-      ipcRenderer.on(channel, subscription);
-      return () => {
-        ipcRenderer.removeListener(channel, subscription);
-      };
-    }
-    return undefined;
-  },
-
-  send: (channel: string, ...data: unknown[]) => {
-    const validChannels = ['component-dialog:close'];
-    if (validChannels.includes(channel)) {
-      ipcRenderer.send(channel, ...data);
-    }
-  },
-
-  invoke: async (channel: string, ...data: unknown[]): Promise<unknown> => {
-    const validChannels = ['component-dialog:get-info'];
-    if (validChannels.includes(channel)) {
-      return ipcRenderer.invoke(channel, ...data);
-    }
-    return null;
-  }
-});
 

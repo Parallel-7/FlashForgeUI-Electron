@@ -195,6 +195,7 @@ export interface PollingData {
   isConnected: boolean;
   isInitializing: boolean; // true until first poll completes
   lastPolled: Date;
+  logMessages?: unknown[];
 }
 
 // ============================================================================

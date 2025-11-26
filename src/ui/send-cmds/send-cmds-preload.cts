@@ -33,7 +33,7 @@ interface CommandResult {
 }
 
 // Create a secure bridge to expose limited IPC functionality to renderer
-contextBridge.exposeInMainWorld('sendCmdsApi', {
+const sendCommandsDialogAPI = {
     // Send a command to the main process
     sendCommand: async (command: string): Promise<CommandResult> => {
         if (typeof command !== 'string') {
@@ -72,5 +72,13 @@ contextBridge.exposeInMainWorld('sendCmdsApi', {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
   }
+} as const;
+
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    sendCommands: sendCommandsDialogAPI
+  }
 });
+
+export {};
 

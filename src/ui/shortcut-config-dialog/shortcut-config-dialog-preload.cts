@@ -93,9 +93,9 @@ function isComponentInfoArray(value: unknown): value is ShortcutComponentInfo[] 
 }
 
 /**
- * Expose safe IPC API to renderer
+ * Expose safe IPC API to renderer through dialog namespace.
  */
-contextBridge.exposeInMainWorld('shortcutConfigAPI', {
+const shortcutConfigDialogAPI = {
   /**
    * Receive dialog initialization data
    */
@@ -183,5 +183,13 @@ contextBridge.exposeInMainWorld('shortcutConfigAPI', {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
   }
+} as const;
+
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    shortcutConfig: shortcutConfigDialogAPI
+  }
 });
+
+export {};
 

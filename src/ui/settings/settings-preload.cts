@@ -10,17 +10,10 @@
  * - Secure contextBridge implementation for sandboxed renderer
  * - Unified window controls for dialog management
  *
- * Exposed APIs:
- * - window.settingsAPI: Global application settings (config.json)
- *   - requestConfig(): Loads current configuration
- *   - saveConfig(config): Persists configuration changes
- *   - receiveConfig(callback): Listens for configuration updates
- *   - closeWindow(): Closes settings dialog
- *
- * - window.printerSettingsAPI: Per-printer settings (printer_details.json)
- *   - get(): Retrieves active printer's settings
- *   - update(settings): Saves printer-specific settings
- *   - getPrinterName(): Returns active printer's display name
+ * Exposed APIs (via `window.api.dialog.*`):
+ * - `window.api.dialog.settings`: Global application settings (config.json)
+ * - `window.api.dialog.printerSettings`: Per-printer settings (printer_details.json)
+ * - `window.api.dialog.autoUpdate`: Auto-update channel + installer controls
  *
  * - window.windowControls: Generic window operations
  *   - minimize/close/closeGeneric: Window state management
@@ -30,14 +23,14 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 import type { AppConfig, ThemeColors } from '../../types/config.js';
+import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI, UpdateStatusResponse } from './types/external.js';
 
 // Ensure this file is treated as a module
 export {};
 
-// Expose settings API to renderer process
-contextBridge.exposeInMainWorld('settingsAPI', {
+const settingsAPI: ISettingsAPI = {
   requestConfig: () => ipcRenderer.invoke('settings-request-config'),
-  saveConfig: (config: AppConfig) => ipcRenderer.invoke('settings-save-config', config),
+  saveConfig: (config: Partial<AppConfig>) => ipcRenderer.invoke('settings-save-config', config) as Promise<boolean>,
   saveDesktopTheme: (theme: ThemeColors) => ipcRenderer.invoke('settings:save-desktop-theme', theme),
   closeWindow: () => ipcRenderer.send('settings-close-window'),
   send: (channel: string, data?: unknown) => ipcRenderer.send(channel, data),
@@ -50,7 +43,7 @@ contextBridge.exposeInMainWorld('settingsAPI', {
   onConfigUpdated: (callback: (config: AppConfig) => void) => {
     ipcRenderer.on('config-updated-event', (_event, config) => callback(config));
   },
-  performThemeProfileOperation: (uiType: 'desktop' | 'web', operation: 'add' | 'update' | 'delete', data: any) => {
+  performThemeProfileOperation: (uiType: 'desktop' | 'web', operation: 'add' | 'update' | 'delete', data: unknown) => {
     ipcRenderer.send('theme-profile-operation', { uiType, operation, data });
   },
   removeListeners: () => {
@@ -61,10 +54,9 @@ contextBridge.exposeInMainWorld('settingsAPI', {
   testSpoolmanConnection: (url: string) => ipcRenderer.invoke('spoolman:test-connection', url),
   testDiscordWebhook: (url: string) => ipcRenderer.invoke('discord:test-webhook', url),
   getRoundedUISupportInfo: () => ipcRenderer.invoke('rounded-ui:get-support-info')
-});
+};
 
-// Expose printer settings API (reusing same implementation as main preload)
-contextBridge.exposeInMainWorld('printerSettingsAPI', {
+const printerSettingsAPI: IPrinterSettingsAPI = {
   get: async (): Promise<unknown> => {
     return await ipcRenderer.invoke('printer-settings:get');
   },
@@ -78,17 +70,25 @@ contextBridge.exposeInMainWorld('printerSettingsAPI', {
     const result: unknown = await ipcRenderer.invoke('printer-settings:get-printer-name');
     return typeof result === 'string' ? result : null;
   }
-});
+};
 
-contextBridge.exposeInMainWorld('autoUpdateAPI', {
+const autoUpdateAPI: IAutoUpdateAPI = {
   checkForUpdates: async (): Promise<{ success: boolean; error?: string }> => {
-    return await ipcRenderer.invoke('check-for-updates') as Promise<{ success: boolean; error?: string }>;
+    return await ipcRenderer.invoke('check-for-updates') as { success: boolean; error?: string };
   },
-  getStatus: async (): Promise<unknown> => {
-    return await ipcRenderer.invoke('get-update-status');
+  getStatus: async (): Promise<UpdateStatusResponse> => {
+    return await ipcRenderer.invoke('get-update-status') as UpdateStatusResponse;
   },
   setUpdateChannel: async (channel: 'stable' | 'alpha'): Promise<{ success: boolean }> => {
-    return await ipcRenderer.invoke('set-update-channel', channel) as Promise<{ success: boolean }>;
+    return await ipcRenderer.invoke('set-update-channel', channel) as { success: boolean };
+  }
+};
+
+contextBridge.exposeInMainWorld('api', {
+  dialog: {
+    settings: settingsAPI,
+    printerSettings: printerSettingsAPI,
+    autoUpdate: autoUpdateAPI
   }
 });
 

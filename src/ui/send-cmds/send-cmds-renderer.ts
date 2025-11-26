@@ -38,17 +38,20 @@ interface CommandResult {
     readonly error?: string;
 }
 
-// Define global API interface for send commands
-declare global {
-    interface Window {
-        readonly sendCmdsApi?: {
-            readonly sendCommand: (command: string) => Promise<CommandResult>;
-            readonly close: () => void;
-            readonly removeListeners: () => void;
-            receive?: (channel: string, func: (...args: unknown[]) => void) => void;
-        };
-    }
+interface SendCommandsDialogAPI {
+    readonly sendCommand: (command: string) => Promise<CommandResult>;
+    readonly close: () => void;
+    readonly removeListeners: () => void;
+    receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
+
+const getSendCommandsDialogAPI = (): SendCommandsDialogAPI => {
+    const api = window.api?.dialog?.sendCommands as SendCommandsDialogAPI | undefined;
+    if (!api) {
+        throw new Error('[SendCommandsDialog] dialog API bridge is not available');
+    }
+    return api;
+};
 
 document.addEventListener('DOMContentLoaded', (): void => {
     window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
@@ -64,13 +67,7 @@ document.addEventListener('DOMContentLoaded', (): void => {
         return;
     }
 
-    // Validate API availability
-    if (!window.sendCmdsApi) {
-        console.error('Send Commands Dialog: sendCmdsApi not available');
-        return;
-    }
-
-    const api = window.sendCmdsApi;
+    const api = getSendCommandsDialogAPI();
     
     // Function to append log messages with timestamps
     function appendLog(message: string, type: 'info' | 'command' | 'response' | 'error' = 'info'): void {
@@ -158,18 +155,16 @@ document.addEventListener('DOMContentLoaded', (): void => {
     commandInput.focus();
 
     // Register theme listener
-    registerThemeListener();
+    registerThemeListener(api);
 
     // Cleanup listeners when window is about to unload
     window.addEventListener('beforeunload', (): void => {
-        if (api) {
-            api.removeListeners();
-        }
+        api.removeListeners();
     });
 });
 
-function registerThemeListener(): void {
-    window.sendCmdsApi?.receive?.('theme-changed', (data: unknown) => {
+function registerThemeListener(api: SendCommandsDialogAPI): void {
+    api.receive?.('theme-changed', (data: unknown) => {
         applyDialogTheme(data as ThemeColors);
     });
 }

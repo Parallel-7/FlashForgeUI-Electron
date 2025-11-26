@@ -58,9 +58,16 @@ interface UpdateDialogAPI {
   receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
+const getUpdateAPI = (): UpdateDialogAPI => {
+  const api = window.api?.dialog?.update as UpdateDialogAPI | undefined;
+  if (!api) {
+    throw new Error('[UpdateDialog] dialog API bridge is not available');
+  }
+  return api;
+};
+
 declare global {
   interface Window {
-    updateDialogAPI: UpdateDialogAPI;
     platform: NodeJS.Platform;
   }
 }
@@ -101,20 +108,20 @@ class UpdateDialogController {
     this.downloadButton?.addEventListener('click', () => void this.handlePrimaryAction());
     this.installWindowsButton?.addEventListener('click', () => void this.handleInstall());
     this.installMacButton?.addEventListener('click', () => void this.handleOpenInstaller());
-    this.closeButton?.addEventListener('click', () => window.updateDialogAPI.closeWindow());
+    this.closeButton?.addEventListener('click', () => getUpdateAPI().closeWindow());
 
     window.addEventListener('beforeunload', () => {
-      window.updateDialogAPI.removeStateListeners();
+      getUpdateAPI().removeStateListeners();
     });
   }
 
   private async initialize(): Promise<void> {
     try {
-      const status = await window.updateDialogAPI.getStatus();
+      const status = await getUpdateAPI().getStatus();
       this.state = status;
       this.render();
 
-      window.updateDialogAPI.onStateChanged((payload) => {
+      getUpdateAPI().onStateChanged((payload) => {
         if (!this.state) {
           this.state = {
             currentVersion: '',
@@ -141,15 +148,15 @@ class UpdateDialogController {
     }
 
     if (!this.state.supportsDownload || this.platform === 'linux') {
-      await window.updateDialogAPI.openReleasePage();
-      window.updateDialogAPI.closeWindow();
+      await getUpdateAPI().openReleasePage();
+      getUpdateAPI().closeWindow();
       return;
     }
 
     this.downloadButton.disabled = true;
     this.setStatusBanner('Starting update download...', 'info');
 
-    const result = await window.updateDialogAPI.downloadUpdate();
+    const result = await getUpdateAPI().downloadUpdate();
     if (!result.success) {
       this.downloadButton.disabled = false;
       this.setStatusBanner(result.error ?? 'Failed to start download.', 'error');
@@ -158,7 +165,7 @@ class UpdateDialogController {
 
   private async handleInstall(): Promise<void> {
     this.installWindowsButton.disabled = true;
-    const result = await window.updateDialogAPI.installUpdate();
+    const result = await getUpdateAPI().installUpdate();
 
     if (!result.success) {
       this.installWindowsButton.disabled = false;
@@ -168,7 +175,7 @@ class UpdateDialogController {
 
   private async handleOpenInstaller(): Promise<void> {
     this.installMacButton.disabled = true;
-    const result = await window.updateDialogAPI.openInstaller();
+    const result = await getUpdateAPI().openInstaller();
 
     if (!result.success) {
       this.installMacButton.disabled = false;
@@ -512,7 +519,7 @@ class UpdateDialogController {
   }
 
   private registerThemeListener(): void {
-    window.updateDialogAPI?.receive?.('theme-changed', (data: unknown) => {
+    getUpdateAPI().receive?.('theme-changed', (data: unknown) => {
       applyDialogTheme(data as ThemeColors);
     });
   }

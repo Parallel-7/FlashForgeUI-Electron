@@ -25,8 +25,17 @@
  * @module types/global
  */
 
-import type { ActiveSpoolData, SpoolResponse, SpoolSearchQuery } from './spoolman.js';
 import type { CameraProxyStatus } from './camera/camera.types.js';
+import type {
+  ISettingsAPI,
+  IPrinterSettingsAPI,
+  IAutoUpdateAPI
+} from '../ui/settings/types/external.js';
+import type { PrinterSelectionAPI as PrinterSelectionDialogAPI } from '../ui/printer-selection/printer-selection-preload.js';
+import type { IFSDialogAPI } from '../ui/ifs-dialog/ifs-dialog-preload.js';
+import type { DialogAPI as InputDialogAPI } from '../ui/input-dialog/input-dialog-preload.js';
+import type { JobUploaderAPI } from '../ui/job-uploader/job-uploader-preload.js';
+import type { AppConfig, ThemeColors } from './config.js';
 import type {
   ShortcutButtonConfig,
   ShortcutComponentInfo,
@@ -36,6 +45,7 @@ import type {
 
 // IPC event listener function type
 type IPCListener = (...args: unknown[]) => void;
+type EventDisposer = () => void;
 
 // Input dialog options interface
 interface InputDialogOptions {
@@ -108,6 +118,13 @@ interface SpoolmanAPI {
   onSpoolUpdated(callback: (spool: unknown) => void): void;
 }
 
+interface ConfigAPI {
+  get(): Promise<AppConfig>;
+  onLoaded(callback: () => void): EventDisposer;
+  onUpdated(callback: (config: AppConfig) => void): EventDisposer;
+  onThemePreview(callback: (theme: ThemeColors) => void): EventDisposer;
+}
+
 /**
  * Component dialog specific IPC surface exposed via context bridge.
  */
@@ -132,16 +149,68 @@ interface ShortcutConfigDialogAPI {
   receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
-/**
- * Spoolman dialog specific API for searching and selecting spools.
- */
-interface SpoolmanDialogAPI {
-  searchSpools: (query: SpoolSearchQuery) => Promise<SpoolResponse[]>;
-  selectSpool: (spool: ActiveSpoolData) => Promise<void>;
+interface SendCommandsDialogAPI {
+  sendCommand: (command: string) => Promise<{ success: boolean; response?: string; error?: string }>;
+  close: () => void;
+  removeListeners: () => void;
   receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
+interface StatusDialogAPI {
+  requestStats: () => Promise<unknown>;
+  closeWindow: () => void;
+  receiveStats: (callback: (stats: unknown) => void) => void;
+  removeListeners: () => void;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
+}
+
+interface MaterialInfoDialogAPI {
+  onInit: (callback: (data: unknown) => void) => void;
+  closeDialog: () => void;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
+}
+
+interface MaterialMatchingDialogAPI {
+  onInit: (callback: (data: unknown) => void) => void;
+  closeDialog: () => void;
+  confirmMappings: (mappings: unknown[]) => void;
+  getMaterialStationStatus: () => Promise<unknown>;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
+}
+
+interface SingleColorConfirmDialogAPI {
+  onInit: (callback: (data: unknown) => void) => void;
+  closeDialog: () => void;
+  confirmPrint: (leveling: boolean) => void;
+  getMaterialStationStatus: () => Promise<unknown>;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
+}
+
+interface PrinterWarningDialogAPI {
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
+  continue: () => Promise<void>;
+  cancel: () => Promise<void>;
+}
+
 // API interface for type safety
+interface DialogNamespace {
+  settings?: ISettingsAPI;
+  printerSettings?: IPrinterSettingsAPI;
+  autoUpdate?: IAutoUpdateAPI;
+  shortcutConfig?: ShortcutConfigDialogAPI;
+  printerSelection?: PrinterSelectionDialogAPI;
+  printerWarning?: PrinterWarningDialogAPI;
+  sendCommands?: SendCommandsDialogAPI;
+  status?: StatusDialogAPI;
+  ifs?: IFSDialogAPI;
+  input?: InputDialogAPI;
+  materialInfo?: MaterialInfoDialogAPI;
+  materialMatching?: MaterialMatchingDialogAPI;
+  singleColor?: SingleColorConfirmDialogAPI;
+  jobUploader?: JobUploaderAPI;
+  [key: string]: unknown;
+}
+
 interface ElectronAPI {
   send: (channel: string, data?: unknown) => void;
   receive: (channel: string, func: IPCListener) => void;
@@ -155,6 +224,8 @@ interface ElectronAPI {
   requestBackendStatus: () => Promise<unknown>;
   requestConfig: () => Promise<unknown>;
   onPlatformInfo: (callback: (platform: string) => void) => void;
+  config: ConfigAPI;
+  dialog: DialogNamespace;
   loading: LoadingAPI;
   camera: CameraAPI;
   printerContexts: PrinterContextsAPI;
@@ -175,8 +246,6 @@ declare global {
   interface Window {
     api: ElectronAPI;
     componentDialogAPI?: ComponentDialogAPI;
-    shortcutConfigAPI?: ShortcutConfigDialogAPI;
-    spoolmanDialogAPI?: SpoolmanDialogAPI;
     CAMERA_URL: string;
     PLATFORM: string;
     windowControls?: WindowControls;

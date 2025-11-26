@@ -13,22 +13,27 @@ export {};
 import type { ThemeColors } from '../../types/config.js';
 import { applyDialogTheme } from '../shared/theme-utils.js';
 
-// Extend Window interface to include our printer warning dialog API
-declare global {
-    interface Window {
-        printerWarningDialogAPI?: {
-            receive?: (channel: string, func: (...args: unknown[]) => void) => void;
-            continue: () => Promise<void>;
-            cancel: () => Promise<void>;
-        };
-    }
-}
-
 // Interface for dialog initialization data
 interface PrinterConnectedWarningData {
     readonly printerName: string;
     readonly responseChannel: string;
 }
+
+interface PrinterWarningDialogAPI {
+    receive?: (channel: string, func: (...args: unknown[]) => void) => void;
+    continue: () => Promise<void>;
+    cancel: () => Promise<void>;
+}
+
+const getPrinterWarningDialogAPI = (): PrinterWarningDialogAPI => {
+    const api = window.api?.dialog?.printerWarning as PrinterWarningDialogAPI | undefined;
+    if (!api) {
+        throw new Error('[PrinterWarningDialog] dialog API bridge is not available');
+    }
+    return api;
+};
+
+const printerWarningDialogAPI = getPrinterWarningDialogAPI();
 
 // DOM element references
 interface DialogElements {
@@ -57,14 +62,8 @@ document.addEventListener('DOMContentLoaded', (): void => {
         return;
     }
 
-    // Check if dialog API is available
-    if (!window.printerWarningDialogAPI) {
-        console.error('Printer connected warning dialog: Dialog API not available');
-        return;
-    }
-
     // Initialize dialog with options from main process
-    window.printerWarningDialogAPI.receive?.('dialog-init', (data: unknown): void => {
+    printerWarningDialogAPI.receive?.('dialog-init', (data: unknown): void => {
         initializeDialog(elements, data as PrinterConnectedWarningData);
     });
 
@@ -79,7 +78,7 @@ document.addEventListener('DOMContentLoaded', (): void => {
 });
 
 function registerThemeListener(): void {
-    window.printerWarningDialogAPI?.receive?.('theme-changed', (data: unknown) => {
+    printerWarningDialogAPI.receive?.('theme-changed', (data: unknown) => {
         applyDialogTheme(data as ThemeColors);
     });
 }
@@ -103,8 +102,6 @@ function initializeDialog(elements: DialogElements, data: PrinterConnectedWarnin
  * Set up all event handlers for dialog interaction
  */
 function setupEventHandlers(elements: DialogElements): void {
-    if (!window.printerWarningDialogAPI) return;
-
     // Continue button click handler
     if (elements.continueButton) {
         elements.continueButton.addEventListener('click', (): void => {
@@ -175,12 +172,10 @@ function setupEventHandlers(elements: DialogElements): void {
  * Handle continue action (user wants to proceed despite warning)
  */
 function handleContinueAction(): void {
-    if (!window.printerWarningDialogAPI) return;
-
     // Disable buttons to prevent double-clicks
     disableButtons();
 
-    window.printerWarningDialogAPI.continue().catch((error: unknown) => {
+    printerWarningDialogAPI.continue().catch((error: unknown) => {
         console.error('Error handling continue action:', error);
         // Re-enable buttons if there was an error
         enableButtons();
@@ -191,12 +186,10 @@ function handleContinueAction(): void {
  * Handle cancel action (user wants to abort)
  */
 function handleCancelAction(): void {
-    if (!window.printerWarningDialogAPI) return;
-
     // Disable buttons to prevent double-clicks
     disableButtons();
 
-    window.printerWarningDialogAPI.cancel().catch((error: unknown) => {
+    printerWarningDialogAPI.cancel().catch((error: unknown) => {
         console.error('Error handling cancel action:', error);
         // Re-enable buttons if there was an error
         enableButtons();

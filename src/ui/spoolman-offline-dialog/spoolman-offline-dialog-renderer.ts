@@ -12,16 +12,19 @@ interface RetryResult {
   error?: string;
 }
 
-type SpoolmanOfflineBridge = {
+interface SpoolmanOfflineAPI {
   retryConnection: () => Promise<RetryResult>;
   onStatusUpdate: (callback: (message: string) => void) => void;
-};
-
-declare global {
-  interface Window {
-    spoolmanOfflineAPI: SpoolmanOfflineBridge;
-  }
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
+
+const getSpoolmanOfflineAPI = (): SpoolmanOfflineAPI => {
+  const api = window.api?.dialog?.spoolmanOffline as SpoolmanOfflineAPI | undefined;
+  if (!api) {
+    throw new Error('[SpoolmanOfflineDialog] dialog API bridge is not available');
+  }
+  return api;
+};
 
 type StatusTone = 'info' | 'error' | 'success';
 
@@ -36,7 +39,7 @@ const ICONS = ['server-off', 'refresh-ccw', 'x'];
 
 
 function registerThemeListener(): void {
-  window.dialogAPI?.receive?.('theme-changed', (data: unknown) => {
+  getSpoolmanOfflineAPI().receive?.('theme-changed', (data: unknown) => {
     applyDialogTheme(data as ThemeColors);
   });
 }
@@ -50,13 +53,8 @@ document.addEventListener('DOMContentLoaded', () => {
     closeButton: document.getElementById('dialog-close') as HTMLButtonElement | null
   };
 
-  if (!window.spoolmanOfflineAPI) {
-    console.error('[SpoolmanOfflineDialog] preload API unavailable');
-    return;
-  }
-
   setupEventHandlers(elements);
-  window.spoolmanOfflineAPI.onStatusUpdate((message: string) => {
+  getSpoolmanOfflineAPI().onStatusUpdate((message: string) => {
     if (message) {
       setStatus(elements, message, 'error');
     }
@@ -88,7 +86,7 @@ function setStatus(elements: DialogElements, message: string, tone: StatusTone =
 }
 
 async function handleRetry(elements: DialogElements): Promise<void> {
-  if (!elements.retryButton || !window.spoolmanOfflineAPI) {
+  if (!elements.retryButton) {
     return;
   }
 
@@ -96,7 +94,7 @@ async function handleRetry(elements: DialogElements): Promise<void> {
   setStatus(elements, 'Checking connection...', 'info');
 
   try {
-    const result = await window.spoolmanOfflineAPI.retryConnection();
+    const result = await getSpoolmanOfflineAPI().retryConnection();
     if (result.connected) {
       setStatus(elements, 'Connection restored! You can close this window.', 'success');
     } else {

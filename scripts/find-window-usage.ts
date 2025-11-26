@@ -14,6 +14,7 @@ interface CliOptions {
   context: number;
   roots: string[];
   pattern: RegExp | null;
+  extensions: Set<string>;
 }
 
 interface WindowUsageMatch {
@@ -22,7 +23,7 @@ interface WindowUsageMatch {
   identifiers: string[];
 }
 
-const SUPPORTED_EXTENSIONS = new Set([
+const DEFAULT_EXTENSIONS = new Set([
   '.ts',
   '.tsx',
   '.js',
@@ -66,6 +67,7 @@ function parseCliOptions(argv: string[]): CliOptions {
   let context = 2;
   const roots: string[] = [];
   let pattern: RegExp | null = null;
+  const extensions = new Set(DEFAULT_EXTENSIONS);
 
   for (const arg of argv) {
     if (arg.startsWith('--context=')) {
@@ -76,7 +78,7 @@ function parseCliOptions(argv: string[]): CliOptions {
       continue;
     }
 
-    if (arg.startsWith('--root=')) {
+    if (arg.startsWith('--root=') || arg.startsWith('--roots=')) {
       const value = arg.split('=')[1];
       if (value) {
         value
@@ -97,6 +99,22 @@ function parseCliOptions(argv: string[]): CliOptions {
           console.warn(`Invalid pattern "${value}":`, error);
         }
       }
+      continue;
+    }
+
+    if (arg.startsWith('--extensions=')) {
+      const value = arg.split('=')[1];
+      if (value) {
+        extensions.clear();
+        value
+          .split(',')
+          .map((entry) => entry.trim())
+          .filter(Boolean)
+          .forEach((entry) => {
+            const normalized = entry.startsWith('.') ? entry.toLowerCase() : `.${entry.toLowerCase()}`;
+            extensions.add(normalized);
+          });
+      }
     }
   }
 
@@ -104,10 +122,10 @@ function parseCliOptions(argv: string[]): CliOptions {
     roots.push('src');
   }
 
-  return { context, roots, pattern };
+  return { context, roots, pattern, extensions };
 }
 
-async function collectSourceFiles(dir: string): Promise<string[]> {
+async function collectSourceFiles(dir: string, extensions: Set<string>): Promise<string[]> {
   const entries = await fs.readdir(dir, { withFileTypes: true });
   const files: string[] = [];
 
@@ -118,7 +136,7 @@ async function collectSourceFiles(dir: string): Promise<string[]> {
       if (EXCLUDED_DIRS.has(entry.name)) {
         continue;
       }
-      files.push(...await collectSourceFiles(fullPath));
+      files.push(...await collectSourceFiles(fullPath, extensions));
       continue;
     }
 
@@ -127,7 +145,7 @@ async function collectSourceFiles(dir: string): Promise<string[]> {
     }
 
     const extension = path.extname(entry.name).toLowerCase();
-    if (SUPPORTED_EXTENSIONS.has(extension)) {
+    if (extensions.has(extension)) {
       files.push(fullPath);
     }
   }
@@ -135,7 +153,7 @@ async function collectSourceFiles(dir: string): Promise<string[]> {
   return files;
 }
 
-async function gatherFiles(roots: string[], projectRoot: string): Promise<string[]> {
+async function gatherFiles(roots: string[], projectRoot: string, extensions: Set<string>): Promise<string[]> {
   const files = new Set<string>();
 
   for (const root of roots) {
@@ -148,12 +166,12 @@ async function gatherFiles(roots: string[], projectRoot: string): Promise<string
     }
 
     if (stat.isDirectory()) {
-      const rootFiles = await collectSourceFiles(absoluteRoot);
+      const rootFiles = await collectSourceFiles(absoluteRoot, extensions);
       rootFiles.forEach((file) => files.add(file));
       continue;
     }
 
-    if (stat.isFile() && SUPPORTED_EXTENSIONS.has(path.extname(absoluteRoot).toLowerCase())) {
+    if (stat.isFile() && extensions.has(path.extname(absoluteRoot).toLowerCase())) {
       files.add(absoluteRoot);
     }
   }
@@ -231,7 +249,7 @@ function collectWindowUsage(content: string, context: number, pattern: RegExp | 
 async function main(): Promise<void> {
   const options = parseCliOptions(process.argv.slice(2));
   const projectRoot = process.cwd();
-  const allFiles = await gatherFiles(options.roots, projectRoot);
+  const allFiles = await gatherFiles(options.roots, projectRoot, options.extensions);
 
   if (allFiles.length === 0) {
     console.log('No files found to scan.');
