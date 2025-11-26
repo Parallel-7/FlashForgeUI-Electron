@@ -15,6 +15,7 @@
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
+import type { CameraProxyStatus } from '../../types/camera/camera.types.js';
 import type {} from '../../types/global.d.ts';
 
 // ---------------------------------------------------------------------------
@@ -45,7 +46,7 @@ interface DialogLoadingOptions {
 
 interface DialogCameraAPI {
   getProxyPort: () => Promise<number>;
-  getStatus: () => Promise<unknown>;
+  getStatus: (contextId?: string) => Promise<CameraProxyStatus | null>;
   setEnabled: (enabled: boolean) => Promise<void>;
   getConfig: () => Promise<unknown>;
   getProxyUrl: () => Promise<string>;
@@ -379,7 +380,14 @@ contextBridge.exposeInMainWorld('api', {
       const result: unknown = await ipcRenderer.invoke('camera:get-proxy-port');
       return typeof result === 'number' ? result : 8181;
     },
-    getStatus: async (): Promise<unknown> => ipcRenderer.invoke('camera:get-status'),
+    getStatus: async (contextId?: string): Promise<CameraProxyStatus | null> => {
+      const result: unknown = await ipcRenderer.invoke('camera:get-status', contextId);
+      if (result === null) {
+        return null;
+      }
+
+      return typeof result === 'object' ? (result as CameraProxyStatus) : null;
+    },
     setEnabled: async (enabled: boolean): Promise<void> => {
       await ipcRenderer.invoke('camera:set-enabled', enabled);
     },

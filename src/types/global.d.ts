@@ -26,6 +26,7 @@
  */
 
 import type { ActiveSpoolData, SpoolResponse, SpoolSearchQuery } from './spoolman.js';
+import type { CameraProxyStatus } from './camera/camera.types.js';
 import type {
   ShortcutButtonConfig,
   ShortcutComponentInfo,
@@ -67,7 +68,7 @@ interface LoadingAPI {
 // Camera API interface
 interface CameraAPI {
   getProxyPort(): Promise<number>;
-  getStatus(): Promise<unknown>;
+  getStatus(contextId?: string): Promise<CameraProxyStatus | null>;
   setEnabled(enabled: boolean): Promise<void>;
   getConfig(): Promise<unknown>;
   getProxyUrl(): Promise<string>;

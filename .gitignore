@@ -117,3 +117,4 @@ out/
 *.py
 detail_response_example.json
 debug_logs/*
+.genkit/

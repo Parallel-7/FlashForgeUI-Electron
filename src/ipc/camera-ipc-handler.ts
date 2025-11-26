@@ -83,9 +83,16 @@ export class CameraIPCHandler {
     });
 
     // Get camera proxy status
-    ipcMain.handle('camera:get-status', async (): Promise<CameraProxyStatus> => {
-      return this.cameraProxyService.getStatus();
-    });
+    ipcMain.handle(
+      'camera:get-status',
+      async (_event: IpcMainInvokeEvent, contextId?: string): Promise<CameraProxyStatus | null> => {
+        if (typeof contextId === 'string' && contextId.length > 0) {
+          return this.cameraProxyService.getStatusForContext(contextId);
+        }
+
+        return this.cameraProxyService.getStatus();
+      }
+    );
     
     // Enable/disable camera preview
     ipcMain.handle('camera:set-enabled', async (event: IpcMainInvokeEvent, enabled: boolean): Promise<void> => {
