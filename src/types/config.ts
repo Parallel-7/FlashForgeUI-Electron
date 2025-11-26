@@ -49,6 +49,31 @@ export interface ThemeProfile {
   isSystem: boolean;
 }
 
+/**
+ * Theme profile operation payload types for IPC and API requests
+ */
+export interface ThemeProfileAddData {
+  name: string;
+  colors: ThemeColors;
+}
+
+export interface ThemeProfileUpdateData {
+  originalName: string;
+  updatedProfile: {
+    name: string;
+    colors: ThemeColors;
+  };
+}
+
+export interface ThemeProfileDeleteData {
+  name: string;
+}
+
+export type ThemeProfileOperationPayload =
+  | { operation: 'add'; data: ThemeProfileAddData }
+  | { operation: 'update'; data: ThemeProfileUpdateData }
+  | { operation: 'delete'; data: ThemeProfileDeleteData };
+
 export interface AppConfig {
   readonly DiscordSync: boolean;
   readonly AlwaysOnTop: boolean;
@@ -116,8 +141,8 @@ export interface MutableAppConfig {
   SpoolmanUpdateMode: 'length' | 'weight';
   DesktopTheme: ThemeColors;
   WebUITheme: ThemeColors;
-  desktopThemeProfiles: ThemeProfile[];
-  webUIThemeProfiles: ThemeProfile[];
+  desktopThemeProfiles: readonly ThemeProfile[];
+  webUIThemeProfiles: readonly ThemeProfile[];
 }
 
 /**

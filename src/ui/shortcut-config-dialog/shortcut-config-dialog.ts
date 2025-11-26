@@ -16,6 +16,9 @@
  * @module ui/shortcut-config-dialog/shortcut-config-dialog
  */
 
+/// <reference types="../../types/global.d.ts" />
+
+import type { ShortcutButtonConfig, ShortcutComponentInfo } from '../../types/shortcut-config.js';
 import type { LucideHelpers } from '../shared/lucide.js';
 
 declare global {
@@ -25,6 +28,9 @@ declare global {
 }
 
 export {};
+
+const shortcutConfigAPI =
+  window.shortcutConfigAPI ?? (() => { throw new Error('[ShortcutConfigDialog] shortcutConfigAPI not available'); })();
 
 /**
  * Response channel for closing dialog
@@ -39,31 +45,7 @@ let currentConfig: ShortcutButtonConfig | null = null;
 /**
  * Available components list
  */
-let availableComponents: ComponentInfo[] = [];
-
-/**
- * Shortcut button configuration type
- */
-interface ShortcutButtonConfig {
-  version: number;
-  slots: {
-    slot1: string | null;
-    slot2: string | null;
-    slot3: string | null;
-  };
-  lastModified: string;
-}
-
-/**
- * Component information type
- */
-interface ComponentInfo {
-  id: string;
-  name: string;
-  icon: string;
-  isPinned: boolean;
-  category: string;
-}
+let availableComponents: ShortcutComponentInfo[] = [];
 
 /**
  * Initialize the dialog
@@ -73,7 +55,7 @@ async function initializeDialog(): Promise<void> {
 
   try {
     // Load current configuration
-    currentConfig = await window.shortcutConfigAPI.getCurrentConfig();
+    currentConfig = await shortcutConfigAPI.getCurrentConfig();
     console.log('[ShortcutConfigDialog] Current config:', currentConfig);
 
     if (!currentConfig) {
@@ -82,7 +64,7 @@ async function initializeDialog(): Promise<void> {
     }
 
     // Load available components
-    availableComponents = await window.shortcutConfigAPI.getAvailableComponents();
+    availableComponents = await shortcutConfigAPI.getAvailableComponents();
     console.log('[ShortcutConfigDialog] Available components:', availableComponents);
 
     // Populate UI
@@ -286,13 +268,13 @@ async function handleApply(): Promise<void> {
     console.log('[ShortcutConfigDialog] Saving configuration:', currentConfig);
     showStatus('Saving configuration...', 'info');
 
-    const result = await window.shortcutConfigAPI.saveConfig(currentConfig);
+    const result = await shortcutConfigAPI.saveConfig(currentConfig);
 
     if (result.success) {
       showStatus('Configuration saved successfully', 'success');
       // Close dialog after brief delay
       setTimeout(() => {
-        window.shortcutConfigAPI.closeDialog(responseChannel!);
+        shortcutConfigAPI.closeDialog(responseChannel!);
       }, 500);
     } else {
       showStatus(`Failed to save: ${result.error || 'Unknown error'}`, 'error');
@@ -308,7 +290,7 @@ async function handleApply(): Promise<void> {
  */
 function handleCancel(): void {
   if (responseChannel) {
-    window.shortcutConfigAPI.closeDialog(responseChannel);
+    shortcutConfigAPI.closeDialog(responseChannel);
   }
 }
 
@@ -375,7 +357,7 @@ function setupEventListeners(): void {
 /**
  * Initialize when dialog init message received
  */
-window.shortcutConfigAPI.onDialogInit((data) => {
+shortcutConfigAPI.onDialogInit((data) => {
   console.log('[ShortcutConfigDialog] Dialog init received:', data);
   responseChannel = data.responseChannel;
 

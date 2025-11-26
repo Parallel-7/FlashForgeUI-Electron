@@ -74,5 +74,6 @@ export function registerAllIpcHandlers(managers: AppManagers): void {
   registerComponentDialogHandlers();
   registerUpdateHandlers(configManager, windowManager);
   registerSpoolmanHandlers();
+  registerThemeHandlers();
 }
 

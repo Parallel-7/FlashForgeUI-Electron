@@ -16,12 +16,13 @@
 // src/ui/settings/sections/DesktopThemeSection.ts
 
 import type { ThemeColors, ThemeProfile } from '../../../types/config.js';
+import type { ThemeProfileOperationData } from '../types/external.js';
 
 interface DesktopThemeSectionOptions {
   readonly document: Document;
   readonly defaultTheme: ThemeColors;
-  readonly onThemeChange: (theme: ThemeColors) => void;
-  readonly onProfileOperation: (operation: 'add' | 'update' | 'delete', profileData: any) => void;
+  readonly onThemeChange: (theme: ThemeColors, saveImmediately: boolean, context?: string) => void;
+  readonly onProfileOperation: (operation: 'add' | 'update' | 'delete', profileData: ThemeProfileOperationData) => void;
   getThemeProfiles: () => readonly ThemeProfile[];
 }
 
@@ -42,8 +43,8 @@ const THEME_INPUT_CONFIG: Array<[ThemeColorKey, string]> = [
 export class DesktopThemeSection {
   private readonly doc: Document;
   private readonly defaultTheme: ThemeColors;
-  private readonly notifyThemeChange: (theme: ThemeColors) => void;
-  private readonly notifyProfileOperation: (operation: 'add' | 'update' | 'delete', profileData: any) => void;
+  private readonly notifyThemeChange: (theme: ThemeColors, saveImmediately: boolean, context?: string) => void;
+  private readonly notifyProfileOperation: (operation: 'add' | 'update' | 'delete', profileData: ThemeProfileOperationData) => void;
   private readonly getThemeProfiles: () => readonly ThemeProfile[];
 
   private readonly nativeColorInputs: Map<ThemeColorKey, HTMLInputElement> = new Map();
@@ -232,7 +233,7 @@ export class DesktopThemeSection {
     this.applyTheme(this.defaultTheme);
     // Remove invalid states
     this.hexInputs.forEach((input) => input.classList.remove('invalid'));
-    this.emitThemeChange();
+    this.emitThemeChange(true, 'reset');
   }
 
   private updateColorFromNativePicker(key: ThemeColorKey): void {
@@ -286,11 +287,11 @@ export class DesktopThemeSection {
     this.updateNativeInputValue(key, hexColor);
     this.updateHexInputValue(key, hexColor);
     this.updateColorSwatch(key, hexColor);
-    this.emitThemeChange();
+    this.emitThemeChange(false);
   }
 
-  private emitThemeChange(): void {
-    this.notifyThemeChange({ ...this.currentTheme });
+  private emitThemeChange(saveImmediately: boolean, context?: string): void {
+    this.notifyThemeChange({ ...this.currentTheme }, saveImmediately, context);
     this.renderThemeProfiles();
   }
 
@@ -689,7 +690,7 @@ export class DesktopThemeSection {
 
   private handleProfileSelect(profile: ThemeProfile): void {
     this.applyTheme(profile.colors);
-    this.emitThemeChange();
+    this.emitThemeChange(true, profile.name);
   }
 
   private handleAddNewProfile(): void {

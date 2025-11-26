@@ -18,7 +18,7 @@
   --card-bg: var(--theme-surface, #252525);
   --button-bg: var(--theme-primary, #4285f4);
   --button-hover: var(--theme-primary-hover, #5a95f5);
-  --button-active: var(--theme-secondary, #357abd);
+  --button-active: var(--theme-primary-active, #357abd);
   --text-color: var(--theme-text, #e8e8e8);
   --accent-color: var(--theme-primary, #4285f4);
 

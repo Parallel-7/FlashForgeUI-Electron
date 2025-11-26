@@ -33,7 +33,7 @@
 
 import { AppConfig, ThemeColors, ThemeProfile, DEFAULT_THEME } from '../../types/config.js';
 import type { MutableSettings } from './types.js';
-import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI } from './types/external.js';
+import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI, ThemeProfileOperationData } from './types/external.js';
 import { DesktopThemeSection } from './sections/DesktopThemeSection.js';
 import { TabSection } from './sections/TabSection.js';
 import { InputDependencySection } from './sections/InputDependencySection.js';
@@ -158,7 +158,7 @@ class SettingsRenderer {
     this.desktopThemeSection = new DesktopThemeSection({
       document,
       defaultTheme: DEFAULT_THEME,
-      onThemeChange: (theme) => this.handleDesktopThemeUpdated(theme),
+      onThemeChange: (theme, saveImmediately, context) => this.handleDesktopThemeUpdated(theme, saveImmediately, context),
       onProfileOperation: (operation, profileData) => this.handleProfileOperation('desktop', operation, profileData),
       getThemeProfiles: () => this.settings.global['desktopThemeProfiles'] as readonly ThemeProfile[] || []
     });
@@ -561,14 +561,51 @@ class SettingsRenderer {
     this.updateSaveButtonState();
   }
 
-  private handleDesktopThemeUpdated(theme: ThemeColors): void {
+  private handleDesktopThemeUpdated(theme: ThemeColors, saveImmediately: boolean = false, context?: string): void {
     this.settings.global['DesktopTheme'] = theme;
+
+    if (saveImmediately) {
+      void this.saveDesktopThemeImmediately(theme, context);
+      console.log('[Settings] Desktop theme saved and applied globally');
+      return;
+    }
+
     this.hasUnsavedChanges = true;
     this.updateSaveButtonState();
-    console.log('[Settings] Desktop theme updated:', theme);
+    console.log('[Settings] Desktop theme updated (unsaved):', theme);
   }
 
-  private handleProfileOperation(uiType: 'desktop' | 'web', operation: 'add' | 'update' | 'delete', profileData: any): void {
+  private async saveDesktopThemeImmediately(theme: ThemeColors, context?: string): Promise<void> {
+    const api = window.settingsAPI;
+    if (!api?.saveDesktopTheme) {
+      console.warn('[Settings] saveDesktopTheme API is not available');
+      return;
+    }
+
+    try {
+      const success = await api.saveDesktopTheme(theme);
+      if (!success) {
+        this.showSaveStatus('Failed to save desktop theme', true);
+      } else {
+        let message: string;
+        if (context === 'reset') {
+          message = 'Desktop theme reset to default';
+        } else if (context) {
+          message = `Applied ${context}`;
+        } else {
+          message = 'Desktop theme saved';
+        }
+        this.showSaveStatus(message);
+      }
+    } catch (error) {
+      console.error('[Settings] Failed to save desktop theme:', error);
+      this.showSaveStatus('Failed to save desktop theme', true);
+    } finally {
+      this.updateSaveButtonState();
+    }
+  }
+
+  private handleProfileOperation(uiType: 'desktop' | 'web', operation: 'add' | 'update' | 'delete', profileData: ThemeProfileOperationData): void {
     window.settingsAPI?.performThemeProfileOperation(uiType, operation, profileData);
   }
 

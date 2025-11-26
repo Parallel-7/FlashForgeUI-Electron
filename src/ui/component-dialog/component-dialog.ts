@@ -15,6 +15,8 @@
  * @module ui/component-dialog/component-dialog
  */
 
+/// <reference types="../../types/global.d.ts" />
+
 // Component system imports
 import './component-dialog.css' with { type: 'css' };
 import { ComponentManager } from '../components/ComponentManager.js';

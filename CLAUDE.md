@@ -166,7 +166,7 @@ When adding new settings sections:
 | `npm run specs:list -- --type active|completed` | Lists AI spec Markdown files (top-level or archive) | Defaults to active specs; pass `--type completed` for `ai_specs/archive` |
 | `npm run knip` (+variants) | Dead code/dependency analysis | Expect intentional false positives (Electron patterns) |
 | `npm run build:*` | Build main / renderer / WebUI / platform packages | Only when user asks or when structural build impacts occur |
-| `npm run linecount` | PowerShell LOC summary | Informational only |
+| `npm run linecount` / `linecount -- --min-lines=N` | TypeScript LOC summary; optionally filter files with N+ lines | Informational only |
 
 ## Testing & Runtime Constraints
 

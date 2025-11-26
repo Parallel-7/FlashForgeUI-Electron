@@ -34,7 +34,8 @@ import { getLogService } from '../../services/LogService.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 
 type WindowManager = ReturnType<typeof getWindowManager>;
-import type { AppConfig } from '../../types/config.js';
+import type { AppConfig, ThemeColors } from '../../types/config.js';
+import { sanitizeTheme } from '../../types/config.js';
 import { 
   createSettingsWindow, 
   createStatusWindow, 
@@ -199,6 +200,23 @@ export function registerDialogHandlers(
   // Status dialog handlers
   ipcMain.on('open-status-dialog', () => {
     createStatusWindow();
+  });
+
+  ipcMain.handle('settings:save-desktop-theme', async (_event, theme: ThemeColors): Promise<boolean> => {
+    try {
+      configManager.updateConfig({ DesktopTheme: sanitizeTheme(theme) });
+      await configManager.forceSave();
+
+      const mainWindow = windowManager.getMainWindow();
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('config-updated', configManager.getConfig());
+      }
+
+      return true;
+    } catch (error) {
+      console.error('[DialogHandlers] Failed to save desktop theme:', error);
+      return false;
+    }
   });
 
   ipcMain.on('open-about-dialog', () => {

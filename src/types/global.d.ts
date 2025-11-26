@@ -25,6 +25,14 @@
  * @module types/global
  */
 
+import type { ActiveSpoolData, SpoolResponse, SpoolSearchQuery } from './spoolman.js';
+import type {
+  ShortcutButtonConfig,
+  ShortcutComponentInfo,
+  ShortcutDialogInitData,
+  ShortcutSaveConfigResult
+} from './shortcut-config.js';
+
 // IPC event listener function type
 type IPCListener = (...args: unknown[]) => void;
 
@@ -99,6 +107,37 @@ interface SpoolmanAPI {
   onSpoolUpdated(callback: (spool: unknown) => void): void;
 }
 
+/**
+ * Component dialog specific IPC surface exposed via context bridge.
+ */
+interface ComponentDialogAPI {
+  receive: (
+    channel: 'component-dialog:init' | 'polling-update',
+    func: (data: unknown) => void
+  ) => (() => void) | undefined;
+  send: (channel: 'component-dialog:close', ...data: unknown[]) => void;
+  invoke: (channel: 'component-dialog:get-info', ...data: unknown[]) => Promise<unknown>;
+}
+
+/**
+ * Shortcut configuration dialog IPC contract exposed through the preload script.
+ */
+interface ShortcutConfigDialogAPI {
+  onDialogInit: (callback: (data: ShortcutDialogInitData) => void) => void;
+  getCurrentConfig: () => Promise<ShortcutButtonConfig | null>;
+  saveConfig: (config: ShortcutButtonConfig) => Promise<ShortcutSaveConfigResult>;
+  getAvailableComponents: () => Promise<ShortcutComponentInfo[]>;
+  closeDialog: (responseChannel: string) => void;
+}
+
+/**
+ * Spoolman dialog specific API for searching and selecting spools.
+ */
+interface SpoolmanDialogAPI {
+  searchSpools: (query: SpoolSearchQuery) => Promise<SpoolResponse[]>;
+  selectSpool: (spool: ActiveSpoolData) => Promise<void>;
+}
+
 // API interface for type safety
 interface ElectronAPI {
   send: (channel: string, data?: unknown) => void;
@@ -132,6 +171,9 @@ interface WindowControls {
 declare global {
   interface Window {
     api: ElectronAPI;
+    componentDialogAPI?: ComponentDialogAPI;
+    shortcutConfigAPI?: ShortcutConfigDialogAPI;
+    spoolmanDialogAPI?: SpoolmanDialogAPI;
     CAMERA_URL: string;
     PLATFORM: string;
     windowControls?: WindowControls;

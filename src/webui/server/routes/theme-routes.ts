@@ -5,9 +5,19 @@
 import type { Router, Response } from 'express';
 import type { AuthenticatedRequest } from '../auth-middleware.js';
 import type { RouteDependencies } from './route-helpers.js';
-import { sanitizeTheme } from '../../../types/config.js';
+import {
+  sanitizeTheme,
+  ThemeProfileAddData,
+  ThemeProfileUpdateData,
+  ThemeProfileDeleteData,
+} from '../../../types/config.js';
 import { StandardAPIResponse } from '../../types/web-api.types.js';
 import { toAppError } from '../../../utils/error.utils.js';
+
+interface ThemeProfileOperationRequestBody {
+  operation: 'add' | 'update' | 'delete';
+  data: ThemeProfileAddData | ThemeProfileUpdateData | ThemeProfileDeleteData;
+}
 
 export function registerPublicThemeRoutes(router: Router, deps: RouteDependencies): void {
   router.get('/api/webui/theme', async (_req, res: Response) => {
@@ -66,19 +76,25 @@ export function registerThemeRoutes(router: Router, deps: RouteDependencies): vo
 
   router.post('/webui/theme/profiles', async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { operation, data } = req.body;
+      const { operation, data } = req.body as ThemeProfileOperationRequestBody;
       const configManager = deps.configManager;
 
       switch (operation) {
-        case 'add':
-          configManager.addThemeProfile('web', data.name, data.colors);
+        case 'add': {
+          const addData = data as ThemeProfileAddData;
+          configManager.addThemeProfile('web', addData.name, addData.colors);
           break;
-        case 'update':
-          configManager.updateThemeProfile('web', data.originalName, data.updatedProfile);
+        }
+        case 'update': {
+          const updateData = data as ThemeProfileUpdateData;
+          configManager.updateThemeProfile('web', updateData.originalName, updateData.updatedProfile);
           break;
-        case 'delete':
-          configManager.deleteThemeProfile('web', data.name);
+        }
+        case 'delete': {
+          const deleteData = data as ThemeProfileDeleteData;
+          configManager.deleteThemeProfile('web', deleteData.name);
           break;
+        }
         default:
           return res.status(400).json({ success: false, error: 'Invalid operation' });
       }

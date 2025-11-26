@@ -15,6 +15,8 @@
  * @module ui/spoolman-dialog/spoolman-dialog-renderer
  */
 
+/// <reference types="../../types/global.d.ts" />
+
 import type { SpoolResponse, ActiveSpoolData } from '../../types/spoolman.js';
 
 // ============================================================================

@@ -111,14 +111,17 @@ Use these npm scripts to enforce quality checks and gather insights:
 | --- | --- | --- |
 | `npm run type-check` | TypeScript validation (`tsc --noEmit`). | Report success/fail clearly; fix root causes before completion. |
 | `npm run lint` / `npm run lint:fix` | ESLint checks and auto-fixes on `src/**/*.ts`. | Auto-fix first; re-run lint to confirm clean state. |
-| `npm run docs:check` | Node/TypeScript script scanning for missing `@fileoverview`. | Use findings to prioritize documentation updates. |
-| `npm run find:console` | Reports all `console.<level>` statements (log/debug/info/warn/error). | Use `-- --level=debug` etc. to scrub noisy logging before releases. |
-| `npm run find:lucide` | Lists every source file referencing Lucide icons. | Handy when pruning unused icons or verifying palette coverage. |
-| `npm run specs:list` | Lists AI specs for LLM agents (`-- --type active|completed`). | Default is active top-level specs; use `--type completed` for `ai_specs/archive`. |
+| `npm run linecount` | Count lines in TypeScript files (`-- --min-lines=N` to filter). | Cross-platform TypeScript script. Use `--min-lines=200` to find oversized files. |
+| `npm run docs:check` | Scan for missing `@fileoverview` blocks. | Cross-platform TypeScript script. Use findings to prioritize documentation. |
+| `npm run docs:combine` | Extract all `@fileoverview` blocks to `fileoverview-report.md`. | Cross-platform TypeScript script. Generates comprehensive module inventory. |
+| `npm run docs:clean` | Remove generated documentation artifacts. | Removes `fileoverview-report.md` and `fileoverview-collection.json`. |
+| `npm run find:console` | Report all `console.<level>` statements (log/debug/info/warn/error). | Use `-- --level=debug` to filter by level. Cross-platform TypeScript script. |
+| `npm run find:lucide` | List all files referencing Lucide icons. | Cross-platform TypeScript script. Useful for pruning unused icons. |
+| `npm run specs:list` | List AI spec files (`-- --type active|completed`). | Cross-platform TypeScript script. Defaults to active; use `--type completed` for archived specs. |
 | `npm run knip` (+ variants) | Dead code and dependency analysis via Knip. | Review results carefully; Electron patterns create false positives. |
 | `npm run build:*` | Build main, renderer, WebUI, or platform packages. | Run only when requested or required for verification. |
 
-Remember PowerShell scripts (`docs:*`, `linecount`) assume Windows-friendly environment; confirm availability before invoking.
+All utility scripts in this project are cross-platform TypeScript/Node.js scripts. No PowerShell required.
 
 ## Bootstrapping & Entry Points
 

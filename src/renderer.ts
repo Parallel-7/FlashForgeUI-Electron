@@ -449,6 +449,14 @@ function initializeStateAndEventListeners(): void {
         applyDesktopTheme(updatedConfig.DesktopTheme);
       }
     });
+
+    window.api.receive('desktop-theme-preview', (...args: unknown[]) => {
+      const previewTheme = args[0] as ThemeColors | undefined;
+      if (previewTheme) {
+        logDebug('Previewing desktop theme from settings dialog');
+        applyDesktopTheme(previewTheme);
+      }
+    });
   }
 
   logDebug('State tracking and event listeners initialized');

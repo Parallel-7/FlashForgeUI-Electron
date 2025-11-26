@@ -34,13 +34,3 @@ contextBridge.exposeInMainWorld('spoolmanDialogAPI', {
     return ipcRenderer.invoke('spoolman:select-spool', spool);
   },
 });
-
-// Type augmentation for window
-declare global {
-  interface Window {
-    spoolmanDialogAPI: {
-      searchSpools: (query: SpoolSearchQuery) => Promise<SpoolResponse[]>;
-      selectSpool: (spool: ActiveSpoolData) => Promise<void>;
-    };
-  }
-}

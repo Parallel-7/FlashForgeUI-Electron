@@ -40,6 +40,28 @@ interface ThemeProfile {
     isSystem: boolean;
 }
 
+interface ThemeProfileAddData {
+  name: string;
+  colors: ThemeColors;
+}
+
+interface ThemeProfileUpdateData {
+  originalName: string;
+  updatedProfile: {
+    name: string;
+    colors: ThemeColors;
+  };
+}
+
+interface ThemeProfileDeleteData {
+  name: string;
+}
+
+type ThemeProfileOperationData =
+  | ThemeProfileAddData
+  | ThemeProfileUpdateData
+  | ThemeProfileDeleteData;
+
 export interface LayoutUiHooks {
   onConnectionStatusUpdate?: (connected: boolean) => void;
   onPrinterStatusUpdate?: (status: PrinterStatus | null) => void;
@@ -101,7 +123,7 @@ export function setupLayoutEventHandlers(): void {
   });
 
   resetThemeButton?.addEventListener('click', () => {
-    loadDefaultThemeIntoSettings();
+    void loadDefaultThemeIntoSettings();
   });
 
   addProfileButton?.addEventListener('click', () => handleAddProfile());
@@ -533,7 +555,7 @@ export async function loadWebUITheme(): Promise<void> {
     const response = await apiRequestWithMetadata<unknown>('/api/webui/theme');
 
     if (response.ok && isThemeColors(response.data)) {
-      applyWebUITheme(response.data, false);
+      void applyWebUITheme(response.data, false);
       return;
     }
 
@@ -564,8 +586,10 @@ export async function applyWebUITheme(theme: ThemeColors, save: boolean = true):
 
   const primaryHover = lightenColor(theme.primary, 15);
   const secondaryHover = lightenColor(theme.secondary, 15);
+  const primaryActive = darkenColor(theme.primary, 12);
   root.style.setProperty('--theme-primary-hover', primaryHover);
   root.style.setProperty('--theme-secondary-hover', secondaryHover);
+  root.style.setProperty('--theme-primary-active', primaryActive);
 
   if (save) {
     try {
@@ -596,6 +620,20 @@ export function lightenColor(hex: string, percent: number): string {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
+export function darkenColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace('#', ''), 16);
+
+  if (Number.isNaN(num)) {
+    return hex;
+  }
+
+  const clampPercent = Math.max(0, Math.min(100, percent)) / 100;
+  const r = Math.max(0, Math.floor((num >> 16) * (1 - clampPercent)));
+  const g = Math.max(0, Math.floor(((num >> 8) & 0x00FF) * (1 - clampPercent)));
+  const b = Math.max(0, Math.floor((num & 0x0000FF) * (1 - clampPercent)));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
+}
+
 export async function loadCurrentThemeIntoSettings(): Promise<void> {
   try {
     const theme = await apiRequest<ThemeColors>('/api/webui/theme');
@@ -606,9 +644,9 @@ export async function loadCurrentThemeIntoSettings(): Promise<void> {
   }
 }
 
-export function loadDefaultThemeIntoSettings(): void {
+export async function loadDefaultThemeIntoSettings(): Promise<void> {
   setThemeInputValues(DEFAULT_THEME_COLORS);
-  showToast('Theme reset to defaults. Click Apply to save.', 'info');
+  await applyWebUITheme(DEFAULT_THEME_COLORS);
 }
 
 export async function handleApplyWebUITheme(): Promise<void> {
@@ -631,7 +669,7 @@ const DEFAULT_THEME_COLORS: ThemeColors = {
 };
 
 export function applyDefaultTheme(): void {
-  applyWebUITheme(DEFAULT_THEME_COLORS, false);
+  void applyWebUITheme(DEFAULT_THEME_COLORS, false);
 }
 
 function setThemeInputValues(theme: ThemeColors): void {
@@ -800,7 +838,7 @@ async function handleDeleteProfile(profile: ThemeProfile): Promise<void> {
     }
 }
 
-async function performProfileOperation(operation: 'add' | 'update' | 'delete', data: any): Promise<void> {
+async function performProfileOperation(operation: 'add' | 'update' | 'delete', data: ThemeProfileOperationData): Promise<void> {
     try {
         await apiRequest('/api/webui/theme/profiles', {
             method: 'POST',

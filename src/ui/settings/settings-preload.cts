@@ -29,7 +29,7 @@
 // src/ui/settings/settings-preload.ts
 
 import { contextBridge, ipcRenderer } from 'electron';
-import type { AppConfig } from '../../types/config.js';
+import type { AppConfig, ThemeColors } from '../../types/config.js';
 
 // Ensure this file is treated as a module
 export {};
@@ -38,6 +38,7 @@ export {};
 contextBridge.exposeInMainWorld('settingsAPI', {
   requestConfig: () => ipcRenderer.invoke('settings-request-config'),
   saveConfig: (config: AppConfig) => ipcRenderer.invoke('settings-save-config', config),
+  saveDesktopTheme: (theme: ThemeColors) => ipcRenderer.invoke('settings:save-desktop-theme', theme),
   closeWindow: () => ipcRenderer.send('settings-close-window'),
   receiveConfig: (callback: (config: AppConfig) => void) => {
     ipcRenderer.on('settings-config-data', (_event, config) => callback(config));

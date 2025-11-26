@@ -494,16 +494,3 @@ contextBridge.exposeInMainWorld('componentDialogAPI', {
   }
 });
 
-// ---------------------------------------------------------------------------
-// Global typings
-// ---------------------------------------------------------------------------
-
-declare global {
-  interface Window {
-    componentDialogAPI: {
-      receive: (channel: string, func: (data: unknown) => void) => (() => void) | undefined;
-      send: (channel: string, ...data: unknown[]) => void;
-      invoke: (channel: string, ...data: unknown[]) => Promise<unknown>;
-    };
-  }
-}
