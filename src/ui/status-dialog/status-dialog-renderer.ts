@@ -35,11 +35,15 @@
 
 // src/ui/status-dialog/status-dialog-renderer.ts
 
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
+
 interface IStatusAPI {
   readonly requestStats: () => Promise<StatusStats | null>;
   readonly closeWindow: () => void;
   readonly receiveStats: (callback: (stats: StatusStats) => void) => void;
   readonly removeListeners: () => void;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
 declare global {
@@ -98,6 +102,7 @@ class StatusDialogRenderer {
     window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
     this.initializeTabs();
     this.setupCloseButtons();
+    this.registerThemeListener();
 
     if (window.statusAPI) {
       window.statusAPI.receiveStats((stats) => this.updateStats(stats));
@@ -336,6 +341,12 @@ class StatusDialogRenderer {
     if (element) {
       element.textContent = value;
     }
+  }
+
+  private registerThemeListener(): void {
+    window.statusAPI?.receive?.('theme-changed', (data: unknown) => {
+      applyDialogTheme(data as ThemeColors);
+    });
   }
 
   private cleanup(): void {

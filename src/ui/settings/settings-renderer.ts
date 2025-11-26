@@ -34,6 +34,7 @@
 import { AppConfig, ThemeColors, ThemeProfile, DEFAULT_THEME } from '../../types/config.js';
 import type { MutableSettings } from './types.js';
 import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI, ThemeProfileOperationData } from './types/external.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 import { DesktopThemeSection } from './sections/DesktopThemeSection.js';
 import { TabSection } from './sections/TabSection.js';
 import { InputDependencySection } from './sections/InputDependencySection.js';
@@ -120,6 +121,7 @@ class SettingsRenderer {
   }
 
   private initialize(): void {
+    this.registerThemeListener();
     document.addEventListener('DOMContentLoaded', () => {
       window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x', 'alert-triangle', 'plus', 'edit-2', 'trash-2']);
       this.initializeElements();
@@ -620,6 +622,12 @@ class SettingsRenderer {
     this.autoUpdateSection?.dispose();
     this.printerContextSection?.dispose();
     // Note: No longer need to remove IPC listeners since we're using promises
+  }
+
+  private registerThemeListener(): void {
+    window.settingsAPI?.receive?.('theme-changed', (data: unknown) => {
+      applyDialogTheme(data as ThemeColors);
+    });
   }
 }
 

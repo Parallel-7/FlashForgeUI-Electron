@@ -40,6 +40,10 @@ contextBridge.exposeInMainWorld('settingsAPI', {
   saveConfig: (config: AppConfig) => ipcRenderer.invoke('settings-save-config', config),
   saveDesktopTheme: (theme: ThemeColors) => ipcRenderer.invoke('settings:save-desktop-theme', theme),
   closeWindow: () => ipcRenderer.send('settings-close-window'),
+  send: (channel: string, data?: unknown) => ipcRenderer.send(channel, data),
+  receive: (channel: string, func: (...args: unknown[]) => void) => {
+    ipcRenderer.on(channel, (_event, ...args) => func(...args));
+  },
   receiveConfig: (callback: (config: AppConfig) => void) => {
     ipcRenderer.on('settings-config-data', (_event, config) => callback(config));
   },
@@ -52,6 +56,7 @@ contextBridge.exposeInMainWorld('settingsAPI', {
   removeListeners: () => {
     ipcRenderer.removeAllListeners('settings-config-data');
     ipcRenderer.removeAllListeners('config-updated-event');
+    ipcRenderer.removeAllListeners('theme-changed');
   },
   testSpoolmanConnection: (url: string) => ipcRenderer.invoke('spoolman:test-connection', url),
   testDiscordWebhook: (url: string) => ipcRenderer.invoke('discord:test-webhook', url),

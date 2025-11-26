@@ -18,6 +18,8 @@
 // IFS Dialog renderer process logic for material station display
 
 import type { MaterialSlotData, MaterialStationData } from './ifs-dialog-preload.cts';
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 
 // Initialize dialog when DOM is loaded

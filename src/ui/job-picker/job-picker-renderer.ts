@@ -21,6 +21,8 @@
 
 import type { AD5XJobInfo } from '../../types/printer-backend/index.js';
 import { logVerbose } from '../../utils/logging.js';
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 // Global window type extension
 declare global {

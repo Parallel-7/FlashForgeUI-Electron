@@ -65,5 +65,12 @@ contextBridge.exposeInMainWorld('sendCmdsApi', {
     removeListeners: (): void => {
         ipcRenderer.removeAllListeners('send-cmds:command-result');
     }
+,
+  receive: (channel: string, func: (...args: unknown[]) => void): void => {
+    const validChannels = ['theme-changed'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (_event, ...args) => func(...args));
+    }
+  }
 });
 

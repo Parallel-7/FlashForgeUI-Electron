@@ -23,10 +23,15 @@ contextBridge.exposeInMainWorld('printerWarningDialogAPI', {
      */
     receive: (channel: string, func: (data: PrinterConnectedWarningData) => void): void => {
         // Validate channel name for security
-        if (channel === 'dialog-init') {
-            ipcRenderer.once(channel, (_event, data: PrinterConnectedWarningData) => {
-                func(data);
-            });
+        const validChannels = ['dialog-init', 'theme-changed'];
+        if (validChannels.includes(channel)) {
+            if (channel === 'dialog-init') {
+                ipcRenderer.once(channel, (_event, data: PrinterConnectedWarningData) => {
+                    func(data);
+                });
+            } else {
+                ipcRenderer.on(channel, (_event, ...args) => func(...(args as [PrinterConnectedWarningData])));
+            }
         } else {
             console.error('Printer connected warning preload: Invalid channel:', channel);
         }

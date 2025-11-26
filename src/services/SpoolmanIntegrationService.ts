@@ -23,6 +23,9 @@ import { EventEmitter } from 'events';
 import type { ConfigManager } from '../managers/ConfigManager.js';
 import type { PrinterContextManager } from '../managers/PrinterContextManager.js';
 import type { PrinterBackendManager } from '../managers/PrinterBackendManager.js';
+import { getConfigManager } from '../managers/ConfigManager.js';
+import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
+import { getPrinterBackendManager } from '../managers/PrinterBackendManager.js';
 import { getPrinterDetailsManager } from '../managers/PrinterDetailsManager.js';
 import { SpoolmanService } from './SpoolmanService.js';
 import type { ActiveSpoolData, SpoolResponse, SpoolSearchQuery } from '../types/spoolman.js';
@@ -446,8 +449,9 @@ export class SpoolmanIntegrationService extends EventEmitter {
 let instance: SpoolmanIntegrationService | null = null;
 
 /**
- * Initialize the Spoolman integration service singleton
- * Must be called before getSpoolmanIntegrationService()
+ * Initialize the Spoolman integration service singleton.
+ * If not called explicitly, the service will auto-initialize on first access.
+ * Can be called to reinitialize with specific dependency instances.
  *
  * @param configManager - Config manager instance
  * @param contextManager - Printer context manager instance
@@ -458,17 +462,28 @@ export function initializeSpoolmanIntegrationService(
   contextManager: PrinterContextManager,
   backendManager: PrinterBackendManager
 ): SpoolmanIntegrationService {
+  if (instance) {
+    console.warn('[SpoolmanIntegrationService] Already initialized - returning existing instance');
+    return instance;
+  }
   instance = new SpoolmanIntegrationService(configManager, contextManager, backendManager);
+  console.log('[SpoolmanIntegrationService] Initialized');
   return instance;
 }
 
 /**
- * Get the Spoolman integration service singleton
- * @throws Error if service not initialized
+ * Get the Spoolman integration service singleton.
+ * Auto-initializes if not already initialized (lazy initialization pattern).
+ * Follows the same pattern as other multi-context services in the codebase.
  */
 export function getSpoolmanIntegrationService(): SpoolmanIntegrationService {
   if (!instance) {
-    throw new Error('SpoolmanIntegrationService not initialized. Call initializeSpoolmanIntegrationService() first.');
+    console.log('[SpoolmanIntegrationService] Auto-initializing on first access');
+    instance = new SpoolmanIntegrationService(
+      getConfigManager(),
+      getPrinterContextManager(),
+      getPrinterBackendManager()
+    );
   }
   return instance;
 }

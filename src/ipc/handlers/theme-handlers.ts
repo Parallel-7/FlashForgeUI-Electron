@@ -2,12 +2,13 @@
  * @fileoverview IPC handlers for theme-related operations.
  */
 
-import { ipcMain } from 'electron';
+import { ipcMain, BrowserWindow } from 'electron';
 import { getConfigManager } from '../../managers/ConfigManager.js';
 import type {
   ThemeProfileAddData,
   ThemeProfileUpdateData,
   ThemeProfileDeleteData,
+  ThemeColors,
 } from '../../types/config.js';
 
 interface ThemeProfileOperationEvent {
@@ -38,5 +39,14 @@ export function registerThemeHandlers(): void {
         break;
       }
     }
+  });
+
+  // Broadcast theme changes to all open windows (main window + dialogs)
+  ipcMain.on('theme-updated', (_event, theme: ThemeColors) => {
+    BrowserWindow.getAllWindows().forEach(window => {
+      if (!window.isDestroyed()) {
+        window.webContents.send('theme-changed', theme);
+      }
+    });
   });
 }

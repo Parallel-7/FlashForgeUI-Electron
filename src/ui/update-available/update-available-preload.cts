@@ -81,6 +81,13 @@ contextBridge.exposeInMainWorld('updateDialogAPI', {
   closeWindow(): void {
     ipcRenderer.send('close-current-window');
   }
+,
+  receive: (channel: string, func: (...args: unknown[]) => void): void => {
+    const validChannels = ['theme-changed'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (_event, ...args) => func(...args));
+    }
+  }
 });
 
 contextBridge.exposeInMainWorld('platform', process.platform);

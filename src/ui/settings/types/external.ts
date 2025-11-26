@@ -22,6 +22,8 @@ export interface ISettingsAPI {
   saveConfig: (config: Partial<AppConfig>) => Promise<boolean>;
   saveDesktopTheme?: (theme: ThemeColors) => Promise<boolean>;
   closeWindow: () => void;
+  send?: (channel: string, data?: unknown) => void;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
   receiveConfig: (callback: (config: AppConfig) => void) => void;
   onConfigUpdated: (callback: (config: AppConfig) => void) => void;
   removeListeners: () => void;

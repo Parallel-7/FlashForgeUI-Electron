@@ -235,7 +235,8 @@ const validReceiveChannels = [
   'spoolman:spool-updated',
   'config-updated',
   'config-loaded',
-  'desktop-theme-preview'
+  'desktop-theme-preview',
+  'theme-changed'
 ];
 
 // Expose camera URL for renderer

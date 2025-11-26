@@ -37,6 +37,7 @@
 		"docs:clean": "rimraf \"fileoverview-report.md\" \"fileoverview-collection.json\"",
 		"find:console": "tsx scripts/find-console-usage.ts",
 		"find:lucide": "tsx scripts/find-lucide-usage.ts",
+		"find:window": "ts-node --esm scripts/find-window-usage.ts",
 		"specs:list": "tsx scripts/list-specs.ts",
 		"clean": "rimraf lib dist \"NVIDIA Corporation\"",
 		"type-check": "npx tsc --noEmit",

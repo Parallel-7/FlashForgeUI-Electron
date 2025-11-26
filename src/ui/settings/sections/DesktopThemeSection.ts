@@ -16,7 +16,13 @@
 // src/ui/settings/sections/DesktopThemeSection.ts
 
 import type { ThemeColors, ThemeProfile } from '../../../types/config.js';
-import type { ThemeProfileOperationData } from '../types/external.js';
+import type { ThemeProfileOperationData, ISettingsAPI } from '../types/external.js';
+
+declare global {
+  interface Window {
+    settingsAPI?: ISettingsAPI;
+  }
+}
 
 interface DesktopThemeSectionOptions {
   readonly document: Document;
@@ -291,8 +297,14 @@ export class DesktopThemeSection {
   }
 
   private emitThemeChange(saveImmediately: boolean, context?: string): void {
-    this.notifyThemeChange({ ...this.currentTheme }, saveImmediately, context);
+    const theme = { ...this.currentTheme };
+    this.notifyThemeChange(theme, saveImmediately, context);
     this.renderThemeProfiles();
+
+    // Broadcast theme change to all open windows (main window + dialogs)
+    if (window.settingsAPI?.send) {
+      window.settingsAPI.send('theme-updated', theme);
+    }
   }
 
   private updateNativeInputValue(key: ThemeColorKey, value: string): void {

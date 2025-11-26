@@ -30,6 +30,8 @@
 export {};
 
 import { logVerbose } from '../../utils/logging.js';
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 // Interface for discovered printer information (matches preload)
 interface PrinterInfo {

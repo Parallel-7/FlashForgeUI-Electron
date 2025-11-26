@@ -5,6 +5,8 @@
  */
 
 import type { ConnectChoiceOption, ConnectChoiceData } from './connect-choice-dialog-preload.cts';
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 // Global state
 let isHandlingChoice = false;
@@ -16,13 +18,20 @@ document.addEventListener('DOMContentLoaded', (): void => {
   console.log('Connect choice dialog renderer loaded');
   window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['globe', 'wifi']);
   setupEventListeners();
-  
+  registerThemeListener();
+
   // Listen for initialization data from main process
   window.connectChoiceAPI.onDialogInit((data: ConnectChoiceData & { responseChannel: string }) => {
     console.log('Received connect choice dialog data:', data);
     updateDialogUI(data);
   });
 });
+
+function registerThemeListener(): void {
+  window.connectChoiceAPI.receive?.('theme-changed', (data: unknown) => {
+    applyDialogTheme(data as ThemeColors);
+  });
+}
 
 /**
  * Setup event listeners for dialog controls

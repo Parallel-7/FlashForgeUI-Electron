@@ -33,4 +33,11 @@ contextBridge.exposeInMainWorld('spoolmanDialogAPI', {
   selectSpool: (spool: ActiveSpoolData): Promise<void> => {
     return ipcRenderer.invoke('spoolman:select-spool', spool);
   },
+
+  receive: (channel: string, func: (...args: unknown[]) => void): void => {
+    const validChannels = ['theme-changed'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (_event, ...args) => func(...args));
+    }
+  }
 });

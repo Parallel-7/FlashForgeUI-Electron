@@ -20,6 +20,8 @@
 
 import type { ShortcutButtonConfig, ShortcutComponentInfo } from '../../types/shortcut-config.js';
 import type { LucideHelpers } from '../shared/lucide.js';
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 declare global {
   interface Window {
@@ -372,4 +374,11 @@ document.addEventListener('DOMContentLoaded', () => {
   console.log('[ShortcutConfigDialog] DOM ready');
   window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['plus', 'circle', 'x']);
   setupEventListeners();
+  registerThemeListener();
 });
+
+function registerThemeListener(): void {
+  shortcutConfigAPI?.receive?.('theme-changed', (data: unknown) => {
+    applyDialogTheme(data as ThemeColors);
+  });
+}

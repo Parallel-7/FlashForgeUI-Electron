@@ -465,7 +465,7 @@ contextBridge.exposeInMainWorld('api', {
 
 contextBridge.exposeInMainWorld('componentDialogAPI', {
   receive: (channel: string, func: (data: unknown) => void): (() => void) | undefined => {
-    const validChannels = ['component-dialog:init', 'polling-update'];
+    const validChannels = ['component-dialog:init', 'polling-update', 'theme-changed'];
     if (validChannels.includes(channel)) {
       const subscription = (_event: Electron.IpcRendererEvent, ...args: unknown[]) => {
         func(args.length === 1 ? args[0] : args);

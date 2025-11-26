@@ -173,5 +173,15 @@ contextBridge.exposeInMainWorld('shortcutConfigAPI', {
   closeDialog: (responseChannel: string) => {
     void ipcRenderer.invoke(responseChannel);
   },
+
+  /**
+   * Listen for theme changes
+   */
+  receive: (channel: string, func: (...args: unknown[]) => void): void => {
+    const validChannels = ['theme-changed'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (_event, ...args) => func(...args));
+    }
+  }
 });
 

@@ -183,6 +183,14 @@ Agents **cannot**:
 
 Call out unverified runtime assumptions explicitly in deliverables.
 
+In order to verify you are complete with a task, you go through this checklist:
+1. Run type checking, if there's errors iterate until they are fixed properly (no band-aids, etc)
+2. Once type checking passes, run build:renderer. This ensure webpack compiles without errors, and if there are any, iterate until they are fixed properly (no band-aids, etc)
+3. Once build:renderer passes, the final check is running lint. It's important to never ignore the errors, the more they pile up the harder it becomes to do cleanups/maintain the codebase.
+
+Do not say you are done with something despite not having run one/any of these checks, and the same if one fails. All must be ran and pass to ensure codebase quality and produciton readiness
+
+
 ## Recent Lessons
 
 1. Component dialog preloads must import typings with `import type {} from '../../types/global';`—runtime `.d.ts` imports break the dialog bootstrap.

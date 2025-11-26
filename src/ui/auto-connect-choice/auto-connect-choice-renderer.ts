@@ -5,6 +5,8 @@
  */
 
 import type { AutoConnectChoiceOption, AutoConnectChoiceData } from './auto-connect-choice-preload.cts';
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 // Global state
 let currentData: AutoConnectChoiceData | null = null;

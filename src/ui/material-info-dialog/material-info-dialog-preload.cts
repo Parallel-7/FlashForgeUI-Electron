@@ -51,6 +51,16 @@ const materialInfoDialogAPI = {
     closeDialog: (): void => {
         console.log('Material info dialog preload: Sending close dialog request');
         ipcRenderer.send('close-material-info-dialog');
+    },
+
+    /**
+     * Listen for theme changes
+     */
+    receive: (channel: string, func: (...args: unknown[]) => void): void => {
+        const validChannels = ['theme-changed'];
+        if (validChannels.includes(channel)) {
+            ipcRenderer.on(channel, (_event, ...args) => func(...args));
+        }
     }
 } as const;
 

@@ -75,5 +75,12 @@ contextBridge.exposeInMainWorld('materialMatchingAPI', {
   getMaterialStationStatus: (): Promise<MaterialStationStatus | null> => {
     return ipcRenderer.invoke('get-material-station-status');
   }
+,
+  receive: (channel: string, func: (...args: unknown[]) => void): void => {
+    const validChannels = ['theme-changed'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (_event, ...args) => func(...args));
+    }
+  }
 });
 

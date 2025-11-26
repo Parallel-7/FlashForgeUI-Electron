@@ -112,7 +112,7 @@ interface SpoolmanAPI {
  */
 interface ComponentDialogAPI {
   receive: (
-    channel: 'component-dialog:init' | 'polling-update',
+    channel: 'component-dialog:init' | 'polling-update' | 'theme-changed',
     func: (data: unknown) => void
   ) => (() => void) | undefined;
   send: (channel: 'component-dialog:close', ...data: unknown[]) => void;
@@ -128,6 +128,7 @@ interface ShortcutConfigDialogAPI {
   saveConfig: (config: ShortcutButtonConfig) => Promise<ShortcutSaveConfigResult>;
   getAvailableComponents: () => Promise<ShortcutComponentInfo[]>;
   closeDialog: (responseChannel: string) => void;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
 /**
@@ -136,6 +137,7 @@ interface ShortcutConfigDialogAPI {
 interface SpoolmanDialogAPI {
   searchSpools: (query: SpoolSearchQuery) => Promise<SpoolResponse[]>;
   selectSpool: (spool: ActiveSpoolData) => Promise<void>;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
 // API interface for type safety

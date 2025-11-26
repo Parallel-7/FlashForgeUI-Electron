@@ -10,11 +10,14 @@
 // Ensure this file is treated as a module
 export {};
 
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
+
 // Extend Window interface to include our printer warning dialog API
 declare global {
     interface Window {
         printerWarningDialogAPI?: {
-            receive: (channel: string, func: (data: PrinterConnectedWarningData) => void) => void;
+            receive?: (channel: string, func: (...args: unknown[]) => void) => void;
             continue: () => Promise<void>;
             cancel: () => Promise<void>;
         };
@@ -61,16 +64,25 @@ document.addEventListener('DOMContentLoaded', (): void => {
     }
 
     // Initialize dialog with options from main process
-    window.printerWarningDialogAPI.receive('dialog-init', (data: PrinterConnectedWarningData): void => {
-        initializeDialog(elements, data);
+    window.printerWarningDialogAPI.receive?.('dialog-init', (data: unknown): void => {
+        initializeDialog(elements, data as PrinterConnectedWarningData);
     });
 
     // Set up event handlers
     setupEventHandlers(elements);
 
+    // Register theme listener
+    registerThemeListener();
+
     // Set default focus to Cancel button (safer default)
     elements.cancelButton.focus();
 });
+
+function registerThemeListener(): void {
+    window.printerWarningDialogAPI?.receive?.('theme-changed', (data: unknown) => {
+        applyDialogTheme(data as ThemeColors);
+    });
+}
 
 /**
  * Initialize dialog with provided printer data

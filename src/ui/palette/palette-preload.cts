@@ -170,6 +170,16 @@ contextBridge.exposeInMainWorld('paletteAPI', {
   toggleEditMode: (): void => {
     console.log('[Palette Preload] Toggling edit mode from palette');
     ipcRenderer.send('palette:toggle-edit-mode');
+  },
+
+  /**
+   * Listen for theme changes
+   */
+  receive: (channel: string, func: (...args: unknown[]) => void): void => {
+    const validChannels = ['theme-changed'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (_event, ...args) => func(...args));
+    }
   }
 } as PaletteAPI);
 

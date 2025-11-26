@@ -3,22 +3,22 @@
  */
 
 :root {
-  --dialog-bg: #1e1e1e;
-  --dialog-header-bg: #2a2a2a;
-  --dialog-border: #3a3a3a;
-  --text-primary: #ffffff;
-  --text-secondary: #b0b0b0;
-  --text-muted: #808080;
-  --button-primary-bg: #0e639c;
-  --button-primary-hover: #1177bb;
-  --button-secondary-bg: #3a3a3a;
-  --button-secondary-hover: #4a4a4a;
-  --input-bg: #2a2a2a;
-  --input-border: #3a3a3a;
-  --input-focus: #0e639c;
-  --status-success: #4caf50;
-  --status-error: #f44336;
-  --status-info: #2196f3;
+  --dialog-bg: var(--theme-background, #1e1e1e);
+  --dialog-header-bg: var(--theme-surface, #2a2a2a);
+  --dialog-border: var(--theme-border, #3a3a3a);
+  --text-primary: var(--theme-text, #ffffff);
+  --text-secondary: var(--theme-text-secondary, #b0b0b0);
+  --text-muted: var(--theme-text-muted, #808080);
+  --button-primary-bg: var(--theme-primary, #0e639c);
+  --button-primary-hover: var(--theme-primary-hover, #1177bb);
+  --button-secondary-bg: var(--theme-surface-hover, #3a3a3a);
+  --button-secondary-hover: var(--theme-surface-active, #4a4a4a);
+  --input-bg: var(--theme-surface, #2a2a2a);
+  --input-border: var(--theme-border, #3a3a3a);
+  --input-focus: var(--theme-primary, #0e639c);
+  --status-success: var(--theme-success, #4caf50);
+  --status-error: var(--theme-error, #f44336);
+  --status-info: var(--theme-info, #2196f3);
 }
 
 * {

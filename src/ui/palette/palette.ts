@@ -7,6 +7,9 @@
  * availability and dispatching add requests.
  */
 
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
+
 type LucideHelperWindow = Window & {
   lucideHelpers?: {
     initializeLucideIconsFromGlobal?(
@@ -24,6 +27,7 @@ interface PaletteAPI {
   getAvailableComponents: () => Promise<ComponentDefinition[]>;
   notifyOpened: () => void;
   toggleEditMode: () => void;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
 interface ComponentDefinition {
@@ -255,7 +259,14 @@ paletteWindow.debugPaletteManager = paletteManager;
 document.addEventListener('DOMContentLoaded', async () => {
   await paletteManager.initialize();
   paletteWindow.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x', 'pin', 'check']);
+  registerThemeListener();
 });
+
+function registerThemeListener(): void {
+  paletteWindow.paletteAPI?.receive?.('theme-changed', (data: unknown) => {
+    applyDialogTheme(data as ThemeColors);
+  });
+}
 
 window.addEventListener('beforeunload', () => {
   paletteManager.dispose();

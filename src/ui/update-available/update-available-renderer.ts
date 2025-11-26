@@ -55,6 +55,7 @@ interface UpdateDialogAPI {
   onStateChanged: (callback: (payload: UpdateStatePayload) => void) => void;
   removeStateListeners: () => void;
   closeWindow: () => void;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
 declare global {
@@ -65,6 +66,9 @@ declare global {
 }
 
 export {};
+
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 class UpdateDialogController {
   private state: UpdateStatusResponse | null = null;
@@ -93,6 +97,7 @@ class UpdateDialogController {
   }
 
   private attachEventListeners(): void {
+    this.registerThemeListener();
     this.downloadButton?.addEventListener('click', () => void this.handlePrimaryAction());
     this.installWindowsButton?.addEventListener('click', () => void this.handleInstall());
     this.installMacButton?.addEventListener('click', () => void this.handleOpenInstaller());
@@ -504,6 +509,12 @@ class UpdateDialogController {
     }
 
     parent.removeChild(element);
+  }
+
+  private registerThemeListener(): void {
+    window.updateDialogAPI?.receive?.('theme-changed', (data: unknown) => {
+      applyDialogTheme(data as ThemeColors);
+    });
   }
 }
 

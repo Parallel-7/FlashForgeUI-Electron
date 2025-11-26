@@ -1,8 +1,24 @@
 # Window API Usage Audit Report
 
-**Generated:** 2025-11-25
-**Scope:** Complete audit of `window.api.*` and `window.*` usage across the FlashForgeUI-Electron codebase
+**Generated:** 2025-11-25  
+**Scope:** Complete audit of `window.api.*` and `window.*` usage across the FlashForgeUI-Electron codebase  
 **Purpose:** Identify areas for API namespace organization and cleanup of `window.*` usage patterns
+
+**Latest Scan Command:** `npm run find:window -- --context=1`  
+**Result:** 398 `window.*` references across 55 files (via the new TypeScript helper script described below).  
+**Most common identifiers:** `window.api` (113 refs), `window.lucideHelpers` (26), `window.uploaderAPI` (24), `window.addEventListener` / `window.localStorage` (17), `window.printerSelectionAPI` (15), `window.settingsAPI` (14), `window.ifsDialogAPI` / `window.dialogAPI` / `window.updateDialogAPI` / `window.logDialogAPI` (≈10 each). Use the helper to keep these counts fresh before remediation.
+
+---
+
+## Helper Tooling
+
+`scripts/find-window-usage.ts` now provides a repeatable scan for any `window.*` pattern. The script walks the repo (default `src`) and prints each hit with configurable context plus a frequency summary:
+
+- Run `npm run find:window -- --context=2` for full context.
+- Filter to specific namespaces with `--pattern=<regex>` (e.g., `--pattern=window\.api`, `--pattern=window\.uploaderAPI`).
+- Limit search roots via `--root=src,src/webui/static`.
+
+The script executes via `ts-node --esm` (no TMPDIR hacks) and avoids comment-only matches. Re-run it before each cleanup sweep to spot new globals quickly.
 
 ---
 
@@ -15,10 +31,12 @@ This report catalogs all usage of `window.api.*` and other `window.*` patterns a
 4. **WebUI Static Client** - Headless WebUI browser code
 
 **Key Findings:**
-- **Total `window.api.*` calls:** 148 across desktop renderer/dialogs
+- **Total `window.api.*` calls:** 113 across renderer + dialog windows (per latest helper run)
+- **Total `window.*` references overall:** 398 across 55 files (includes BrowserWindow usage in the main process)
 - **WebUI uses NO `window.api.*`** - relies on REST/WebSocket transport instead
 - **Browser standard APIs:** Extensively used (`localStorage`, timers, viewport APIs)
-- **Custom globals:** Lucide icons, GridStack library (WebUI only)
+- **Custom globals:** `window.lucideHelpers`, `window.lucide`, `window.GridStack`, dialog-specific APIs for each window
+- **New helper script:** `npm run find:window` surfaces every occurrence with line context + identifier counts
 
 ---
 
@@ -150,6 +168,12 @@ This report catalogs all usage of `window.api.*` and other `window.*` patterns a
 | `window.confirm()` | EditModeController.ts | Native confirmation dialog (layout reset) |
 | `window.location.reload()` | EditModeController.ts | Page reload after reset |
 
+### Additional Renderer Controllers & Utilities
+- `src/ui/legacy/LegacyUiController.ts`: Dispatches chrome/menu actions via `window.api.send`, listens for `window.api.receive('loading-state-changed')`, and invokes `window.api.loading.cancel()` from cancel buttons.
+- `src/ui/palette/palette.ts`: Registers `window.addEventListener('beforeunload')` and uses `window.api.send('open/close-component-palette')` while the palette dialog is open.
+- `src/ui/shared/lucide.ts` & `src/utils/icons.ts`: Populate and reuse `window.lucideHelpers` for lucide hydration in every dialog/component.
+- `src/utils/icons.ts`: Guards `window` access (SSR-safe) but still assumes the helper is available before dialog constructors run.
+
 ### Safety Patterns Observed
 - **Optional chaining:** All `window.api` access uses `?.` or null checks
 - **Context-aware:** Camera and Spoolman methods accept `contextId` parameters
@@ -185,6 +209,27 @@ This report catalogs all usage of `window.api.*` and other `window.*` patterns a
 | `window.shortcutConfigAPI` | shortcut-config-dialog.ts | `getCurrentConfig()`, `getAvailableComponents()`, `saveConfig()`, `closeDialog()`, `onDialogInit()` |
 | `window.lucideHelpers` | All dialogs | `initializeLucideIconsFromGlobal()` |
 
+### Newly Cataloged Dialog Bridges
+
+| Dialog | File | Global API | Notes |
+|--------|------|------------|-------|
+| Update Available | `src/ui/update-available/update-available-renderer.ts` | `window.updateDialogAPI`, `window.platform` | Drives auto-update workflow, removes listeners on `beforeunload`. |
+| Status Dashboard | `src/ui/status-dialog/status-dialog-renderer.ts` | `window.statusAPI` | Streams system/printer stats, uses `window.localStorage` for tab persistence. |
+| About Dialog | `src/ui/about-dialog/about-dialog-renderer.ts` | `window.aboutAPI`, `window.lucide` | Fetches app metadata, hydrates lucide icons directly. |
+| Connect Choice | `src/ui/connect-choice-dialog/connect-choice-dialog-renderer.ts` | `window.connectChoiceAPI` | Sends selection payloads, removes listeners on unload. |
+| Auto-Connect Choice | `src/ui/auto-connect-choice/auto-connect-choice-renderer.ts` | `window.autoConnectChoiceAPI` | Similar to connect-choice but populated via auto-connect fallback data. |
+| Printer Selection | `src/ui/printer-selection/printer-selection-renderer.ts` | `window.printerSelectionAPI` | Rich lifecycle: discovery events, saved printer selection, `window.location.reload()` fallback buttons. |
+| Printer Warning | `src/ui/printer-connected-warning/printer-connected-warning-renderer.ts` | `window.printerWarningDialogAPI` | Continue/cancel flows plus theme listener. |
+| IFS Dialog | `src/ui/ifs-dialog/ifs-dialog-renderer.ts` | `window.ifsDialogAPI` | Requests material station data, closes dialog via API. |
+| Send Commands | `src/ui/send-cmds/send-cmds-renderer.ts` | `window.sendCmdsApi` | Manual G-code send dialog with theme events. |
+| Job Picker | `src/ui/job-picker/job-picker-renderer.ts` | `window.jobPickerAPI` | Handles job lists, thumbnails, and spawn of downstream dialogs (`materialMatching`, `materialInfo`, `singleColorConfirm`). |
+| Job Uploader (renderer + preload) | `src/ui/job-uploader/*.ts` | `window.uploaderAPI` | Upload flow, metadata parsing, AD5X helpers; preload calls `.uploadFileAD5X()` during compatibility prompts. |
+| Material Matching | `src/ui/material-matching-dialog/material-matching-dialog-renderer.ts` | `window.materialMatchingAPI` | Mapping UI for AD5X multi-color prints. |
+| Material Info | `src/ui/material-info-dialog/material-info-dialog-renderer.ts` | `window.materialInfoDialogAPI` | Presents tool/material metadata. |
+| Single-Color Confirmation | `src/ui/single-color-confirmation-dialog/single-color-confirmation-dialog-renderer.ts` | `window.singleColorConfirmAPI` | Validates IFS slots before running AD5X jobs. |
+| Log Dialog | `src/ui/log-dialog/log-dialog-renderer.ts` | `window.logDialogAPI`, `window.windowControls` fallback | Streams logs, clears them, watches theme events. |
+| Status + Spoolman Offline Dialogs | `src/ui/status-dialog/*`, `src/ui/spoolman-offline-dialog/*` | `window.statusAPI`, `window.spoolmanOfflineAPI` | Provide diagnostics + offline retry flows. |
+
 ### Browser API Usage (Dialogs)
 | Pattern | Files | Purpose |
 |---------|-------|---------|
@@ -193,6 +238,7 @@ This report catalogs all usage of `window.api.*` and other `window.*` patterns a
 | `window.close()` | Multiple dialogs | Close dialog windows |
 | `window.localStorage` | TabSection.ts | Persist tab selection |
 | `window.requestAnimationFrame()` | DesktopThemeSection.ts | Animation frame scheduling |
+| `window.location.reload()` | printer-selection-renderer.ts | Retry buttons when discovery fails |
 
 ### Key Observations (Dialogs)
 
@@ -405,6 +451,24 @@ window.api.temperature.promptTemperature(type: 'bed' | 'extruder')
 
 ---
 
+## Section 5: Main Process Window Lifecycle & Broadcasts
+
+The helper script surfaced several `window.*` usages in the main process where `window` represents an Electron `BrowserWindow` instance rather than the renderer global:
+
+- `src/index.ts`: After configuration loads, iterates all BrowserWindows and calls `window.webContents.send('config-loaded')`.
+- `src/ipc/handlers/dialog-handlers.ts`: Provides imperative handlers such as `window.close()`, `window.minimize()`, and ensures dialogs clean up when commands finish.
+- `src/ipc/handlers/theme-handlers.ts`: Broadcasts `theme-changed` to every window that is not destroyed.
+- `src/services/MainProcessPollingCoordinator.ts`: Dispatches `polling-update` payloads to all windows on each poll tick, guarded by `window.isDestroyed()`.
+- `src/services/DialogIntegrationService.ts`: Opens/monitors dialog windows (printer selection, warnings) and explicitly closes BrowserWindows after resolving promises.
+- `src/windows/WindowManager.ts`: Central registry using `window.isDestroyed()`, `window.close()`, and `window.focus()` to manage all window types.
+- `src/windows/shared/WindowConfig.ts`: Calls `window.webContents.openDevTools()`, `window.once('ready-to-show', ...)`, `window.show()`, and `window.on('closed', ...)` whenever windows are created.
+- `src/utils/CSSVariables.ts`: Injects CSS into a `BrowserWindow` via `window.webContents.insertCSS`.
+- `src/webui/server/WebUIManager.ts`: When routing log messages or status to the renderer, calls `window.webContents.send('log-message', ...)` for every BrowserWindow still alive.
+
+These usages should stay isolated to the main process. When renaming or refactoring, make sure not to conflate `BrowserWindow`-scoped helpers with the renderer's `window`.
+
+---
+
 ## Migration Strategy
 
 ### Phase 1: Add New Namespaces (Non-Breaking)
@@ -424,30 +488,35 @@ window.api.temperature.promptTemperature(type: 'bed' | 'extruder')
 
 ---
 
-## Appendix: API Usage Statistics
+## Appendix: Latest Helper Snapshot
 
-### By Category
-| Category | Count | % of Total |
-|----------|-------|------------|
-| Core IPC (send/receive/invoke) | 71 | 48% |
-| Scoped Namespaces (camera, spoolman, contexts, config) | 34 | 23% |
-| Dialog-Specific Bridges | 25 | 17% |
-| Browser Standard APIs | 18 | 12% |
+- Command: `npm run find:window -- --context=1`
+- Total references: **398** across **55** files
+- Use `--pattern` to drill down by namespace (e.g., `window\.api`, `window\.uploaderAPI`)
 
-### By File Type
-| File Type | `window.api.*` Count |
-|-----------|---------------------|
-| Renderer & Utilities | 38 |
-| UI Components | 42 |
-| Dialog Windows | 68 |
-| WebUI Static | 0 |
+### Top Identifiers
+| Identifier | Count | Notes |
+|------------|-------|-------|
+| `window.api` | 113 | Core preload bridge shared by renderer/components |
+| `window.lucideHelpers` | 26 | Icon hydration helper used by nearly every dialog |
+| `window.uploaderAPI` | 24 | Job uploader dialog (renderer + preload) |
+| `window.addEventListener` | 17 | Dialog/renderer lifecycle cleanup |
+| `window.localStorage` | 17 | Printer selection + WebUI layout persistence |
+| `window.printerSelectionAPI` | 15 | Printer selection dialog bridge |
+| `window.settingsAPI` | 14 | Settings dialog orchestration |
+| `window.ifsDialogAPI` | 10 | AD5X IFS status dialog |
+| `window.dialogAPI` | 10 | Generic input dialog |
+| `window.updateDialogAPI` | 10 | Auto-update dialog |
+| `window.logDialogAPI` | 9 | Log dialog streaming |
+| `window.jobPickerAPI` | 8 | Job picker dialog |
+| `window.printerWarningDialogAPI` | 8 | Printer-connected warning |
+| `window.webContents` | 6 | BrowserWindow broadcast helpers (main process) |
+| `window.componentDialogAPI` | 6 | Component palette dialog |
+| `window.statusAPI` | 6 | Status dashboard dialog |
+| `window.location` | 6 | WebUI + printer selection reload flows |
+| `window.PLATFORM` | 5 | Platform-specific CSS toggles |
 
-### Most-Used IPC Channels
-1. `polling-update` - Real-time printer data (all components)
-2. `printer-context-*` - Context lifecycle events (renderer, tabs)
-3. `config-*` - Configuration loading/updates (renderer, settings)
-4. Printer control commands - `pause-print`, `resume-print`, `cancel-print`, etc. (controls-grid)
-5. `log-*` - Logging system (renderer, component-dialog)
+Re-run the helper before each cleanup sweep to capture drift.
 
 ---
 

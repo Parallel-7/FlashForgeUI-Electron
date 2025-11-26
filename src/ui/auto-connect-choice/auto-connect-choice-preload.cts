@@ -45,6 +45,14 @@ const autoConnectChoiceAPI = {
   // Remove all listeners when dialog is destroyed
   removeAllListeners: (): void => {
     ipcRenderer.removeAllListeners('auto-connect-choice:init');
+  },
+
+  // Listen for theme changes
+  receive: (channel: string, func: (...args: unknown[]) => void): void => {
+    const validChannels = ['theme-changed'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (_event, ...args) => func(...args));
+    }
   }
 };
 

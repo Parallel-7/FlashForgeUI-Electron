@@ -14,6 +14,8 @@
  */
 
 import { createLogPanel, type LogEntry, type LogPanelController } from '../shared/log-panel/index.js';
+import type { ThemeColors } from '../../types/config.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 // Define interfaces for type safety
 interface LogMessage {
@@ -27,6 +29,7 @@ interface ILogDialogAPI {
   closeWindow: () => void;
   onLogMessage: (callback: (message: LogMessage) => void) => void;
   removeListeners: () => void;
+  receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
 declare global {
@@ -185,6 +188,12 @@ class LogDialogRenderer {
     }
   }
 
+  public registerThemeListener(): void {
+    window.logDialogAPI?.receive?.('theme-changed', (data: unknown) => {
+      applyDialogTheme(data as ThemeColors);
+    });
+  }
+
   public dispose(): void {
     // Clean up event listeners
     window.logDialogAPI?.removeListeners();
@@ -196,5 +205,6 @@ class LogDialogRenderer {
 document.addEventListener('DOMContentLoaded', () => {
   console.log('Log Dialog: DOM loaded, initializing renderer...');
   window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x']);
-  new LogDialogRenderer();
+  const renderer = new LogDialogRenderer();
+  renderer.registerThemeListener();
 });

@@ -21,7 +21,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 let responseChannel: string | null = null;
 
 // Valid channels for security
-const validReceiveChannels = ['dialog-init'];
+const validReceiveChannels = ['dialog-init', 'theme-changed'];
 
 // Define the shape of dialog initialization options
 interface DialogInitOptions {

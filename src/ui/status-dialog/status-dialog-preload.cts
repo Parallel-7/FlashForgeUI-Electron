@@ -110,6 +110,12 @@ contextBridge.exposeInMainWorld('statusAPI', {
       ipcRenderer.removeListener(STATUS_PUSH_CHANNEL, statusPushListener);
       statusPushListener = null;
     }
+  },
+  receive: (channel: string, func: (...args: unknown[]) => void): void => {
+    const validChannels = ['theme-changed'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (_event, ...args) => func(...args));
+    }
   }
 });
 
