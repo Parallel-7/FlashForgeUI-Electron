@@ -35,6 +35,9 @@
   --toolbar-shadow: 0 2px 8px color-mix(in srgb, #000 40%, transparent);
   --tab-bg: var(--card-bg);
   --tab-bg-hover: var(--card-bg-hover);
+  --header-padding-inline: 12px;
+  --window-control-hover: color-mix(in srgb, var(--text-color, #e8e8e8) 15%, var(--toolbar-bg, #1a1a1a));
+  --window-control-close-hover: var(--error-color, #e81123);
 
   /* Secondary derived colors */
   --darker-bg: var(--surface-muted, var(--theme-background, #151515));
@@ -180,7 +183,7 @@ body {
   gap: 10px;
   background-color: var(--toolbar-bg);
   height: 44px;
-  padding: 0 12px;
+  padding: 0 var(--header-padding-inline);
   -webkit-app-region: drag;
   border-bottom: 1px solid var(--toolbar-border-color);
   box-shadow: var(--toolbar-shadow);
@@ -387,6 +390,7 @@ body {
   justify-content: center;
   border-radius: 0;
   padding: 0;
+  transition: background-color var(--transition-fast);
 }
 
 .window-controls button .lucide-icon {
@@ -396,16 +400,34 @@ body {
 }
 
 .window-controls button:hover {
-  background-color: var(--tab-bg-hover);
+  background-color: var(--window-control-hover);
 }
 
 #btn-close:hover {
-  background-color: #e81123;
+  background-color: var(--window-control-close-hover, #e81123);
 }
 
 #btn-close {
-  padding-right: 6px;
+  padding-right: 0;
   padding-left: 0;
+  position: relative;
+  overflow: visible;
+}
+
+#btn-close::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: calc(-1 * var(--header-padding-inline));
+  width: var(--header-padding-inline);
+  height: 100%;
+  background-color: transparent;
+  transition: background-color var(--transition-fast);
+  pointer-events: none;
+}
+
+#btn-close:hover::after {
+  background-color: var(--window-control-close-hover, #e81123);
 }
 
 /* =========================== */
@@ -486,6 +508,7 @@ body.platform-darwin .traffic-lights {
 /* MacOS layout adjustments */
 .platform-darwin .header {
   justify-content: flex-start; /* Change from space-between to flex-start */
+  padding-right: var(--header-padding-inline);
 }
 
 /* MacOS: Hide standard window controls */
@@ -797,7 +820,7 @@ body.platform-darwin .traffic-lights {
 }
 
 .loading-cancel-btn:hover {
-  background-color: #d32f2f;
+  background-color: color-mix(in srgb, var(--error-color) 85%, white);
 }
 
 .loading-success-icon,

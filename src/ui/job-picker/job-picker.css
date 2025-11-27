@@ -174,8 +174,8 @@ button {
 }
 
 button:hover {
-    background: #777;
-    border-color: #888;
+    background: var(--surface-elevated);
+    border-color: var(--border-color);
 }
 
 button:active {
@@ -198,7 +198,7 @@ button.cancel {
 }
 
 button.cancel:hover {
-    background: #777;
+    background: var(--surface-elevated);
 }
 
 button#btn-select {
@@ -260,5 +260,5 @@ button#btn-select:hover:not(:disabled) {
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: #888;
+    background: var(--scrollbar-thumb-hover-color);
 }

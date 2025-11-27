@@ -113,8 +113,8 @@ body {
 }
 
 .slot-item:hover {
-  background-color: #404040;
-  border-color: #666;
+  background-color: var(--surface-elevated);
+  border-color: var(--border-color-light);
 }
 
 /* Spool styling */

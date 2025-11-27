@@ -116,8 +116,8 @@
 }
 
 .slot-item:hover:not(.disabled):not(.assigned) {
-  background-color: #404040;
-  border-color: #666;
+  background-color: var(--surface-elevated);
+  border-color: var(--border-color-light);
 }
 
 .slot-item.selected {
@@ -216,7 +216,7 @@
 }
 
 .remove-mapping:hover {
-  background-color: rgba(255, 68, 68, 0.2);
+  background-color: color-mix(in srgb, var(--error-color) 20%, transparent);
 }
 
 .remove-mapping .lucide-icon {
@@ -272,8 +272,8 @@
 }
 
 .dialog-button.cancel:hover {
-  background-color: #777;
-  border-color: #888;
+  background-color: var(--surface-elevated);
+  border-color: var(--border-color);
 }
 
 /* Empty state */

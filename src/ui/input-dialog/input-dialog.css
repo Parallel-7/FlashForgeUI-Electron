@@ -74,8 +74,8 @@
 }
 
 .dialog-button.cancel:hover {
-    background-color: #777;
-    border-color: #888;
+    background-color: var(--surface-elevated);
+    border-color: var(--border-color);
 }
 
 /* Hidden input state for confirmation dialogs */

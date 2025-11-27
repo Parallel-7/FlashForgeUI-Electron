@@ -91,8 +91,8 @@ export class SpoolmanTestSection implements SettingsSection {
 
     this.resultElement.textContent = message;
     this.resultElement.style.color =
-      type === 'success' ? '#4ade80' :
-      type === 'error' ? '#f87171' :
-      '#60a5fa';
+      type === 'success' ? 'var(--success-color, #4ade80)' :
+      type === 'error' ? 'var(--error-color, #f87171)' :
+      'var(--info-color, #60a5fa)';
   }
 }

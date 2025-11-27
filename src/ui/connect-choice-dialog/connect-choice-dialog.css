@@ -43,8 +43,8 @@
 }
 
 .choice-button:hover {
-    border-color: #4a90e2;
-    background: #515151;
+    border-color: var(--theme-primary);
+    background: var(--surface-elevated);
     transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
 }
@@ -133,8 +133,8 @@
 }
 
 .btn-secondary:hover {
-    background: #777;
-    border-color: #888;
+    background: var(--surface-elevated);
+    border-color: var(--border-color);
 }
 
 .btn-secondary:active {
@@ -192,8 +192,8 @@
 }
 
 .choice-button:disabled:hover {
-    border-color: #555;
-    background: #4a4a4a;
+    border-color: var(--border-color);
+    background: var(--surface-muted);
     transform: none;
     box-shadow: none;
 }

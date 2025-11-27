@@ -15,7 +15,7 @@
   width: 96px;
   height: 96px;
   border-radius: 22px;
-  background: #1f1f1f;
+  background: transparent;
   padding: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
@@ -52,12 +52,12 @@
 
 .release-label {
   font-size: 0.9rem;
-  color: #d0d0d0;
+  color: var(--text-color);
 }
 
 .developer-credit {
   font-size: 1rem;
-  color: #f5f5f5;
+  color: var(--text-color);
   margin: 0;
 }
 
@@ -105,8 +105,8 @@
 }
 
 .link-card:hover {
-  border-color: #4a90e2;
-  background: rgba(74, 144, 226, 0.1);
+  border-color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 10%, transparent);
   transform: translateY(-1px);
 }
 

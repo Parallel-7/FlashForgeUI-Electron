@@ -71,7 +71,7 @@
 .component-job-stats .info-label {
   font-size: 11px;
   font-weight: 700;
-  color: var(--text-color-secondary);
+  color: var(--text-color);
   letter-spacing: 0.5px;
   text-transform: uppercase;
   min-width: 70px;
@@ -80,7 +80,7 @@
 
 .component-job-stats .info-value {
   font-size: 14px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-color);
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
   letter-spacing: 0.2px;

@@ -515,7 +515,7 @@ class SettingsRenderer {
   private showSaveStatus(message: string, isError: boolean = false): void {
     if (this.saveStatusElement) {
       this.saveStatusElement.textContent = message;
-      this.saveStatusElement.style.color = isError ? '#e53e3e' : '#4CAF50';
+      this.saveStatusElement.style.color = isError ? 'var(--error-color, #e53e3e)' : 'var(--success-color, #4CAF50)';
       this.saveStatusElement.classList.add('visible');
 
       if (this.statusTimeout) {

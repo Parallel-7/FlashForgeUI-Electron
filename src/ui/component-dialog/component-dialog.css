@@ -135,7 +135,7 @@ body {
 }
 
 .dialog-close:hover {
-  background-color: var(--button-hover-bg);
+  background-color: var(--surface-elevated);
 }
 
 .dialog-close:active {

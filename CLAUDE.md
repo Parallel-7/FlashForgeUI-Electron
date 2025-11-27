@@ -1,6 +1,6 @@
 # FlashForgeUI-Electron Development Guide
 
-**Last Updated:** 2025-11-15 18:54 ET (America/New_York)
+**Last Updated:** 2025-11-27 16:07 ET (America/New_York)
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -191,6 +191,146 @@ In order to verify you are complete with a task, you go through this checklist:
 Do not say you are done with something despite not having run one/any of these checks, and the same if one fails. All must be ran and pass to ensure codebase quality and produciton readiness
 
 
+## Theme System & CSS Variables
+
+**CRITICAL**: FlashForgeUI uses a unified theme system. NEVER hardcode colors in CSS or inline styles.
+
+### Core Theme Files
+- `src/utils/CSSVariables.ts` - Injects CSS variables into all windows based on current theme
+- `src/utils/themeColorUtils.ts` - Computes derived colors (hover states, borders, shadows, etc.)
+- `src/types/config.ts` - Defines `ThemeColors` interface and `DEFAULT_THEME`
+
+### Available Theme Variables
+
+**Primary Theme Colors** (user-configurable):
+- `--theme-primary` - Primary accent color
+- `--theme-secondary` - Secondary accent color
+- `--theme-background` - Main background color
+- `--theme-surface` - Surface/card background color
+- `--theme-text` - Primary text color
+
+**Computed Hover States** (auto-generated from theme):
+- `--theme-primary-hover` - Primary color hover (15% lighter)
+- `--theme-secondary-hover` - Secondary color hover (15% lighter)
+
+**Surface Variants** (computed from surface luminance):
+- `--surface-muted` - Darker surface (6% darker)
+- `--surface-elevated` - Elevated surface (12% lighter/darker based on theme)
+- `--surface-hover` - Not currently computed; use `--theme-primary-hover` for interactive elements
+
+**Semantic Colors**:
+- `--success-color` - Success states (derived from theme or fallback)
+- `--error-color` - Error states (derived from theme or fallback)
+- `--warning-color` - Warning states (derived from theme or fallback)
+
+**Border Colors** (computed with transparency):
+- `--border-color` - Standard borders (35% opacity)
+- `--border-color-light` - Light borders (25% opacity)
+- `--border-color-focus` - Focus borders (50% opacity)
+
+**Scrollbar Colors** (theme-aware):
+- `--scrollbar-track-color` - Scrollbar track background
+- `--scrollbar-thumb-color` - Scrollbar thumb (derived from primary)
+- `--scrollbar-thumb-hover-color` - Scrollbar thumb hover
+- `--scrollbar-thumb-active-color` - Scrollbar thumb active
+
+**Text Colors** (computed for contrast):
+- `--text-color-secondary` - Secondary text (not yet in palette, use fallback)
+- `--text-color-muted` - Muted/disabled text (not yet in palette, use fallback)
+- `--button-text-color` - Text on secondary buttons (computed for contrast)
+- `--accent-text-color` - Text on primary buttons (computed for contrast)
+
+### CSS Variable Usage Rules
+
+1. **NEVER hardcode colors** - Always use CSS variables with fallbacks:
+   ```css
+   /* ❌ BAD */
+   background: #4285f4;
+   color: #e0e0e0;
+
+   /* ✅ GOOD */
+   background: var(--theme-primary);
+   color: var(--text-color);
+   ```
+
+2. **Hover states** - Use computed hover variables:
+   ```css
+   /* ❌ BAD */
+   .button:hover { background: #5a95f5; }
+
+   /* ✅ GOOD */
+   .button:hover { background: var(--theme-primary-hover); }
+   ```
+
+3. **Mixing colors** - Use CSS `color-mix()` for transparency:
+   ```css
+   /* ❌ BAD */
+   background: rgba(66, 133, 244, 0.1);
+
+   /* ✅ GOOD */
+   background: color-mix(in srgb, var(--theme-primary) 10%, transparent);
+   ```
+
+4. **Borders with transparency** - Prefer theme border variables:
+   ```css
+   /* ✅ GOOD */
+   border: 1px solid var(--border-color);
+   ```
+
+5. **Fallbacks** - Always provide fallbacks for compatibility:
+   ```css
+   color: var(--text-color, #e0e0e0);
+   ```
+
+### Adding New Theme Variables
+
+If you need a new computed color (e.g., `surfaceHover`):
+1. Add computation to `computeThemePalette()` in `themeColorUtils.ts`
+2. Add to `ComputedThemePalette` interface
+3. Inject in `injectUIStyleVariables()` in `CSSVariables.ts`
+4. Document it in this section
+
+### Common Patterns
+
+**Button hover states**:
+```css
+.button {
+  background: var(--theme-primary);
+  color: var(--accent-text-color);
+}
+.button:hover {
+  background: var(--theme-primary-hover);
+}
+```
+
+**Cancel/secondary buttons**:
+```css
+.cancel-button {
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-color);
+}
+.cancel-button:hover {
+  background: var(--surface-muted);
+}
+```
+
+**Status messages**:
+```css
+.status.error { color: var(--error-color); }
+.status.success { color: var(--success-color); }
+.status.warning { color: var(--warning-color); }
+```
+
+### Light Theme Support
+
+The theme system automatically handles light/dark themes:
+- Surface variants reverse direction based on luminance
+- Border colors adjust opacity based on background
+- Text colors use contrast calculations for readability
+- Scrollbar colors derive from primary theme color
+
+**Test all UI changes with both light and dark themes** to ensure proper contrast and visibility.
+
 ## Recent Lessons
 
 1. Component dialog preloads must import typings with `import type {} from '../../types/global';`—runtime `.d.ts` imports break the dialog bootstrap.
@@ -199,6 +339,7 @@ Do not say you are done with something despite not having run one/any of these c
 4. Spoolman integration deliberately blocks AD5X/material-station contexts (`src/services/SpoolmanIntegrationService.ts`). Removing the guard regresses filament safety checks.
 5. Camera proxy keep-alive + port management live in `CameraProxyService`/`PortAllocator` and the camera priority spec. Do not bypass the allocator or reuse ports manually, especially in headless mode.
 6. Headless mode and desktop mode share the same connection/polling/camera stack. Avoid `isHeadlessMode()` forks unless absolutely necessary; duplicating logic leads to drift.
+7. **Theme System**: NEVER hardcode colors in CSS. Always use CSS variables from the theme system (`--theme-primary`, `--theme-primary-hover`, `--surface-elevated`, etc.). The theme system handles light/dark themes automatically. See "Theme System & CSS Variables" section above.
 
 ## Key File Locations
 

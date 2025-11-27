@@ -236,8 +236,8 @@ tbody tr.loading-row td,
 }
 
 .dialog-button.cancel:hover {
-    background-color: #777;
-    border-color: #888;
+    background-color: var(--surface-elevated);
+    border-color: var(--border-color);
 }
 
 .dialog-button:disabled {

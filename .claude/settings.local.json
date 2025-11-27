@@ -95,7 +95,8 @@
       "Bash(npm outdated:*)",
       "Bash(npm view:*)",
       "Bash(npm:*)",
-      "Bash(git show:*)"
+      "Bash(git show:*)",
+      "Bash(go run:*)"
     ],
     "deny": [],
     "additionalDirectories": [

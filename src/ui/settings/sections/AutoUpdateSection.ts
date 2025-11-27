@@ -128,11 +128,11 @@ export class AutoUpdateSection implements SettingsSection {
 
     this.updateStatusElement.textContent = message;
     if (level === 'error') {
-      this.updateStatusElement.style.color = '#e53e3e';
+      this.updateStatusElement.style.color = 'var(--error-color, #e53e3e)';
     } else if (level === 'success') {
-      this.updateStatusElement.style.color = '#4CAF50';
+      this.updateStatusElement.style.color = 'var(--success-color, #4CAF50)';
     } else {
-      this.updateStatusElement.style.color = '#aaa';
+      this.updateStatusElement.style.color = 'var(--text-color-muted, #aaa)';
     }
   }
 }

@@ -96,7 +96,7 @@
 .component-camera-preview .job-row span:first-child,
 .component-camera-preview .progress-row span:first-child {
   font-weight: 600;
-  color: var(--text-color-secondary);
+  color: var(--text-color);
   letter-spacing: 0.3px;
 }
 

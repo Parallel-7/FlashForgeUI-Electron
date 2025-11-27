@@ -76,7 +76,7 @@
 .temp-card__label {
   font-size: 10px;
   font-weight: 700;
-  color: var(--text-color-secondary);
+  color: var(--text-color);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   flex-shrink: 0;
@@ -84,7 +84,7 @@
 
 .temp-card__reading {
   font-size: clamp(13px, 1.5vw, 16px);
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text-color);
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   letter-spacing: 0.2px;
@@ -187,7 +187,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--text-color-secondary);
+  color: var(--text-color);
   flex-shrink: 0;
 }
 

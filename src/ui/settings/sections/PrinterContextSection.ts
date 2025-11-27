@@ -63,7 +63,7 @@ export class PrinterContextSection implements SettingsSection {
       if (settingsHeader) {
         this.indicator = this.doc.createElement('div');
         this.indicator.id = 'printer-context-indicator';
-        this.indicator.style.cssText = 'margin-top: 10px; padding: 8px; background: #f0f0f0; border-radius: 4px; font-size: 12px; color: #666;';
+        this.indicator.className = 'printer-context-indicator';
         settingsHeader.appendChild(this.indicator);
       }
     }
