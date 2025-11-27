@@ -3,10 +3,6 @@
  */
 @import url('../shared/rounded-dialog-template.css');
 
-.dialog-container {
-  max-width: 560px;
-}
-
 .about-content {
   display: flex;
   flex-direction: column;

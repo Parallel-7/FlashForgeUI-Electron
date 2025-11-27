@@ -8,7 +8,7 @@ body {
 }
 
 .dialog-container {
-    background: #3a3a3a;
+    background: var(--surface-muted, var(--theme-surface));
     border: 1px solid #555;
 }
 

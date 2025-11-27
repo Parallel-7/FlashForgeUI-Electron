@@ -204,6 +204,50 @@ export const SYSTEM_THEME_PROFILES: readonly ThemeProfile[] = [
       text: '#F8F8F2',
     },
   },
+  {
+    name: 'Aurora Light',
+    isSystem: true,
+    colors: {
+      primary: '#2962FF',
+      secondary: '#5C79FF',
+      background: '#F5F7FB',
+      surface: '#FFFFFF',
+      text: '#1E2433',
+    },
+  },
+  {
+    name: 'Glacial Prism',
+    isSystem: true,
+    colors: {
+      primary: '#0B8BD9',
+      secondary: '#4BC3FF',
+      background: '#F7FBFF',
+      surface: '#FFFFFF',
+      text: '#0F1B2B',
+    },
+  },
+  {
+    name: 'Sandstone Dawn',
+    isSystem: true,
+    colors: {
+      primary: '#C25C35',
+      secondary: '#E48B4A',
+      background: '#FDF7F1',
+      surface: '#FFFDF9',
+      text: '#2C1F18',
+    },
+  },
+  {
+    name: 'Sage Studio',
+    isSystem: true,
+    colors: {
+      primary: '#4B9C7C',
+      secondary: '#7AC6A2',
+      background: '#F4F8F5',
+      surface: '#FEFFFD',
+      text: '#1F2A24',
+    },
+  },
 ];
 
 /**
@@ -341,6 +385,26 @@ function sanitizeThemeProfile(profile: Partial<ThemeProfile>): ThemeProfile {
   };
 }
 
+/**
+ * Ensures the theme profile list contains all built-in system themes while preserving custom entries.
+ * System profiles are always replaced with the canonical definitions so palette updates propagate.
+ */
+function mergeSystemThemeProfiles(profiles: readonly ThemeProfile[]): ThemeProfile[] {
+  const customProfiles = profiles.filter(profile => !profile.isSystem).map(profile => ({
+    ...profile,
+    colors: { ...profile.colors },
+    isSystem: false,
+  }));
+
+  const systemProfiles = SYSTEM_THEME_PROFILES.map(profile => ({
+    ...profile,
+    colors: { ...profile.colors },
+    isSystem: true,
+  }));
+
+  return [...systemProfiles, ...customProfiles];
+}
+
 
 /**
  * Sanitizes and ensures a config object contains only valid keys with correct types
@@ -403,6 +467,9 @@ export function sanitizeConfig(config: Partial<AppConfig>): AppConfig {
   if (Array.isArray(config.webUIThemeProfiles)) {
     sanitized.webUIThemeProfiles = config.webUIThemeProfiles.map(sanitizeThemeProfile);
   }
+
+  sanitized.desktopThemeProfiles = mergeSystemThemeProfiles(sanitized.desktopThemeProfiles);
+  sanitized.webUIThemeProfiles = mergeSystemThemeProfiles(sanitized.webUIThemeProfiles);
 
   return sanitized;
 }

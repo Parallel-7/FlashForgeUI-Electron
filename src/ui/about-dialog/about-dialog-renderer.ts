@@ -32,6 +32,7 @@ class AboutDialogRenderer {
 
   async initialize(): Promise<void> {
     this.registerCloseHandlers();
+    initializeLucideIconsFromGlobal(['x']);
     await this.populateAppInfo();
     this.registerThemeListener();
   }

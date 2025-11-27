@@ -38,10 +38,12 @@
 }
 
 .file-stats span {
-  padding: 6px 12px;
-  background-color: var(--file-stats-bg);
-  border: 1px solid #555;
-  border-radius: 6px;
+  padding: 8px 24px;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 100px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
 }
 
 /* Materials container */
@@ -199,18 +201,4 @@
   .file-header h3 {
     font-size: 16px;
   }
-}
-
-/* Material station indicator */
-.material-station-indicator {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--success-color);
-}
-
-.material-station-indicator .lucide-icon {
-  width: 14px;
-  height: 14px;
-  stroke-width: 2;
 }
