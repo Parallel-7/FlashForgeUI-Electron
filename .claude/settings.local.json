@@ -3,7 +3,6 @@
     "allow": [
       "Bash(npm run typecheck:*)",
       "Bash(npm run lint)",
-      "mcp__code-context-provider-mcp__get_code_context",
       "Bash(npm run linecount:*)",
       "Bash(npm run type-check:*)",
       "Bash(npm run lint:*)",
@@ -96,7 +95,14 @@
       "Bash(npm view:*)",
       "Bash(npm:*)",
       "Bash(git show:*)",
-      "Bash(go run:*)"
+      "Bash(go run:*)",
+      "mcp__code-search-mcp__add_workspace",
+      "mcp__code-search-mcp__list_workspaces",
+      "mcp__code-search-mcp__search_files",
+      "mcp__code-search-mcp__search_text",
+      "mcp__code-search-mcp__search_symbols",
+      "mcp__code-search-mcp__search_ast_pattern",
+      "mcp__code-search-mcp__detect_stacks"
     ],
     "deny": [],
     "additionalDirectories": [

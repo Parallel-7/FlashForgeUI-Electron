@@ -1,6 +1,6 @@
 # FlashForgeUI-Electron Development Guide
 
-**Last Updated:** 2025-11-27 16:07 ET (America/New_York)
+**Last Updated:** 2025-11-27 18:22 ET (America/New_York)
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -193,52 +193,66 @@ Do not say you are done with something despite not having run one/any of these c
 
 ## Theme System & CSS Variables
 
-**CRITICAL**: FlashForgeUI uses a unified theme system. NEVER hardcode colors in CSS or inline styles.
+**CRITICAL**: FlashForgeUI uses a unified theme system. NEVER hardcode colors in CSS or inline styles. All fragmented CSS is being progressively consolidated into the centralized theme system.
 
 ### Core Theme Files
-- `src/utils/CSSVariables.ts` - Injects CSS variables into all windows based on current theme
-- `src/utils/themeColorUtils.ts` - Computes derived colors (hover states, borders, shadows, etc.)
-- `src/types/config.ts` - Defines `ThemeColors` interface and `DEFAULT_THEME`
 
-### Available Theme Variables
+- **`src/utils/CSSVariables.ts`** - Main injection utility that reads theme config and injects computed CSS variables into all BrowserWindows. Handles both RoundedUI variables and full theme palette injection.
+- **`src/utils/themeColorUtils.ts`** - Pure computation utilities for deriving theme colors. Contains color manipulation functions (`lightenColor`, `darkenColor`, `hexToRgba`, `getLuminance`, `getContrastingTextColor`) and the central `computeThemePalette()` function that generates all derived variables.
+- **`src/index.css`** - Root CSS file with `:root` variable declarations. Contains fallback values and legacy compatibility variables. All new CSS should reference computed variables, not define hardcoded values.
+- **`src/types/config.ts`** - Defines `ThemeColors` interface (5 user-configurable base colors) and `DEFAULT_THEME`.
 
-**Primary Theme Colors** (user-configurable):
-- `--theme-primary` - Primary accent color
-- `--theme-secondary` - Secondary accent color
-- `--theme-background` - Main background color
-- `--theme-surface` - Surface/card background color
-- `--theme-text` - Primary text color
+### Theme Computation Architecture
 
-**Computed Hover States** (auto-generated from theme):
-- `--theme-primary-hover` - Primary color hover (15% lighter)
-- `--theme-secondary-hover` - Secondary color hover (15% lighter)
+**Base Theme Colors** (user-configurable via Settings → Desktop Theme):
+- `primary` → `--theme-primary` - Primary accent color (used for focused elements, primary buttons)
+- `secondary` → `--theme-secondary` - Secondary accent color (used for secondary buttons, alternative accents)
+- `background` → `--theme-background` - Main window background
+- `surface` → `--theme-surface` - Card/panel backgrounds
+- `text` → `--theme-text` - Primary text color
 
-**Surface Variants** (computed from surface luminance):
-- `--surface-muted` - Darker surface (6% darker)
-- `--surface-elevated` - Elevated surface (12% lighter/darker based on theme)
-- `--surface-hover` - Not currently computed; use `--theme-primary-hover` for interactive elements
+**Computed Palette** (automatically derived in `computeThemePalette()`):
 
-**Semantic Colors**:
-- `--success-color` - Success states (derived from theme or fallback)
-- `--error-color` - Error states (derived from theme or fallback)
-- `--warning-color` - Warning states (derived from theme or fallback)
+*Hover States:*
+- `--theme-primary-hover` - Primary color lightened 15%
+- `--theme-secondary-hover` - Secondary color lightened 15%
 
-**Border Colors** (computed with transparency):
-- `--border-color` - Standard borders (35% opacity)
-- `--border-color-light` - Light borders (25% opacity)
-- `--border-color-focus` - Focus borders (50% opacity)
+*Surface Variants* (luminance-aware, automatically reverse for light themes):
+- `--surface-muted` - Surface darkened 6%
+- `--surface-elevated` - Surface darkened/lightened 12% based on luminance
 
-**Scrollbar Colors** (theme-aware):
-- `--scrollbar-track-color` - Scrollbar track background
-- `--scrollbar-thumb-color` - Scrollbar thumb (derived from primary)
-- `--scrollbar-thumb-hover-color` - Scrollbar thumb hover
-- `--scrollbar-thumb-active-color` - Scrollbar thumb active
+*Border Colors* (computed from surface with transparency):
+- `--border-color` - rgba(surface ± 30%, 0.35 opacity)
+- `--border-color-light` - rgba(surface ± 18%, 0.25 opacity)
+- `--border-color-focus` - rgba(surface ± 40%, 0.5 opacity)
+- `--ui-border-color` - Stronger border for RoundedUI (surface ± 45%)
 
-**Text Colors** (computed for contrast):
-- `--text-color-secondary` - Secondary text (not yet in palette, use fallback)
-- `--text-color-muted` - Muted/disabled text (not yet in palette, use fallback)
-- `--button-text-color` - Text on secondary buttons (computed for contrast)
-- `--accent-text-color` - Text on primary buttons (computed for contrast)
+*Text Colors* (automatic contrast calculation using WCAG luminance):
+- `--button-text-color` - Contrasting text for secondary buttons (computed from `theme.secondary`)
+- `--accent-text-color` - Contrasting text for primary buttons (computed from `theme.primary`)
+- `--dialog-header-text-color` - Contrasting text for dialog headers (computed from `surfaceMuted`)
+- `--container-text-color` - Contrasting text for containers (computed from `theme.surface`)
+
+*Scrollbar Colors* (theme-aware, derived from primary):
+- `--scrollbar-track-color` - Surface ± 10% based on luminance
+- `--scrollbar-thumb-color` - Primary ± 8-12% based on luminance
+- `--scrollbar-thumb-hover-color` - Primary ± 14-20% based on luminance
+- `--scrollbar-thumb-active-color` - Primary ± 18-28% based on luminance
+
+*RoundedUI Variables* (when RoundedUI is enabled):
+- `--ui-padding`, `--ui-border-radius`, `--ui-background`, `--ui-border`, `--ui-box-shadow`
+- `--header-border-radius-top`, `--footer-border-radius-bottom`
+- `--rounded-box-shadow` - Depth-aware shadow (varies by theme luminance)
+
+*Legacy Compatibility Variables* (to be phased out):
+- `--button-bg`, `--button-hover` - Deprecated, use `--theme-secondary` and `--theme-secondary-hover`
+
+### Status Colors (Independent)
+
+These colors are **not** derived from theme and maintain fixed values:
+- `--error-color: #f44336` - Error states (defined in `index.css`)
+- `--warning-color: #ff9800` - Warning states (defined in `index.css`)
+- `--success-color: #00e676` - Success states (defined in `index.css`)
 
 ### CSS Variable Usage Rules
 
@@ -250,7 +264,7 @@ Do not say you are done with something despite not having run one/any of these c
 
    /* ✅ GOOD */
    background: var(--theme-primary);
-   color: var(--text-color);
+   color: var(--theme-text);
    ```
 
 2. **Hover states** - Use computed hover variables:
@@ -262,7 +276,7 @@ Do not say you are done with something despite not having run one/any of these c
    .button:hover { background: var(--theme-primary-hover); }
    ```
 
-3. **Mixing colors** - Use CSS `color-mix()` for transparency:
+3. **Mixing colors** - Use CSS `color-mix()` for transparency (modern browsers):
    ```css
    /* ❌ BAD */
    background: rgba(66, 133, 244, 0.1);
@@ -271,7 +285,7 @@ Do not say you are done with something despite not having run one/any of these c
    background: color-mix(in srgb, var(--theme-primary) 10%, transparent);
    ```
 
-4. **Borders with transparency** - Prefer theme border variables:
+4. **Borders with transparency** - Prefer computed border variables:
    ```css
    /* ✅ GOOD */
    border: 1px solid var(--border-color);
@@ -279,57 +293,133 @@ Do not say you are done with something despite not having run one/any of these c
 
 5. **Fallbacks** - Always provide fallbacks for compatibility:
    ```css
-   color: var(--text-color, #e0e0e0);
+   color: var(--theme-text, #e0e0e0);
+   background: var(--scrollbar-track-color, var(--surface-muted, #1a1a1a));
    ```
 
 ### Adding New Theme Variables
 
-If you need a new computed color (e.g., `surfaceHover`):
-1. Add computation to `computeThemePalette()` in `themeColorUtils.ts`
-2. Add to `ComputedThemePalette` interface
-3. Inject in `injectUIStyleVariables()` in `CSSVariables.ts`
-4. Document it in this section
+If you need a new computed color:
+1. Add computation logic to `computeThemePalette()` in `themeColorUtils.ts`
+2. Add the new property to `ComputedThemePalette` interface
+3. Inject it in `injectUIStyleVariables()` in `CSSVariables.ts` (line ~36-73)
+4. Document it in this section of CLAUDE.md
+
+**Example:**
+```typescript
+// In themeColorUtils.ts, add to computeThemePalette():
+const surfaceHover = lightenColor(theme.surface, 8);
+
+// Add to ComputedThemePalette interface:
+export interface ComputedThemePalette {
+  // ... existing properties
+  surfaceHover: string;
+}
+
+// Return in computeThemePalette():
+return {
+  // ... existing properties
+  surfaceHover,
+};
+
+// In CSSVariables.ts, inject the variable:
+const cssVariables = `
+  :root {
+    /* ... existing variables */
+    --surface-hover: ${palette.surfaceHover};
+  }
+`;
+```
 
 ### Common Patterns
 
-**Button hover states**:
+**Primary action buttons:**
 ```css
-.button {
+.primary-button {
   background: var(--theme-primary);
   color: var(--accent-text-color);
+  border: none;
 }
-.button:hover {
+.primary-button:hover {
   background: var(--theme-primary-hover);
 }
 ```
 
-**Cancel/secondary buttons**:
+**Secondary/cancel buttons:**
 ```css
-.cancel-button {
+.secondary-button {
   background: var(--surface-elevated);
+  color: var(--theme-text);
   border: 1px solid var(--border-color);
 }
-.cancel-button:hover {
+.secondary-button:hover {
   background: var(--surface-muted);
+  border-color: var(--border-color-light);
 }
 ```
 
-**Status messages**:
+**Status indicators:**
 ```css
 .status.error { color: var(--error-color); }
 .status.success { color: var(--success-color); }
 .status.warning { color: var(--warning-color); }
 ```
 
+**Interactive surface elements:**
+```css
+.card {
+  background: var(--theme-surface);
+  border: 1px solid var(--border-color);
+}
+.card:hover {
+  background: var(--surface-elevated);
+  border-color: var(--border-color-focus);
+}
+```
+
 ### Light Theme Support
 
-The theme system automatically handles light/dark themes:
-- Surface variants reverse direction based on luminance
-- Border colors adjust opacity based on background
-- Text colors use contrast calculations for readability
-- Scrollbar colors derive from primary theme color
+The theme system automatically handles light/dark themes through **luminance-aware computations**:
+- **Surface variants** reverse direction: dark themes lighten elevated surfaces, light themes darken them
+- **Border colors** adjust strength: computed from surface with appropriate darkening/lightening based on `getLuminance(theme.surface) > 0.5`
+- **Text colors** use WCAG contrast calculations via `getContrastingTextColor()` (returns `#111111` for light backgrounds, `#ffffff` for dark)
+- **Scrollbar colors** derive intelligently from primary color luminance
 
-**Test all UI changes with both light and dark themes** to ensure proper contrast and visibility.
+**Test all UI changes with both light and dark themes** to ensure proper contrast and visibility. Use Settings → Desktop Theme to switch between built-in themes (Dark Blue, Dark Purple, Light themes, etc.).
+
+### Detecting Hardcoded CSS
+
+Use the **`detect-hardcoded-css`** Go tool (`scripts/detect-hardcoded-css.go`) to scan for hardcoded color values that need migration:
+
+**Quick full scan:**
+```bash
+go run ./scripts/detect-hardcoded-css.go --summary
+```
+
+**Scan specific areas:**
+```bash
+# WebUI CSS files only, show hex + rgb
+go run ./scripts/detect-hardcoded-css.go \
+  --path-include src/webui \
+  --match-types hex,rgb
+
+# Find specific color usage
+go run ./scripts/detect-hardcoded-css.go \
+  --line-contains "#4285f4"
+
+# Scan TypeScript/CSS files in ui/ directory
+go run ./scripts/detect-hardcoded-css.go \
+  --path-include src/ui \
+  --ext .css,.ts
+```
+
+The tool:
+- Detects hex literals (`#4285f4`), `rgb()`/`rgba()`, `hsl()`/`hsla()`, gradients, and named colors
+- Ignores colors already wrapped in `var(...)` (fallbacks are OK)
+- Skips comments to avoid false positives
+- Supports filtering by file type, path patterns, and match types
+
+See `scripts/detect-hardcoded-css.md` for full documentation and flag reference.
 
 ## Recent Lessons
 

@@ -295,25 +295,116 @@ A tool for dynamic and reflective problem-solving through thoughts.
   - Planning and design with room for revision
   - When you are "stuck" on an issue, working on something complex, or need deeper thoughts/reflections on the task at hand
 
-### `code-context-provider-mcp`
-A tool for getting context about a project directory structure and code symbols.
+### `code-search-mcp`
+A powerful code search and analysis tool that provides workspace indexing, symbol search, text search, file search, AST pattern matching, and technology stack detection.
 
-#### `get_code_context`
-- **Purpose**: Returns complete context of a given project directory, including directory tree and code symbols
-- **When to use**:
-  - Getting a quick overview of a project's codebase
-  - Understanding project structure at the start of a new task
-  - When analyzing the codebase with the `code-context-provider-mcp` tool
+#### Available Tools:
+
+##### `add_workspace`
+- **Purpose**: Registers a workspace directory for searching and indexing
+- **When to use**: At the start of working with a new project or codebase
+- **Arguments**:
+  - `path` (string, required): Absolute path to the workspace root directory
+  - `name` (string, optional): Optional friendly name for the workspace
+- **Returns**: Workspace ID to use in subsequent search operations
+
+##### `list_workspaces`
+- **Purpose**: Lists all registered workspaces with their metadata
+- **When to use**: To see available workspaces or get workspace IDs
+- **Returns**: Array of workspaces with IDs, paths, names, and timestamps
+
+##### `search_files`
+- **Purpose**: Search for files by name, pattern, or extension
+- **When to use**: Finding specific files or file types in the codebase
+- **Arguments**:
+  - `workspace_id` (string, required): ID of the workspace to search
+  - `name` (string, optional): File name to search for (supports wildcards like `config.*`)
+  - `pattern` (string, optional): Glob pattern to match files (e.g., `**/*.json`, `src/**/*.ts`)
+  - `extension` (string, optional): File extension to filter by (e.g., `ts`, `json`)
+  - `directory` (string, optional): Restrict search to this directory (relative to workspace root)
+  - `limit` (number, optional): Maximum results to return (default: 100)
+- **Example**:
+  ```
+  search_files(workspace_id="my-project", pattern="src/**/*.ts", limit=50)
+  ```
+
+##### `search_text`
+- **Purpose**: Search for text/code patterns using ripgrep (supports regex)
+- **When to use**: Finding code patterns, function calls, variable usage, or specific strings
+- **Arguments**:
+  - `workspace_id` (string, required): ID of the workspace to search
+  - `pattern` (string, required): Search pattern (regex or literal)
+  - `case_insensitive` (boolean, optional): Case-insensitive search (default: false)
+  - `literal` (boolean, optional): Treat pattern as literal string, not regex (default: false)
+  - `language` (string, optional): Restrict to specific language files (java, python, javascript, typescript, csharp)
+  - `limit` (number, optional): Maximum results to return
+- **Example**:
+  ```
+  search_text(workspace_id="my-project", pattern="PrinterContextManager", limit=20)
+  ```
+
+##### `search_symbols`
+- **Purpose**: Search for code symbols (classes, functions, methods, variables, etc.)
+- **When to use**: Finding specific class/function definitions or navigating to code locations
+- **Arguments**:
+  - `workspace_id` (string, required): ID of the workspace to search
+  - `language` (string, required): Programming language (java, python, javascript, typescript, csharp, go, rust, c, cpp, php, ruby, kotlin)
+  - `name` (string, required): Symbol name to search for
+  - `match` (string, optional): How to match the name - `exact`, `prefix`, `substring`, `regex` (default: exact)
+  - `kinds` (array, optional): Symbol kinds to filter by (e.g., `["class", "method"]`)
+  - `scope` (object, optional): Scope filters (`in_class`, `in_module`, `in_namespace`)
+  - `limit` (number, optional): Maximum results to return (default: 100)
+- **Example**:
+  ```
+  search_symbols(workspace_id="my-project", language="typescript", name="PrinterContextManager", match="exact")
+  ```
+
+##### `search_ast_pattern`
+- **Purpose**: Search code using AST pattern matching with metavariables
+- **When to use**: Finding structural code patterns (e.g., all classes, specific function signatures, async patterns)
+- **Arguments**:
+  - `workspace_id` (string, required): ID of the workspace to search
+  - `language` (string, required): Programming language
+  - `pattern` (string, required): AST pattern with metavariables (`$VAR` for capture, `$$VAR` for single anonymous, `$$$VAR` for multiple)
+  - `paths` (array, optional): Specific file paths or glob patterns to search
+  - `limit` (number, optional): Maximum results to return (default: 100)
+  - `max_lines` (number, optional): Maximum lines to include in match text (default: 3)
+- **Examples**:
+  ```
+  # Find all exported classes
+  search_ast_pattern(workspace_id="my-project", language="typescript", pattern="export class $CLASS { $$$ }")
+
+  # Find async functions without await
+  search_ast_pattern(workspace_id="my-project", language="typescript", pattern="async function $NAME() { $$$ }")
+  ```
+
+##### `detect_stacks`
+- **Purpose**: Automatically detect technology stacks in a workspace
+- **When to use**: Understanding the technologies, frameworks, and languages used in a project
+- **Arguments**:
+  - `workspace_id` (string, required): ID of the workspace to analyze
+  - `scan_mode` (string, optional): Scanning thoroughness - `fast` or `thorough` (default: thorough)
+- **Returns**: Detected stacks with confidence scores, evidence, and dependencies
 
 #### Usage Guidelines:
 
-**For Overview Analysis**:
-- Use root directory with `includeSymbols: false` and `maxDepth: 3-5` for structure overview
-- This provides file counts, directory tree, and basic metrics without hitting token limits
+**Starting with a New Project**:
+1. Register the workspace with `add_workspace`
+2. Optionally run `detect_stacks` to understand the technology landscape
+3. Use `search_files`, `search_text`, or `search_symbols` as needed
 
-**For Detailed Symbol Analysis**:
-- Use targeted subdirectory calls with `includeSymbols: true` and `symbolType: "all"`
-- Make separate calls for major directories
-- This approach gets comprehensive symbol information without exceeding token limits
+**For Code Navigation**:
+- Use `search_symbols` to find class/function definitions quickly
+- Use `search_text` for general code patterns or string searches
+- Use `search_ast_pattern` for structural code searches
 
-**Never**: Try to get all symbols from root directory - it will always exceed the 25k token limit
+**For Architecture Analysis**:
+- Combine `search_files` with patterns to understand file organization
+- Use `search_symbols` to map out class hierarchies
+- Use `detect_stacks` to identify frameworks and dependencies
+
+**Performance Tips**:
+- Symbol search is very fast and efficient for finding definitions
+- Text search uses ripgrep, which is extremely fast even on large codebases
+- AST pattern matching is more expensive but provides powerful structural search
+- Use `limit` parameter to control result size

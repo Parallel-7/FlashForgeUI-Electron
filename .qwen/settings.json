@@ -7,12 +7,12 @@
         "C:\\Users\\Cope\\Documents\\GitHub\\ff-5mp-api-ts"
     ],
     "mcpServers": {
-        "code-context-provider-mcp": {
+        "code-search-mcp": {
             "args": [
                 "/c",
-                "npx",
-                "-y",
-                "code-context-provider-mcp@latest"
+                "cd",
+                "/d",
+                "C:\\Users\\Cope\\Documents\\GitHub\\code-search-mcp && node dist/index.js"
             ],
             "command": "cmd.exe"
         },

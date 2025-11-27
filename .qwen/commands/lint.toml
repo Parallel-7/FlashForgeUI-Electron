@@ -28,7 +28,7 @@ You MUST follow these steps:
    - Show a nice message about the project now having good code quality
    
    If auto-fix did NOT resolve all remaining issues:
-   - Use the `code-context-provider-mcp` tool to get comprehensive information about the areas of the codebase where errors occurred
+   - Use the `code-search-mcp` tool to get comprehensive information about the areas of the codebase where errors occurred
    - Use the `sequential-thinking` tool to analyze the situation and locate the root cause of the linting errors:
      - Use sequential-thinking to break down the code quality issues
    - After locating the root cause, use the `sequential-thinking` tool again to create a solution that addresses the *root cause*:
