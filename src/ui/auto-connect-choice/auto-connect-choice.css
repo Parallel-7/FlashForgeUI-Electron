@@ -22,26 +22,29 @@
     margin-bottom: 8px;
 }
 
+
 .message-text {
     font-size: 1rem;
-    color: #e0e0e0;
+    color: var(--text-color);
     margin-bottom: 12px;
     font-weight: 500;
 }
 
+
 .last-used-info {
     font-size: 0.85rem;
-    color: #b0b0b0;
+    color: var(--text-color-secondary);
     padding: 8px 16px;
-    background: #444;
+    background: var(--surface-muted);
     border-radius: 6px;
     margin: 0 auto;
     display: inline-block;
-    border: 1px solid #555;
+    border: 1px solid var(--border-color);
 }
 
+
 .last-used-info strong {
-    color: #ffffff;
+    color: var(--text-color);
 }
 
 .options-container {
@@ -54,27 +57,28 @@
     box-sizing: border-box;
 }
 
+
 .option-button {
     display: flex;
     align-items: center;
-    background: #4a4a4a;
-    border: 2px solid #555;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 16px;
     cursor: pointer;
     transition: all 0.2s ease;
     text-align: left;
     width: 100%;
-    color: inherit;
+    color: var(--text-color);
     font-family: inherit;
     box-sizing: border-box;
 }
 
 .option-button:hover {
-    border-color: #4a90e2;
-    background: #515151;
+    border-color: var(--border-color-light);
+    background: var(--card-bg-hover);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
+    box-shadow: var(--shadow-sm);
 }
 
 .option-button:active {
@@ -82,34 +86,36 @@
     box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
 }
 
+
 .option-button:focus {
     outline: none;
-    border-color: #4a90e2;
-    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
+    border-color: var(--border-color-focus);
+    box-shadow: 0 0 0 2px var(--border-color-focus);
 }
 
+
 .option-button.primary {
-    background: linear-gradient(135deg, #4a90e2 0%, #357abd 100%);
-    border-color: #357abd;
-    color: white;
+    background: var(--accent-color);
+    border-color: var(--accent-color);
+    color: var(--accent-text-color);
 }
 
 .option-button.primary:hover {
-    background: linear-gradient(135deg, #5a9ef3 0%, #4686c7 100%);
-    border-color: #4686c7;
-    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+    background: var(--button-hover);
+    border-color: var(--button-hover);
+    box-shadow: var(--shadow-md);
 }
 
 .option-button.cancel {
-    background: #d13438;
-    border-color: #b22327;
-    color: white;
+    background: var(--error-color);
+    border-color: var(--error-color);
+    color: var(--button-text-color);
 }
 
 .option-button.cancel:hover {
-    background: #e14044;
-    border-color: #c32a2e;
-    box-shadow: 0 4px 12px rgba(209, 52, 56, 0.3);
+    background: color-mix(in srgb, var(--error-color) 85%, white);
+    border-color: color-mix(in srgb, var(--error-color) 85%, white);
+    box-shadow: var(--shadow-md);
 }
 
 .option-icon {
@@ -155,16 +161,13 @@
 .option-description {
     margin: 0;
     font-size: 0.85rem;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--text-color-secondary);
     line-height: 1.4;
 }
 
-.option-button.primary .option-description {
-    color: rgba(255, 255, 255, 0.9);
-}
-
+.option-button.primary .option-description,
 .option-button.cancel .option-description {
-    color: rgba(255, 255, 255, 0.9);
+    color: color-mix(in srgb, var(--accent-text-color, #ffffff) 85%, transparent);
 }
 
 /* Disabled state */
@@ -174,9 +177,10 @@
     transform: none;
 }
 
+
 .option-button:disabled:hover {
-    border-color: #555;
-    background: #4a4a4a;
+    border-color: var(--border-color);
+    background: var(--card-bg);
     transform: none;
     box-shadow: none;
 }

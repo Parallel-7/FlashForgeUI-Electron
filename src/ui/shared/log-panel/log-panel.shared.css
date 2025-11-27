@@ -13,11 +13,7 @@
   width: 100%;
   height: 100%;
   min-height: 0;
-  background: linear-gradient(
-    135deg,
-    rgba(30, 30, 30, 0.92) 0%,
-    rgba(25, 25, 25, 0.97) 100%
-  );
+  background: var(--card-bg, #1f1f1f);
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
   border-radius: 10px;
   box-shadow: var(--shadow-sm, 0 8px 16px rgba(0, 0, 0, 0.25));
@@ -31,11 +27,7 @@
   gap: 12px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
-  background: linear-gradient(
-    135deg,
-    rgba(40, 40, 40, 0.95) 0%,
-    rgba(35, 35, 35, 0.98) 100%
-  );
+  background: var(--surface-muted, rgba(40, 40, 40, 0.95));
   font-weight: 600;
   font-size: 13px;
   letter-spacing: 0.4px;
@@ -66,7 +58,7 @@
   padding: 14px 18px;
   display: flex;
   flex-direction: column;
-  background: rgba(18, 18, 18, 0.96);
+  background: var(--card-bg, rgba(18, 18, 18, 0.96));
 }
 
 .ff-log-panel__output {
@@ -108,16 +100,16 @@
 }
 
 .ff-log-panel__output::-webkit-scrollbar-track {
-  background: rgba(15, 15, 15, 0.75);
+  background: var(--scrollbar-track-color, var(--surface-muted, rgba(15, 15, 15, 0.75)));
 }
 
 .ff-log-panel__output::-webkit-scrollbar-thumb {
-  background: rgba(90, 90, 90, 0.75);
+  background: var(--scrollbar-thumb-color, var(--card-bg-hover, rgba(90, 90, 90, 0.75)));
   border-radius: 4px;
 }
 
 .ff-log-panel__output::-webkit-scrollbar-thumb:hover {
-  background: rgba(110, 110, 110, 0.85);
+  background: var(--scrollbar-thumb-hover-color, var(--accent-color, rgba(110, 110, 110, 0.85)));
 }
 
 @media (max-width: 768px) {

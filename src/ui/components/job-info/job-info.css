@@ -47,51 +47,51 @@
 }
 
 .component-job-info progress::-webkit-progress-value {
-  background: linear-gradient(90deg, #1976d2, #42a5f5);
+  background: var(--accent-color);
   border-radius: var(--ui-border-radius, 2px);
   transition: background 0.3s ease;
 }
 
 .component-job-info progress::-moz-progress-bar {
-  background: linear-gradient(90deg, #1976d2, #42a5f5);
+  background: var(--accent-color);
   border-radius: var(--ui-border-radius, 2px);
   transition: background 0.3s ease;
 }
 
 /* Progress bar state styling - printing state */
 .component-job-info progress.printing::-webkit-progress-value {
-  background: linear-gradient(90deg, var(--success-color), #66bb6a);
+  background: var(--success-color);
 }
 
 .component-job-info progress.printing::-moz-progress-bar {
-  background: linear-gradient(90deg, var(--success-color), #66bb6a);
+  background: var(--success-color);
 }
 
 /* Progress bar state styling - paused state */
 .component-job-info progress.paused::-webkit-progress-value {
-  background: linear-gradient(90deg, var(--warning-color), #ffb74d);
+  background: var(--warning-color);
 }
 
 .component-job-info progress.paused::-moz-progress-bar {
-  background: linear-gradient(90deg, var(--warning-color), #ffb74d);
+  background: var(--warning-color);
 }
 
 /* Progress bar state styling - completed state */
 .component-job-info progress.completed::-webkit-progress-value {
-  background: linear-gradient(90deg, var(--success-color), #66bb6a);
+  background: var(--success-color);
 }
 
 .component-job-info progress.completed::-moz-progress-bar {
-  background: linear-gradient(90deg, var(--success-color), #66bb6a);
+  background: var(--success-color);
 }
 
 /* Progress bar state styling - error state */
 .component-job-info progress.error::-webkit-progress-value {
-  background: linear-gradient(90deg, var(--error-color), #ef5350);
+  background: var(--error-color);
 }
 
 .component-job-info progress.error::-moz-progress-bar {
-  background: linear-gradient(90deg, var(--error-color), #ef5350);
+  background: var(--error-color);
 }
 
 /* Camera controls styling */
@@ -103,9 +103,9 @@
 }
 
 .component-job-info .camera-controls button {
-  background-color: var(--button-bg);
-  color: white;
-  border: none;
+  background-color: var(--accent-color);
+  color: var(--accent-text-color);
+  border: 1px solid var(--border-color-light);
   padding: 4px 10px;
   border-radius: var(--ui-border-radius, 2px);
   cursor: pointer;
@@ -118,8 +118,8 @@
 }
 
 .component-job-info .camera-controls button:disabled {
-  background-color: var(--darker-bg);
-  color: #888;
+  background-color: var(--surface-muted);
+  color: var(--text-color-muted);
   cursor: not-allowed;
 }
 

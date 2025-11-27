@@ -6,22 +6,7 @@
  */
 
 import type { ThemeColors } from '../../types/config.js';
-
-/**
- * Lightens a hex color by a percentage
- * @param hex Hex color string (e.g., '#4285f4')
- * @param percent Percentage to lighten (0-100)
- * @returns Lightened hex color
- */
-export function lightenColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
-  if (isNaN(num)) return hex;
-
-  const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * (percent / 100)));
-  const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * (percent / 100)));
-  const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * (percent / 100)));
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
-}
+import { computeThemePalette, lightenColor } from '../../utils/themeColorUtils.js';
 
 /**
  * Applies theme colors to the document root CSS variables
@@ -29,6 +14,15 @@ export function lightenColor(hex: string, percent: number): string {
  */
 export function applyDialogTheme(theme: ThemeColors): void {
   const root = document.documentElement;
+  const palette = computeThemePalette(theme);
+  const computedStyles = getComputedStyle(root);
+  const currentBackground = computedStyles.getPropertyValue('--ui-background').trim().toLowerCase();
+  const shouldStayTransparent = currentBackground === 'transparent' || currentBackground === 'rgba(0, 0, 0, 0)';
+  const currentBorder = computedStyles.getPropertyValue('--ui-border').trim();
+  const hasBorder = currentBorder && currentBorder !== 'none';
+  const currentBoxShadow = computedStyles.getPropertyValue('--ui-box-shadow').trim();
+  const hasBoxShadow = currentBoxShadow && currentBoxShadow !== 'none';
+
   root.style.setProperty('--theme-primary', theme.primary);
   root.style.setProperty('--theme-secondary', theme.secondary);
   root.style.setProperty('--theme-background', theme.background);
@@ -41,4 +35,32 @@ export function applyDialogTheme(theme: ThemeColors): void {
   root.style.setProperty('--theme-secondary-hover', secondaryHover);
   root.style.setProperty('--button-bg', theme.primary);
   root.style.setProperty('--button-hover', primaryHover);
+  root.style.setProperty('--button-text-color', palette.buttonTextColor);
+  root.style.setProperty('--accent-text-color', palette.accentTextColor);
+  root.style.setProperty('--surface-muted', palette.surfaceMuted);
+  root.style.setProperty('--surface-elevated', palette.surfaceElevated);
+  root.style.setProperty('--border-color', palette.borderColor);
+  root.style.setProperty('--border-color-light', palette.borderColorLight);
+  root.style.setProperty('--border-color-focus', palette.borderColorFocus);
+  root.style.setProperty('--scrollbar-track-color', palette.scrollbarTrackColor);
+  root.style.setProperty('--scrollbar-thumb-color', palette.scrollbarThumbColor);
+  root.style.setProperty('--scrollbar-thumb-hover-color', palette.scrollbarThumbHoverColor);
+  root.style.setProperty('--scrollbar-thumb-active-color', palette.scrollbarThumbActiveColor);
+  root.style.setProperty('--container-text-color', palette.containerTextColor);
+  root.style.setProperty('--dialog-header-text-color', palette.dialogHeaderTextColor);
+  root.style.setProperty('--container-background', theme.surface);
+
+  if (shouldStayTransparent) {
+    root.style.setProperty('--ui-background', 'transparent');
+  } else {
+    root.style.setProperty('--ui-background', theme.background);
+  }
+
+  if (hasBorder) {
+    root.style.setProperty('--ui-border', `1px solid ${palette.uiBorderColor}`);
+  }
+
+  if (hasBoxShadow) {
+    root.style.setProperty('--ui-box-shadow', palette.roundedBoxShadow);
+  }
 }

@@ -12,27 +12,7 @@ import { BrowserWindow } from 'electron';
 import { getConfigManager } from '../managers/ConfigManager.js';
 import { isRoundedUISupported } from './RoundedUICompatibility.js';
 import { DEFAULT_THEME } from '../types/config.js';
-
-/**
- * Lightens a hex color by a percentage
- * @param hex Hex color string (e.g., '#4285f4')
- * @param percent Percentage to lighten (0-100)
- * @returns Lightened hex color
- */
-function lightenColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
-
-  // Guard against invalid hex values
-  if (isNaN(num)) {
-    console.warn(`Invalid hex color for lightening: ${hex}, returning original`);
-    return hex;
-  }
-
-  const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * (percent / 100)));
-  const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * (percent / 100)));
-  const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * (percent / 100)));
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
-}
+import { computeThemePalette } from './themeColorUtils.js';
 
 /**
  * Injects CSS variables into a window based on the current RoundedUI configuration
@@ -46,19 +26,22 @@ export function injectUIStyleVariables(window: BrowserWindow): void {
   const useRoundedUI = config.RoundedUI && isRoundedUISupported();
   const theme = config.DesktopTheme || DEFAULT_THEME;
 
-  // Compute hover states (15% lighter - same logic as renderer.ts)
-  const primaryHover = lightenColor(theme.primary, 15);
-  const secondaryHover = lightenColor(theme.secondary, 15);
+  const palette = computeThemePalette(theme);
+  const primaryHover = palette.primaryHover;
+  const secondaryHover = palette.secondaryHover;
+  const uiBorderColor = palette.uiBorderColor;
+  const uiBackground = useRoundedUI ? 'transparent' : theme.background;
+  const uiBoxShadow = useRoundedUI ? palette.roundedBoxShadow : 'none';
 
   const cssVariables = `
     :root {
       /* RoundedUI variables */
       --ui-padding: ${useRoundedUI ? '16px' : '0px'};
       --ui-border-radius: ${useRoundedUI ? '12px' : '0px'};
-      --ui-background: ${useRoundedUI ? 'transparent' : '#3a3a3a'};
-      --ui-border: ${useRoundedUI ? '1px solid #555' : 'none'};
-      --ui-box-shadow: ${useRoundedUI ? '0 8px 32px rgba(0, 0, 0, 0.5)' : 'none'};
-      --container-background: #3a3a3a;
+      --ui-background: ${uiBackground};
+      --ui-border: ${useRoundedUI ? `1px solid ${uiBorderColor}` : 'none'};
+      --ui-box-shadow: ${uiBoxShadow};
+      --container-background: ${theme.surface};
       --header-border-radius-top: ${useRoundedUI ? '12px' : '0px'};
       --footer-border-radius-bottom: ${useRoundedUI ? '12px' : '0px'};
 
@@ -70,10 +53,23 @@ export function injectUIStyleVariables(window: BrowserWindow): void {
       --theme-text: ${theme.text};
       --theme-primary-hover: ${primaryHover};
       --theme-secondary-hover: ${secondaryHover};
+      --surface-muted: ${palette.surfaceMuted};
+      --surface-elevated: ${palette.surfaceElevated};
+      --dialog-header-text-color: ${palette.dialogHeaderTextColor};
+      --container-text-color: ${palette.containerTextColor};
+      --border-color: ${palette.borderColor};
+      --border-color-light: ${palette.borderColorLight};
+      --border-color-focus: ${palette.borderColorFocus};
+      --scrollbar-track-color: ${palette.scrollbarTrackColor};
+      --scrollbar-thumb-color: ${palette.scrollbarThumbColor};
+      --scrollbar-thumb-hover-color: ${palette.scrollbarThumbHoverColor};
+      --scrollbar-thumb-active-color: ${palette.scrollbarThumbActiveColor};
 
       /* Legacy button variables for backward compatibility */
       --button-bg: ${theme.primary};
       --button-hover: ${primaryHover};
+      --button-text-color: ${palette.buttonTextColor};
+      --accent-text-color: ${palette.accentTextColor};
     }
   `;
 

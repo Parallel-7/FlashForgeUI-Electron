@@ -56,6 +56,7 @@ import { resetUI, handleUIError } from './services/ui-updater.js';
 import type { PollingData } from './types/polling.js';
 import type { ThemeColors, AppConfig } from './types/config.js';
 import { DEFAULT_THEME } from './types/config.js';
+import { computeThemePalette } from './utils/themeColorUtils.js';
 import { RendererGridController } from './renderer/gridController.js';
 import { ShortcutButtonController } from './renderer/shortcutButtons.js';
 
@@ -481,6 +482,7 @@ if (window.api?.config) {
  */
 function applyDesktopTheme(theme: ThemeColors): void {
   const root = document.documentElement;
+  const palette = computeThemePalette(theme);
 
   // Apply theme color variables
   root.style.setProperty('--theme-primary', theme.primary);
@@ -489,34 +491,25 @@ function applyDesktopTheme(theme: ThemeColors): void {
   root.style.setProperty('--theme-surface', theme.surface);
   root.style.setProperty('--theme-text', theme.text);
 
-  // Compute hover states (slightly lighter for dark theme)
-  const primaryHover = lightenColor(theme.primary, 15);
-  const secondaryHover = lightenColor(theme.secondary, 15);
-  root.style.setProperty('--theme-primary-hover', primaryHover);
-  root.style.setProperty('--theme-secondary-hover', secondaryHover);
+  root.style.setProperty('--theme-primary-hover', palette.primaryHover);
+  root.style.setProperty('--theme-secondary-hover', palette.secondaryHover);
+  root.style.setProperty('--surface-muted', palette.surfaceMuted);
+  root.style.setProperty('--surface-elevated', palette.surfaceElevated);
+  root.style.setProperty('--border-color', palette.borderColor);
+  root.style.setProperty('--border-color-light', palette.borderColorLight);
+  root.style.setProperty('--border-color-focus', palette.borderColorFocus);
+  root.style.setProperty('--scrollbar-track-color', palette.scrollbarTrackColor);
+  root.style.setProperty('--scrollbar-thumb-color', palette.scrollbarThumbColor);
+  root.style.setProperty('--scrollbar-thumb-hover-color', palette.scrollbarThumbHoverColor);
+  root.style.setProperty('--scrollbar-thumb-active-color', palette.scrollbarThumbActiveColor);
+  root.style.setProperty('--button-bg', theme.primary);
+  root.style.setProperty('--button-hover', palette.primaryHover);
+  root.style.setProperty('--button-text-color', palette.buttonTextColor);
+  root.style.setProperty('--accent-text-color', palette.accentTextColor);
+  root.style.setProperty('--container-text-color', palette.containerTextColor);
+  root.style.setProperty('--container-background', theme.surface);
 
   logDebug('Desktop theme applied:', theme);
-}
-
-/**
- * Lightens a hex color by a percentage
- * @param hex Hex color string (e.g., '#4285f4')
- * @param percent Percentage to lighten (0-100)
- * @returns Lightened hex color
- */
-function lightenColor(hex: string, percent: number): string {
-  const num = parseInt(hex.replace('#', ''), 16);
-
-  // Guard against invalid hex values
-  if (isNaN(num)) {
-    console.warn(`Invalid hex color for lightening: ${hex}, returning original`);
-    return hex;
-  }
-
-  const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * (percent / 100)));
-  const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * (percent / 100)));
-  const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * (percent / 100)));
-  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
 /**

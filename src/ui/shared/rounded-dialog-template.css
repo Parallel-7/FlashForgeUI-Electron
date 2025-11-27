@@ -18,8 +18,8 @@ body {
     margin: 0;
     padding: var(--ui-padding);
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--ui-background);
-    color: #ffffff;
+    background: var(--ui-background, var(--theme-background));
+    color: var(--container-text-color, var(--theme-text, #ffffff));
     display: flex;
     align-items: center;
     justify-content: center;
@@ -32,8 +32,8 @@ body {
 
 /* Main dialog container - adapts styling based on UI mode */
 .dialog-container {
-    background: var(--container-background);
-    border: var(--ui-border);
+    background: var(--container-background, var(--theme-surface));
+    border: var(--ui-border, 1px solid var(--border-color, rgba(255, 255, 255, 0.1)));
     border-radius: var(--ui-border-radius);
     box-shadow: var(--ui-box-shadow);
     width: 100%;
@@ -64,11 +64,11 @@ body {
 
 /* Header with gradient background - use responsive padding */
 .dialog-header {
-    background: var(--theme-surface);
-    color: white;
+    background: var(--surface-muted, var(--theme-surface));
+    color: var(--dialog-header-text-color, var(--theme-text, #ffffff));
     padding: 16px 24px; /* Default to compact size for title-only dialogs */
     text-align: center;
-    border-bottom: var(--ui-border);
+    border-bottom: var(--ui-border, 1px solid var(--border-color, rgba(255, 255, 255, 0.1)));
     border-top-left-radius: var(--header-border-radius-top);
     border-top-right-radius: var(--header-border-radius-top);
     flex-shrink: 0;
@@ -92,7 +92,7 @@ body {
 
 .dialog-description {
     margin: 8px 0 0 0;
-    opacity: 0.9;
+    color: var(--text-color-secondary, rgba(255, 255, 255, 0.8));
     font-size: 0.9rem;
     line-height: 1.4;
 }
@@ -106,7 +106,7 @@ body {
     right: 24px;
     background: none;
     border: none;
-    color: white;
+    color: var(--dialog-header-text-color, var(--theme-text, #ffffff));
     cursor: pointer;
     width: 32px;
     height: 32px;
@@ -126,7 +126,7 @@ body {
 
 .close-button:hover,
 .dialog-close:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+    background-color: var(--border-color-light, rgba(255, 255, 255, 0.15));
 }
 
 .dialog-close .lucide-icon,
@@ -157,8 +157,8 @@ body {
     display: flex;
     justify-content: flex-end;
     align-items: center;
-    border-top: var(--ui-border);
-    background: var(--theme-surface);
+    border-top: var(--ui-border, 1px solid var(--border-color, rgba(255, 255, 255, 0.1)));
+    background: var(--surface-muted, var(--theme-surface));
     flex-shrink: 0;
     gap: 10px;
     border-bottom-left-radius: var(--footer-border-radius-bottom);
@@ -175,9 +175,9 @@ body {
 button,
 .btn-secondary,
 .dialog-button {
-    background: var(--theme-surface);
-    color: var(--theme-text);
-    border: 1px solid #777;
+    background: var(--surface-elevated, var(--theme-surface));
+    color: var(--theme-text, #ffffff);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
     padding: 8px 16px;
     border-radius: 6px;
     cursor: pointer;
@@ -190,22 +190,31 @@ button,
 button:hover,
 .btn-secondary:hover,
 .dialog-button:hover {
-    background: #777;
-    border-color: #888;
+    background: var(--card-bg-hover, #3a3a3a);
+    border-color: var(--border-color-focus, rgba(255, 255, 255, 0.2));
 }
 
 button:active,
 .btn-secondary:active,
 .dialog-button:active {
-    background: #555;
+    background: var(--surface-muted, #1f1f1f);
 }
 
 button:disabled,
 .btn-secondary:disabled,
 .dialog-button:disabled {
-    background: #555;
+    background: var(--surface-muted, #1f1f1f);
     cursor: not-allowed;
     opacity: 0.6;
+    color: var(--text-color-muted, #808080);
+    border-color: var(--border-color-light, rgba(255, 255, 255, 0.15));
+}
+
+button:focus-visible,
+.btn-secondary:focus-visible,
+.dialog-button:focus-visible {
+    outline: 2px solid var(--border-color-focus, rgba(255, 255, 255, 0.2));
+    outline-offset: 2px;
 }
 
 /* Primary button styling */
@@ -214,6 +223,7 @@ button:disabled,
 button.primary {
     background-color: var(--button-bg, #4285f4);
     border-color: var(--button-bg, #4285f4);
+    color: var(--button-text-color, #ffffff);
 }
 
 .btn-primary:hover,

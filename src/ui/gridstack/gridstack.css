@@ -16,7 +16,7 @@
   flex: 1;
   min-height: 0; /* Important for flex children to allow shrinking */
   overflow: auto;
-  background-color: var(--darker-bg);
+  background-color: var(--dark-bg);
   padding: 12px;
   position: relative;
   gap: 12px;
@@ -31,8 +31,8 @@
 }
 
 .grid-stack-item-content {
-  /* Content container styling - Modern glass-morphic appearance */
-  background: linear-gradient(135deg, var(--card-bg) 0%, rgba(30, 30, 30, 0.95) 100%);
+  /* Content container styling with flat theme surfaces */
+  background-color: var(--card-bg);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   overflow: hidden;
@@ -57,8 +57,8 @@
   height: 28px;
   border-radius: 14px;
   border: none;
-  background: rgba(30, 30, 30, 0.85);
-  color: rgba(255, 255, 255, 0.85);
+  background: var(--surface-muted, rgba(30, 30, 30, 0.85));
+  color: var(--theme-text, rgba(255, 255, 255, 0.85));
   font-size: 18px;
   line-height: 1;
   display: none;
@@ -70,9 +70,9 @@
 }
 
 .grid-stack-item-remove:hover {
-  background: rgba(244, 67, 54, 0.9);
+  background: var(--error-color, #f44336);
   transform: scale(1.05);
-  color: #fff;
+  color: var(--button-text-color, #fff);
 }
 
 .grid-stack-item-remove:active {
@@ -93,14 +93,14 @@
   align-items: center;
   gap: 10px;
   padding: 14px 24px;
-  background: linear-gradient(135deg, var(--accent-color) 0%, var(--button-hover) 100%);
-  color: white;
+  background-color: var(--accent-color);
+  color: var(--button-text-color, #ffffff);
   border-radius: 8px;
-  box-shadow: var(--shadow-lg), 0 0 20px rgba(66, 133, 244, 0.4);
+  box-shadow: var(--shadow-lg), 0 0 20px color-mix(in srgb, var(--accent-color) 40%, transparent);
   font-weight: 600;
   font-size: 14px;
   letter-spacing: 0.3px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.2));
   animation: slideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
   backdrop-filter: blur(10px);
 }
@@ -130,10 +130,10 @@
   justify-content: center;
   padding: 8px;
   margin-left: 8px;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: var(--surface-elevated, rgba(255, 255, 255, 0.15));
+  border: 1px solid var(--border-color-light, rgba(255, 255, 255, 0.3));
   border-radius: 6px;
-  color: white;
+  color: var(--theme-text, #ffffff);
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 18px;
@@ -141,13 +141,13 @@
 }
 
 .edit-mode-reset-btn:hover {
-  background: rgba(255, 255, 255, 0.25);
-  border-color: rgba(255, 255, 255, 0.5);
+  background: var(--card-bg-hover, rgba(255, 255, 255, 0.25));
+  border-color: var(--border-color-focus, rgba(255, 255, 255, 0.5));
   transform: scale(1.05);
 }
 
 .edit-mode-reset-btn:active {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--surface-muted, rgba(255, 255, 255, 0.2));
   transform: scale(0.98);
 }
 
@@ -168,11 +168,11 @@ body.edit-mode .grid-stack-item:active {
 
 body.edit-mode .grid-stack-item-content {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.25), var(--shadow-md);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 25%, transparent), var(--shadow-md);
 }
 
 body.edit-mode .grid-stack-item-content:hover {
-  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.5), var(--shadow-lg);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 50%, transparent), var(--shadow-lg);
   border-color: var(--button-hover);
 }
 
@@ -202,8 +202,8 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
 .grid-stack-item > .ui-resizable-sw {
   width: 24px !important;
   height: 24px !important;
-  background: linear-gradient(135deg, var(--accent-color) 0%, var(--button-hover) 100%);
-  border: 2px solid rgba(0, 0, 0, 0.3);
+  background-color: var(--accent-color);
+  border: 2px solid var(--border-color-focus, rgba(0, 0, 0, 0.3));
   border-radius: 6px;
   box-shadow: var(--shadow-sm);
   transition: transform var(--transition-fast), box-shadow var(--transition-fast);
@@ -231,15 +231,15 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   position: absolute;
   width: 8px;
   height: 8px;
-  border-right: 2px solid white;
-  border-bottom: 2px solid white;
+  border-right: 2px solid var(--button-text-color, #ffffff);
+  border-bottom: 2px solid var(--button-text-color, #ffffff);
   right: 3px;
   bottom: 3px;
 }
 
 .grid-stack-item > .ui-resizable-sw::after {
   border-right: none;
-  border-left: 2px solid white;
+  border-left: 2px solid var(--button-text-color, #ffffff);
   right: auto;
   left: 3px;
 }
@@ -249,7 +249,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
    ============================================================================ */
 
 .grid-stack-placeholder {
-  background-color: rgba(66, 133, 244, 0.2) !important;
+  background-color: color-mix(in srgb, var(--accent-color) 20%, transparent) !important;
   border: 2px dashed var(--accent-color) !important;
   border-radius: 4px !important;
 }

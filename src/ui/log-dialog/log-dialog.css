@@ -24,19 +24,6 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 }
 
-:root {
-    --dark-bg: #2a2a2a;
-    --darker-bg: #1e1e1e;
-    --header-bg: #222222;
-    --border-color: #444444;
-    --button-bg: #4285f4;
-    --button-hover: #5a95f5;
-    --text-color: #e0e0e0;
-    --success-color: #4CAF50;
-    --secondary-button-bg: #666666;
-    --secondary-button-hover: #777777;
-}
-
 /* Template provides: body, .dialog-container, dialogFadeIn animation */
 /* Template provides: .dialog-header, .dialog-title, .dialog-close styles */
 /* Template provides: .dialog-content base styles */
@@ -61,12 +48,13 @@
 }
 
 .dialog-button.secondary {
-    background: var(--secondary-button-bg);
-    border: 1px solid var(--border-color);
+    background: var(--surface-muted, var(--theme-surface));
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    color: var(--theme-text, #e0e0e0);
 }
 
 .dialog-button.secondary:hover {
-    background: var(--secondary-button-hover);
+    background: var(--card-bg-hover, #3a3a3a);
 }
 
 .log-container {
@@ -78,17 +66,12 @@
 .log-container .ff-log-panel {
     width: 100%;
     border-radius: var(--ui-border-radius, 6px);
-    border-color: var(--border-color);
-    background: linear-gradient(135deg, rgba(28, 28, 28, 0.95) 0%, rgba(20, 20, 20, 0.98) 100%);
+    border-color: var(--border-color, rgba(255, 255, 255, 0.1));
     box-shadow: none;
 }
 
-.log-container .ff-log-panel__body {
-    background: rgba(12, 12, 12, 0.92);
-}
-
 .log-container .ff-log-panel__empty {
-    color: var(--text-color);
+    color: var(--text-color, #e0e0e0);
 }
 
 /* Template provides: .dialog-footer and .dialog-buttons styles */

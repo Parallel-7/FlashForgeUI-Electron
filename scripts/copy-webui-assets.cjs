@@ -13,7 +13,7 @@ const path = require('path');
 // Configuration
 const srcDir = 'src/webui/static';
 const destDir = 'dist/webui/static';
-const filesToCopy = ['index.html', 'webui.css', 'gridstack-extra.min.css'];
+const filesToCopy = ['index.html', 'webui.css', 'gridstack-extra.min.css', 'flashforge_ui.ico'];
 
 // Vendor library to copy from node_modules
 const vendorLibraries = [

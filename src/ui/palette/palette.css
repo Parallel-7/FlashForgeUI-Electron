@@ -221,9 +221,9 @@ body {
 
 .palette-item-action {
   -webkit-app-region: no-drag;
-  background: var(--theme-primary, linear-gradient(135deg, #4a90e2 0%, #357abd 100%));
+  background: var(--accent-color);
   border: none;
-  color: #fff;
+  color: var(--accent-text-color);
   font-size: 0.85rem;
   font-weight: 600;
   padding: 6px 14px;
@@ -233,7 +233,7 @@ body {
 }
 
 .palette-item-action:hover:not(:disabled) {
-  background: var(--theme-primary-hover, linear-gradient(135deg, #5aa0f2 0%, #468bce 100%));
+  background: var(--button-hover);
   transform: translateY(-1px);
 }
 
@@ -244,32 +244,32 @@ body {
 .palette-item-action:disabled,
 .palette-item.in-use .palette-item-action {
   cursor: default;
-  background: rgba(90, 90, 90, 0.6);
-  color: #bbb;
+  background: var(--surface-muted);
+  color: var(--text-color-muted);
   transform: none;
 }
 
 /* In-use state for components already in grid */
 .palette-item.in-use {
   opacity: 0.5;
-  background: rgba(45, 45, 45, 0.7);
-  border-color: rgba(70, 70, 70, 0.5);
+  background: var(--surface-muted);
+  border-color: var(--border-color);
 }
 
 .palette-item.in-use:hover {
-  background: rgba(45, 45, 45, 0.7);
-  border-color: rgba(70, 70, 70, 0.5);
+  background: var(--surface-muted);
+  border-color: var(--border-color);
   transform: none;
   box-shadow: none;
 }
 
 .palette-item.in-use .palette-item-icon {
-  background: linear-gradient(135deg, #555 0%, #444 100%);
+  background: var(--card-bg);
   opacity: 0.6;
 }
 
 .palette-item.in-use .palette-item-label {
-  color: #888;
+  color: var(--text-color-muted);
 }
 
 /* Loading and empty states */

@@ -141,7 +141,7 @@ progress::-webkit-progress-bar {
 }
 
 progress::-webkit-progress-value {
-  background: linear-gradient(135deg, #4a90e2, #42b883);
+  background: var(--accent-color);
   border-radius: 8px;
 }
 
@@ -172,21 +172,23 @@ progress::-webkit-progress-value {
 }
 
 .button-row .primary {
-  background: linear-gradient(135deg, #42a1ff, #2665d8);
-  border-color: rgba(66, 161, 255, 0.6);
+  background: var(--accent-color);
+  border-color: var(--border-color-focus);
+  color: var(--accent-text-color);
 }
 
 .button-row .primary:hover {
-  background: linear-gradient(135deg, #51adff, #2f73e6);
+  background: var(--button-hover);
 }
 
 .button-row .secondary {
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  color: var(--text-color);
 }
 
 .button-row .secondary:hover {
-  background: rgba(255, 255, 255, 0.14);
+  background: var(--card-bg-hover);
 }
 
 .button-row button:disabled {
