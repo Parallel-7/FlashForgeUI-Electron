@@ -270,8 +270,8 @@ export class DesktopThemeSection {
 
     this.currentPickerColorKey = key;
     const currentColor = this.currentTheme[key] ?? this.defaultTheme[key];
-    this.applyHexToPicker(currentColor, false);
     this.colorPickerModal.hidden = false;
+    this.applyHexToPicker(currentColor, false);
   }
 
   private closeColorPicker(): void {
