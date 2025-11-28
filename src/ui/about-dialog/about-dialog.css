@@ -17,7 +17,7 @@
   border-radius: 22px;
   background: transparent;
   padding: 12px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-lg);
 }
 
 .about-app-name {
@@ -39,15 +39,15 @@
   font-weight: 600;
   padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(76, 175, 80, 0.2);
-  color: #4caf50;
-  border: 1px solid rgba(76, 175, 80, 0.4);
+  background: color-mix(in srgb, var(--success-color) 20%, transparent);
+  color: var(--success-color);
+  border: 1px solid color-mix(in srgb, var(--success-color) 40%, transparent);
 }
 
 .version-badge.beta {
-  background: rgba(255, 193, 7, 0.18);
-  border-color: rgba(255, 193, 7, 0.5);
-  color: #ffc107;
+  background: color-mix(in srgb, var(--warning-color) 18%, transparent);
+  border-color: color-mix(in srgb, var(--warning-color) 50%, transparent);
+  color: var(--warning-color);
 }
 
 .release-label {
@@ -75,8 +75,8 @@
   gap: 12px;
   padding: 14px 16px;
   border-radius: 10px;
-  background: #3a3a3a;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--surface-muted);
+  border: 1px solid color-mix(in srgb, var(--theme-text) 8%, transparent);
 }
 
 .info-card i {
@@ -97,8 +97,8 @@
   width: 100%;
   padding: 14px 16px;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid color-mix(in srgb, var(--theme-text) 10%, transparent);
+  background: color-mix(in srgb, var(--theme-text) 3%, transparent);
   cursor: pointer;
   text-align: left;
   transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
@@ -113,7 +113,7 @@
 .link-card i {
   width: 26px;
   height: 26px;
-  color: #ffffff;
+  color: var(--theme-text);
 }
 
 .link-card .link-copy {
@@ -129,7 +129,7 @@
 
 .link-card .link-description {
   font-size: 0.85rem;
-  color: #c8c8c8;
+  color: color-mix(in srgb, var(--theme-text) 70%, transparent);
 }
 
 .dialog-footer {

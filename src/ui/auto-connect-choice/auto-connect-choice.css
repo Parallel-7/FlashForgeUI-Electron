@@ -83,7 +83,7 @@
 
 .option-button:active {
     transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--theme-primary) 30%, transparent);
 }
 
 
@@ -167,7 +167,7 @@
 
 .option-button.primary .option-description,
 .option-button.cancel .option-description {
-    color: color-mix(in srgb, var(--accent-text-color, #ffffff) 85%, transparent);
+    color: color-mix(in srgb, var(--accent-text-color) 85%, transparent);
 }
 
 /* Disabled state */
@@ -214,15 +214,15 @@
 /* High contrast accessibility support */
 @media (prefers-contrast: high) {
     .dialog-container {
-        border-color: #ffffff;
+        border-color: var(--theme-text);
     }
-    
+
     .option-button {
-        border-color: #ffffff;
+        border-color: var(--theme-text);
     }
-    
+
     .option-description {
-        color: #cccccc;
+        color: color-mix(in srgb, var(--theme-text) 70%, transparent);
     }
 }
 
@@ -248,6 +248,6 @@
 
 /* Focus management for keyboard navigation */
 .option-button.keyboard-focused {
-    border-color: #4a90e2;
-    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.5);
+    border-color: var(--theme-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 50%, transparent);
 }
