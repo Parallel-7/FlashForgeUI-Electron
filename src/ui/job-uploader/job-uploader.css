@@ -2,16 +2,7 @@
 /* Import shared template for consistent styling */
 @import url('../shared/rounded-dialog-template.css');
 
-/* Custom CSS variables for job uploader */
-:root {
-    --button-bg: #4285f4;
-    --button-hover: #5a95f5;
-    --blue: #4285f4;
-    --blue-hover: #5a95f5;
-    --file-path-bg: #2a2a2a;
-    --column-bg: #2a2a2a;
-    --thumbnail-bg: #252525;
-}
+/* Theme variables are now centrally managed - no local overrides needed */
 
 /* Job Uploader Specific Styling */
 
@@ -21,19 +12,19 @@
     gap: 12px;
     margin-bottom: 20px;
     padding: 16px;
-    background: #353535;
-    border: 1px solid #555;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
 }
 
 .file-path {
     flex: 1;
-    background: var(--file-path-bg);
-    border: 1px solid #555;
+    background: var(--surface-muted);
+    border: 1px solid var(--border-color);
     padding: 10px 12px;
     border-radius: 6px;
     font-size: 14px;
-    color: #ffffff;
+    color: var(--theme-text);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -42,13 +33,13 @@
 
 .file-path:focus {
     outline: none;
-    border-color: var(--blue);
+    border-color: var(--theme-primary);
 }
 
 .browse-btn {
-    background: var(--blue);
-    color: white;
-    border: 1px solid var(--blue);
+    background: var(--theme-primary);
+    color: var(--theme-text);
+    border: 1px solid var(--theme-primary);
     padding: 10px 16px;
     border-radius: 6px;
     cursor: pointer;
@@ -58,8 +49,8 @@
 }
 
 .browse-btn:hover {
-    background: var(--blue-hover);
-    border-color: var(--blue-hover);
+    background: var(--theme-primary-hover);
+    border-color: var(--theme-primary-hover);
 }
 
 /* Options Section */
@@ -69,8 +60,8 @@
     gap: 32px;
     margin-bottom: 20px;
     padding: 12px 16px;
-    background: #353535;
-    border: 1px solid #555;
+    background: var(--surface-elevated);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
 }
 
@@ -80,12 +71,12 @@
     gap: 8px;
     cursor: pointer;
     font-size: 14px;
-    color: #ffffff;
+    color: var(--theme-text);
 }
 
 input[type="checkbox"] {
     cursor: pointer;
-    accent-color: var(--blue);
+    accent-color: var(--theme-primary);
     width: 16px;
     height: 16px;
 }
@@ -102,8 +93,8 @@ input[type="checkbox"] {
 }
 
 .column {
-    background: var(--column-bg);
-    border: 1px solid #555;
+    background: var(--surface-muted);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 16px;
     display: flex;
@@ -123,8 +114,8 @@ input[type="checkbox"] {
 .column-title {
     margin: 0 0 16px 0;
     padding: 0 0 8px 0;
-    border-bottom: 1px solid #555;
-    color: #ffffff;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--theme-text);
     font-size: 14px;
     font-weight: 600;
     text-align: left;
@@ -138,13 +129,13 @@ input[type="checkbox"] {
 }
 
 .label {
-    color: #cccccc;
+    color: color-mix(in srgb, var(--theme-text) 70%, transparent);
     font-size: 13px;
     font-weight: 500;
 }
 
 .value {
-    color: #ffffff;
+    color: var(--theme-text);
     font-size: 14px;
     word-break: break-word;
 }
@@ -156,8 +147,8 @@ input[type="checkbox"] {
     display: flex;
     align-items: flex-start;
     justify-content: center;
-    background: var(--column-bg);
-    border: 1px solid #555;
+    background: var(--surface-muted);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 16px;
     padding-top: 20px;
@@ -166,8 +157,8 @@ input[type="checkbox"] {
 .thumbnail {
     width: 140px;
     height: 140px;
-    background: var(--thumbnail-bg);
-    border: 1px solid #555;
+    background: var(--theme-surface);
+    border: 1px solid var(--border-color);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -182,7 +173,7 @@ input[type="checkbox"] {
 }
 
 .no-preview {
-    color: #888;
+    color: color-mix(in srgb, var(--theme-text) 50%, transparent);
     font-style: italic;
     font-size: 13px;
     text-align: center;
@@ -192,8 +183,8 @@ input[type="checkbox"] {
 .metadata-section {
     grid-column: 1;
     grid-row: 1;
-    background: var(--column-bg);
-    border: 1px solid #555;
+    background: var(--surface-muted);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 20px;
     display: grid;
@@ -216,22 +207,22 @@ input[type="checkbox"] {
 }
 
 .group-title {
-    color: #cccccc;
+    color: color-mix(in srgb, var(--theme-text) 70%, transparent);
     font-size: 13px;
     font-weight: 500;
     margin: 0;
 }
 
 .group-value {
-    color: #ffffff;
+    color: var(--theme-text);
     font-size: 14px;
     word-break: break-word;
 }
 
 /* Print Time Highlight in Metadata Grid */
 .print-time-highlight {
-    background: rgba(66, 133, 244, 0.1);
-    border: 1px solid rgba(66, 133, 244, 0.3);
+    background: color-mix(in srgb, var(--theme-primary) 10%, transparent);
+    border: 1px solid color-mix(in srgb, var(--theme-primary) 30%, transparent);
     border-radius: 6px;
     padding: 16px;
     text-align: center;
@@ -242,44 +233,44 @@ input[type="checkbox"] {
 }
 
 .print-time-highlight .group-title {
-    color: #cccccc;
+    color: color-mix(in srgb, var(--theme-text) 70%, transparent);
     font-size: 13px;
     margin-bottom: 8px;
     font-weight: 500;
 }
 
 .print-time-highlight .print-time-value {
-    color: #ffffff;
+    color: var(--theme-text);
     font-size: 18px;
     font-weight: 600;
 }
 
 /* Button styling - inherit from template with overrides */
 .dialog-button.primary {
-    background-color: var(--button-bg);
-    border-color: var(--button-bg);
+    background-color: var(--theme-primary);
+    border-color: var(--theme-primary);
 }
 
 .dialog-button.primary:hover:not(:disabled) {
-    background-color: var(--button-hover);
-    border-color: var(--button-hover);
+    background-color: var(--theme-primary-hover);
+    border-color: var(--theme-primary-hover);
 }
 
 .dialog-button.primary:disabled {
-    background-color: #555;
-    border-color: #666;
+    background-color: var(--surface-elevated);
+    border-color: var(--border-color-light);
     cursor: not-allowed;
     opacity: 0.6;
 }
 
 .dialog-button.cancel {
-    background-color: #666;
-    border-color: #777;
+    background-color: var(--surface-muted);
+    border-color: var(--border-color-light);
 }
 
 .dialog-button.cancel:hover {
-    background-color: #777;
-    border-color: #888;
+    background-color: var(--theme-primary);
+    border-color: var(--border-color-focus);
 }
 
 /* Loading Overlay */
@@ -289,13 +280,13 @@ input[type="checkbox"] {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(58, 58, 58, 0.9);
+    background: color-mix(in srgb, var(--surface-elevated) 90%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
     font-style: italic;
     font-size: 14px;
-    color: #ffffff;
+    color: var(--theme-text);
     z-index: 100;
     border-radius: 12px;
 }
@@ -307,7 +298,7 @@ input[type="checkbox"] {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(58, 58, 58, 0.95);
+    background: color-mix(in srgb, var(--surface-elevated) 95%, transparent);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -316,13 +307,13 @@ input[type="checkbox"] {
 }
 
 .progress-container {
-    background: #2a2a2a;
-    border: 1px solid #555;
+    background: var(--surface-muted);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 30px;
     min-width: 320px;
     text-align: center;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+    box-shadow: var(--shadow-lg);
 }
 
 .progress-header {
@@ -335,20 +326,20 @@ input[type="checkbox"] {
 .progress-title {
     font-size: 16px;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--theme-text);
 }
 
 .progress-percentage {
     font-size: 14px;
     font-weight: 500;
-    color: var(--blue);
+    color: var(--theme-primary);
 }
 
 .progress-bar-container {
     width: 100%;
     height: 10px;
-    background: #1e1e1e;
-    border: 1px solid #555;
+    background: var(--theme-surface);
+    border: 1px solid var(--border-color);
     border-radius: 6px;
     overflow: hidden;
     margin-bottom: 16px;
@@ -364,7 +355,7 @@ input[type="checkbox"] {
 
 .progress-status {
     font-size: 14px;
-    color: #cccccc;
+    color: color-mix(in srgb, var(--theme-text) 70%, transparent);
     font-style: italic;
 }
 
