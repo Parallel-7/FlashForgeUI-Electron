@@ -1,9 +1,10 @@
 # CSS Migration Spec: spoolman-dialog.css
 
+**Status:** ✅ COMPLETED (2025-11-28)
 **File:** `src/ui/spoolman-dialog/spoolman-dialog.css`
-**Total Patterns:** 31 (30 need migration, 1 intentional)
+**Total Patterns:** 31 (30 migrated, 1 intentional kept)
 **Priority:** HIGH - Spoolman filament selection dialog
-**Estimated Time:** 25-30 minutes
+**Time Taken:** ~15 minutes
 
 ## Pattern Breakdown
 
@@ -114,31 +115,40 @@ Black overlay for empty state:
 
 ## Implementation Checklist
 
-- [ ] Migrate 5 dark background patterns → surface variables
-- [ ] Migrate 7 gray border patterns → `var(--border-color)`
-- [ ] Migrate 6 indigo accent patterns → `--theme-primary` / `--theme-primary-hover`
-- [ ] Migrate 4 white text patterns → `var(--theme-text)` or `var(--accent-text-color)`
-- [ ] Migrate 5 muted text patterns → `color-mix()` with opacity
-- [ ] Migrate 1 error color → `var(--error-color)`
-- [ ] Migrate 2 dark shadow patterns → `var(--shadow-md)` or `color-mix()`
-- [ ] Migrate 2 light overlay patterns → `color-mix()` with `--theme-text`
-- [ ] Migrate 1 dark overlay → `color-mix()` with `--theme-background`
-- [ ] **SKIP** `transparent !important` (line 12) - intentional
-- [ ] Verify 30 patterns migrated, 1 intentionally skipped
-- [ ] Test with light theme
-- [ ] Test with dark theme
-- [ ] Verify spool selection works correctly
+- [x] Migrate 5 dark background patterns → surface variables
+- [x] Migrate 7 gray border patterns → `var(--border-color)`
+- [x] Migrate 6 indigo accent patterns → `--theme-primary` / `--theme-primary-hover`
+- [x] Migrate 4 white text patterns → `var(--theme-text)` or `var(--accent-text-color)`
+- [x] Migrate 5 muted text patterns → `color-mix()` with opacity
+- [x] Migrate 1 error color → `var(--error-color)`
+- [x] Migrate 2 dark shadow patterns → `var(--shadow-md)` or `color-mix()`
+- [x] Migrate 2 light overlay patterns → `color-mix()` with `--theme-text`
+- [x] Migrate 1 dark overlay → `color-mix()` with `--theme-background`
+- [x] **SKIP** `transparent !important` (line 12) - intentional
+- [x] Verify 30 patterns migrated, 1 intentionally skipped
+- [ ] Test with light theme (requires runtime testing)
+- [ ] Test with dark theme (requires runtime testing)
+- [ ] Verify spool selection works correctly (requires runtime testing)
 
-## Expected Outcome
+## Completion Summary
 
-After migration:
-- **Before:** 31 total patterns (30 to migrate, 1 intentional)
-- **After:** 1 intentional pattern remains (`transparent`)
+Migration completed successfully on 2025-11-28:
+- ✅ **Before:** 31 total patterns (30 to migrate, 1 intentional)
+- ✅ **After:** 1 intentional pattern remains (`transparent !important` on line 12)
+- ✅ All 30 hardcoded color patterns migrated to theme system variables
+- ✅ Type checking passed (0 errors)
+- ✅ Webpack build passed successfully
+- ✅ Lint passed (pre-existing warnings unrelated to this migration)
+- ✅ Verified with hardcoded CSS scanner: only 1 intentional pattern remains
+
+**Expected Runtime Behavior:**
 - All UI colors adapt to user-selected theme
 - Indigo accent maps to `--theme-primary`
 - Spool selection visual feedback works across themes
 - Error messages use proper error color
 - Light/dark themes work correctly
+
+**Note:** Runtime testing with actual Spoolman server required for full verification.
 
 ## Common Patterns Reference
 
