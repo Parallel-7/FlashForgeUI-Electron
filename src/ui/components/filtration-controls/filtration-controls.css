@@ -23,7 +23,7 @@
   letter-spacing: 0.5px;
   color: var(--text-color);
   backdrop-filter: blur(8px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm);
 }
 
 .filtration-controls-container .panel-content {
@@ -46,7 +46,7 @@
   background: var(--card-bg);
   border-radius: 6px;
   border: 1px solid var(--border-color);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.03), var(--shadow-sm);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-text) 3%, transparent), var(--shadow-sm);
   transition: all var(--transition-normal);
   min-height: 36px;
   width: 100%;
@@ -55,7 +55,7 @@
 
 .filtration-controls-container .filtration-status-row:hover {
   border-color: var(--border-color-light);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), var(--shadow-md);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-text) 6%, transparent), var(--shadow-md);
   background: var(--card-bg-hover);
   transform: translateY(-1px);
 }
@@ -87,23 +87,23 @@
 /* Subtle interaction feedback */
 .filtration-controls-container .filtration-value:hover {
   color: var(--accent-color);
-  text-shadow: 0 0 12px rgba(66, 133, 244, 0.3);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--accent-color) 30%, transparent);
 }
 
 /* TVOC Level Color Indicators with Enhanced Visibility */
 .filtration-controls-container #tvoc-level-display.tvoc-low {
   color: var(--success-color);
-  text-shadow: 0 0 10px rgba(0, 230, 118, 0.3);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--success-color) 30%, transparent);
 }
 
 .filtration-controls-container #tvoc-level-display.tvoc-medium {
   color: var(--warning-color);
-  text-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--warning-color) 30%, transparent);
 }
 
 .filtration-controls-container #tvoc-level-display.tvoc-high {
   color: var(--error-color);
-  text-shadow: 0 0 10px rgba(244, 67, 54, 0.3);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--error-color) 30%, transparent);
 }
 
 /* Filtration Button Container */
@@ -129,7 +129,7 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   transition: all var(--transition-fast);
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent);
   min-width: 40px;
   display: flex;
   align-items: center;
@@ -142,20 +142,20 @@
 .filtration-controls-container .filtration-control-btn:hover:not(:disabled) {
   background: var(--button-hover);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  box-shadow: var(--shadow-md), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent);
   border-color: var(--border-color-light);
 }
 
 .filtration-controls-container .filtration-control-btn:active:not(:disabled) {
   transform: translateY(0);
   background: var(--button-hover);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 2px 4px color-mix(in srgb, var(--theme-background) 30%, black);
 }
 
 /* Active Filtration Mode Styling - Enhanced */
 .filtration-controls-container .filtration-control-btn.active {
   background: var(--success-color);
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 16px rgba(0, 230, 118, 0.3);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent), 0 0 16px color-mix(in srgb, var(--success-color) 30%, transparent);
   color: var(--accent-text-color);
   border-color: var(--success-color);
 }
@@ -163,19 +163,19 @@
 .filtration-controls-container .filtration-control-btn.active:hover:not(:disabled) {
   background: color-mix(in srgb, var(--success-color) 85%, white);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 20px rgba(0, 230, 118, 0.4);
+  box-shadow: var(--shadow-md), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent), 0 0 20px color-mix(in srgb, var(--success-color) 40%, transparent);
 }
 
 .filtration-controls-container .filtration-control-btn.active:active:not(:disabled) {
   transform: translateY(0);
   background: color-mix(in srgb, var(--success-color) 75%, black);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 2px 4px color-mix(in srgb, var(--theme-background) 30%, black);
 }
 
 /* "None" Button Variant - Red when active */
 .filtration-controls-container .filtration-control-btn#btn-no-filtration.active {
   background: var(--error-color);
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 16px rgba(244, 67, 54, 0.3);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent), 0 0 16px color-mix(in srgb, var(--error-color) 30%, transparent);
   color: var(--button-text-color);
   border-color: var(--error-color);
 }
@@ -183,7 +183,7 @@
 .filtration-controls-container .filtration-control-btn#btn-no-filtration.active:hover:not(:disabled) {
   background: color-mix(in srgb, var(--error-color) 85%, white);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.2), 0 0 20px rgba(244, 67, 54, 0.4);
+  box-shadow: var(--shadow-md), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent), 0 0 20px color-mix(in srgb, var(--error-color) 40%, transparent);
 }
 
 /* Disabled Button States */
@@ -194,7 +194,7 @@
   cursor: not-allowed;
   opacity: 0.6;
   transform: none;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--theme-background) 30%, black);
   border: 1px solid var(--border-color);
 }
 
@@ -202,7 +202,7 @@
 .filtration-controls-container .filtration-control-btn.disabled:hover {
   background: var(--surface-muted);
   transform: none;
-  box-shadow: inset 0 1px 2px rgba(0,0,0,0.3);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--theme-background) 30%, black);
 }
 
 /* Hide filtration section when unavailable */
