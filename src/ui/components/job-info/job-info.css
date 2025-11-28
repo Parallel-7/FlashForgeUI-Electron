@@ -143,11 +143,11 @@
 /* High contrast mode support */
 @media (prefers-contrast: high) {
   .component-job-info progress::-webkit-progress-value {
-    background: #0066cc;
+    background: var(--theme-primary);
   }
-  
+
   .component-job-info progress::-moz-progress-bar {
-    background: #0066cc;
+    background: var(--theme-primary);
   }
   
   .component-job-info .camera-controls button {

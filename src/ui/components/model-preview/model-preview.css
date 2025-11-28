@@ -33,7 +33,7 @@
   letter-spacing: 0.5px;
   color: var(--text-color);
   backdrop-filter: blur(8px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-sm);
 }
 
 /* Panel content area with proper flex layout */
@@ -140,7 +140,7 @@
 /* High contrast mode support */
 @media (prefers-contrast: high) {
   .component-model-preview .model-panel-header {
-    border-bottom-color: #ffffff;
+    border-bottom-color: var(--theme-text);
   }
 
   .component-model-preview #model-preview img {
