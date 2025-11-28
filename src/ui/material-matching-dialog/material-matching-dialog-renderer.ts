@@ -290,7 +290,8 @@ function createSlotItem(slot: MaterialSlotInfo, slotNumber: number): HTMLElement
   if (slot.materialColor) {
     swatch.style.backgroundColor = slot.materialColor;
   } else {
-    swatch.style.backgroundColor = '#333333';
+    // Use theme-aware fallback color for empty material swatches
+    swatch.style.backgroundColor = 'var(--surface-muted)';
   }
 
   const info = document.createElement('div');
@@ -387,7 +388,8 @@ function createMapping(): void {
     slotId: selectedSlot,
     materialName: tool.materialName,
     toolMaterialColor: tool.materialColor,
-    slotMaterialColor: slot.materialColor || '#333333'
+    // Note: Backend expects actual color value, not CSS var, so using neutral gray
+    slotMaterialColor: slot.materialColor || '#808080'
   };
 
   // Validate material compatibility
@@ -463,24 +465,55 @@ function createMappingItem(mapping: AD5XMaterialMapping): HTMLElement {
   item.className = 'mapping-item';
 
   // Check for color difference
-  if (hasColorDifference(mapping.toolMaterialColor, mapping.slotMaterialColor)) {
+  const hasWarning = hasColorDifference(mapping.toolMaterialColor, mapping.slotMaterialColor);
+  if (hasWarning) {
     item.classList.add('mapping-warning');
   }
 
+  // Create content container
+  const content = document.createElement('div');
+  content.className = 'mapping-content';
+
+  // Add warning icon if colors differ
+  if (hasWarning) {
+    const warningIcon = document.createElement('i');
+    warningIcon.className = 'mapping-warning-icon';
+    warningIcon.setAttribute('data-lucide', 'alert-triangle');
+    content.appendChild(warningIcon);
+    window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['alert-triangle'], content);
+  }
+
+  // Add tool color swatch
+  const toolSwatch = document.createElement('div');
+  toolSwatch.className = 'mapping-swatch';
+  toolSwatch.style.backgroundColor = mapping.toolMaterialColor;
+  toolSwatch.title = `Tool ${mapping.toolId + 1} color: ${mapping.toolMaterialColor}`;
+  content.appendChild(toolSwatch);
+
+  // Add text with arrow
   const text = document.createElement('div');
   text.className = 'mapping-text';
   text.innerHTML = `Tool ${mapping.toolId + 1} <span class="mapping-arrow">→</span> Slot ${mapping.slotId}`;
+  content.appendChild(text);
 
-    const removeButton = document.createElement('button');
-    removeButton.className = 'remove-mapping';
-    const removeIcon = document.createElement('i');
-    removeIcon.setAttribute('data-lucide', 'x');
-    removeButton.appendChild(removeIcon);
-    window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x'], removeButton);
-    removeButton.title = 'Remove mapping';
-    removeButton.addEventListener('click', () => removeMapping(mapping.toolId));
+  // Add slot color swatch
+  const slotSwatch = document.createElement('div');
+  slotSwatch.className = 'mapping-swatch';
+  slotSwatch.style.backgroundColor = mapping.slotMaterialColor;
+  slotSwatch.title = `Slot ${mapping.slotId} color: ${mapping.slotMaterialColor}`;
+  content.appendChild(slotSwatch);
 
-  item.appendChild(text);
+  // Add remove button
+  const removeButton = document.createElement('button');
+  removeButton.className = 'remove-mapping';
+  const removeIcon = document.createElement('i');
+  removeIcon.setAttribute('data-lucide', 'x');
+  removeButton.appendChild(removeIcon);
+  window.lucideHelpers?.initializeLucideIconsFromGlobal?.(['x'], removeButton);
+  removeButton.title = 'Remove mapping';
+  removeButton.addEventListener('click', () => removeMapping(mapping.toolId));
+
+  item.appendChild(content);
   item.appendChild(removeButton);
 
   return item;

@@ -92,7 +92,7 @@ body {
 
 .dialog-description {
     margin: 8px 0 0 0;
-    color: var(--text-color-secondary, rgba(255, 255, 255, 0.8));
+    color: color-mix(in srgb, var(--dialog-header-text-color, var(--theme-text)) 80%, transparent);
     font-size: 0.9rem;
     line-height: 1.4;
 }

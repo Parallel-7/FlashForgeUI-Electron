@@ -15,20 +15,6 @@
     height: 100%;
 }
 
-:root {
-    --dark-bg: #2a2a2a;
-    --darker-bg: #1e1e1e;
-    --header-bg: #222222;
-    --border-color: #444444;
-    --button-bg: #4285f4;
-    --button-hover: #5a95f5;
-    --text-color: #e0e0e0;
-    --accent-color: #4285f4;
-    --error-color: #f44336;
-    --warning-color: #ff9800;
-    --success-color: #4caf50;
-}
-
 /* Template provides: body styles */
 
 /* Template provides: .dialog-container, animation, .dialog-header base styles */
@@ -61,7 +47,7 @@
 }
 
 .file-item {
-    background-color: var(--darker-bg);
+    background-color: var(--theme-surface);
     border: 1px solid var(--border-color);
     border-radius: 4px;
     padding: 10px;
@@ -69,7 +55,7 @@
     flex-direction: column;
     align-items: center;
     cursor: pointer;
-    transition: border-color 0.2s;
+    transition: all 0.2s;
     position: relative;
 }
 
@@ -81,8 +67,8 @@
 }
 
 .info-icon {
-    background: var(--accent-color);
-    color: white;
+    background: var(--theme-primary);
+    color: var(--accent-text-color);
     border: none;
     border-radius: 10px;
     width: 20px;
@@ -92,21 +78,23 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
     font-weight: bold;
 }
 
 .info-icon:hover {
-    background: var(--button-hover);
+    background: var(--theme-primary-hover);
     transform: scale(1.1);
 }
 
-.file-item:hover, .file-item.selected {
-    border-color: var(--accent-color);
+.file-item:hover {
+    background-color: var(--surface-elevated);
+    border-color: var(--border-color-focus);
 }
 
 .file-item.selected {
-    background-color: rgba(66, 133, 244, 0.2);
+    background-color: color-mix(in srgb, var(--theme-primary) 20%, transparent);
+    border-color: var(--theme-primary);
 }
 
 .thumbnail {
@@ -115,7 +103,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    background-color: var(--dark-bg);
+    background-color: var(--surface-muted);
     margin-bottom: 8px;
 }
 
@@ -125,7 +113,7 @@
 }
 
 .no-preview {
-    color: #777;
+    color: color-mix(in srgb, var(--theme-text) 45%, transparent);
     font-style: italic;
     font-size: 12px;
     text-align: center;
@@ -161,9 +149,9 @@
 }
 
 button {
-    background: #666;
-    color: white;
-    border: 1px solid #777;
+    background: var(--surface-elevated);
+    color: var(--theme-text);
+    border: 1px solid var(--border-color);
     padding: 8px 16px;
     border-radius: 6px;
     cursor: pointer;
@@ -174,41 +162,43 @@ button {
 }
 
 button:hover {
-    background: var(--surface-elevated);
-    border-color: var(--border-color);
+    background: var(--surface-muted);
+    border-color: var(--border-color-focus);
 }
 
 button:active {
-    background: #555;
+    background: var(--surface-muted);
 }
 
 button:focus {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(102, 102, 102, 0.5);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 50%, transparent);
 }
 
 button:disabled {
-    background-color: #555;
+    background-color: var(--surface-muted);
+    color: color-mix(in srgb, var(--theme-text) 40%, transparent);
     cursor: not-allowed;
     opacity: 0.6;
 }
 
 button.cancel {
-    background: #666;
-}
-
-button.cancel:hover {
     background: var(--surface-elevated);
 }
 
+button.cancel:hover {
+    background: var(--surface-muted);
+}
+
 button#btn-select {
-    background-color: var(--button-bg);
-    border-color: var(--button-bg);
+    background-color: var(--theme-secondary);
+    border-color: var(--theme-secondary);
+    color: var(--button-text-color);
 }
 
 button#btn-select:hover:not(:disabled) {
-    background-color: var(--button-hover);
-    border-color: var(--button-hover);
+    background-color: var(--theme-secondary-hover);
+    border-color: var(--theme-secondary-hover);
 }
 
 /* Loading indicator */
@@ -220,9 +210,9 @@ button#btn-select:hover:not(:disabled) {
 }
 
 .loading-spinner {
-    border: 4px solid rgba(255, 255, 255, 0.3);
+    border: 4px solid color-mix(in srgb, var(--theme-text) 30%, transparent);
     border-radius: 50%;
-    border-top: 4px solid var(--accent-color);
+    border-top: 4px solid var(--theme-primary);
     width: 30px;
     height: 30px;
     animation: spin 1s linear infinite;
@@ -239,7 +229,7 @@ button#btn-select:hover:not(:disabled) {
     justify-content: center;
     align-items: center;
     height: 200px;
-    color: #777;
+    color: color-mix(in srgb, var(--theme-text) 45%, transparent);
     font-style: italic;
     grid-column: 1 / -1;
 }
@@ -251,11 +241,11 @@ button#btn-select:hover:not(:disabled) {
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--darker-bg);
+    background: var(--scrollbar-track-color);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: #666;
+    background: var(--scrollbar-thumb-color);
     border-radius: 4px;
 }
 
