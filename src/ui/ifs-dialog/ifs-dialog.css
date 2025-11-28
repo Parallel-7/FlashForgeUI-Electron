@@ -9,18 +9,7 @@ body {
 
 .dialog-container {
     background: var(--surface-muted, var(--theme-surface));
-    border: 1px solid #555;
-}
-
-/* Custom CSS variables for IFS dialog */
-:root {
-  --accent-color: #5c6bc0;
-  --success-color: #4caf50;
-  --error-color: #f44336;
-  --warning-color: #ff9800;
-  --empty-spool-color: #666;
-  --slot-bg: #353535;
-  --material-bg: #2a2a2a;
+    border: 1px solid var(--border-color);
 }
 
 /* IFS Dialog Specific Styling */
@@ -31,20 +20,20 @@ body {
   align-items: center;
   margin-bottom: 20px;
   padding-bottom: 14px;
-  border-bottom: 1px solid #555;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .station-header h3 {
   font-size: 18px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--theme-text);
   margin: 0;
   flex: 1;
 }
 
 .active-slot-info {
   font-size: 14px;
-  color: #ffffff;
+  color: var(--theme-text);
   flex: 1;
   text-align: center;
 }
@@ -54,24 +43,24 @@ body {
   align-items: center;
   gap: 8px;
   font-size: 14px;
-  color: #cccccc;
+  color: color-mix(in srgb, var(--theme-text) 70%, transparent);
 }
 
 .status-indicator {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background-color: var(--error-color);
+  background-color: #f44336;
   transition: background-color 0.3s ease;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--theme-background) 30%, black);
 }
 
 .status-indicator.connected {
-  background-color: var(--success-color);
+  background-color: #4caf50;
 }
 
 .status-indicator.warning {
-  background-color: var(--warning-color);
+  background-color: #ff9800;
 }
 
 /* Slots container */
@@ -88,8 +77,8 @@ body {
 }
 
 .slot-item {
-  background-color: var(--slot-bg);
-  border: 1px solid #555;
+  background-color: var(--theme-surface);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
   display: flex;
@@ -103,8 +92,8 @@ body {
 }
 
 .slot-item.active {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 12px rgba(92, 107, 192, 0.4);
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--theme-primary) 40%, transparent);
   transform: translateY(-2px);
 }
 
@@ -128,35 +117,24 @@ body {
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background-color: var(--empty-spool-color);
-  border: 4px solid rgba(255, 255, 255, 0.1);
+  background-color: var(--surface-elevated);
+  border: 4px solid color-mix(in srgb, var(--theme-text) 10%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   transition: all 0.3s ease;
-  box-shadow: 
-    inset 0 4px 8px rgba(0, 0, 0, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.spool.has-material {
-  border-color: rgba(255, 255, 255, 0.2);
-  box-shadow: 
-    inset 0 4px 8px rgba(0, 0, 0, 0.4),
-    0 4px 8px rgba(0, 0, 0, 0.3);
+  box-shadow:
+    inset 0 4px 8px color-mix(in srgb, var(--theme-background) 30%, black),
+    0 2px 4px color-mix(in srgb, var(--theme-background) 20%, black);
 }
 
 .spool-center {
-  width: 24px;
-  height: 24px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  background-color: rgba(0, 0, 0, 0.3);
-  border: 2px solid rgba(255, 255, 255, 0.1);
-}
-
-.spool.has-material .spool-center {
-  border-color: rgba(255, 255, 255, 0.2);
+  background-color: var(--surface-muted);
+  border: 2px solid color-mix(in srgb, var(--theme-text) 45%, transparent);
 }
 
 /* Slot information */
@@ -168,30 +146,30 @@ body {
 .slot-label {
   font-size: 14px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--theme-text);
   margin-bottom: 6px;
 }
 
 .material-type {
   font-size: 12px;
-  color: #cccccc;
+  color: color-mix(in srgb, var(--theme-text) 70%, transparent);
   padding: 6px 10px;
   border-radius: 6px;
-  background-color: var(--material-bg);
-  border: 1px solid #555;
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border-color);
   display: inline-block;
   min-width: 60px;
   text-align: center;
 }
 
 .material-type.has-material {
-  background-color: rgba(92, 107, 192, 0.2);
-  border-color: rgba(92, 107, 192, 0.4);
-  color: var(--accent-color);
+  background-color: color-mix(in srgb, var(--theme-primary) 20%, transparent);
+  border-color: color-mix(in srgb, var(--theme-primary) 40%, transparent);
+  color: var(--theme-primary);
 }
 
 .material-type.empty {
-  color: #888888;
+  color: color-mix(in srgb, var(--theme-text) 50%, transparent);
   font-style: italic;
 }
 
@@ -199,7 +177,7 @@ body {
 
 .active-slot-info span:last-child {
   font-weight: 600;
-  color: var(--accent-color);
+  color: var(--theme-primary);
   margin-left: 4px;
 }
 

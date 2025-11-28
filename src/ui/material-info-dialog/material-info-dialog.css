@@ -74,7 +74,7 @@
   width: 100%;
   height: 100%;
   border-radius: 50%;
-  background-color: var(--surface-muted);
+  background-color: var(--surface-elevated);
   border: 4px solid color-mix(in srgb, var(--theme-text) 10%, transparent);
   display: flex;
   align-items: center;
@@ -83,26 +83,15 @@
   transition: all 0.3s ease;
   box-shadow:
     inset 0 4px 8px color-mix(in srgb, var(--theme-background) 30%, black),
-    var(--shadow-sm);
-}
-
-.spool.has-material {
-  border-color: color-mix(in srgb, var(--theme-text) 20%, transparent);
-  box-shadow:
-    inset 0 4px 8px color-mix(in srgb, var(--theme-background) 40%, black),
-    var(--shadow-md);
+    0 2px 4px color-mix(in srgb, var(--theme-background) 20%, black);
 }
 
 .spool-center {
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background-color: color-mix(in srgb, var(--theme-background) 30%, black);
-  border: 2px solid color-mix(in srgb, var(--theme-text) 10%, transparent);
-}
-
-.spool.has-material .spool-center {
-  border-color: color-mix(in srgb, var(--theme-text) 20%, transparent);
+  background-color: var(--surface-muted);
+  border: 2px solid color-mix(in srgb, var(--theme-text) 45%, transparent);
 }
 
 /* Material information */
