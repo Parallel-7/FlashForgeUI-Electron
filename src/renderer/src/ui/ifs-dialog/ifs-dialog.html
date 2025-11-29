@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>IFS - Material Station</title>
+    <link rel="stylesheet" href="ifs-dialog.css">
+    
+    
+</head>
+<body>
+    <div class="dialog-container dialog-container--full">
+        <!-- Dialog Header -->
+        <div class="dialog-header">
+            <div class="dialog-title">IFS - Material Station</div>
+            <button id="btn-close" class="dialog-close" aria-label="Close">
+                <i data-lucide="x" aria-hidden="true"></i>
+            </button>
+        </div>
+        
+        <!-- Dialog Content -->
+        <div class="dialog-content">
+            <div class="station-header">
+                <h3>Material Slots</h3>
+                <div class="active-slot-info">
+                    <span>Active Slot: </span>
+                    <span id="active-slot-text">None</span>
+                </div>
+                <div class="station-status" id="station-status">
+                    <span class="status-indicator" id="status-indicator"></span>
+                    <span id="status-text">Checking...</span>
+                </div>
+            </div>
+            
+            <div class="slots-container" id="slots-container">
+                <!-- Material slots will be populated by JavaScript -->
+                <div class="slot-item" id="slot-1">
+                    <div class="spool-container">
+                        <div class="spool" id="spool-1">
+                            <div class="spool-center"></div>
+                        </div>
+                    </div>
+                    <div class="slot-info">
+                        <div class="slot-label">Slot 1</div>
+                        <div class="material-type" id="material-type-1">Empty</div>
+                    </div>
+                </div>
+                
+                <div class="slot-item" id="slot-2">
+                    <div class="spool-container">
+                        <div class="spool" id="spool-2">
+                            <div class="spool-center"></div>
+                        </div>
+                    </div>
+                    <div class="slot-info">
+                        <div class="slot-label">Slot 2</div>
+                        <div class="material-type" id="material-type-2">Empty</div>
+                    </div>
+                </div>
+                
+                <div class="slot-item" id="slot-3">
+                    <div class="spool-container">
+                        <div class="spool" id="spool-3">
+                            <div class="spool-center"></div>
+                        </div>
+                    </div>
+                    <div class="slot-info">
+                        <div class="slot-label">Slot 3</div>
+                        <div class="material-type" id="material-type-3">Empty</div>
+                    </div>
+                </div>
+                
+                <div class="slot-item" id="slot-4">
+                    <div class="spool-container">
+                        <div class="spool" id="spool-4">
+                            <div class="spool-center"></div>
+                        </div>
+                    </div>
+                    <div class="slot-info">
+                        <div class="slot-label">Slot 4</div>
+                        <div class="material-type" id="material-type-4">Empty</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    
+  <script type="module" src="./ifs-dialog-renderer.ts"></script>
+</body>
+</html> 

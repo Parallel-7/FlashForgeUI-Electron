@@ -1,0 +1,698 @@
+/**
+ * @fileoverview Renderer process for job uploader dialog with 3MF multi-color workflow.
+ *
+ * Implements comprehensive file upload interface with slicer metadata display, AD5X 3MF validation,
+ * and intelligent multi-color material matching integration. Handles file browsing, metadata
+ * visualization (thumbnails, print settings, filament info), and upload progress tracking.
+ * Routes AD5X 3MF files through material matching dialogs while supporting legacy upload for
+ * other printer models.
+ *
+ * Key features:
+ * - Slicer metadata parsing and display (3MF, G-code)
+ * - AD5X 3MF-only validation with user-friendly error messages
+ * - Multi-color filament detection and material matching dialog routing
+ * - Single-color AD5X workflow with confirmation dialog
+ * - Upload progress overlay with percentage and status updates
+ * - Auto-close on successful upload with 2-second delay
+ * - Comprehensive error handling and user feedback
+ */
+
+// job-uploader-renderer.ts
+// TypeScript renderer logic for the Job Uploader Dialog
+// Handles file selection, metadata parsing, and job uploading with full slicer-meta integration
+// ENHANCED: Now supports 3MF multi-color upload for AD5X printers
+
+import type { ParseResult, FilamentInfo } from '@parallel-7/slicer-meta';
+import type { AD5XMaterialMapping } from '@ghosttypes/ff-api';
+import type { JobUploaderAPI, UploadProgress, UploadCompletionResult } from './job-uploader-preload.cts';
+import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+
+// Import types from ff-api for material station functionality
+type FFGcodeToolData = {
+    readonly toolId: number;
+    readonly materialName: string;
+    readonly materialColor: string;
+    readonly filamentWeight: number;
+    readonly slotId: number;
+};
+
+// Ensure this file is treated as a module
+export {};
+
+// Interface for upload job payload
+interface UploadJobPayload {
+    filePath: string;
+    startNow: boolean;
+    autoLevel: boolean;
+}
+
+// Use the ParseResult type from slicer-meta, but allow for error property
+type MetadataResult = ParseResult & {
+    error?: string;
+};
+
+// DOM element references with proper typing
+interface DialogElements {
+    filePathDisplay: HTMLElement | null;
+    browseButton: HTMLButtonElement | null;
+    startNowCheckbox: HTMLInputElement | null;
+    autoLevelCheckbox: HTMLInputElement | null;
+    printerModel: HTMLElement | null;
+    filamentType: HTMLElement | null;
+    filamentLen: HTMLElement | null;
+    supportUsed: HTMLElement | null;
+    slicerName: HTMLElement | null;
+    slicerVer: HTMLElement | null;
+    sliceDate: HTMLElement | null;
+    sliceTime: HTMLElement | null;
+    thumbnailBox: HTMLElement | null;
+    eta: HTMLElement | null;
+    layerHeight: HTMLElement | null;
+    infill: HTMLElement | null;
+    layers: HTMLElement | null;
+    okButton: HTMLButtonElement | null;
+    cancelButton: HTMLButtonElement | null;
+    closeButton: HTMLButtonElement | null;
+    loadingOverlay: HTMLElement | null;
+    uploadProgressOverlay: HTMLElement | null;
+    progressBar: HTMLElement | null;
+    progressPercentage: HTMLElement | null;
+    progressStatus: HTMLElement | null;
+}
+
+// Global state for material mappings (for 3MF multi-color uploads)
+let savedMaterialMappings: AD5XMaterialMapping[] | null = null;
+let currentFilePath: string | null = null;
+let cachedJobUploaderAPI: JobUploaderAPI | null = null;
+
+const getJobUploaderAPI = (): JobUploaderAPI => {
+    if (cachedJobUploaderAPI) {
+        return cachedJobUploaderAPI;
+    }
+    const api = window.api?.dialog?.jobUploader as JobUploaderAPI | undefined;
+    if (!api) {
+        throw new Error('[JobUploader] dialog API not available');
+    }
+    cachedJobUploaderAPI = api;
+    return api;
+};
+
+/**
+ * Convert FilamentInfo array from slicer-meta to FFGcodeToolData format
+ * expected by the material matching dialog
+ */
+function convertFilamentsToToolData(filaments: FilamentInfo[]): FFGcodeToolData[] {
+    return filaments.map((filament, index) => ({
+        toolId: index,
+        materialName: filament.type || 'Unknown',
+        materialColor: filament.color || '#FFFFFF', // Default to white if no color specified
+        filamentWeight: parseFloat(filament.usedG || '0'),
+        slotId: 0 // Will be set by user selection in material matching dialog
+    }));
+}
+
+/**
+ * Determine if file is a 3MF and should use enhanced upload flow
+ */
+async function shouldUseEnhanced3MFFlow(api: JobUploaderAPI, filePath: string): Promise<boolean> {
+    const isAD5X = await api.isAD5XPrinter();
+    if (!isAD5X) {
+        return false;
+    }
+    
+    return filePath.toLowerCase().endsWith('.3mf');
+}
+
+/**
+ * Show warning dialog for 3MF files without filament data
+ */
+function showNoFilamentDataWarning(filePath: string): void {
+    const filename = filePath.split(/[\\/]/).pop() || filePath;
+    const message = `The 3MF file "${filename}" does not contain filament data.\n\nThis may happen with:` +
+        '\n• Files not sliced for multi-color printing' +
+        '\n• Older slicer versions' +
+        '\n• Corrupted or incomplete files' +
+        '\n\nThe file will be uploaded using the standard upload process.';
+    
+    alert(message);
+    
+    // Continue with regular upload flow
+    // The metadata should already be displayed, just enable the OK button
+    const okButton = document.getElementById('btn-ok') as HTMLButtonElement;
+    if (okButton) {
+        okButton.disabled = false;
+    }
+}
+
+// Initialize dialog when DOM is loaded
+document.addEventListener('DOMContentLoaded', (): void => {
+    initializeLucideIconsFromGlobal(['x']);
+    // Get DOM element references with proper type safety
+    const elements: DialogElements = {
+        filePathDisplay: document.getElementById('file-path-display'),
+        browseButton: document.getElementById('btn-browse') as HTMLButtonElement,
+        startNowCheckbox: document.getElementById('cb-start-now') as HTMLInputElement,
+        autoLevelCheckbox: document.getElementById('cb-auto-level') as HTMLInputElement,
+        printerModel: document.getElementById('meta-printer'),
+        filamentType: document.getElementById('meta-filament-type'),
+        filamentLen: document.getElementById('meta-filament-len'),
+        supportUsed: document.getElementById('meta-support'),
+        slicerName: document.getElementById('meta-slicer-name'),
+        slicerVer: document.getElementById('meta-slicer-ver'),
+        sliceDate: document.getElementById('meta-slice-date'),
+        sliceTime: document.getElementById('meta-slice-time'),
+        thumbnailBox: document.getElementById('meta-thumbnail'),
+        eta: document.getElementById('meta-eta'),
+        layerHeight: document.getElementById('meta-layer-height'),
+        infill: document.getElementById('meta-infill'),
+        layers: document.getElementById('meta-layers'),
+        okButton: document.getElementById('btn-ok') as HTMLButtonElement,
+        cancelButton: document.getElementById('btn-cancel') as HTMLButtonElement,
+        closeButton: document.getElementById('btn-close') as HTMLButtonElement,
+        loadingOverlay: document.getElementById('loading-overlay'),
+        uploadProgressOverlay: document.getElementById('upload-progress-overlay'),
+        progressBar: document.getElementById('progress-bar'),
+        progressPercentage: document.getElementById('progress-percentage'),
+        progressStatus: document.getElementById('progress-status')
+    };
+
+    // Verify required elements exist
+    if (!elements.browseButton || !elements.okButton || !elements.cancelButton || !elements.closeButton) {
+        console.error('Job Uploader: Required DOM elements not found');
+        return;
+    }
+
+    let api: JobUploaderAPI;
+    try {
+        api = getJobUploaderAPI();
+    } catch (error) {
+        console.error('Job Uploader: Uploader API not available', error);
+        return;
+    }
+
+    // Set up event handlers
+    setupEventHandlers(elements, api);
+
+    // Set up IPC message handlers
+    setupIPCHandlers(elements, api);
+
+    // Initialize UI state
+    resetMetadata(elements);
+    setOKButtonState(elements, false);
+
+    console.log('Job Uploader Dialog initialized successfully');
+});
+
+/**
+ * Set up all event handlers for dialog interaction
+ */
+function setupEventHandlers(elements: DialogElements, api: JobUploaderAPI): void {
+    // Browse button click handler
+    if (elements.browseButton) {
+        elements.browseButton.addEventListener('click', (): void => {
+            resetMetadata(elements);
+            api.browseFile();
+        });
+    }
+
+    // OK button click handler
+    if (elements.okButton) {
+        elements.okButton.addEventListener('click', (): void => {
+            void handleUploadJob(elements, api);
+        });
+    }
+
+    // Cancel button click handler
+    if (elements.cancelButton) {
+        elements.cancelButton.addEventListener('click', (): void => {
+            handleCancel(api);
+        });
+    }
+
+    // Close button click handler
+    if (elements.closeButton) {
+        elements.closeButton.addEventListener('click', (): void => {
+            handleCancel(api);
+        });
+    }
+}
+
+/**
+ * Set up IPC message handlers for communication with main process
+ */
+function setupIPCHandlers(elements: DialogElements, api: JobUploaderAPI): void {
+    // Handle file selection result
+    api.receiveFile((filePath: string | null): void => {
+        handleFileSelected(elements, filePath);
+    });
+
+    // Handle metadata parsing result
+    api.receiveMetadata((result: MetadataResult): void => {
+        void handleMetadataResult(elements, result, api);
+    });
+
+    // Handle upload progress updates
+    api.receiveUploadProgress((progress: UploadProgress): void => {
+        updateUploadProgress(elements, progress);
+    });
+
+    // Handle upload completion
+    api.receiveUploadComplete((result: UploadCompletionResult): void => {
+        void handleUploadComplete(elements, result, api);
+    });
+}
+
+/**
+ * Handle file selection from file browser
+ */
+function handleFileSelected(elements: DialogElements, filePath: string | null): void {
+    console.log('File selected:', filePath);
+
+    // Clear any previously saved material mappings when a new file is selected
+    savedMaterialMappings = null;
+
+    if (filePath) {
+        currentFilePath = filePath;
+        
+        // Display filename, not full path for brevity
+        const filename = filePath.split(/[\\/]/).pop() || filePath;
+        if (elements.filePathDisplay) {
+            elements.filePathDisplay.textContent = filename;
+            elements.filePathDisplay.title = filePath; // Show full path on hover
+        }
+
+        // OK button remains disabled until metadata is parsed
+        setOKButtonState(elements, false);
+
+        // Show loading overlay while main process parses metadata
+        showLoading(elements, true);
+    } else {
+        // User cancelled file browser
+        currentFilePath = null;
+        if (elements.filePathDisplay) {
+            elements.filePathDisplay.textContent = 'No file selected...';
+            elements.filePathDisplay.title = '';
+        }
+        resetMetadata(elements);
+        setOKButtonState(elements, false);
+        showLoading(elements, false);
+    }
+}
+
+/**
+ * Handle metadata parsing result from main process
+ */
+async function handleMetadataResult(elements: DialogElements, result: MetadataResult, api: JobUploaderAPI): Promise<void> {
+    console.log('Metadata received:', result);
+    
+    // Hide loading overlay
+    showLoading(elements, false);
+
+    if (result && !result.error) {
+        // Check if this is an AD5X printer with a non-3MF file
+        const isAD5X = await api.isAD5XPrinter();
+        const is3MF = currentFilePath?.toLowerCase().endsWith('.3mf');
+        
+        if (isAD5X && !is3MF) {
+            // AD5X printers only support 3MF files
+            const fileName = currentFilePath?.split(/[\\/]/).pop() || 'file';
+            const fileExtension = fileName.split('.').pop()?.toUpperCase() || 'unknown';
+            
+            if (elements.filePathDisplay) {
+                elements.filePathDisplay.textContent = 'Unsupported file type for AD5X printer';
+            }
+            
+            resetMetadata(elements);
+            setOKButtonState(elements, false);
+            currentFilePath = null;
+            
+            alert(`AD5X printers only support 3MF files.\n\nThe selected ${fileExtension} file cannot be uploaded to this printer.\n\nPlease select a 3MF file that has been sliced specifically for the AD5X printer.`);
+            return;
+        }
+        
+        // Successfully parsed metadata - populate the display
+        populateMetadata(elements, result);
+        
+        // Check if this is a 3MF file for AD5X that should use enhanced upload flow
+        if (currentFilePath && await shouldUseEnhanced3MFFlow(api, currentFilePath)) {
+            try {
+                // ✅ NEW: Check both threeMf.filaments and file.filaments as fallback
+                const filaments = result.threeMf?.filaments || result.file?.filaments || [];
+
+                if (filaments.length === 0) {
+                    // No filament data - show warning and fall back to regular upload
+                    console.log('3MF file has no filament data, falling back to regular upload');
+                    showNoFilamentDataWarning(currentFilePath);
+                    return; // Warning function handles enabling OK button
+                }
+
+                // Always show material matching dialog for AD5X 3MF files (single or multi-color)
+                console.log(`3MF file detected with ${filaments.length} filament(s)`);
+                const toolData = convertFilamentsToToolData(filaments);
+
+                if (api.showMaterialMatchingDialog) {
+                    const mappings = await api.showMaterialMatchingDialog(currentFilePath, toolData);
+                    if (mappings && Array.isArray(mappings)) {
+                        // Save material mappings for later use
+                        savedMaterialMappings = mappings;
+                        console.log('Material mappings saved:', mappings);
+                        // Enable OK button now that mappings are confirmed
+                        setOKButtonState(elements, true);
+                    } else {
+                        // User cancelled - disable OK button
+                        console.log('Material matching cancelled by user');
+                        setOKButtonState(elements, false);
+                    }
+                    return; // Don't enable OK button here, handled above
+                }
+            } catch (error) {
+                console.warn('Error processing 3MF file for enhanced upload:', error);
+                // Fall through to regular upload flow
+            }
+        }
+        
+        // Regular upload flow - enable OK button
+        setOKButtonState(elements, true);
+    } else {
+        // Handle parsing error
+        const errorMessage = result?.error || 'Unknown error';
+        console.error('Metadata parsing error:', errorMessage);
+        
+        if (elements.filePathDisplay) {
+            elements.filePathDisplay.textContent = `Error parsing file: ${errorMessage}`;
+        }
+        
+        resetMetadata(elements);
+        setOKButtonState(elements, false);
+        currentFilePath = null;
+
+        // Show error message to user
+        alert(`Could not parse file metadata:\n${errorMessage}`);
+    }
+}
+
+/**
+ * Handle upload job button click
+ */
+async function handleUploadJob(elements: DialogElements, api: JobUploaderAPI): Promise<void> {
+    if (!currentFilePath) return;
+
+    // Check if this should use AD5X upload path
+    const isAD5X = await api.isAD5XPrinter();
+    const is3MF = currentFilePath.toLowerCase().endsWith('.3mf');
+    const useAD5XUpload = isAD5X && is3MF;
+
+    if (useAD5XUpload) {
+        // Use AD5X upload for 3MF files on AD5X printer
+        console.log('Using AD5X upload for 3MF file');
+        
+        try {
+            const result = await api.uploadFileAD5X(
+                currentFilePath,
+                elements.startNowCheckbox?.checked || false,
+                elements.autoLevelCheckbox?.checked || false,
+                savedMaterialMappings || undefined // Use mappings if available (multi-color), undefined for single-color
+            );
+            
+            console.log('AD5X upload result:', result);
+            // Clear saved mappings after upload attempt
+            savedMaterialMappings = null;
+        } catch (error) {
+            console.error('AD5X upload failed:', error);
+            alert(`Upload failed: ${error instanceof Error ? error.message : String(error)}`);
+        }
+    } else if (isAD5X && !is3MF) {
+        // This should not happen due to earlier validation, but safety check
+        alert('AD5X printers only support 3MF files. Please select a valid 3MF file.');
+        return;
+    } else {
+        // Use regular upload for non-AD5X printers or non-3MF files
+        const payload: UploadJobPayload = {
+            filePath: currentFilePath,
+            startNow: elements.startNowCheckbox?.checked || false,
+            autoLevel: elements.autoLevelCheckbox?.checked || false
+        };
+
+        console.log('Uploading job with regular upload:', payload);
+        api.uploadJob(payload);
+    }
+}
+
+/**
+ * Handle cancel/close actions
+ */
+function handleCancel(api: JobUploaderAPI): void {
+    api.cancelUpload();
+}
+
+/**
+ * Populate metadata display with parsed data
+ */
+function populateMetadata(elements: DialogElements, data: MetadataResult): void {
+    // Left Column: Details
+    if (elements.printerModel) {
+        elements.printerModel.textContent = 
+            data.file?.printerModel || 
+            data.threeMf?.printerModelId || 
+            '-';
+    }
+
+    if (elements.filamentType) {
+        elements.filamentType.textContent = 
+            data.file?.filamentType || 
+            data.threeMf?.filaments?.[0]?.type || 
+            '-';
+    }
+
+    if (elements.filamentLen) {
+        let lengthText = '-';
+        let weightText = '';
+
+        // Get length
+        if (data.file?.filaments?.[0]?.usedM) {
+            // NEW: Use file.filaments (works for both .gcode and .3mf)
+            const usedM = parseFloat(data.file.filaments[0].usedM);
+            lengthText = `${usedM.toFixed(2)} m`;
+        } else if (data.threeMf?.filaments?.[0]?.usedM) {
+            // FALLBACK: Use threeMf.filaments for .3mf files
+            const usedM = parseFloat(data.threeMf.filaments[0].usedM);
+            lengthText = `${usedM.toFixed(2)} m`;
+        } else if (data.file?.filamentUsedMM) {
+            // LEGACY: Convert millimeters to meters for display
+            lengthText = `${(data.file.filamentUsedMM / 1000).toFixed(2)} m`;
+        }
+
+        // Get weight (only if length is available)
+        if (lengthText !== '-') {
+            if (data.file?.filamentUsedG) {
+                weightText = ` • ${data.file.filamentUsedG.toFixed(2)} g`;
+            } else if (data.threeMf?.filaments?.[0]?.usedG) {
+                const usedG = parseFloat(data.threeMf.filaments[0].usedG);
+                weightText = ` • ${usedG.toFixed(2)} g`;
+            } else if (data.file?.filaments?.[0]?.usedG) {
+                const usedG = parseFloat(data.file.filaments[0].usedG);
+                weightText = ` • ${usedG.toFixed(2)} g`;
+            }
+        }
+
+        // Combine: "17.42 m • 51.95 g" or just "17.42 m" if no weight data
+        elements.filamentLen.textContent = lengthText + weightText;
+    }
+
+    if (elements.supportUsed) {
+        elements.supportUsed.textContent = data.threeMf ? 
+            (data.threeMf.supportUsed ? 'Yes' : 'No') : 
+            '-';
+    }
+
+    // Middle Column: Slicer Info
+    if (elements.slicerName) {
+        elements.slicerName.textContent = data.slicer?.slicerName || '-';
+    }
+
+    if (elements.slicerVer) {
+        elements.slicerVer.textContent = data.slicer?.slicerVersion || '-';
+    }
+
+    if (elements.sliceDate) {
+        elements.sliceDate.textContent = data.slicer?.sliceDate || '-';
+    }
+
+    if (elements.sliceTime) {
+        elements.sliceTime.textContent = data.slicer?.sliceTime || '-';
+    }
+
+    if (elements.eta) {
+        elements.eta.textContent = data.slicer?.printEta || '-';
+    }
+    
+    // New Print Information Fields - Use available data or fallbacks
+    if (elements.layerHeight) {
+        // Try to get layer height from threeMf or file with proper type checking
+        const threeMfData = data.threeMf as Record<string, unknown> | undefined;
+        const fileData = data.file as Record<string, unknown> | undefined;
+        const layerHeight = (threeMfData?.layerHeight as number | undefined) || (fileData?.layerHeight as number | undefined);
+        elements.layerHeight.textContent = layerHeight ? `${layerHeight} mm` : '-';
+    }
+    if (elements.infill) {
+        // Try to get infill from threeMf or file with proper type checking
+        const threeMfData = data.threeMf as Record<string, unknown> | undefined;
+        const fileData = data.file as Record<string, unknown> | undefined;
+        const infill = (threeMfData?.infill as number | undefined) || (fileData?.infill as number | undefined);
+        elements.infill.textContent = infill ? `${infill}%` : '-';
+    }
+    if (elements.layers) {
+        // Try to get layer count from threeMf or file with proper type checking
+        const threeMfData = data.threeMf as Record<string, unknown> | undefined;
+        const fileData = data.file as Record<string, unknown> | undefined;
+        const layerCount = (threeMfData?.layerCount as number | undefined) || (fileData?.layers as number | undefined);
+        elements.layers.textContent = layerCount ? layerCount.toString() : '-';
+    }
+
+    // Right Column: Thumbnail
+    if (elements.thumbnailBox) {
+        const thumbnailData = data.threeMf?.plateImage || data.file?.thumbnail;
+        if (thumbnailData) {
+            // Check if it already has the data URL prefix
+            const src = thumbnailData.startsWith('data:image') ? 
+                thumbnailData : 
+                `data:image/png;base64,${thumbnailData}`;
+            
+            elements.thumbnailBox.innerHTML = `<img src="${src}" alt="Preview" />`;
+        } else {
+            elements.thumbnailBox.innerHTML = '<span class="no-preview-text">No Preview</span>';
+        }
+    }
+}
+
+/**
+ * Reset all metadata fields to default state
+ */
+function resetMetadata(elements: DialogElements): void {
+    const metadataElements = [
+        elements.printerModel,
+        elements.filamentType,
+        elements.filamentLen,
+        elements.supportUsed,
+        elements.slicerName,
+        elements.slicerVer,
+        elements.sliceDate,
+        elements.sliceTime,
+        elements.eta,
+        elements.layerHeight,
+        elements.infill,
+        elements.layers
+    ];
+
+    metadataElements.forEach(element => {
+        if (element) {
+            element.textContent = '-';
+        }
+    });
+
+    if (elements.thumbnailBox) {
+        elements.thumbnailBox.innerHTML = '<span class="no-preview-text">No Preview</span>';
+    }
+}
+
+/**
+ * Show or hide loading overlay
+ */
+function showLoading(elements: DialogElements, show: boolean): void {
+    if (elements.loadingOverlay) {
+        elements.loadingOverlay.style.display = show ? 'flex' : 'none';
+    }
+}
+
+/**
+ * Enable or disable OK button
+ */
+function setOKButtonState(elements: DialogElements, enabled: boolean): void {
+    if (elements.okButton) {
+        elements.okButton.disabled = !enabled;
+    }
+}
+
+/**
+ * Show or hide upload progress overlay
+ */
+function showUploadProgress(elements: DialogElements, show: boolean): void {
+    if (elements.uploadProgressOverlay) {
+        elements.uploadProgressOverlay.style.display = show ? 'flex' : 'none';
+    }
+}
+
+/**
+ * Update upload progress bar and status
+ */
+function updateUploadProgress(elements: DialogElements, progress: UploadProgress): void {
+    console.log('Upload progress:', progress);
+    
+    // Show progress overlay if not already visible
+    showUploadProgress(elements, true);
+    
+    // Update progress bar width
+    if (elements.progressBar) {
+        elements.progressBar.style.width = `${progress.percentage}%`;
+    }
+    
+    // Update percentage text
+    if (elements.progressPercentage) {
+        elements.progressPercentage.textContent = `${Math.round(progress.percentage)}%`;
+    }
+    
+    // Update status text
+    if (elements.progressStatus) {
+        elements.progressStatus.textContent = progress.status;
+    }
+}
+
+/**
+ * Handle upload completion and auto-close functionality
+ */
+async function handleUploadComplete(elements: DialogElements, result: UploadCompletionResult, api: JobUploaderAPI): Promise<void> {
+    console.log('Upload complete:', result);
+    
+    if (result.success) {
+        // Show success state
+        updateUploadProgress(elements, {
+            percentage: 100,
+            status: `Successfully uploaded ${result.fileName}`,
+            stage: 'completed'
+        });
+        
+        // Auto-close after 2 seconds
+        setTimeout(() => {
+            api.cancelUpload();
+        }, 2000);
+    } else {
+        // Show error state
+        updateUploadProgress(elements, {
+            percentage: 0,
+            status: `Upload failed: ${result.error || 'Unknown error'}`,
+            stage: 'error'
+        });
+        
+        // Hide progress overlay after 5 seconds to show error
+        setTimeout(() => {
+            showUploadProgress(elements, false);
+            if (result.error) {
+                alert(`Upload failed: ${result.error}`);
+            }
+        }, 5000);
+    }
+}
+
+// Cleanup on window unload
+window.addEventListener('beforeunload', (): void => {
+    console.log('Cleaning up Job Uploader Dialog resources');
+    
+    // Clear saved material mappings
+    savedMaterialMappings = null;
+    
+    try {
+        getJobUploaderAPI().removeListeners();
+    } catch (error) {
+        console.warn('Job Uploader: Unable to remove listeners during cleanup', error);
+    }
+});

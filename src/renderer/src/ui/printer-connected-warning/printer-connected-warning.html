@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: blob:;
+        connect-src 'self';
+        font-src 'self';
+        object-src 'none';
+        base-uri 'self';
+        form-action 'self';
+    ">
+    <title>Printer Connected</title>
+    <link rel="stylesheet" href="printer-connected-warning.css">
+    
+    
+</head>
+<body>
+    <div class="dialog-container dialog-container--full">
+        <div class="dialog-header">
+            <div class="dialog-title" id="dialog-title">Printer Connected</div>
+            <button class="dialog-close" id="dialog-close" aria-label="Close">
+                <i data-lucide="x" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <div class="dialog-content">
+            <div class="warning-content">
+                <div class="warning-icon">
+                    <i data-lucide="alert-triangle" aria-hidden="true"></i>
+                </div>
+
+                <div class="warning-message">
+                    <p class="primary-message" id="primary-message">You are currently connected to [PrinterName]</p>
+                    <p class="detail-message">Opening connection options may interfere with ongoing operations. Do you want to continue?</p>
+                </div>
+            </div>
+
+            <div class="dialog-buttons">
+                <button class="dialog-button cancel" id="dialog-cancel">Cancel</button>
+                <button class="dialog-button primary" id="dialog-continue">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    
+  <script type="module" src="./printer-connected-warning-renderer.ts"></script>
+</body>
+</html>
