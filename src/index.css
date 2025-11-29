@@ -348,6 +348,7 @@ body {
   background-color: var(--tab-bg);
   color: var(--text-color);
   border: 1px solid var(--border-color-light);
+  border-radius: 4px;
   cursor: pointer;
   transition: all var(--transition-fast);
   align-items: center;
