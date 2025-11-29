@@ -2,31 +2,23 @@
 /* Import shared template for consistent styling */
 @import url('../shared/rounded-dialog-template.css');
 
-/* Custom CSS variables for input dialog */
-:root {
-    --button-bg: #4285f4;
-    --button-hover: #5a95f5;
-    --input-border: #555;
-    --input-focus: #4285f4;
-}
-
 /* Input Dialog Specific Styling */
 
 /* Message text styling */
 .dialog-message {
     font-size: 14px;
     line-height: 1.4;
-    color: #ffffff;
+    color: var(--theme-text);
     margin-bottom: 16px;
     text-align: center;
 }
 
 /* Input field styling */
 .dialog-input {
-    background-color: #2a2a2a;
-    border: 1px solid var(--input-border);
+    background-color: var(--surface-elevated);
+    border: 1px solid var(--border-color);
     padding: 10px 12px;
-    color: #ffffff;
+    color: var(--theme-text);
     font-size: 14px;
     border-radius: 6px;
     outline: none;
@@ -40,12 +32,12 @@
 }
 
 .dialog-input:focus {
-    border-color: var(--input-focus);
-    box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.3);
+    border-color: var(--theme-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 30%, transparent);
 }
 
 .dialog-input::placeholder {
-    color: #888;
+    color: color-mix(in srgb, var(--theme-text) 50%, transparent);
 }
 
 /* Button container styling */
@@ -58,24 +50,24 @@
 
 /* Button styling - inherit most styles from template */
 .dialog-button {
-    background-color: var(--button-bg);
-    border-color: var(--button-bg);
+    background-color: var(--theme-primary);
+    border-color: var(--theme-primary);
 }
 
 .dialog-button:hover {
-    background-color: var(--button-hover);
-    border-color: var(--button-hover);
+    background-color: var(--theme-primary-hover);
+    border-color: var(--theme-primary-hover);
 }
 
 /* Cancel button variant */
 .dialog-button.cancel {
-    background-color: #666;
-    border-color: #777;
+    background-color: var(--surface-elevated);
+    border-color: var(--border-color);
 }
 
 .dialog-button.cancel:hover {
-    background-color: var(--surface-elevated);
-    border-color: var(--border-color);
+    background-color: var(--surface-muted);
+    border-color: var(--border-color-light);
 }
 
 /* Hidden input state for confirmation dialogs */

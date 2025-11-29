@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -66,6 +67,31 @@ type scanConfig struct {
 	excludePaths []string
 	workerCount  int
 	options      detectionOptions
+	whitelist    *whitelist
+}
+
+type whitelistConfig struct {
+	Version         string                `json:"version"`
+	GlobalPatterns  []globalPattern       `json:"globalPatterns"`
+	FileWhitelists  []fileWhitelist       `json:"fileWhitelists"`
+}
+
+type globalPattern struct {
+	Pattern string `json:"pattern"`
+	Reason  string `json:"reason"`
+}
+
+type fileWhitelist struct {
+	Path     string `json:"path"`
+	Lines    []int  `json:"lines,omitempty"`
+	Pattern  string `json:"pattern,omitempty"`
+	Contains string `json:"contains,omitempty"`
+	Reason   string `json:"reason"`
+}
+
+type whitelist struct {
+	globalPatterns map[string]string // pattern -> reason
+	fileRules      map[string][]fileWhitelist
 }
 
 type scanResult struct {
@@ -100,6 +126,7 @@ func main() {
 	workersFlag := flag.Int("workers", runtime.NumCPU(), "number of worker goroutines to run in parallel")
 	summaryOnly := flag.Bool("summary", false, "only print summary statistics instead of every finding")
 	showDescription := flag.Bool("help-details", false, "print extended description")
+	whitelistPath := flag.String("whitelist", "scripts/css-scanner-whitelist.json", "path to whitelist config file")
 
 	flag.Parse()
 
@@ -126,6 +153,12 @@ func main() {
 
 	lineContains := strings.ToLower(strings.TrimSpace(*lineContainsFlag))
 
+	// Load whitelist if exists
+	wl, err := loadWhitelist(*whitelistPath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "warning: failed to load whitelist: %v\n", err)
+	}
+
 	cfg := scanConfig{
 		root:         absRoot,
 		extensions:   buildSet(*extensions, ","),
@@ -133,6 +166,7 @@ func main() {
 		includePaths: buildList(*includePathsFlag, ","),
 		excludePaths: buildList(*excludePathsFlag, ","),
 		workerCount:  workerCount,
+		whitelist:    wl,
 		options: detectionOptions{
 			allowedKinds: matchKinds,
 			lineContains: lineContains,
@@ -150,6 +184,39 @@ func main() {
 	}
 
 	printResults(result, elapsed, *summaryOnly)
+}
+
+func loadWhitelist(path string) (*whitelist, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil, nil // No whitelist is fine
+		}
+		return nil, err
+	}
+
+	var cfg whitelistConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("invalid whitelist JSON: %w", err)
+	}
+
+	wl := &whitelist{
+		globalPatterns: make(map[string]string),
+		fileRules:      make(map[string][]fileWhitelist),
+	}
+
+	// Index global patterns
+	for _, gp := range cfg.GlobalPatterns {
+		wl.globalPatterns[strings.ToLower(gp.Pattern)] = gp.Reason
+	}
+
+	// Index file rules by normalized path
+	for _, fw := range cfg.FileWhitelists {
+		normalizedPath := normalizeForMatch(fw.Path)
+		wl.fileRules[normalizedPath] = append(wl.fileRules[normalizedPath], fw)
+	}
+
+	return wl, nil
 }
 
 func parseMatchTypes(raw string) (map[string]struct{}, error) {
@@ -248,7 +315,7 @@ func scanWorkspace(cfg scanConfig) (scanResult, error) {
 		go func() {
 			defer wg.Done()
 			for task := range jobCh {
-				analysis, err := analyzeFile(task, cfg.options)
+				analysis, err := analyzeFile(task, cfg.options, cfg.whitelist)
 				resultCh <- fileAnalysisResult{analysis: analysis, err: err}
 			}
 		}()
@@ -337,7 +404,7 @@ func collectFileTasks(cfg scanConfig) ([]fileTask, error) {
 	return tasks, nil
 }
 
-func analyzeFile(task fileTask, opts detectionOptions) (fileAnalysis, error) {
+func analyzeFile(task fileTask, opts detectionOptions, wl *whitelist) (fileAnalysis, error) {
 	file, err := os.Open(task.path)
 	if err != nil {
 		return fileAnalysis{}, err
@@ -369,6 +436,14 @@ func analyzeFile(task fileTask, opts detectionOptions) (fileAnalysis, error) {
 			continue
 		}
 
+		// Filter whitelisted patterns
+		if wl != nil {
+			lineMatches = filterWhitelisted(lineMatches, task.displayPath, lineNumber, line, wl)
+			if len(lineMatches) == 0 {
+				continue
+			}
+		}
+
 		if opts.lineContains != "" {
 			lineLower := strings.ToLower(line)
 			if !strings.Contains(lineLower, opts.lineContains) {
@@ -392,6 +467,62 @@ func analyzeFile(task fileTask, opts detectionOptions) (fileAnalysis, error) {
 		findings:     findings,
 		linesScanned: lineNumber,
 	}, nil
+}
+
+func filterWhitelisted(matches []match, filePath string, lineNum int, lineText string, wl *whitelist) []match {
+	var filtered []match
+	normalizedPath := normalizeForMatch(filePath)
+
+	for _, m := range matches {
+		// Check global patterns first
+		if _, ok := wl.globalPatterns[strings.ToLower(m.Value)]; ok {
+			continue // Skip this match, it's whitelisted globally
+		}
+
+		// Check file-specific rules
+		if rules, ok := wl.fileRules[normalizedPath]; ok {
+			whitelisted := false
+			for _, rule := range rules {
+				// Line-based whitelist
+				if len(rule.Lines) > 0 {
+					for _, wlLine := range rule.Lines {
+						if lineNum == wlLine {
+							whitelisted = true
+							break
+						}
+					}
+				}
+
+				// Line range whitelist (if Lines has 2 elements, treat as range)
+				if len(rule.Lines) == 2 && lineNum >= rule.Lines[0] && lineNum <= rule.Lines[1] {
+					whitelisted = true
+				}
+
+				// Pattern-based whitelist
+				if rule.Pattern != "" && strings.Contains(strings.ToLower(m.Value), strings.ToLower(rule.Pattern)) {
+					whitelisted = true
+				}
+
+				// Contains-based whitelist (check if line contains specific substring)
+				if rule.Contains != "" && strings.Contains(strings.ToLower(lineText), strings.ToLower(rule.Contains)) {
+					whitelisted = true
+				}
+
+				if whitelisted {
+					break
+				}
+			}
+
+			if whitelisted {
+				continue // Skip this match
+			}
+		}
+
+		// Not whitelisted, keep it
+		filtered = append(filtered, m)
+	}
+
+	return filtered
 }
 
 func detectMatches(line string, allowedKinds map[string]struct{}) []match {

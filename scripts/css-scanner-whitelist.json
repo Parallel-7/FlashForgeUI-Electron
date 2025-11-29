@@ -1,0 +1,80 @@
+{
+  "version": "1.0",
+  "globalPatterns": [
+    {
+      "pattern": "transparent",
+      "reason": "Valid CSS keyword for intentional transparency"
+    },
+    {
+      "pattern": "white",
+      "reason": "Valid CSS named color - used for high contrast text on colored backgrounds"
+    }
+  ],
+  "fileWhitelists": [
+    {
+      "path": "src/ui/ifs-dialog/ifs-dialog.css",
+      "lines": [227, 240],
+      "reason": "Physical filament spool colors - represent actual material colors, not theme-dependent UI"
+    },
+    {
+      "path": "src/ui/settings/settings.css",
+      "lines": [602, 608],
+      "reason": "HSL color picker hue gradient - mathematical color spectrum required for picker functionality"
+    },
+    {
+      "path": "src/ui/settings/settings.html",
+      "contains": "placeholder=",
+      "reason": "Example values in input placeholders - user-facing help text, not actual styling"
+    },
+    {
+      "path": "src/ui/settings/sections/DesktopThemeSection.ts",
+      "lines": [450, 461],
+      "reason": "2D color picker canvas rendering - mathematical color space gradient (white to color to black)"
+    },
+    {
+      "path": "src/ui/components/printer-tabs/PrinterTabsComponent.ts",
+      "lines": [90],
+      "reason": "DOM selector querySelector('#add-printer-tab'), not a color value"
+    },
+    {
+      "path": "src/ui/spoolman-dialog/spoolman-dialog-renderer.ts",
+      "lines": [337],
+      "reason": "HTML entity &#039; for apostrophe escaping, not a color value"
+    },
+    {
+      "path": "src/ui/settings/settings.html",
+      "lines": [318],
+      "reason": "Display label showing current picker color value - content, not styling"
+    },
+    {
+      "path": "src/ui/spoolman-dialog/spoolman-dialog-renderer.ts",
+      "pattern": "#666666",
+      "reason": "Default gray fallback color when no material color data available"
+    },
+    {
+      "path": "src/ui/job-uploader/job-uploader-renderer.ts",
+      "pattern": "#FFFFFF",
+      "reason": "Default white fallback color when no filament color specified"
+    },
+    {
+      "path": "src/ui/material-matching-dialog/material-matching-dialog-renderer.ts",
+      "pattern": "#808080",
+      "reason": "Default gray fallback color for material slot with no color data"
+    },
+    {
+      "path": "src/ui/shared/theme-utils.ts",
+      "contains": "shouldStayTransparent",
+      "reason": "Runtime detection of transparent backgrounds for theme switching logic"
+    },
+    {
+      "path": "src/ui/printer-connected-warning/printer-connected-warning.css",
+      "pattern": "#111111",
+      "reason": "High contrast mode soft black for accessibility (softened from pure black for consistency)"
+    },
+    {
+      "path": "src/ui/connect-choice-dialog/connect-choice-dialog-renderer.ts",
+      "pattern": "#dc3545",
+      "reason": "Error banner background color - inline style for dynamic error messages"
+    }
+  ]
+}

@@ -1,7 +1,7 @@
 @import url('../shared/rounded-dialog-template.css');
 
 body {
-  color: #ffffff;
+  color: var(--theme-text);
   font-size: 14px;
 }
 
@@ -34,7 +34,7 @@ body {
 }
 
 .icon-button:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: color-mix(in srgb, var(--theme-text) 20%, transparent);
 }
 
 .status-banner {
@@ -45,31 +45,31 @@ body {
 }
 
 .status-info {
-  background: rgba(66, 133, 244, 0.15);
-  border: 1px solid rgba(66, 133, 244, 0.4);
+  background: color-mix(in srgb, var(--theme-primary) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-primary) 40%, transparent);
 }
 
 .status-success {
-  background: rgba(76, 175, 80, 0.15);
-  border: 1px solid rgba(76, 175, 80, 0.4);
+  background: color-mix(in srgb, var(--success-color) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--success-color) 40%, transparent);
 }
 
 .status-warning {
-  background: rgba(255, 193, 7, 0.15);
-  border: 1px solid rgba(255, 193, 7, 0.4);
+  background: color-mix(in srgb, var(--warning-color) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning-color) 40%, transparent);
 }
 
 .status-error {
-  background: rgba(229, 62, 62, 0.15);
-  border: 1px solid rgba(229, 62, 62, 0.4);
+  background: color-mix(in srgb, var(--error-color) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--error-color) 40%, transparent);
 }
 
 .version-summary {
   margin: 20px 24px 0 24px;
   padding: 16px;
-  background: rgba(255, 255, 255, 0.04);
+  background: color-mix(in srgb, var(--theme-text) 4%, transparent);
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid color-mix(in srgb, var(--theme-text) 8%, transparent);
   display: grid;
   gap: 12px;
 }
@@ -81,20 +81,20 @@ body {
 }
 
 .version-row .label {
-  color: #a0aec0;
+  color: color-mix(in srgb, var(--theme-text) 65%, transparent);
   font-weight: 500;
 }
 
 .version-row .value {
   font-weight: 600;
-  color: #f7fafc;
+  color: var(--theme-text);
 }
 
 .release-notes {
   margin: 20px 24px 0 24px;
-  background: rgba(255, 255, 255, 0.03);
+  background: color-mix(in srgb, var(--theme-text) 3%, transparent);
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid color-mix(in srgb, var(--theme-text) 6%, transparent);
   padding: 16px;
   max-height: 360px;
   overflow-y: auto;
@@ -103,7 +103,7 @@ body {
 .release-notes h3 {
   margin: 0 0 10px 0;
   font-size: 0.95rem;
-  color: #d0d7ff;
+  color: color-mix(in srgb, var(--theme-text) 85%, var(--theme-primary) 15%);
 }
 
 .release-notes p {
@@ -116,7 +116,7 @@ body {
 }
 
 .release-notes::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: color-mix(in srgb, var(--theme-text) 20%, transparent);
   border-radius: 4px;
 }
 
@@ -132,11 +132,11 @@ progress {
   height: 12px;
   border-radius: 8px;
   overflow: hidden;
-  background-color: rgba(255, 255, 255, 0.1);
+  background-color: color-mix(in srgb, var(--theme-text) 10%, transparent);
 }
 
 progress::-webkit-progress-bar {
-  background-color: rgba(255, 255, 255, 0.08);
+  background-color: color-mix(in srgb, var(--theme-text) 8%, transparent);
   border-radius: 8px;
 }
 
@@ -148,7 +148,7 @@ progress::-webkit-progress-value {
 .progress-details {
   display: flex;
   justify-content: space-between;
-  color: #cbd5f5;
+  color: color-mix(in srgb, var(--theme-text) 80%, transparent);
   font-size: 0.85rem;
 }
 
@@ -212,9 +212,9 @@ body.platform-linux .btn-text-linux {
   margin: 0 24px 24px 24px;
   padding: 12px 16px;
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: #e2e8f0;
+  background: color-mix(in srgb, var(--theme-text) 4%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-text) 8%, transparent);
+  color: color-mix(in srgb, var(--theme-text) 90%, transparent);
   line-height: 1.4;
 }
 

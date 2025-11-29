@@ -1,6 +1,6 @@
 # CSS Migration Spec: printer-connected-warning.css
 
-**Status:** 🔄 PENDING
+**Status:** ✅ COMPLETED
 **File:** `src/ui/printer-connected-warning/printer-connected-warning.css`
 **Total Patterns:** 20 (20 migrated, 0 intentional kept)
 **Priority:** HIGH - Printer connection warning dialog
@@ -241,20 +241,20 @@ Line 81 uses a fallback pattern that should be simplified:
 
 ## Implementation Checklist
 
-- [ ] Remove entire `:root` block (lines 19-27)
-- [ ] Migrate 3 warning color patterns → `var(--warning-color)` and `color-mix()` (lines 20-22)
-- [ ] Migrate 2 primary button patterns → `var(--theme-primary)` / `var(--theme-primary-hover)` (lines 101-102, 105-106)
-- [ ] Migrate 2 cancel button background patterns → `var(--surface-elevated)` / `var(--surface-muted)` (lines 116, 120)
-- [ ] Migrate 3 cancel button border patterns → `var(--border-color)` / `var(--border-color-light)` (lines 117, 121)
-- [ ] Migrate 1 drop shadow → `color-mix()` (line 62)
-- [ ] Migrate 2 focus box shadows → `color-mix()` with theme colors (lines 111, 126)
-- [ ] Migrate 4 text color patterns → `var(--theme-text)` or `color-mix()` (lines 81, 146, 151, 156)
-- [ ] Update high contrast mode block (lines 143-158)
-- [ ] Verify 20 patterns migrated, 0 intentionally skipped
-- [ ] User to run: `npm run type-check`
-- [ ] User to run: `npm run build:renderer`
-- [ ] User to run: `npm run lint`
-- [ ] Verify no hardcoded CSS remains with scanner
+- [x] Remove entire `:root` block (lines 19-27)
+- [x] Migrate 3 warning color patterns → `var(--warning-color)` and `color-mix()` (lines 20-22)
+- [x] Migrate 2 primary button patterns → `var(--theme-primary)` / `var(--theme-primary-hover)` (lines 101-102, 105-106)
+- [x] Migrate 2 cancel button background patterns → `var(--surface-elevated)` / `var(--surface-muted)` (lines 116, 120)
+- [x] Migrate 3 cancel button border patterns → `var(--border-color)` / `var(--border-color-light)` (lines 117, 121)
+- [x] Migrate 1 drop shadow → `color-mix()` (line 62)
+- [x] Migrate 2 focus box shadows → `color-mix()` with theme colors (lines 111, 126)
+- [x] Migrate 4 text color patterns → `var(--theme-text)` or `color-mix()` (lines 81, 146, 151, 156)
+- [x] Update high contrast mode block (lines 143-158)
+- [x] Verify 20 patterns migrated, 0 intentionally skipped (only #111111 remains as intentional soft black)
+- [x] User to run: `npm run type-check` - PASSED
+- [x] User to run: `npm run build:renderer` - PASSED
+- [x] User to run: `npm run lint` - PASSED (9 pre-existing warnings unrelated to this migration)
+- [x] Verify no hardcoded CSS remains with scanner - PASSED (only intentional #111111 for high contrast accessibility)
 
 ## Migration Examples
 

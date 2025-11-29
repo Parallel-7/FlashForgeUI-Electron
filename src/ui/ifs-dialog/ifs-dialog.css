@@ -50,17 +50,17 @@ body {
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background-color: #f44336;
+  background-color: var(--error-color);
   transition: background-color 0.3s ease;
   box-shadow: 0 0 4px color-mix(in srgb, var(--theme-background) 30%, black);
 }
 
 .status-indicator.connected {
-  background-color: #4caf50;
+  background-color: var(--success-color);
 }
 
 .status-indicator.warning {
-  background-color: #ff9800;
+  background-color: var(--warning-color);
 }
 
 /* Slots container */

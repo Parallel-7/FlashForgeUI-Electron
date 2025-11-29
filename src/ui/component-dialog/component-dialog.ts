@@ -264,7 +264,7 @@ function showError(message: string): void {
         align-items: center;
         justify-content: center;
         height: 100%;
-        color: #f44336;
+        color: var(--error-color);
         font-size: 14px;
         text-align: center;
         padding: 20px;

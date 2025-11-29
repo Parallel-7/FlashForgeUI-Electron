@@ -385,7 +385,7 @@ const showDiscoveryTimeout = (): void => {
     elements.noPrintersMessage.innerHTML = `
         <div style="text-align: center;">
             <p style="margin-bottom: 10px;">Discovery timed out after 15 seconds.</p>
-            <p style="font-size: 0.9em; color: #666;">Please check your network connection and ensure LAN mode is enabled on your printer.</p>
+            <p style="font-size: 0.9em; color: color-mix(in srgb, var(--theme-text) 60%, transparent);">Please check your network connection and ensure LAN mode is enabled on your printer.</p>
             <button onclick="window.location.reload()" style="margin-top: 10px; padding: 5px 15px; cursor: pointer;">Retry</button>
         </div>
     `;
@@ -544,10 +544,10 @@ const setupIPCListeners = (): void => {
         if (elements.noPrintersMessage) {
             elements.noPrintersMessage.style.display = 'flex';
             elements.noPrintersMessage.innerHTML = `
-                <div style="text-align: center; color: #d32f2f;">
+                <div style="text-align: center; color: var(--error-color);">
                     <p style="margin-bottom: 10px; font-weight: bold;">Discovery Error</p>
                     <p style="font-size: 0.9em;">${data.message}</p>
-                    <p style="font-size: 0.8em; color: #666; margin-top: 10px;">Error: ${data.error}</p>
+                    <p style="font-size: 0.8em; color: color-mix(in srgb, var(--theme-text) 60%, transparent); margin-top: 10px;">Error: ${data.error}</p>
                     <button onclick="window.location.reload()" style="margin-top: 15px; padding: 5px 15px; cursor: pointer;">Retry</button>
                 </div>
             `;

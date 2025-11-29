@@ -1,6 +1,6 @@
 # CSS Migration Spec: spoolman-offline-dialog.css
 
-**Status:** 🔄 PENDING
+**Status:** ✅ COMPLETED
 **File:** `src/ui/spoolman-offline-dialog/spoolman-offline-dialog.css`
 **Total Patterns:** 18 (17 migrated, 1 intentional kept)
 **Priority:** HIGH - Spoolman offline warning dialog

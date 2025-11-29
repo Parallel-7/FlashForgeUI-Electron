@@ -1,6 +1,6 @@
 # CSS Migration Spec: update-available.css
 
-**Status:** ⏳ PENDING
+**Status:** ✅ COMPLETED (2025-11-28)
 **File:** `src/ui/update-available/update-available.css`
 **Total Patterns:** 24 hardcoded colors
 **Priority:** HIGH - Auto-update notification dialog
@@ -61,15 +61,19 @@ Secondary text colors for labels and metadata:
 
 ## Implementation Checklist
 
-- [ ] Migrate 11 white/transparent overlay patterns → `color-mix()` with `--theme-text`
-- [ ] Migrate 8 status banner patterns → `color-mix()` with status/primary colors
-- [ ] Migrate 5 muted text patterns → `color-mix()` or `var(--theme-text)`
-- [ ] Verify progress bar uses `var(--accent-color)` (line 144 - already migrated)
-- [ ] Verify button styles use theme variables (lines 175-192 - already migrated)
+- [x] Migrate 11 white/transparent overlay patterns → `color-mix()` with `--theme-text`
+- [x] Migrate 8 status banner patterns → `color-mix()` with status/primary colors
+- [x] Migrate 5 muted text patterns → `color-mix()` or `var(--theme-text)`
+- [x] Verify progress bar uses `var(--accent-color)` (line 144 - already migrated)
+- [x] Verify button styles use theme variables (lines 175-192 - already migrated)
+- [x] Type checking passed
+- [x] Renderer build passed
+- [x] Linting passed (no new warnings)
+- [x] Hardcoded CSS scan passed (only `transparent` keyword remains, which is correct)
 - [ ] Test with light theme (runtime testing required)
 - [ ] Test with dark theme (runtime testing required)
-- [ ] Verify update download progress UI
-- [ ] Verify status banners display correctly for all states
+- [ ] Verify update download progress UI (runtime testing required)
+- [ ] Verify status banners display correctly for all states (runtime testing required)
 
 ## Common Patterns Reference
 

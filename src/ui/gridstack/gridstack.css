@@ -357,5 +357,5 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
 
 body.edit-mode .grid-stack-item.grid-stack-item-locked .grid-stack-item-content {
   border-color: var(--warning-color);
-  box-shadow: 0 0 0 2px rgba(255, 152, 0, 0.2);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning-color) 20%, transparent);
 }

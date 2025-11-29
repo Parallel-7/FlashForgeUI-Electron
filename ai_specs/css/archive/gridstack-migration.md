@@ -1,8 +1,8 @@
 # CSS Migration Spec: gridstack.css
 
-**Status:** 🔴 NOT STARTED
+**Status:** ✅ COMPLETED
 **File:** `src/ui/gridstack/gridstack.css`
-**Total Patterns:** 1 pattern (needs verification, likely intentional)
+**Total Patterns:** 1 pattern (migrated)
 **Priority:** MEDIUM - GridStack dashboard styling for main window
 **Impact:** Affects the main dashboard grid layout edit mode visual feedback
 
@@ -80,12 +80,12 @@ body.edit-mode .grid-stack-item.grid-stack-item-locked .grid-stack-item-content 
 
 ## Implementation Checklist
 
-- [ ] Verify this is the ONLY hardcoded pattern in the file
-- [ ] Migrate line 360 box-shadow → `color-mix(in srgb, var(--warning-color) 20%, transparent)`
-- [ ] User to run: `npm run type-check`
-- [ ] User to run: `npm run build:renderer`
-- [ ] User to run: `npm run lint`
-- [ ] Verify with hardcoded CSS scanner: `go run ./scripts/detect-hardcoded-css.go --path-include src/ui/gridstack/gridstack.css`
+- [x] Verify this is the ONLY hardcoded pattern in the file
+- [x] Migrate line 360 box-shadow → `color-mix(in srgb, var(--warning-color) 20%, transparent)`
+- [x] User to run: `npm run type-check` (PASSED)
+- [x] User to run: `npm run build:renderer` (PASSED)
+- [x] User to run: `npm run lint` (PASSED - 0 errors, 9 pre-existing warnings)
+- [x] Verify with hardcoded CSS scanner: `go run ./scripts/detect-hardcoded-css.go --path-include src/ui/gridstack/gridstack.css` (PASSED - no hardcoded patterns detected)
 - [ ] Test grid edit mode with locked items (requires runtime testing)
 - [ ] Verify warning color glow appears correctly on locked items in edit mode
 

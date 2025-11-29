@@ -30,8 +30,8 @@
 .choice-button {
     display: flex;
     align-items: center;
-    background: #4a4a4a;
-    border: 2px solid #555;
+    background: var(--surface-elevated);
+    border: 2px solid var(--border-color);
     border-radius: 8px;
     padding: 16px;
     cursor: pointer;
@@ -46,18 +46,18 @@
     border-color: var(--theme-primary);
     background: var(--surface-elevated);
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(74, 144, 226, 0.2);
+    box-shadow: 0 4px 12px color-mix(in srgb, var(--theme-primary) 20%, transparent);
 }
 
 .choice-button:active {
     transform: translateY(0);
-    box-shadow: 0 2px 8px rgba(74, 144, 226, 0.3);
+    box-shadow: 0 2px 8px color-mix(in srgb, var(--theme-primary) 30%, transparent);
 }
 
 .choice-button:focus {
     outline: none;
-    border-color: #4a90e2;
-    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.3);
+    border-color: var(--theme-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 30%, transparent);
 }
 
 .choice-icon {
@@ -96,13 +96,13 @@
     margin: 0 0 6px 0;
     font-size: 1.1rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--theme-text);
 }
 
 .choice-content p {
     margin: 0;
     font-size: 0.85rem;
-    color: #b0b0b0;
+    color: color-mix(in srgb, var(--theme-text) 70%, transparent);
     line-height: 1.4;
 }
 
@@ -110,8 +110,8 @@
     padding: 16px 24px 24px 24px;
     display: flex;
     justify-content: flex-end;
-    border-top: 1px solid #555;
-    background: #353535;
+    border-top: 1px solid var(--border-color);
+    background: var(--theme-surface);
     flex-shrink: 0;
 }
 
@@ -120,9 +120,9 @@
 }
 
 .btn-secondary {
-    background: #666;
-    color: white;
-    border: 1px solid #777;
+    background: var(--surface-elevated);
+    color: var(--theme-text);
+    border: 1px solid var(--border-color-light);
     padding: 8px 16px;
     border-radius: 6px;
     cursor: pointer;
@@ -138,26 +138,26 @@
 }
 
 .btn-secondary:active {
-    background: #555;
+    background: var(--surface-muted);
 }
 
 .btn-secondary:focus {
     outline: none;
-    box-shadow: 0 0 0 2px rgba(102, 102, 102, 0.5);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface-elevated) 50%, transparent);
 }
 
 /* High contrast accessibility support */
 @media (prefers-contrast: high) {
     .dialog-container {
-        border-color: #ffffff;
+        border-color: var(--theme-text);
     }
-    
+
     .choice-button {
-        border-color: #ffffff;
+        border-color: var(--theme-text);
     }
-    
+
     .choice-content p {
-        color: #cccccc;
+        color: color-mix(in srgb, var(--theme-text) 80%, transparent);
     }
 }
 
@@ -180,8 +180,8 @@
 
 /* Focus management for keyboard navigation */
 .choice-button.keyboard-focused {
-    border-color: #4a90e2;
-    box-shadow: 0 0 0 2px rgba(74, 144, 226, 0.5);
+    border-color: var(--theme-primary);
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 50%, transparent);
 }
 
 /* Loading state (future enhancement) */

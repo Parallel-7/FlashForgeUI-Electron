@@ -2,16 +2,6 @@
 /* Import shared template for consistent styling */
 @import url('../shared/rounded-dialog-template.css');
 
-/* Custom CSS variables for single color confirmation dialog */
-:root {
-  --button-bg: #4285f4;
-  --button-hover: #5a95f5;
-  --material-type-color: #00ff6e;
-  --spool-bg: #808080;
-  --card-bg: #353535;
-  --option-bg: #2a2a2a;
-}
-
 /* Single Color Confirmation Dialog Specific Styling */
 
 .confirmation-message {
@@ -21,13 +11,13 @@
 
 .confirmation-message p {
   margin: 0 0 12px 0;
-  color: #cccccc;
+  color: color-mix(in srgb, var(--theme-text) 80%, transparent);
   font-size: 14px;
 }
 
 .file-name {
   margin: 0;
-  color: #ffffff;
+  color: var(--theme-text);
   font-size: 18px;
   font-weight: 600;
   word-break: break-word;
@@ -35,8 +25,8 @@
 
 /* Material preview section */
 .material-preview {
-  background-color: var(--card-bg);
-  border: 1px solid #555;
+  background-color: var(--surface-elevated);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 20px;
   margin-bottom: 20px;
@@ -44,7 +34,7 @@
 
 .material-preview h4 {
   margin: 0 0 16px 0;
-  color: #ffffff;
+  color: var(--theme-text);
   font-size: 14px;
   font-weight: 600;
   text-align: center;
@@ -69,10 +59,10 @@
   height: 100%;
   border-radius: 50%;
   background-color: var(--spool-bg);
-  border: 3px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 
-    inset 0 0 20px rgba(0, 0, 0, 0.4),
-    0 4px 12px rgba(0, 0, 0, 0.4);
+  border: 3px solid color-mix(in srgb, var(--theme-text) 30%, transparent);
+  box-shadow:
+    inset 0 0 20px color-mix(in srgb, var(--theme-background) 40%, black),
+    var(--shadow-md);
   transition: all 0.3s ease;
 }
 
@@ -84,8 +74,8 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background-color: #1a1a1a;
-  border: 2px solid rgba(255, 255, 255, 0.2);
+  background-color: var(--theme-background);
+  border: 2px solid color-mix(in srgb, var(--theme-text) 20%, transparent);
 }
 
 /* Material info */
@@ -96,20 +86,20 @@
 .slot-label {
   font-size: 16px;
   font-weight: 600;
-  color: #ffffff;
+  color: var(--theme-text);
   margin-bottom: 6px;
 }
 
 .material-type {
   font-size: 14px;
-  color: var(--material-type-color);
+  color: var(--success-color);
   font-weight: 500;
 }
 
 /* Options section */
 .options-section {
-  background-color: var(--option-bg);
-  border: 1px solid #555;
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 16px;
   margin-bottom: 16px;
@@ -126,20 +116,20 @@
   height: 18px;
   margin-right: 12px;
   cursor: pointer;
-  accent-color: var(--button-bg);
+  accent-color: var(--theme-primary);
 }
 
 .checkbox-label {
-  color: #ffffff;
+  color: var(--theme-text);
   font-size: 14px;
   user-select: none;
 }
 
 /* Error message */
 .error-message {
-  background-color: rgba(255, 68, 68, 0.1);
-  border: 1px solid rgba(255, 68, 68, 0.3);
-  color: #ff4444;
+  background-color: color-mix(in srgb, var(--error-color) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--error-color) 30%, transparent);
+  color: var(--error-color);
   padding: 12px;
   border-radius: 8px;
   font-size: 14px;
@@ -149,23 +139,23 @@
 
 /* Button styling - inherit from template with overrides */
 .dialog-button.primary {
-  background-color: var(--button-bg);
-  border-color: var(--button-bg);
+  background-color: var(--theme-primary);
+  border-color: var(--theme-primary);
 }
 
 .dialog-button.primary:hover {
-  background-color: var(--button-hover);
-  border-color: var(--button-hover);
+  background-color: var(--theme-primary-hover);
+  border-color: var(--theme-primary-hover);
 }
 
 .dialog-button.cancel {
-  background-color: #666;
-  border-color: #777;
+  background-color: var(--surface-elevated);
+  border-color: var(--border-color-light);
 }
 
 .dialog-button.cancel:hover {
-  background-color: #777;
-  border-color: #888;
+  background-color: var(--surface-muted);
+  border-color: var(--border-color);
 }
 
 /* Loading state */
@@ -175,13 +165,13 @@
 
 /* No material state */
 .no-material .spool-color {
-  background-color: #333333;
+  background-color: var(--surface-muted);
   border-style: dashed;
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: color-mix(in srgb, var(--theme-text) 20%, transparent);
 }
 
 .no-material .material-type {
-  color: #888888;
+  color: color-mix(in srgb, var(--theme-text) 50%, transparent);
   font-style: italic;
 }
 

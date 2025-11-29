@@ -10,20 +10,6 @@
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
-/* Custom CSS variables for printer selection dialog */
-:root {
-    --button-bg: #4285f4;
-    --button-hover: #5a95f5;
-    --row-hover-bg: #404040;
-    --selected-bg: #4285f4;
-    --selected-text: white;
-    --status-online: #4caf50;
-    --status-offline: #f44336;
-    --status-changed: #ff9800;
-    --table-border: #555;
-    --table-header-bg: #2a2a2a;
-}
-
 /* Printer Selection Dialog Specific Styling */
 
 /* Override template drag behavior - allow dragging from title text */
@@ -39,10 +25,10 @@
 .table-container {
     flex: 1;
     overflow-y: auto;
-    border: 1px solid var(--table-border);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     margin: 0 0 16px 0;
-    background-color: #353535;
+    background-color: var(--surface-elevated);
     /* Hide scrollbars while maintaining scroll functionality */
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -110,18 +96,18 @@ table.saved-mode td:nth-child(5) {
 th, td {
     padding: 12px;
     text-align: left;
-    border-bottom: 1px solid var(--table-border);
+    border-bottom: 1px solid var(--border-color);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
 
 th {
-    background-color: var(--table-header-bg);
+    background-color: var(--surface-muted);
     position: sticky;
     top: 0;
     z-index: 1;
-    color: #ffffff;
+    color: var(--theme-text);
     font-weight: 600;
     font-size: 14px;
 }
@@ -129,26 +115,26 @@ th {
 tbody tr {
     cursor: pointer;
     transition: all 0.2s ease;
-    background-color: #353535;
+    background-color: var(--surface-elevated);
 }
 
 tbody tr:hover {
-    background-color: var(--row-hover-bg);
+    background-color: var(--surface-elevated);
 }
 
 tbody tr.selected {
-    background-color: var(--selected-bg);
-    color: var(--selected-text);
+    background-color: var(--theme-primary);
+    color: var(--accent-text-color);
 }
 
 tbody tr.last-used {
-    border-left: 3px solid var(--button-bg);
+    border-left: 3px solid var(--theme-primary);
 }
 
 tbody tr.loading-row td,
 .message-overlay {
     text-align: center;
-    color: #aaaaaa;
+    color: color-mix(in srgb, var(--theme-text) 60%, transparent);
     font-style: italic;
     padding: 24px;
 }
@@ -159,7 +145,7 @@ tbody tr.loading-row td,
     left: 0;
     right: 0;
     bottom: 16px;
-    background-color: rgba(53, 53, 53, 0.95);
+    background-color: color-mix(in srgb, var(--surface-elevated) 95%, transparent);
     border-radius: 8px;
     display: flex;
     justify-content: center;
@@ -178,23 +164,23 @@ tbody tr.loading-row td,
 }
 
 .status-online {
-    background-color: var(--status-online);
+    background-color: var(--success-color);
     color: white;
 }
 
 .status-offline {
-    background-color: var(--status-offline);
+    background-color: var(--error-color);
     color: white;
 }
 
 .status-changed {
-    background-color: var(--status-changed);
+    background-color: var(--warning-color);
     color: white;
 }
 
 /* IP address change indicator */
 .ip-changed {
-    color: var(--status-changed);
+    color: var(--warning-color);
     font-size: 0.85em;
 }
 
@@ -215,24 +201,24 @@ tbody tr.loading-row td,
 
 .instructions {
     font-size: 0.9rem;
-    color: #cccccc;
+    color: color-mix(in srgb, var(--theme-text) 75%, transparent);
     font-style: italic;
 }
 
 /* Button styling - inherit from template with overrides */
 .dialog-button {
-    background-color: var(--button-bg);
-    border-color: var(--button-bg);
+    background-color: var(--theme-primary);
+    border-color: var(--theme-primary);
 }
 
 .dialog-button:hover {
-    background-color: var(--button-hover);
-    border-color: var(--button-hover);
+    background-color: var(--theme-primary-hover);
+    border-color: var(--theme-primary-hover);
 }
 
 .dialog-button.cancel {
-    background-color: #666;
-    border-color: #777;
+    background-color: var(--surface-elevated);
+    border-color: var(--border-color);
 }
 
 .dialog-button.cancel:hover {
@@ -241,8 +227,8 @@ tbody tr.loading-row td,
 }
 
 .dialog-button:disabled {
-    background-color: #555;
-    border-color: #666;
+    background-color: var(--surface-muted);
+    border-color: var(--border-color);
     cursor: not-allowed;
     opacity: 0.6;
 }
@@ -250,7 +236,7 @@ tbody tr.loading-row td,
 /* Scanning animation */
 .scanning-animation {
     font-size: 1.1em;
-    color: var(--button-bg);
+    color: var(--theme-primary);
     animation: pulse 1.5s infinite;
 }
 
@@ -268,9 +254,9 @@ tbody tr.loading-row td,
 
 /* Discovery error styles */
 #no-printers-message button {
-    background-color: var(--button-bg);
-    color: white;
-    border: 1px solid var(--button-bg);
+    background-color: var(--theme-primary);
+    color: var(--accent-text-color);
+    border: 1px solid var(--theme-primary);
     border-radius: 6px;
     padding: 8px 20px;
     font-size: 0.9em;
@@ -279,8 +265,8 @@ tbody tr.loading-row td,
 }
 
 #no-printers-message button:hover {
-    background-color: var(--button-hover);
-    border-color: var(--button-hover);
+    background-color: var(--theme-primary-hover);
+    border-color: var(--theme-primary-hover);
 }
 
 /* Responsive design */

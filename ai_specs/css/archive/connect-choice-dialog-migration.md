@@ -1,6 +1,6 @@
 # CSS Migration Spec: connect-choice-dialog.css
 
-**Status:** ⏳ PENDING
+**Status:** ✅ COMPLETED
 **File:** `src/ui/connect-choice-dialog/connect-choice-dialog.css`
 **Total Patterns:** 19 hardcoded colors
 **Priority:** HIGH - Initial connection flow dialog
@@ -109,15 +109,15 @@ Accessibility support for high contrast mode:
 
 ## Implementation Checklist
 
-- [ ] Migrate 2 dark background patterns → surface variables
-- [ ] Migrate 2 border patterns → `var(--border-color)`
-- [ ] Migrate 3 primary shadow patterns → `color-mix()` with `--theme-primary`
-- [ ] Migrate 3 focus state patterns → `var(--theme-primary)` + `color-mix()`
-- [ ] Migrate 2 white text patterns → `var(--theme-text)`
-- [ ] Migrate 2 muted text patterns → `color-mix()` with opacity
-- [ ] Migrate 4 secondary button patterns → surface variables + `color-mix()`
-- [ ] Migrate 2 high contrast patterns → `var(--theme-text)`
-- [ ] Verify existing theme variables remain unchanged (lines 46-47, 136-137, 195-196)
+- [x] Migrate 2 dark background patterns → surface variables
+- [x] Migrate 2 border patterns → `var(--border-color)`
+- [x] Migrate 3 primary shadow patterns → `color-mix()` with `--theme-primary`
+- [x] Migrate 3 focus state patterns → `var(--theme-primary)` + `color-mix()`
+- [x] Migrate 2 white text patterns → `var(--theme-text)`
+- [x] Migrate 2 muted text patterns → `color-mix()` with opacity
+- [x] Migrate 4 secondary button patterns → surface variables + `color-mix()`
+- [x] Migrate 2 high contrast patterns → `var(--theme-text)`
+- [x] Verify existing theme variables remain unchanged (lines 46-47, 136-137, 195-196)
 - [ ] Test with light theme (runtime testing required)
 - [ ] Test with dark theme (runtime testing required)
 - [ ] Test keyboard navigation and focus states

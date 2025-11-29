@@ -1,6 +1,6 @@
 # CSS Migration Spec: status-dialog.css
 
-**Status:** ⏳ PENDING
+**Status:** ✅ COMPLETED (2025-11-28)
 **File:** `src/ui/status-dialog/status-dialog.css`
 **Total Patterns:** 20 hardcoded colors
 **Priority:** MEDIUM - Printer status information dialog
@@ -85,13 +85,17 @@ Active/inactive status indicator dots:
 
 ## Implementation Checklist
 
-- [ ] Migrate 2 dark background patterns → `var(--theme-surface)`
-- [ ] Migrate 3 surface overlay patterns → `color-mix()` with `--theme-text`
-- [ ] Migrate 4 border patterns → `var(--border-color)`
-- [ ] Migrate 1 focus state → `var(--theme-primary)`
-- [ ] Migrate 4 white text patterns → `var(--theme-text)`
-- [ ] Migrate 4 muted text patterns → `color-mix()` with opacity
-- [ ] Migrate 2 status indicator patterns → status color variables
+- [x] Migrate 2 dark background patterns → `var(--theme-surface)`
+- [x] Migrate 3 surface overlay patterns → `color-mix()` with `--theme-text`
+- [x] Migrate 4 border patterns → `var(--border-color)`
+- [x] Migrate 1 focus state → `var(--theme-primary)`
+- [x] Migrate 4 white text patterns → `var(--theme-text)`
+- [x] Migrate 4 muted text patterns → `color-mix()` with opacity
+- [x] Migrate 2 status indicator patterns → status color variables
+- [x] Type checking passed (npm run type-check)
+- [x] Renderer build passed (npm run build:renderer)
+- [x] Linting passed (npm run lint)
+- [x] Verified no hardcoded patterns remain (detect-hardcoded-css.go)
 - [ ] Test with light theme (runtime testing required)
 - [ ] Test with dark theme (runtime testing required)
 - [ ] Verify tab switching works correctly

@@ -23,7 +23,7 @@
   letter-spacing: 0.5px;
   color: var(--text-color);
   backdrop-filter: blur(8px);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--theme-background) 20%, black);
 }
 
 .temperature-controls__content {
@@ -47,7 +47,7 @@
   background: var(--card-bg);
   border-radius: 6px;
   border: 1px solid var(--border-color);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), var(--shadow-sm);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-text) 3%, transparent), var(--shadow-sm);
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
@@ -60,7 +60,7 @@
 .temp-card:hover {
   transform: translateY(-1px);
   border-color: var(--border-color-light);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--shadow-md);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-text) 6%, transparent), var(--shadow-md);
   background: var(--card-bg-hover);
 }
 
@@ -119,11 +119,11 @@
   cursor: pointer;
   transition: all var(--transition-fast);
   min-width: 50px;
-  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  box-shadow: var(--shadow-sm), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 15%, transparent);
 }
 
 .temp-btn--primary {
-  background: var(--accent-color);
+  background: var(--theme-primary);
   color: var(--accent-text-color);
 }
 
@@ -134,13 +134,13 @@
 
 .temp-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  box-shadow: var(--shadow-md), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 15%, transparent);
   border-color: var(--border-color-light);
 }
 
 .temp-btn:active:not(:disabled) {
   transform: translateY(0);
-  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 2px 4px color-mix(in srgb, var(--theme-background) 30%, black);
 }
 
 .temp-btn:disabled {
@@ -150,7 +150,7 @@
   color: var(--text-color-muted);
   border-color: var(--border-color);
   transform: none;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--theme-background) 30%, black);
 }
 
 .temperature-controls__status {
@@ -170,7 +170,7 @@
   justify-content: space-between;
   gap: 8px;
   min-height: 42px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), var(--shadow-sm);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-text) 3%, transparent), var(--shadow-sm);
   transition: all var(--transition-normal);
   backdrop-filter: blur(8px);
 }
@@ -178,7 +178,7 @@
 .fan-card:hover {
   transform: translateY(-1px);
   border-color: var(--border-color-light);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), var(--shadow-md);
+  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-text) 6%, transparent), var(--shadow-md);
   background: var(--card-bg-hover);
 }
 
@@ -198,26 +198,26 @@
   font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
   padding: 4px 10px;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--accent-color) 12%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent-color) 25%, transparent);
+  background: color-mix(in srgb, var(--theme-primary) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-primary) 25%, transparent);
   min-width: 40px;
   text-align: center;
   transition: all var(--transition-normal);
 }
 
 .fan-card:hover .fan-card__value {
-  background: color-mix(in srgb, var(--accent-color) 20%, transparent);
-  border-color: color-mix(in srgb, var(--accent-color) 35%, transparent);
+  background: color-mix(in srgb, var(--theme-primary) 20%, transparent);
+  border-color: color-mix(in srgb, var(--theme-primary) 35%, transparent);
 }
 
 .temp-heating {
   color: var(--warning-color);
-  text-shadow: 0 0 10px rgba(255, 152, 0, 0.4);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--warning-color) 40%, transparent);
 }
 
 .temp-at-target {
   color: var(--success-color);
-  text-shadow: 0 0 10px rgba(0, 230, 118, 0.4);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--success-color) 40%, transparent);
 }
 
 @media (max-width: 900px) {

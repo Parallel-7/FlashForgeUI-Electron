@@ -1,13 +1,5 @@
 @import url('../shared/rounded-dialog-template.css');
 
-:root {
-  --warning-color: #f97316;
-  --warning-bg: rgba(249, 115, 22, 0.15);
-  --warning-border: rgba(249, 115, 22, 0.35);
-  --primary-button: #38bdf8;
-  --primary-button-hover: #0ea5e9;
-}
-
 * {
   margin: 0;
   padding: 0;
@@ -41,8 +33,8 @@ body {
   width: 72px;
   height: 72px;
   border-radius: 16px;
-  background: var(--warning-bg);
-  border: 1px solid var(--warning-border);
+  background: color-mix(in srgb, var(--warning-color) 15%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning-color) 35%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -61,29 +53,29 @@ body {
 .primary-message {
   font-size: 16px;
   font-weight: 600;
-  color: #fff;
+  color: var(--theme-text);
   margin-bottom: 8px;
 }
 
 .detail-message {
   font-size: 14px;
-  color: #cbd5f5;
+  color: color-mix(in srgb, var(--theme-text) 80%, transparent);
   line-height: 1.6;
 }
 
 .status-message {
   min-height: 20px;
   font-size: 14px;
-  color: #cbd5f5;
+  color: color-mix(in srgb, var(--theme-text) 80%, transparent);
   margin-bottom: 8px;
 }
 
 .status-message.status-error {
-  color: #fb7185;
+  color: var(--error-color);
 }
 
 .status-message.status-success {
-  color: #4ade80;
+  color: var(--success-color);
 }
 
 .dialog-buttons {
@@ -102,13 +94,13 @@ body {
 }
 
 .dialog-button.primary {
-  background-color: var(--primary-button);
-  border-color: var(--primary-button);
+  background-color: var(--theme-primary);
+  border-color: var(--theme-primary);
 }
 
 .dialog-button.primary:hover:not(:disabled) {
-  background-color: var(--primary-button-hover);
-  border-color: var(--primary-button-hover);
+  background-color: var(--theme-primary-hover);
+  border-color: var(--theme-primary-hover);
 }
 
 .dialog-button.primary:disabled {
@@ -118,12 +110,12 @@ body {
 
 .dialog-button.secondary {
   background-color: transparent;
-  border-color: rgba(255, 255, 255, 0.3);
-  color: #e5e7eb;
+  border-color: var(--border-color);
+  color: var(--theme-text);
 }
 
 .dialog-button.secondary:hover {
-  border-color: rgba(255, 255, 255, 0.55);
+  border-color: var(--border-color-focus);
 }
 
 .dialog-button i {

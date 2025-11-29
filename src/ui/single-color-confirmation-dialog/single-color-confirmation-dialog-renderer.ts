@@ -221,13 +221,15 @@ function displayMaterialInfo(): void {
     if (activeSlotInfo.materialColor) {
       spoolColorElement.style.backgroundColor = activeSlotInfo.materialColor;
     } else {
-      spoolColorElement.style.backgroundColor = '#333333';
+      // Remove inline style to let CSS handle no-material state with theme variables
+      spoolColorElement.style.backgroundColor = '';
     }
   } else {
     // No active slot
     slotLabelElement.textContent = 'No active slot';
     materialTypeElement.textContent = 'No material';
-    spoolColorElement.style.backgroundColor = '#333333';
+    // Remove inline style to let CSS handle no-material state with theme variables
+    spoolColorElement.style.backgroundColor = '';
     materialTypeElement.parentElement?.parentElement?.classList.add('no-material');
   }
 }

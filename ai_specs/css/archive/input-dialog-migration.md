@@ -1,6 +1,6 @@
 # CSS Migration Spec: input-dialog.css
 
-**Status:** 🔄 PENDING
+**Status:** ✅ COMPLETED
 **File:** `src/ui/input-dialog/input-dialog.css`
 **Total Patterns:** 9 (9 migrated, 0 intentional kept)
 **Priority:** HIGH - Input dialog (critical UI component)
@@ -195,20 +195,20 @@ Lines 71-79 define cancel button (already partially migrated):
 
 ## Implementation Checklist
 
-- [ ] Remove entire `:root` block (lines 6-11)
-- [ ] Migrate 2 primary button patterns → `var(--theme-primary)` / `var(--theme-primary-hover)` (lines 61-62, 65-66)
-- [ ] Migrate 2 input border patterns → `var(--border-color)` and `var(--theme-primary)` (lines 27, 43)
-- [ ] Migrate 2 white text patterns → `var(--theme-text)` (lines 19, 29)
-- [ ] Migrate 2 dark background patterns → `var(--surface-elevated)` (lines 26, 72)
-- [ ] Migrate 2 cancel button border patterns → `var(--border-color)` (line 73)
-- [ ] Migrate 1 placeholder text → `color-mix()` (line 48)
-- [ ] Migrate 1 focus box shadow → `color-mix()` (line 44)
-- [ ] Update cancel button hover to use `var(--surface-muted)` (line 77)
-- [ ] Verify 9 patterns migrated, 0 intentionally skipped
-- [ ] User to run: `npm run type-check`
-- [ ] User to run: `npm run build:renderer`
-- [ ] User to run: `npm run lint`
-- [ ] Verify no hardcoded CSS remains with scanner
+- [x] Remove entire `:root` block (lines 6-11)
+- [x] Migrate 2 primary button patterns → `var(--theme-primary)` / `var(--theme-primary-hover)` (lines 61-62, 65-66)
+- [x] Migrate 2 input border patterns → `var(--border-color)` and `var(--theme-primary)` (lines 27, 43)
+- [x] Migrate 2 white text patterns → `var(--theme-text)` (lines 19, 29)
+- [x] Migrate 2 dark background patterns → `var(--surface-elevated)` (lines 26, 72)
+- [x] Migrate 2 cancel button border patterns → `var(--border-color)` (line 73)
+- [x] Migrate 1 placeholder text → `color-mix()` (line 48)
+- [x] Migrate 1 focus box shadow → `color-mix()` (line 44)
+- [x] Update cancel button hover to use `var(--surface-muted)` (line 77)
+- [x] Verify 9 patterns migrated, 0 intentionally skipped
+- [x] User to run: `npm run type-check` ✅ PASSED
+- [x] User to run: `npm run build:renderer` ✅ PASSED
+- [x] User to run: `npm run lint` ✅ PASSED (no new errors)
+- [x] Verify no hardcoded CSS remains with scanner ✅ CLEAN
 
 ## Migration Examples
 

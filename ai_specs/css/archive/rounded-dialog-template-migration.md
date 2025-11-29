@@ -1,6 +1,6 @@
 # CSS Migration Spec: rounded-dialog-template.css
 
-**Status:** 🔴 NOT STARTED
+**Status:** ✅ COMPLETED
 **File:** `src/ui/shared/rounded-dialog-template.css`
 **Total Patterns:** 2 patterns (both need migration)
 **Priority:** HIGH - Shared template used by ALL dialogs across the application
@@ -93,12 +93,12 @@ Border color override for high contrast mode accessibility:
 
 ## Implementation Checklist
 
-- [ ] Migrate text shadow on line 89 → `color-mix(in srgb, var(--theme-background) 20%, black)`
-- [ ] Migrate high contrast border on line 239 → `var(--theme-text)`
-- [ ] User to run: `npm run type-check`
-- [ ] User to run: `npm run build:renderer`
-- [ ] User to run: `npm run lint`
-- [ ] Verify with hardcoded CSS scanner: `go run ./scripts/detect-hardcoded-css.go --path-include src/ui/shared/rounded-dialog-template.css`
+- [x] Migrate text shadow on line 89 → `color-mix(in srgb, var(--theme-background) 20%, black)`
+- [x] Migrate high contrast border on line 239 → `var(--theme-text)`
+- [x] User to run: `npm run type-check`
+- [x] User to run: `npm run build:renderer`
+- [x] User to run: `npm run lint`
+- [x] Verify with hardcoded CSS scanner: `go run ./scripts/detect-hardcoded-css.go --path-include src/ui/shared/rounded-dialog-template.css`
 - [ ] **CRITICAL:** Test multiple dialogs to ensure no visual regressions:
   - [ ] Settings dialog
   - [ ] Spoolman selection dialog
@@ -106,7 +106,7 @@ Border color override for high contrast mode accessibility:
   - [ ] Job picker dialog
   - [ ] Upload dialog
 - [ ] User to test with light and dark themes
-- [ ] User to test with light and dark themes
+- [ ] User to test with high contrast mode (Windows accessibility settings or browser DevTools emulation)
 
 ## Expected Behavior
 

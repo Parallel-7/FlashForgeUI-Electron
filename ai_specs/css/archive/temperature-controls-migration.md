@@ -1,6 +1,6 @@
 # CSS Migration Spec: temperature-controls.css
 
-**Status:** ⏳ PENDING
+**Status:** ✅ COMPLETED (2025-11-28)
 **File:** `src/ui/components/temperature-controls/temperature-controls.css`
 **Total Patterns:** 11 hardcoded colors
 **Priority:** MEDIUM - Temperature control panel component
@@ -65,14 +65,14 @@ The file already uses some theme variables correctly:
 
 ## Implementation Checklist
 
-- [ ] Migrate 6 dark shadow inset patterns → `color-mix()` with `--theme-background`
-- [ ] Migrate 2 light overlay patterns → `color-mix()` with `--theme-text`
-- [ ] Migrate 2 temperature glow patterns → `color-mix()` with status colors
-- [ ] **VERIFY** `--accent-color` usage (lines 201, 202, 209, 210) - should be `--theme-primary`
-- [ ] User to run: `npm run type-check`
-- [ ] User to run: `npm run build:renderer`
-- [ ] User to run: `npm run lint`
-- [ ] Verify with `go run ./scripts/detect-hardcoded-css.go --path-include src/ui/components/temperature-controls`
+- [x] Migrate 6 dark shadow inset patterns → `color-mix()` with `--theme-background`
+- [x] Migrate 2 light overlay patterns → `color-mix()` with `--theme-text`
+- [x] Migrate 2 temperature glow patterns → `color-mix()` with status colors
+- [x] **VERIFY** `--accent-color` usage (lines 201, 202, 209, 210) - should be `--theme-primary`
+- [x] User to run: `npm run type-check`
+- [x] User to run: `npm run build:renderer`
+- [x] User to run: `npm run lint`
+- [x] Verify with `go run ./scripts/detect-hardcoded-css.go --path-include src/ui/components/temperature-controls`
 
 ## Migration Details
 

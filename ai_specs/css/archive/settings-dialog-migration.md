@@ -1,8 +1,8 @@
 # CSS Migration Spec: settings.css
 
-**Status:** 🔄 PENDING
+**Status:** ✅ COMPLETED
 **File:** `src/ui/settings/settings.css`
-**Total Patterns:** 10 (10 migrated, 0 intentional kept)
+**Total Patterns:** 10 (3 migrated, 7 intentional kept)
 **Priority:** HIGH - Settings dialog (critical UI component)
 
 ## Pattern Breakdown
@@ -151,14 +151,14 @@ This file already uses many theme variables correctly:
 
 ## Implementation Checklist
 
-- [ ] **VERIFY** if `--shadow-sm`, `--shadow-md`, `--shadow-lg` exist in `index.css`
-- [ ] Migrate 3 box shadow patterns → shadow variables or `color-mix()` (lines 302, 493, 621/631)
-- [ ] **DO NOT MIGRATE** hue slider gradient (lines 601-608) - intentional color wheel
-- [ ] Verify only 3 patterns migrated, 7 color wheel stops preserved
+- [x] **VERIFY** if `--shadow-sm`, `--shadow-md`, `--shadow-lg` exist in `index.css` - Found but with different opacities, used `color-mix()` instead
+- [x] Migrate 3 box shadow patterns → `color-mix()` (lines 302, 493, 621/631)
+- [x] **DO NOT MIGRATE** hue slider gradient (lines 601-608) - intentional color wheel (PRESERVED)
+- [x] Verify only 3 patterns migrated, 7 color wheel stops preserved - ✅ Confirmed
 - [ ] User to run: `npm run type-check`
 - [ ] User to run: `npm run build:renderer`
 - [ ] User to run: `npm run lint`
-- [ ] Verify no hardcoded CSS remains with scanner (excluding color wheel gradient)
+- [x] Verify no hardcoded CSS remains with scanner (excluding color wheel gradient) - ✅ Only intentional patterns remain
 
 ## Migration Examples
 

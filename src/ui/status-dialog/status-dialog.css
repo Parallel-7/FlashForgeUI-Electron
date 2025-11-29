@@ -22,30 +22,30 @@
     flex-shrink: 0;
     padding: 8px 14px;
     border-radius: 6px 6px 0 0;
-    border: 1px solid #444;
+    border: 1px solid var(--border-color);
     border-bottom: none;
-    background: rgba(255, 255, 255, 0.04);
-    color: #e0e0e0;
+    background: color-mix(in srgb, var(--theme-text) 4%, transparent);
+    color: color-mix(in srgb, var(--theme-text) 88%, transparent);
     cursor: pointer;
     font-size: 0.9rem;
     transition: background 0.2s ease, color 0.2s ease;
 }
 
 .status-tab-button[aria-selected="true"] {
-    background: #1e1e1e;
-    color: #ffffff;
+    background: var(--theme-surface);
+    color: var(--theme-text);
     font-weight: 600;
 }
 
 .status-tab-button:focus-visible {
-    outline: 2px solid #4285f4;
+    outline: 2px solid var(--theme-primary);
     outline-offset: 2px;
 }
 
 .tab-panels {
-    border: 1px solid #444;
+    border: 1px solid var(--border-color);
     border-radius: 0 6px 6px 6px;
-    background: #1e1e1e;
+    background: var(--theme-surface);
     padding: 18px;
     display: flex;
     flex-direction: column;
@@ -68,7 +68,7 @@
 .tab-panel-title {
     font-size: 1.1rem;
     font-weight: 600;
-    color: #f0f0f0;
+    color: var(--theme-text);
 }
 
 .status-summary-grid {
@@ -78,8 +78,8 @@
 }
 
 .status-summary-card {
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid #444;
+    background: color-mix(in srgb, var(--theme-text) 4%, transparent);
+    border: 1px solid var(--border-color);
     border-radius: 8px;
     padding: 16px;
     display: flex;
@@ -97,28 +97,28 @@
 .summary-title {
     font-size: 0.95rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--theme-text);
 }
 
 .summary-value {
     font-size: 1.2rem;
     font-weight: 600;
-    color: #ffffff;
+    color: var(--theme-text);
 }
 
 .summary-subtext {
     font-size: 0.85rem;
-    color: #b8b8b8;
+    color: color-mix(in srgb, var(--theme-text) 70%, transparent);
 }
 
 .status-section {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    background: rgba(255, 255, 255, 0.04);
+    background: color-mix(in srgb, var(--theme-text) 4%, transparent);
     padding: 16px;
     border-radius: 8px;
-    border: 1px solid #444;
+    border: 1px solid var(--border-color);
 }
 
 .status-row {
@@ -131,7 +131,7 @@
 
 .status-label {
     font-weight: 600;
-    color: #e0e0e0;
+    color: color-mix(in srgb, var(--theme-text) 88%, transparent);
 }
 
 .status-value {
@@ -139,7 +139,7 @@
     overflow: hidden;
     text-overflow: ellipsis;
     word-break: break-all;
-    color: #b8b8b8;
+    color: color-mix(in srgb, var(--theme-text) 70%, transparent);
 }
 
 .status-indicator,
@@ -153,11 +153,11 @@
 }
 
 .status-active {
-    background-color: #4CAF50;
+    background-color: var(--success-color);
 }
 
 .status-inactive {
-    background-color: #f44336;
+    background-color: var(--error-color);
 }
 
 .dialog-footer .dialog-button {

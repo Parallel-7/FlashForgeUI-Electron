@@ -1,6 +1,6 @@
 # CSS Migration Spec: ifs-dialog.css
 
-**Status:** ⏳ PENDING
+**Status:** ✅ COMPLETED
 **File:** `src/ui/ifs-dialog/ifs-dialog.css`
 **Total Patterns:** 17 hardcoded colors
 **Priority:** HIGH - Material station filament slot visualization
@@ -57,14 +57,14 @@ Lines 227-240 define filament color classes (`.spool-white`, `.spool-black`, `.s
 
 ## Implementation Checklist
 
-- [ ] Migrate 3 status indicator patterns → status color variables
-- [ ] **SKIP** `transparent !important` (line 7) - intentional
-- [ ] **SKIP** All 14 spool color utility classes (lines 227-240) - represent actual filament colors
-- [ ] Verify 3 patterns migrated, 15 intentionally kept
-- [ ] User to run: `npm run type-check`
-- [ ] User to run: `npm run build:renderer`
-- [ ] User to run: `npm run lint`
-- [ ] Verify with `go run ./scripts/detect-hardcoded-css.go --path-include src/ui/ifs-dialog`
+- [x] Migrate 3 status indicator patterns → status color variables
+- [x] **SKIP** `transparent !important` (line 7) - intentional
+- [x] **SKIP** All 14 spool color utility classes (lines 227-240) - represent actual filament colors
+- [x] Verify 3 patterns migrated, 15 intentionally kept
+- [x] User to run: `npm run type-check`
+- [x] User to run: `npm run build:renderer`
+- [x] User to run: `npm run lint`
+- [x] Verify with `go run ./scripts/detect-hardcoded-css.go --path-include src/ui/ifs-dialog`
 
 ## Migration Details
 

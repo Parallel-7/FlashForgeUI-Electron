@@ -86,7 +86,7 @@ body {
     margin: 0;
     font-size: 1.4rem;
     font-weight: 600;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+    text-shadow: 0 1px 2px color-mix(in srgb, var(--theme-background) 20%, black);
     -webkit-app-region: no-drag;
 }
 
@@ -236,7 +236,7 @@ button.primary:hover {
 /* High contrast accessibility support */
 @media (prefers-contrast: high) {
     .dialog-container {
-        border-color: #ffffff;
+        border-color: var(--theme-text);
     }
 }
 
