@@ -164,7 +164,15 @@ export const createJobPickerWindow = (isRecentFiles: boolean = false): void => {
   // Load HTML content
   void loadWindowHTML(jobPickerWindow, 'job-picker');
 
-  // Setup lifecycle handlers with initialization data
+  // Send initialization data to the job picker when ready
+  jobPickerWindow.webContents.on('did-finish-load', () => {
+    if (jobPickerWindow && !jobPickerWindow.isDestroyed()) {
+      const initData: JobPickerInitData = { isRecentFiles };
+      jobPickerWindow.webContents.send('job-picker-init', initData);
+    }
+  });
+
+  // Setup lifecycle handlers with special cleanup tasks
   setupWindowLifecycle(
     jobPickerWindow,
     () => {
@@ -176,12 +184,6 @@ export const createJobPickerWindow = (isRecentFiles: boolean = false): void => {
       // Resume polling when job picker closes
       pollingCoordinator.resumePolling();
       windowManager.setJobPickerWindow(null);
-    },
-    () => {
-      // Send initialization data to the job picker
-      // The renderer will handle fetching the actual job data
-      const initData: JobPickerInitData = { isRecentFiles };
-      jobPickerWindow.webContents.send('job-picker-init', initData);
     }
   );
 

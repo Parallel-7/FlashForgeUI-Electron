@@ -29,8 +29,8 @@ export function applyDialogTheme(theme: ThemeColors): void {
   root.style.setProperty('--theme-surface', theme.surface);
   root.style.setProperty('--theme-text', theme.text);
 
-  const primaryHover = lightenColor(theme.primary, 15);
-  const secondaryHover = lightenColor(theme.secondary, 15);
+  const primaryHover = palette.primaryHover;
+  const secondaryHover = palette.secondaryHover;
   root.style.setProperty('--theme-primary-hover', primaryHover);
   root.style.setProperty('--theme-secondary-hover', secondaryHover);
   root.style.setProperty('--button-bg', theme.primary);

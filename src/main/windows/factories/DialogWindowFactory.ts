@@ -221,6 +221,13 @@ export const createMaterialMatchingDialog = (data: MaterialMatchingDialogData): 
     // Load HTML and setup lifecycle
     void loadWindowHTML(materialMatchingDialogWindow, 'material-matching-dialog');
 
+    // Send initialization data to dialog when ready
+    materialMatchingDialogWindow.webContents.on('did-finish-load', () => {
+      if (materialMatchingDialogWindow && !materialMatchingDialogWindow.isDestroyed()) {
+        materialMatchingDialogWindow.webContents.send('material-matching:init', data);
+      }
+    });
+
     // Setup window lifecycle with cleanup
     setupWindowLifecycle(
       materialMatchingDialogWindow,
@@ -230,10 +237,6 @@ export const createMaterialMatchingDialog = (data: MaterialMatchingDialogData): 
         if (windowData.resolve) {
           windowData.resolve(null);
         }
-      },
-      () => {
-        // Send initialization data to dialog when ready
-        materialMatchingDialogWindow.webContents.send('material-matching:init', data);
       }
     );
 
@@ -274,6 +277,13 @@ export const createSingleColorConfirmationDialog = (data: SingleColorConfirmatio
     // Load HTML and setup lifecycle
     void loadWindowHTML(singleColorConfirmationDialogWindow, 'single-color-confirmation-dialog');
 
+    // Send initialization data to dialog when ready
+    singleColorConfirmationDialogWindow.webContents.on('did-finish-load', () => {
+      if (singleColorConfirmationDialogWindow && !singleColorConfirmationDialogWindow.isDestroyed()) {
+        singleColorConfirmationDialogWindow.webContents.send('single-color-confirm:init', data);
+      }
+    });
+
     // Setup window lifecycle with cleanup
     setupWindowLifecycle(
       singleColorConfirmationDialogWindow,
@@ -283,10 +293,6 @@ export const createSingleColorConfirmationDialog = (data: SingleColorConfirmatio
         if (windowData.resolve) {
           windowData.resolve(false);
         }
-      },
-      () => {
-        // Send initialization data to dialog when ready
-        singleColorConfirmationDialogWindow.webContents.send('single-color-confirm:init', data);
       }
     );
 
@@ -322,15 +328,18 @@ export const createMaterialInfoDialog = (materialData: unknown): void => {
   // Load HTML and setup lifecycle
   void loadWindowHTML(materialInfoDialogWindow, 'material-info-dialog');
 
+  // Send material data to dialog when ready
+  materialInfoDialogWindow.webContents.on('did-finish-load', () => {
+    if (materialInfoDialogWindow && !materialInfoDialogWindow.isDestroyed()) {
+      materialInfoDialogWindow.webContents.send('material-info-dialog-init', materialData);
+    }
+  });
+
   // Setup window lifecycle with cleanup
   setupWindowLifecycle(
     materialInfoDialogWindow,
     () => {
       windowManager.setMaterialInfoDialogWindow(null);
-    },
-    () => {
-      // Send material data to dialog when ready
-      materialInfoDialogWindow.webContents.send('material-info-dialog-init', materialData);
     }
   );
 
@@ -364,15 +373,18 @@ export const createIFSDialog = (): void => {
   // Load HTML and setup lifecycle
   void loadWindowHTML(ifsDialogWindow, 'ifs-dialog');
 
+  // Send initialization message to dialog when ready
+  ifsDialogWindow.webContents.on('did-finish-load', () => {
+    if (ifsDialogWindow && !ifsDialogWindow.isDestroyed()) {
+      ifsDialogWindow.webContents.send('ifs-dialog-init');
+    }
+  });
+
   // Setup window lifecycle with cleanup
   setupWindowLifecycle(
     ifsDialogWindow,
     () => {
       windowManager.setIFSDialogWindow(null);
-    },
-    () => {
-      // Send initialization message to dialog when ready
-      ifsDialogWindow.webContents.send('ifs-dialog-init');
     }
   );
 

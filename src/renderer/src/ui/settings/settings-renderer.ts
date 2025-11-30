@@ -370,6 +370,10 @@ class SettingsRenderer {
 
     // Load desktop theme values
     this.desktopThemeSection?.applyTheme(this.settings.global['DesktopTheme'] as ThemeColors | undefined);
+    // Ensure CSS variables are applied to the document root
+    if (this.settings.global['DesktopTheme']) {
+      applyDialogTheme(this.settings.global['DesktopTheme']);
+    }
     this.applyWebUIEnabledSetting();
 
     // Update input states after loading
