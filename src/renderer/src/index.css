@@ -431,6 +431,12 @@ body {
   background-color: var(--window-control-close-hover, #e81123);
 }
 
+/* Global Scrollbar Visibility Control */
+::-webkit-scrollbar {
+  display: var(--scrollbar-display, initial);
+}
+
+/* Platform-specific styling */
 /* =========================== */
 /* MACOS TRAFFIC LIGHTS STYLING */
 /* =========================== */

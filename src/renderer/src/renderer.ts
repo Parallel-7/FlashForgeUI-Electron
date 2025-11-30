@@ -457,7 +457,7 @@ if (window.api?.config) {
     window.api.config.onUpdated((updatedConfig) => {
       if (updatedConfig?.DesktopTheme) {
         logDebug('Config updated, reapplying desktop theme');
-        applyDesktopTheme(updatedConfig.DesktopTheme);
+        applyDesktopTheme(updatedConfig.DesktopTheme, updatedConfig.HideScrollbars);
       }
     })
   );
@@ -466,7 +466,8 @@ if (window.api?.config) {
     window.api.config.onThemePreview((previewTheme) => {
       if (previewTheme) {
         logDebug('Previewing desktop theme from settings dialog');
-        applyDesktopTheme(previewTheme);
+        // Preview mode might not have access to full config for scrollbars, default to current state if possible or false
+        applyDesktopTheme(previewTheme, document.documentElement.classList.contains('hide-scrollbars'));
       }
     })
   );
@@ -479,10 +480,14 @@ if (window.api?.config) {
 /**
  * Applies theme colors to the document root CSS variables
  * @param theme The theme colors to apply
+ * @param hideScrollbars Whether to hide scrollbars globally
  */
-function applyDesktopTheme(theme: ThemeColors): void {
+function applyDesktopTheme(theme: ThemeColors, hideScrollbars: boolean = false): void {
   const root = document.documentElement;
   const palette = computeThemePalette(theme);
+
+  // Apply scrollbar visibility variable
+  root.style.setProperty('--scrollbar-display', hideScrollbars ? 'none' : 'initial');
 
   // Apply theme color variables
   root.style.setProperty('--theme-primary', theme.primary);
@@ -524,12 +529,12 @@ async function loadAndApplyDesktopTheme(): Promise<void> {
 
     const config = await window.api.config.get();
     if (config.DesktopTheme) {
-      applyDesktopTheme(config.DesktopTheme);
+      applyDesktopTheme(config.DesktopTheme, config.HideScrollbars);
     }
   } catch (error) {
     console.error('Failed to load desktop theme:', error);
     // Apply default theme as fallback to ensure UI is styled
-    applyDesktopTheme(DEFAULT_THEME);
+    applyDesktopTheme(DEFAULT_THEME, false);
   }
 }
 

@@ -92,6 +92,7 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'force-legacy-api': 'ForceLegacyAPI',
   'discord-update-interval': 'DiscordUpdateIntervalMinutes',
   'rounded-ui': 'RoundedUI',
+  'hide-scrollbars': 'HideScrollbars',
   'rtsp-frame-rate': 'RtspFrameRate',
   'rtsp-quality': 'RtspQuality',
   'check-updates-on-launch': 'CheckForUpdatesOnLaunch',
@@ -369,10 +370,12 @@ class SettingsRenderer {
     });
 
     // Load desktop theme values
+    const hideScrollbars = Boolean(this.settings.global['HideScrollbars']);
     this.desktopThemeSection?.applyTheme(this.settings.global['DesktopTheme'] as ThemeColors | undefined);
-    // Ensure CSS variables are applied to the document root
+    
+    // Ensure CSS variables and scrollbar settings are applied to the document root
     if (this.settings.global['DesktopTheme']) {
-      applyDialogTheme(this.settings.global['DesktopTheme']);
+      applyDialogTheme(this.settings.global['DesktopTheme'], hideScrollbars);
     }
     this.applyWebUIEnabledSetting();
 
@@ -648,7 +651,8 @@ class SettingsRenderer {
   private registerThemeListener(): void {
     this.settingsAPI?.receive?.('theme-changed', (data: unknown) => {
       const theme = data as ThemeColors;
-      applyDialogTheme(theme);
+      const hideScrollbars = Boolean(this.settings.global['HideScrollbars']);
+      applyDialogTheme(theme, hideScrollbars);
       // Update the theme section inputs to reflect the new theme
       this.desktopThemeSection?.applyTheme(theme);
     });

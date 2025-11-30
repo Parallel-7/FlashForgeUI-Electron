@@ -145,9 +145,9 @@ body {
     -ms-overflow-style: none; /* Internet Explorer 10+ */
 }
 
-/* Hide scrollbars for WebKit browsers (Chrome, Safari, Edge) */
+/* Hide scrollbars for WebKit browsers (Chrome, Safari, Edge) - Controlled by global setting */
 .dialog-content::-webkit-scrollbar {
-    display: none;
+    display: var(--scrollbar-display, initial);
 }
 
 /* Footer/actions area - adjust padding based on content */

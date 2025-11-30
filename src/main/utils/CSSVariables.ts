@@ -70,6 +70,9 @@ export function injectUIStyleVariables(window: BrowserWindow): void {
       --button-hover: ${primaryHover};
       --button-text-color: ${palette.buttonTextColor};
       --accent-text-color: ${palette.accentTextColor};
+
+      /* Scrollbar visibility */
+      --scrollbar-display: ${config.HideScrollbars ? 'none' : 'initial'};
     }
   `;
 

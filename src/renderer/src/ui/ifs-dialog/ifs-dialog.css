@@ -2,6 +2,13 @@
 /* Import shared template for consistent styling */
 @import url('../shared/rounded-dialog-template.css');
 
+:root {
+  /* Use theme variables with fallbacks matching settings.css */
+  --success-color: var(--theme-success, #4CAF50);
+  --error-color: var(--theme-error, #f44336);
+  --warning-color: var(--theme-warning, #ff9800);
+}
+
 /* Ensure transparent background for IFS dialog */
 body {
     background: transparent !important;
@@ -16,11 +23,12 @@ body {
 
 .station-header {
   display: flex;
-  justify-content: space-between;
+  justify-content: center; /* Center the title */
   align-items: center;
-  margin-bottom: 20px;
+  margin-bottom: 12px;
   padding-bottom: 14px;
   border-bottom: 1px solid var(--border-color);
+  position: relative; /* For absolute positioning of status */
 }
 
 .station-header h3 {
@@ -28,17 +36,20 @@ body {
   font-weight: 600;
   color: var(--theme-text);
   margin: 0;
-  flex: 1;
+  text-align: center;
 }
 
 .active-slot-info {
   font-size: 14px;
   color: var(--theme-text);
-  flex: 1;
   text-align: center;
+  margin-bottom: 20px;
+  width: 100%;
 }
 
 .station-status {
+  position: absolute;
+  right: 0;
   display: flex;
   align-items: center;
   gap: 8px;

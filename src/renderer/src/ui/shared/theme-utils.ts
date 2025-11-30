@@ -11,10 +11,15 @@ import { computeThemePalette } from '@shared/themeColorUtils.js';
 /**
  * Applies theme colors to the document root CSS variables
  * @param theme The theme colors to apply
+ * @param hideScrollbars Whether to hide scrollbars globally
  */
-export function applyDialogTheme(theme: ThemeColors): void {
+export function applyDialogTheme(theme: ThemeColors, hideScrollbars: boolean = false): void {
   const root = document.documentElement;
   const palette = computeThemePalette(theme);
+  
+  // Apply scrollbar visibility variable
+  root.style.setProperty('--scrollbar-display', hideScrollbars ? 'none' : 'initial');
+
   const computedStyles = getComputedStyle(root);
   const currentBackground = computedStyles.getPropertyValue('--ui-background').trim().toLowerCase();
   const shouldStayTransparent = currentBackground === 'transparent' || currentBackground === 'rgba(0, 0, 0, 0)';
