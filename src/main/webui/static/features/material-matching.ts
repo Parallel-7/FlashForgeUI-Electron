@@ -25,6 +25,9 @@ import { $, hideElement, showElement, showToast } from '../shared/dom.js';
 import { colorsDiffer, isAD5XJobFile, materialsMatch } from '../shared/formatting.js';
 import { sendJobStartRequest } from './job-control.js';
 
+const DEFAULT_MATERIAL_GREY = 'var(--text-color-secondary)';
+const DEFAULT_SLOT_GREY = 'var(--surface-muted)';
+
 type MaterialMessageType = 'error' | 'warning';
 
 let materialHandlersRegistered = false;
@@ -183,7 +186,7 @@ export function renderMaterialRequirements(job: WebUIJobFile | undefined): void 
 
     const color = document.createElement('span');
     color.className = 'material-tool-color';
-    color.style.backgroundColor = tool.materialColor || '#cccccc';
+    color.style.backgroundColor = tool.materialColor || DEFAULT_MATERIAL_GREY;
 
     header.appendChild(label);
     header.appendChild(color);
@@ -376,7 +379,7 @@ function handleSlotSelection(slotInfo: MaterialSlotInfo): void {
     slotId: displaySlotId,
     materialName: tool.materialName,
     toolMaterialColor: tool.materialColor,
-    slotMaterialColor: slotInfo.materialColor || '#333333',
+    slotMaterialColor: slotInfo.materialColor || DEFAULT_SLOT_GREY,
   };
 
   matchingState.mappings.set(tool.toolId, mapping);

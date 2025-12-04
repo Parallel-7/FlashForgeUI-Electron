@@ -591,6 +591,11 @@ export async function applyWebUITheme(theme: ThemeColors, save: boolean = true):
   root.style.setProperty('--theme-secondary-hover', secondaryHover);
   root.style.setProperty('--theme-primary-active', primaryActive);
 
+  const metaThemeColor = document.querySelector('meta[name="theme-color"]');
+  if (metaThemeColor) {
+    metaThemeColor.setAttribute('content', theme.background);
+  }
+
   if (save) {
     try {
       await apiRequest<ApiResponse>('/api/webui/theme', {

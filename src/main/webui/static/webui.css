@@ -25,14 +25,14 @@
   /* Secondary derived colors */
   --darker-bg: var(--theme-background, #151515);
   --header-bg: var(--theme-background, #1a1a1a);
-  --text-color-secondary: #b0b0b0;
-  --text-color-muted: #808080;
-  --card-bg-hover: #2a2a2a;
+  --text-color-secondary: color-mix(in srgb, var(--theme-text) 70%, transparent);
+  --text-color-muted: color-mix(in srgb, var(--theme-text) 50%, transparent);
+  --card-bg-hover: color-mix(in srgb, var(--theme-text) 5%, var(--theme-surface));
 
   /* Border colors (derived from surface with transparency) */
-  --border-color: rgba(255, 255, 255, 0.1);
-  --border-color-light: rgba(255, 255, 255, 0.15);
-  --border-color-focus: rgba(255, 255, 255, 0.2);
+  --border-color: color-mix(in srgb, var(--theme-text) 15%, transparent);
+  --border-color-light: color-mix(in srgb, var(--theme-text) 25%, transparent);
+  --border-color-focus: color-mix(in srgb, var(--theme-text) 35%, transparent);
 
   /* Status Colors (independent of theme) */
   --error-color: #f44336;
@@ -48,6 +48,26 @@
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
   --transition-slow: 0.4s ease;
+
+  /* Primary Opacities (derived) */
+  --primary-alpha-10: color-mix(in srgb, var(--theme-primary) 10%, transparent);
+  --primary-alpha-15: color-mix(in srgb, var(--theme-primary) 15%, transparent);
+  --primary-alpha-20: color-mix(in srgb, var(--theme-primary) 20%, transparent);
+  --primary-alpha-35: color-mix(in srgb, var(--theme-primary) 35%, transparent);
+  --primary-alpha-40: color-mix(in srgb, var(--theme-primary) 40%, transparent);
+  --primary-alpha-60: color-mix(in srgb, var(--theme-primary) 60%, transparent);
+
+  /* Warning/Error Opacities */
+  --error-alpha-15: color-mix(in srgb, var(--error-color) 15%, transparent);
+  --error-alpha-40: color-mix(in srgb, var(--error-color) 40%, transparent);
+  --warning-alpha-10: color-mix(in srgb, var(--warning-color) 10%, transparent);
+  --warning-alpha-15: color-mix(in srgb, var(--warning-color) 15%, transparent);
+  --warning-alpha-40: color-mix(in srgb, var(--warning-color) 40%, transparent);
+
+  /* Surface/Background utilities */
+  --overlay-bg: var(--overlay-bg);
+  --surface-muted: color-mix(in srgb, var(--theme-text) 10%, var(--theme-surface));
+  --text-on-primary: #ffffff;
 }
 
 /* Reset and Base Styles */
@@ -131,7 +151,7 @@ body {
 
 .login-form input[type="password"]:focus {
   border-color: var(--border-color-focus);
-  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.35);
+  box-shadow: 0 0 0 2px var(--primary-alpha-35);
 }
 
 .remember-me {
@@ -151,7 +171,7 @@ body {
 
 .login-form button {
   background-color: var(--button-bg);
-  color: #ffffff;
+  color: var(--text-on-primary);
   border: none;
   padding: 12px 24px;
   border-radius: 8px;
@@ -240,7 +260,7 @@ body {
 
 .printer-select:focus {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.35);
+  box-shadow: 0 0 0 2px var(--primary-alpha-35);
 }
 
 .connection-status {
@@ -282,7 +302,7 @@ body {
 }
 
 .edit-mode-toggle[aria-pressed="true"] {
-  background-color: rgba(66, 133, 244, 0.15);
+  background-color: var(--primary-alpha-15);
   border-color: var(--accent-color);
   color: var(--accent-color);
 }
@@ -317,7 +337,7 @@ body {
 .logout-button:focus-visible {
   outline: none;
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.35);
+  box-shadow: 0 0 0 2px var(--primary-alpha-35);
 }
 
 .connection-indicator {
@@ -334,7 +354,7 @@ body {
 
 .logout-button {
   background-color: var(--button-bg);
-  color: #ffffff;
+  color: var(--text-on-primary);
   border: none;
   padding: 8px 16px;
   font-size: 14px;
@@ -350,7 +370,7 @@ body {
   flex: 1;
   padding: 12px;      /* Match Electron (was 20px) */
   overflow: auto;
-  background: radial-gradient(circle at top left, rgba(66, 133, 244, 0.08), transparent 45%);
+  background: radial-gradient(circle at top left, color-mix(in srgb, var(--theme-primary) 8%, transparent), transparent 45%);
 }
 
 .webui-grid {
@@ -369,7 +389,7 @@ body {
 }
 
 .grid-stack.edit-mode .grid-stack-item {
-  border: 2px dashed rgba(66, 133, 244, 0.35);
+  border: 2px dashed var(--primary-alpha-35);
 }
 
 .grid-stack.edit-mode .panel-header::before {
@@ -511,7 +531,7 @@ body {
 .control-btn {
   flex: 1;
   background-color: var(--button-bg);
-  color: #ffffff;
+  color: var(--text-on-primary);
   border: none;
   padding: 12px 16px;
   border-radius: 10px;
@@ -618,7 +638,7 @@ body {
 
 .temp-btn:hover,
 .filtration-btn:hover {
-  background-color: rgba(66, 133, 244, 0.15);
+  background-color: var(--primary-alpha-15);
   border-color: var(--accent-color);
   color: var(--accent-color);
 }
@@ -626,7 +646,7 @@ body {
 .filtration-btn.active {
   background-color: var(--accent-color);
   border-color: transparent;
-  color: #ffffff;
+  color: var(--text-on-primary);
 }
 
 .filtration-btn.active:hover {
@@ -640,7 +660,7 @@ body {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.75);
+  background-color: var(--overlay-bg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -727,14 +747,14 @@ body {
 }
 
 .material-matching-message.error {
-  border-color: rgba(244, 67, 54, 0.4);
-  background-color: rgba(244, 67, 54, 0.15);
+  border-color: var(--error-alpha-40);
+  background-color: var(--error-alpha-15);
   color: var(--error-color);
 }
 
 .material-matching-message.warning {
-  border-color: rgba(255, 152, 0, 0.4);
-  background-color: rgba(255, 152, 0, 0.15);
+  border-color: var(--warning-alpha-40);
+  background-color: var(--warning-alpha-15);
   color: var(--warning-color);
 }
 
@@ -791,12 +811,12 @@ body {
 
 .material-tool-item.selected {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 1px rgba(66, 133, 244, 0.2);
+  box-shadow: 0 0 0 1px var(--primary-alpha-20);
 }
 
 .material-tool-item.mapped {
-  border-color: rgba(66, 133, 244, 0.6);
-  background-color: rgba(66, 133, 244, 0.1);
+  border-color: var(--primary-alpha-60);
+  background-color: var(--primary-alpha-10);
 }
 
 .material-tool-header {
@@ -816,8 +836,8 @@ body {
   width: 16px;
   height: 16px;
   border-radius: 999px;
-  background-color: #555555;
-  border: 1px solid rgba(0, 0, 0, 0.5);
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border-color-light);
 }
 
 .material-tool-details {
@@ -852,16 +872,16 @@ body {
 }
 
 .material-slot-item.assigned {
-  border-color: rgba(66, 133, 244, 0.6);
-  background-color: rgba(66, 133, 244, 0.1);
+  border-color: var(--primary-alpha-60);
+  background-color: var(--primary-alpha-10);
 }
 
 .material-slot-swatch {
   width: 20px;
   height: 20px;
   border-radius: 6px;
-  background-color: #555555;
-  border: 1px solid rgba(0, 0, 0, 0.5);
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border-color-light);
 }
 
 .material-slot-info {
@@ -907,8 +927,8 @@ body {
 }
 
 .material-mapping-item.warning {
-  border-color: rgba(255, 152, 0, 0.4);
-  background-color: rgba(255, 152, 0, 0.1);
+  border-color: var(--warning-alpha-40);
+  background-color: var(--warning-alpha-10);
 }
 
 .material-mapping-text {
@@ -945,7 +965,7 @@ body {
 .material-mapping-remove:hover {
   color: var(--accent-color);
   border-color: var(--accent-color);
-  background-color: rgba(66, 133, 244, 0.1);
+  background-color: var(--primary-alpha-10);
 }
 
 .material-mapping-empty {
@@ -1080,7 +1100,7 @@ body {
 .profile-action-btn {
     background: transparent;
     border: none;
-    color: #9e9e9e;
+    color: var(--text-color-secondary);
     cursor: pointer;
     padding: 2px;
     border-radius: 4px;
@@ -1090,8 +1110,8 @@ body {
 }
 
 .profile-action-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-    color: #fff;
+    background: var(--border-color);
+    color: var(--text-on-primary);
 }
 
 .profile-action-btn .lucide {
@@ -1108,7 +1128,7 @@ body {
     width: 24px;
     height: 24px;
     border-radius: 4px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
 }
 
 .button-icon {
@@ -1163,7 +1183,7 @@ body {
 
 .primary-btn {
   background-color: var(--button-bg);
-  color: #ffffff;
+  color: var(--text-on-primary);
 }
 
 .primary-btn:hover:not(:disabled) {
@@ -1215,7 +1235,7 @@ body {
 .file-item.selected {
   background-color: var(--accent-color);
   border-color: transparent;
-  color: #ffffff;
+  color: var(--text-on-primary);
 }
 
 .file-item-header {
@@ -1239,14 +1259,14 @@ body {
   text-transform: uppercase;
   letter-spacing: 0.05em;
   border: 1px solid var(--border-color-light);
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--card-bg-hover);
   color: var(--text-color-secondary);
 }
 
 .file-badge.multi-color {
   border-color: var(--warning-color);
   color: var(--warning-color);
-  background-color: rgba(255, 152, 0, 0.1);
+  background-color: var(--warning-alpha-10);
 }
 
 .file-meta {
@@ -1275,7 +1295,7 @@ body {
   gap: 6px;
   padding: 4px 8px;
   border-radius: 999px;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--card-bg-hover);
   border: 1px solid var(--border-color);
 }
 
@@ -1284,8 +1304,8 @@ body {
   width: 12px;
   height: 12px;
   border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.6);
-  background-color: #555555;
+  border: 1px solid var(--border-color-light);
+  background-color: var(--surface-muted);
 }
 
 .material-chip-label,
@@ -1309,7 +1329,7 @@ body {
 
 #temp-input:focus {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(66, 133, 244, 0.35);
+  box-shadow: 0 0 0 2px var(--primary-alpha-35);
 }
 
 /* Toast Notifications */
@@ -1337,12 +1357,12 @@ body {
 }
 
 .toast.success {
-  background-color: rgba(0, 230, 118, 0.15);
+  background-color: color-mix(in srgb, var(--success-color) 15%, transparent);
   color: var(--success-color);
 }
 
 .toast.error {
-  background-color: rgba(244, 67, 54, 0.15);
+  background-color: var(--error-alpha-15);
   color: var(--error-color);
 }
 
@@ -1520,7 +1540,7 @@ body {
   border: 1px solid var(--border-color);
   flex-shrink: 0;
   /* Ensure color is visible even with dark colors on dark backgrounds */
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 0 0 1px var(--border-color);
 }
 
 .spool-details {

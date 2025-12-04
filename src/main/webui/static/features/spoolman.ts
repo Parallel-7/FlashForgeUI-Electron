@@ -22,6 +22,8 @@ import { updateSpoolmanPanelState } from '../ui/panels.js';
 import { getCurrentContextId } from './context-switching.js';
 import { applySettings, refreshSettingsUI } from './layout-theme.js';
 
+const DEFAULT_SPOOL_COLOR = 'var(--text-color-muted)';
+
 let spoolSearchDebounceTimer: number | null = null;
 let handlersRegistered = false;
 
@@ -230,7 +232,7 @@ export function renderSpoolList(spools: SpoolSummary[]): void {
       ? spool.colorHex.startsWith('#')
         ? spool.colorHex
         : `#${spool.colorHex}`
-      : '#808080';
+      : DEFAULT_SPOOL_COLOR;
     const name = spool.name || `Spool #${spool.id}`;
     const vendor = spool.vendor || '';
     const material = spool.material || '';
