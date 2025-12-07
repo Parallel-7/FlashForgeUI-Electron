@@ -17,7 +17,6 @@
  *
  * Key exports:
  * - registerPaletteHandlers(): Register all palette IPC handlers on app startup
- * - broadcastPaletteStatus(): Broadcast component status updates to palette
  *
  * Component Registry Integration:
  * - Queries ComponentRegistry for all available components
@@ -44,9 +43,6 @@
  *
  * // Register handlers on app startup
  * registerPaletteHandlers();
- *
- * // Broadcast status update from main window
- * broadcastPaletteStatus(['camera-preview', 'controls-grid']);
  * ```
  *
  * @module ipc/handlers/palette-handlers
@@ -193,18 +189,3 @@ export function registerPaletteHandlers(): void {
   console.log('[Palette Handlers] Palette IPC handlers registered successfully');
 }
 
-/**
- * Broadcast component status update to palette window
- * Called by main window when components are added or removed from grid
- *
- * @param componentsInUse - Array of component IDs currently in the grid
- */
-export function broadcastPaletteStatus(componentsInUse: string[]): void {
-  const windowManager = getWindowManager();
-  const paletteWindow = windowManager.getPaletteWindow();
-
-  if (paletteWindow && !paletteWindow.isDestroyed()) {
-    console.log(`[Palette Handlers] Broadcasting status update: ${componentsInUse.length} components in use`);
-    paletteWindow.webContents.send('palette:update-status', componentsInUse);
-  }
-}

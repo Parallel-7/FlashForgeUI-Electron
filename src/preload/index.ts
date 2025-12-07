@@ -26,14 +26,15 @@
 
 import { contextBridge, ipcRenderer } from 'electron';
 import type { CameraProxyStatus } from '@shared/types/camera/camera.types.js';
+import { isValidConfig } from '@shared/types/config.js';
 import type { AppConfig, ThemeColors } from '@shared/types/config.js';
 import type {
   ISettingsAPI,
-  IPrinterSettingsAPI,
   IAutoUpdateAPI,
   ThemeProfileOperationData,
-  UpdateStatusResponse
-} from './ui/settings/types/external.js';
+  UpdateStatusResponse,
+  RoundedUISupportInfo
+} from '@renderer/ui/settings/types/external.js';
 
 // IPC event listener function type
 type IPCListener = (...args: unknown[]) => void;
@@ -52,8 +53,13 @@ interface DialogNamespace {
   settings: ISettingsAPI;
   printerSettings: PrinterSettingsAPI;
   autoUpdate: IAutoUpdateAPI;
-  [key: string]: unknown;
 }
+
+type ThemeProfileOperationEvent = {
+  uiType: 'desktop' | 'web';
+  operation: 'add' | 'update' | 'delete';
+  data: ThemeProfileOperationData;
+};
 
 interface ElectronAPI {
   send: (channel: string, data?: unknown) => void;
@@ -138,6 +144,79 @@ interface LoadingOptions {
   autoHideAfter?: number;
 }
 
+type SpoolmanTestResponse = { connected: boolean; error?: string };
+type DiscordTestResponse = { success: boolean; error?: string };
+type SpoolmanStatusResponse = { enabled: boolean; disabledReason?: string | null; contextId?: string | null };
+
+const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null;
+
+const isString = (value: unknown): value is string => typeof value === 'string';
+
+const isBoolean = (value: unknown): value is boolean => typeof value === 'boolean';
+
+const isNullableString = (value: unknown): value is string | null | undefined =>
+  value === null || value === undefined || typeof value === 'string';
+
+const isRoundedUISupportInfoResponse = (value: unknown): value is RoundedUISupportInfo => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const reason = value.reason;
+  const isValidReason = reason === null || reason === 'macos' || reason === 'windows11' || reason === undefined;
+  return isBoolean(value.supported) && isValidReason;
+};
+
+const isSpoolmanTestResponse = (value: unknown): value is SpoolmanTestResponse => {
+  if (!isRecord(value) || !isBoolean(value.connected)) {
+    return false;
+  }
+
+  return value.error === undefined || typeof value.error === 'string';
+};
+
+const isDiscordTestResponse = (value: unknown): value is DiscordTestResponse => {
+  if (!isRecord(value) || !isBoolean(value.success)) {
+    return false;
+  }
+
+  return value.error === undefined || typeof value.error === 'string';
+};
+
+const isSpoolmanStatusResponse = (value: unknown): value is SpoolmanStatusResponse => {
+  if (!isRecord(value) || !isBoolean(value.enabled)) {
+    return false;
+  }
+
+  return isNullableString(value.disabledReason) && isNullableString(value.contextId);
+};
+
+const isUpdateStatusResponsePayload = (value: unknown): value is UpdateStatusResponse => {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  if (!isString(value.state) || !isString(value.currentVersion) || !isBoolean(value.supportsDownload)) {
+    return false;
+  }
+
+  if (value.updateInfo !== null && value.updateInfo !== undefined && !isRecord(value.updateInfo)) {
+    return false;
+  }
+
+  if (value.downloadProgress !== null && value.downloadProgress !== undefined && !isRecord(value.downloadProgress)) {
+    return false;
+  }
+
+  if (value.error !== null && value.error !== undefined) {
+    if (!isRecord(value.error) || !isString(value.error.message)) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 // Loading API interface
 interface LoadingAPI {
   show: (options: LoadingOptions) => void;
@@ -173,16 +252,19 @@ const registerPayloadEventListener = <T,>(channel: string, callback: (payload: T
 
 const settingsDialogBridge: ISettingsAPI = {
   requestConfig: async (): Promise<AppConfig> => {
-    const config = await ipcRenderer.invoke('settings-request-config');
-    return config as AppConfig;
+    const config: unknown = await ipcRenderer.invoke('settings-request-config');
+    if (!isValidConfig(config)) {
+      throw new Error('Invalid config payload received from main process');
+    }
+    return config;
   },
   saveConfig: async (config: Partial<AppConfig>): Promise<boolean> => {
-    const result = await ipcRenderer.invoke('settings-save-config', config);
-    return Boolean(result);
+    const result: unknown = await ipcRenderer.invoke('settings-save-config', config);
+    return typeof result === 'boolean' ? result : false;
   },
   saveDesktopTheme: async (theme: ThemeColors): Promise<boolean> => {
-    const result = await ipcRenderer.invoke('settings:save-desktop-theme', theme);
-    return Boolean(result);
+    const result: unknown = await ipcRenderer.invoke('settings:save-desktop-theme', theme);
+    return typeof result === 'boolean' ? result : false;
   },
   closeWindow: () => {
     ipcRenderer.send('settings-close-window');
@@ -210,22 +292,36 @@ const settingsDialogBridge: ISettingsAPI = {
     operation: 'add' | 'update' | 'delete',
     data: ThemeProfileOperationData
   ) => {
-    ipcRenderer.send('theme-profile-operation', { uiType, operation, data });
+    const payload: ThemeProfileOperationEvent = { uiType, operation, data };
+    ipcRenderer.send('theme-profile-operation', payload);
   },
-  testSpoolmanConnection: async (url: string) => {
-    return await ipcRenderer.invoke('spoolman:test-connection', url) as { connected: boolean; error?: string };
+  testSpoolmanConnection: async (url: string): Promise<SpoolmanTestResponse> => {
+    const response: unknown = await ipcRenderer.invoke('spoolman:test-connection', url);
+    if (!isSpoolmanTestResponse(response)) {
+      return { connected: false, error: 'Invalid response from Spoolman test' };
+    }
+    return response;
   },
-  testDiscordWebhook: async (url: string) => {
-    return await ipcRenderer.invoke('discord:test-webhook', url) as { success: boolean; error?: string };
+  testDiscordWebhook: async (url: string): Promise<DiscordTestResponse> => {
+    const response: unknown = await ipcRenderer.invoke('discord:test-webhook', url);
+    if (!isDiscordTestResponse(response)) {
+      return { success: false, error: 'Invalid Discord webhook response' };
+    }
+    return response;
   },
-  getRoundedUISupportInfo: async () => {
-    return await ipcRenderer.invoke('rounded-ui:get-support-info');
+  getRoundedUISupportInfo: async (): Promise<RoundedUISupportInfo> => {
+    const info: unknown = await ipcRenderer.invoke('rounded-ui:get-support-info');
+    if (!isRoundedUISupportInfoResponse(info)) {
+      return { supported: false, reason: null };
+    }
+    return info;
   }
 };
 
-const printerSettingsBridge: PrinterSettingsAPI & IPrinterSettingsAPI = {
+const printerSettingsBridge: PrinterSettingsAPI = {
   get: async (): Promise<unknown> => {
-    return await ipcRenderer.invoke('printer-settings:get');
+    const result: unknown = await ipcRenderer.invoke('printer-settings:get');
+    return result;
   },
   update: async (settings: unknown): Promise<boolean> => {
     const result: unknown = await ipcRenderer.invoke('printer-settings:update', settings);
@@ -239,13 +335,32 @@ const printerSettingsBridge: PrinterSettingsAPI & IPrinterSettingsAPI = {
 
 const autoUpdateBridge: IAutoUpdateAPI = {
   checkForUpdates: async (): Promise<{ success: boolean; error?: string }> => {
-    return await ipcRenderer.invoke('check-for-updates') as { success: boolean; error?: string };
+    const response: unknown = await ipcRenderer.invoke('check-for-updates');
+    if (!isDiscordTestResponse(response)) {
+      return { success: false, error: 'Invalid update response' };
+    }
+    return response;
   },
   getStatus: async (): Promise<UpdateStatusResponse> => {
-    return await ipcRenderer.invoke('get-update-status') as UpdateStatusResponse;
+    const status: unknown = await ipcRenderer.invoke('get-update-status');
+    if (!isUpdateStatusResponsePayload(status)) {
+      return {
+        state: 'idle',
+        updateInfo: null,
+        downloadProgress: null,
+        error: null,
+        currentVersion: 'unknown',
+        supportsDownload: false
+      };
+    }
+    return status;
   },
   setUpdateChannel: async (channel: 'stable' | 'alpha'): Promise<{ success: boolean }> => {
-    return await ipcRenderer.invoke('set-update-channel', channel) as { success: boolean };
+    const response: unknown = await ipcRenderer.invoke('set-update-channel', channel);
+    if (!isRecord(response) || !isBoolean(response.success)) {
+      return { success: false };
+    }
+    return { success: response.success };
   }
 };
 
@@ -253,7 +368,7 @@ const dialogBridge = {
   settings: settingsDialogBridge,
   printerSettings: printerSettingsBridge,
   autoUpdate: autoUpdateBridge
-};
+} satisfies DialogNamespace;
 
 // Valid IPC channels for security
 const validSendChannels = [
@@ -393,8 +508,11 @@ contextBridge.exposeInMainWorld('PLATFORM', process.platform);
 
 const configAPI: ConfigAPI = {
   get: async (): Promise<AppConfig> => {
-    const config = await ipcRenderer.invoke('request-config');
-    return config as AppConfig;
+    const config: unknown = await ipcRenderer.invoke('request-config');
+    if (!isValidConfig(config)) {
+      throw new Error('Invalid config payload received');
+    }
+    return config;
   },
   onLoaded: (callback: () => void): EventDisposer => {
     return registerVoidEventListener('config-loaded', callback);
@@ -415,8 +533,7 @@ const configAPI: ConfigAPI = {
   }
 };
 
-// Expose the API to the renderer process
-contextBridge.exposeInMainWorld('api', {
+const electronAPI: ElectronAPI = {
   isProxyAvailable: true,
   
   send: (channel: string, data?: unknown) => {
@@ -701,7 +818,10 @@ contextBridge.exposeInMainWorld('api', {
 
     getStatus: async (contextId?: string): Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }> => {
       const result: unknown = await ipcRenderer.invoke('spoolman:get-status', contextId);
-      return result as { enabled: boolean; disabledReason?: string | null; contextId?: string | null };
+      if (!isSpoolmanStatusResponse(result)) {
+        return { enabled: false, disabledReason: 'Invalid response', contextId: null };
+      }
+      return result;
     },
 
     onSpoolSelected: (callback: (spool: unknown) => void) => {
@@ -720,7 +840,10 @@ contextBridge.exposeInMainWorld('api', {
       ipcRenderer.on('spoolman:spool-updated', wrappedCallback);
     }
   }
-} as ElectronAPI);
+};
+
+// Expose the API to the renderer process
+contextBridge.exposeInMainWorld('api', electronAPI);
 
 // Type declarations for the renderer process
 declare global {

@@ -18,12 +18,9 @@
  * - safeExtractNumber(obj, key, default): Extract/parse number with fallback
  * - safeExtractBoolean(obj, key, default): Extract/coerce boolean with fallback
  * - safeExtractArray(obj, key, default): Extract array with type parameter
- * - safeExtractNested(obj, path, default): Dot-notation property access
- * - safeExtractMultiple(obj, schema): Batch extraction with schema definition
  *
  * Utility Functions:
  * - isValidObject(value): Type guard for non-null, non-array objects
- * - toNumber(value, default, min, max): Convert to number with range validation
  * - hasValue(value): Check for non-empty, non-null values
  *
  * Type Coercion:
@@ -152,90 +149,6 @@ export function safeExtractArray<T = unknown>(
 }
 
 /**
- * Safely extract nested object property
- * @param obj - Object to extract from
- * @param path - Dot-separated path (e.g., 'parent.child.value')
- * @param defaultValue - Default value if extraction fails
- */
-export function safeExtractNested<T = unknown>(
-  obj: unknown,
-  path: string,
-  defaultValue: T
-): T {
-  if (!isValidObject(obj)) {
-    return defaultValue;
-  }
-
-  const keys = path.split('.');
-  let current: unknown = obj;
-  
-  for (const key of keys) {
-    if (!isValidObject(current) || !(key in current)) {
-      return defaultValue;
-    }
-    current = current[key];
-  }
-  
-  return current as T;
-}
-
-/**
- * Extract multiple properties from an object with defaults
- * @param obj - Object to extract from
- * @param schema - Schema defining properties and their defaults
- */
-export function safeExtractMultiple<T extends Record<string, unknown>>(
-  obj: unknown,
-  schema: { [K in keyof T]: { key: string; default: T[K]; type: 'string' | 'number' | 'boolean' } }
-): T {
-  const result = {} as T;
-  
-  for (const [prop, config] of Object.entries(schema) as Array<[keyof T, typeof schema[keyof T]]>) {
-    switch (config.type) {
-      case 'string':
-        result[prop] = safeExtractString(obj, config.key, config.default as string) as T[keyof T];
-        break;
-      case 'number':
-        result[prop] = safeExtractNumber(obj, config.key, config.default as number) as T[keyof T];
-        break;
-      case 'boolean':
-        result[prop] = safeExtractBoolean(obj, config.key, config.default as boolean) as T[keyof T];
-        break;
-    }
-  }
-  
-  return result;
-}
-
-/**
- * Convert value to number with validation
- * @param value - Value to convert
- * @param defaultValue - Default if conversion fails
- * @param min - Minimum allowed value
- * @param max - Maximum allowed value
- */
-export function toNumber(
-  value: unknown,
-  defaultValue = 0,
-  min = -Infinity,
-  max = Infinity
-): number {
-  let num = defaultValue;
-  
-  if (typeof value === 'number' && !isNaN(value)) {
-    num = value;
-  } else if (typeof value === 'string') {
-    const parsed = parseFloat(value);
-    if (!isNaN(parsed)) {
-      num = parsed;
-    }
-  }
-  
-  // Clamp to range
-  return Math.max(min, Math.min(max, num));
-}
-
-/**
  * Check if a value exists and is not empty
  * @param value - Value to check
  */
@@ -258,4 +171,3 @@ export function hasValue(value: unknown): boolean {
   
   return true;
 }
-

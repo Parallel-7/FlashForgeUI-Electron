@@ -85,25 +85,3 @@ function determineOverallStatus(info: MatlStationInfo): 'ready' | 'warming' | 'e
   return 'ready'; // Default to ready for unknown states
 }
 
-/**
- * Create material mappings array for IPC communication
- * Ensures consistent format for AD5X job start operations
- */
-export function createMaterialMappings(
-  mappings: ReadonlyArray<{
-    toolId: number;
-    slotId: number;
-    materialName: string;
-    toolMaterialColor: string;
-    slotMaterialColor: string;
-  }>
-): AD5XMaterialMapping[] {
-  return mappings.map(m => ({
-    toolId: m.toolId,
-    slotId: m.slotId,
-    materialName: m.materialName,
-    toolMaterialColor: m.toolMaterialColor,
-    slotMaterialColor: m.slotMaterialColor
-  }));
-}
-

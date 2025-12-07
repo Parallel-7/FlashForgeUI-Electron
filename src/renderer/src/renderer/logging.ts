@@ -13,8 +13,6 @@ export const setLogPanelComponent = (panel: LogPanelComponent | null): void => {
   logPanelComponent = panel;
 };
 
-export const getLogPanelComponent = (): LogPanelComponent | null => logPanelComponent;
-
 export function logMessage(message: string): void {
   if (window.api) {
     window.api.send('add-log-message', message);

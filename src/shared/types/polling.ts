@@ -13,10 +13,10 @@
  * - Material Station: MaterialSlot, MaterialStationStatus for AD5X multi-material
  * - Polling Container: PollingData aggregates all polling information for UI updates
  *
- * Utility Functions:
- * - State Checking: isActiveState, isReadyForJob, canControlPrint
- * - Formatting: formatTemperature, formatTime, formatPercentage, formatWeight, formatLength
- * - Factory: createEmptyPollingData for initialization
+* Utility Functions:
+* - State Checking: isActiveState, isReadyForJob
+* - Formatting: formatTemperature, formatWeight, formatLength
+* - Factory: createEmptyPollingData for initialization
  *
  * Configuration:
  * - DEFAULT_POLLING_CONFIG: 2.5s interval, 3 retries, 1s retry delay
@@ -199,29 +199,6 @@ export interface PollingData {
 }
 
 // ============================================================================
-// UI UPDATE EVENTS
-// ============================================================================
-
-/**
- * Types of UI updates that can occur
- */
-export type UIUpdateType = 
-  | 'status'      // Status panel update
-  | 'job'         // Job info panel update
-  | 'preview'     // Model preview update
-  | 'connection'  // Connection status change
-  | 'error';      // Error occurred
-
-/**
- * UI update event data
- */
-export interface UIUpdateEvent {
-  type: UIUpdateType;
-  data: PollingData;
-  timestamp: Date;
-}
-
-// ============================================================================
 // POLLING CONFIGURATION
 // ============================================================================
 
@@ -261,49 +238,12 @@ export function isActiveState(state: PrinterState): boolean {
 /**
  * Check if printer is available for new jobs (enables file selection)
  */
-export function isReadyForJob(state: PrinterState): boolean {
-  return state === 'Ready' || 
-         state === 'Completed' ||
-         state === 'Cancelled';
-}
-
-/**
- * Check if printer can accept print control commands (pause/resume/cancel)
- */
-export function canControlPrint(state: PrinterState): boolean {
-  return state === 'Printing' ||
-         state === 'Paused' ||
-         state === 'Heating' ||
-         state === 'Calibrating';
-}
 
 /**
  * Format temperature for display
  */
 export function formatTemperature(temp: TemperatureData): string {
   return `${Math.round(temp.current)}°C/${Math.round(temp.target)}°C`;
-}
-
-/**
- * Format time in HH:MM format
- */
-export function formatTime(minutes: number | null): string {
-  if (minutes === null || minutes < 0) return '--:--';
-  
-  const hours = Math.floor(minutes / 60);
-  const mins = Math.floor(minutes % 60);
-  
-  if (hours > 0) {
-    return `${hours}:${mins.toString().padStart(2, '0')}`;
-  }
-  return `${mins.toString().padStart(2, '0')}`;
-}
-
-/**
- * Format percentage for display
- */
-export function formatPercentage(value: number): string {
-  return `${Math.round(value)}%`;
 }
 
 /**

@@ -43,12 +43,6 @@ function resolveVerboseLoggingFlag(): boolean {
   return cachedVerboseFlag;
 }
 
-/**
- * Returns true when verbose logging is currently enabled.
- */
-export function isVerboseLoggingEnabled(): boolean {
-  return resolveVerboseLoggingFlag();
-}
 
 /**
  * Emits a verbose log statement when the verbose flag is enabled.
@@ -73,9 +67,3 @@ export function logVerbose(
   }
 }
 
-/**
- * Force the verbose logging flag on or off. Useful for tests.
- */
-export function setVerboseLoggingEnabled(flag: boolean): void {
-  cachedVerboseFlag = flag;
-}

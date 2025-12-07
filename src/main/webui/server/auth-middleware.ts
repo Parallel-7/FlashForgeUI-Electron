@@ -9,7 +9,6 @@
  *
  * Key exports:
  * - createAuthMiddleware(): Required authentication for protected routes
- * - createOptionalAuthMiddleware(): Optional authentication that checks but doesn't require tokens
  * - createLoginRateLimiter(): Rate limiting for login endpoint (5 attempts per 15 minutes)
  * - createErrorMiddleware(): Centralized error handling with standardized responses
  * - createRequestLogger(): Request logging with method, path, status code, and duration
@@ -74,42 +73,6 @@ export function createAuthMiddleware() {
       token,
       authenticated: true
     };
-    
-    next();
-  };
-}
-
-/**
- * Optional auth middleware - doesn't require auth but checks if provided
- */
-export function createOptionalAuthMiddleware() {
-  const authManager = getAuthManager();
-  
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    if (!authManager.isAuthenticationRequired()) {
-      req.auth = {
-        token: '',
-        authenticated: true
-      };
-      next();
-      return;
-    }
-
-    // Extract token from Authorization header
-    const authHeader = req.headers.authorization;
-    const token = authManager.extractTokenFromHeader(authHeader);
-    
-    if (token && authManager.verifyToken(token)) {
-      req.auth = {
-        token,
-        authenticated: true
-      };
-    } else {
-      req.auth = {
-        token: '',
-        authenticated: false
-      };
-    }
     
     next();
   };

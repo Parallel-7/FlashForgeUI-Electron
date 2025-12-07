@@ -225,12 +225,3 @@ export function getMultiContextSpoolmanTracker(): MultiContextSpoolmanTracker {
   return globalMultiContextSpoolmanTracker;
 }
 
-/**
- * Reset global multi-context Spoolman tracker (for testing)
- */
-export function resetMultiContextSpoolmanTracker(): void {
-  if (globalMultiContextSpoolmanTracker) {
-    globalMultiContextSpoolmanTracker.dispose();
-    globalMultiContextSpoolmanTracker = null;
-  }
-}

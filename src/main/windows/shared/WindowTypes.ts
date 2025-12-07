@@ -53,13 +53,12 @@
  * @exports WindowWidth, WindowHeight, WindowMinWidth, WindowMinHeight - Branded dimensional types
  * @exports PreloadPath, ResponseChannel, DialogId - Branded security types
  * @exports createWindowWidth, createWindowHeight, createWindowMinWidth, createWindowMinHeight - Dimensional helpers
- * @exports createPreloadPath, createResponseChannel, createDialogId - Security helpers
+ * @exports createPreloadPath - Security helper
  * @exports InputDialogOptions - Input dialog configuration interface
  * @exports WindowDimensions - Window dimension configuration interface
  * @exports WindowBehavior - Window behavior configuration interface
  * @exports WindowSecurity - Window security configuration interface
  * @exports WindowConfiguration - Complete window configuration interface
- * @exports DialogResponse - Dialog response handling interface
  * @exports MaterialMatchingDialogData - Material matching dialog data interface
  * @exports SingleColorConfirmationDialogData - Single color confirmation dialog data interface
  * @exports AutoConnectChoiceDialogData - Auto-connect choice dialog data interface
@@ -87,8 +86,6 @@ export const createWindowHeight = (height: number): WindowHeight => height as Wi
 export const createWindowMinWidth = (minWidth: number): WindowMinWidth => minWidth as WindowMinWidth;
 export const createWindowMinHeight = (minHeight: number): WindowMinHeight => minHeight as WindowMinHeight;
 export const createPreloadPath = (path: string): PreloadPath => path as PreloadPath;
-export const createResponseChannel = (channel: string): ResponseChannel => channel as ResponseChannel;
-export const createDialogId = (id: string): DialogId => id as DialogId;
 
 // Interface for input dialog options (extracted from WindowFactory)
 export interface InputDialogOptions {
@@ -120,20 +117,6 @@ export interface WindowSecurity {
   readonly preload: PreloadPath;
   readonly nodeIntegration: boolean;
   readonly contextIsolation: boolean;
-}
-
-// Complete window configuration interface
-export interface WindowConfiguration {
-  readonly dimensions: WindowDimensions;
-  readonly behavior: WindowBehavior;
-  readonly security: WindowSecurity;
-}
-
-// Dialog response handling interface
-export interface DialogResponse<T> {
-  readonly dialogId: DialogId;
-  readonly responseChannel: ResponseChannel;
-  readonly resolve: (result: T | null) => void;
 }
 
 // Material matching dialog data interface

@@ -73,14 +73,6 @@ export const JobStartDataSchema = z.object({
   startNow: z.boolean().optional().default(true)
 });
 
-/**
- * Model preview request data
- */
-export const ModelPreviewRequestSchema = z.object({
-  filename: z.string().min(1),
-  requestId: z.string().optional()
-});
-
 // ============================================================================
 // API REQUEST SCHEMAS
 // ============================================================================
@@ -121,14 +113,6 @@ export const JobStartRequestSchema = z.object({
     .optional()
 });
 
-/**
- * G-code command request validation
- */
-export const GCodeCommandRequestSchema = z.object({
-  command: z.string()
-    .min(1, 'Command is required')
-    .regex(/^[A-Z]/, 'G-code commands must start with a letter')
-});
 
 // ============================================================================
 // COMMAND VALIDATION
@@ -170,28 +154,10 @@ export const PrinterCommandSchema = z.enum([
   'request-model-preview'
 ]);
 
-/**
- * Command-specific data validation
- */
-export const CommandDataValidators = {
-  'set-bed-temp': TemperatureDataSchema,
-  'set-extruder-temp': TemperatureDataSchema,
-  'print-file': JobStartDataSchema,
-  'request-model-preview': ModelPreviewRequestSchema
-} as const;
-
 // ============================================================================
 // RESPONSE VALIDATION
 // ============================================================================
 
-/**
- * Standard API response validation (for internal use)
- */
-export const StandardAPIResponseSchema = z.object({
-  success: z.boolean(),
-  message: z.string().optional(),
-  error: z.string().optional()
-});
 
 /**
  * Printer features validation
@@ -210,34 +176,6 @@ export const PrinterFeaturesSchema = z.object({
 // HELPER FUNCTIONS
 // ============================================================================
 
-/**
- * Validate WebSocket command with appropriate data schema
- */
-export function validateWebSocketCommand(data: unknown): z.infer<typeof WebSocketCommandSchema> | null {
-  const commandResult = WebSocketCommandSchema.safeParse(data);
-  if (!commandResult.success) {
-    return null;
-  }
-  
-  const command = commandResult.data;
-  
-  // Validate command-specific data if needed
-  if (command.command in CommandDataValidators) {
-    const validator = CommandDataValidators[command.command as keyof typeof CommandDataValidators];
-    const dataResult = validator.safeParse(command.data);
-    
-    if (!dataResult.success) {
-      return null;
-    }
-    
-    return {
-      ...command,
-      data: dataResult.data
-    };
-  }
-  
-  return command;
-}
 
 /**
  * Validate authentication token
@@ -245,22 +183,6 @@ export function validateWebSocketCommand(data: unknown): z.infer<typeof WebSocke
 export function validateAuthToken(token: unknown): string | null {
   const result = AuthTokenSchema.safeParse(token);
   return result.success ? result.data : null;
-}
-
-/**
- * Extract and validate Bearer token from Authorization header
- */
-export function extractBearerToken(authHeader: unknown): string | null {
-  if (typeof authHeader !== 'string') {
-    return null;
-  }
-  
-  const match = authHeader.match(/^Bearer\s+(.+)$/);
-  if (!match) {
-    return null;
-  }
-  
-  return validateAuthToken(match[1]);
 }
 
 /**

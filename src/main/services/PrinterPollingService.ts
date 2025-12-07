@@ -553,39 +553,3 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
   }
 }
 
-// ============================================================================
-// FACTORY FUNCTIONS
-// ============================================================================
-
-/**
- * Create new polling service instance
- */
-export function createPollingService(config?: Partial<PollingConfig>): PrinterPollingService {
-  return new PrinterPollingService(config);
-}
-
-/**
- * Global polling service instance
- */
-let globalPollingService: PrinterPollingService | null = null;
-
-/**
- * Get global polling service instance
- */
-export function getGlobalPollingService(): PrinterPollingService {
-  if (!globalPollingService) {
-    globalPollingService = new PrinterPollingService();
-  }
-  return globalPollingService;
-}
-
-/**
- * Reset global polling service
- */
-export function resetGlobalPollingService(): void {
-  if (globalPollingService) {
-    globalPollingService.dispose();
-    globalPollingService = null;
-  }
-}
-

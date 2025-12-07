@@ -4,12 +4,14 @@
     "electron.vite.config.ts",
     "src/main/**/*",
     "src/preload/**/*",
-    "src/shared/**/*"
+    "src/shared/**/*",
+    "src/renderer/src/ui/settings/types/**/*"
   ],
   "compilerOptions": {
     "composite": true,
     "paths": {
-      "@shared/*": ["./src/shared/*"]
+      "@shared/*": ["./src/shared/*"],
+      "@renderer/*": ["./src/renderer/src/*"]
     }
   }
 }

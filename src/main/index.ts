@@ -21,7 +21,6 @@
 import './bootstrap.js';
 
 import { app, BrowserWindow, dialog, powerSaveBlocker, ipcMain } from 'electron';
-import { join } from 'path';
 import { is } from '@electron-toolkit/utils';
 import { getConfigManager } from './managers/ConfigManager.js';
 import { getPrinterConnectionManager } from './managers/ConnectionFlowManager.js';
@@ -32,7 +31,8 @@ import { setupWindowControlHandlers } from './ipc/WindowControlHandlers.js';
 import { setupDialogHandlers } from './ipc/DialogHandlers.js';
 import { registerAllIpcHandlers } from './ipc/handlers/index.js';
 import { setupPrinterContextHandlers, setupConnectionStateHandlers, setupCameraContextHandlers } from './ipc/printer-context-handlers.js';
-import type { PollingData } from '@shared/types/polling.js';
+import type { PollingData, PrinterStatus } from '@shared/types/polling.js';
+import type { AppConfig } from '@shared/types/config.js';
 // import { getMainProcessPollingCoordinator } from './services/MainProcessPollingCoordinator';
 import { getMultiContextPollingCoordinator } from './services/MultiContextPollingCoordinator.js';
 import { getMultiContextPrintStateMonitor } from './services/MultiContextPrintStateMonitor.js';
@@ -56,11 +56,12 @@ import { getHeadlessManager } from './managers/HeadlessManager.js';
 import { getLoadingManager } from './managers/LoadingManager.js';
 import { getAutoUpdateService } from './services/AutoUpdateService.js';
 import { initializeSpoolmanIntegrationService, getSpoolmanIntegrationService } from './services/SpoolmanIntegrationService.js';
-import type { SpoolmanIntegrationService } from './services/SpoolmanIntegrationService.js';
+import type { SpoolmanIntegrationService, SpoolmanChangedEvent } from './services/SpoolmanIntegrationService.js';
 import { getDiscordNotificationService } from './services/discord/index.js';
 import { getSpoolmanHealthMonitor } from './services/SpoolmanHealthMonitor.js';
 import { showSpoolmanOfflineDialog, hideSpoolmanOfflineDialog } from './windows/dialogs/SpoolmanOfflineDialog.js';
 import type { PrinterCooledEvent } from './services/MultiContextTemperatureMonitor.js';
+import type { ContextCreatedEvent, ContextRemovedEvent, ContextSwitchEvent } from '@shared/types/PrinterContext.js';
 
 /**
  * Main Electron process entry point. Handles app lifecycle, creates the main window,
@@ -198,7 +199,7 @@ const handleRoundedUICompatibilityIssues = async (): Promise<void> => {
   }
 
   const configManager = getConfigManager();
-  const config = configManager.getConfig();
+  const config: Readonly<AppConfig> = configManager.getConfig();
 
   if (!config.RoundedUI) {
     return;
@@ -265,7 +266,7 @@ const createMainWindow = async (): Promise<void> => {
   
   // Get UI configuration for main window (only for transparency)
   const configManager = getConfigManager();
-  const config = configManager.getConfig();
+  const config: Readonly<AppConfig> = configManager.getConfig();
   const roundedUI = config.RoundedUI;
   const useRoundedUI = roundedUI && isRoundedUISupported();
   
@@ -310,8 +311,8 @@ const createMainWindow = async (): Promise<void> => {
     // Inject CSS variables for conditional UI styling
     injectUIStyleVariables(mainWindow);
     console.log('CSS variables injected for main window');
-  } catch (error) {
-    const loadError = error instanceof Error ? error : new Error(String(error));
+  } catch (error: unknown) {
+    const loadError = toError(error);
     console.error('Failed to load web UI:', loadError.message);
     
     // Handle the error with comprehensive diagnostics
@@ -402,15 +403,18 @@ const setupSpoolmanEventForwarding = (): void => {
 
   // Forward spoolman-changed events to all renderer windows
   spoolmanService.on('spoolman-changed', (event: unknown) => {
-    const spoolmanEvent = event as import('./services/SpoolmanIntegrationService.js').SpoolmanChangedEvent;
+    if (!isSpoolmanChangedEvent(event)) {
+      console.warn('[Spoolman Event] Ignoring malformed spoolman payload');
+      return;
+    }
 
-    // Forward to main window
+    const spoolmanEvent: SpoolmanChangedEvent = event;
+
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('spoolman:spool-updated', spoolmanEvent.spool);
     }
 
-    // Forward to component dialog if open
     const componentDialog = windowManager.getComponentDialogWindow();
     if (componentDialog && !componentDialog.isDestroyed()) {
       componentDialog.webContents.send('spoolman:spool-updated', spoolmanEvent.spool);
@@ -459,11 +463,14 @@ const setupPrinterContextEventForwarding = (): void => {
 
   // Forward context-created events to renderer
   contextManager.on('context-created', (event: unknown) => {
-    const contextEvent = event as import('./types/PrinterContext.js').ContextCreatedEvent;
+    if (!isContextCreatedEvent(event)) {
+      console.warn('[Context Event] Ignoring malformed context-created payload');
+      return;
+    }
 
+    const contextEvent: ContextCreatedEvent = event;
     console.log('[Context Event] Received context-created:', JSON.stringify(contextEvent, null, 2));
 
-    // Forward to renderer
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('printer-context-created', contextEvent);
@@ -476,7 +483,12 @@ const setupPrinterContextEventForwarding = (): void => {
 
   // Start polling and camera when backend is initialized for a context
   backendManager.on('backend-initialized', (event: unknown) => {
-    const backendEvent = event as { contextId: string; modelType: string };
+    if (!isBackendInitializedEvent(event)) {
+      console.warn('[Main] Ignoring malformed backend-initialized payload');
+      return;
+    }
+
+    const backendEvent: BackendInitializedEvent = event;
     const contextId = backendEvent.contextId;
 
     console.log(`[Main] Backend initialized for context ${contextId}`);
@@ -566,7 +578,7 @@ const setupPrinterContextEventForwarding = (): void => {
       discordService.registerContext(contextId);
 
       // Wire Discord service to print state events for event-driven notifications
-      stateMonitor.on('print-completed', (event) => {
+      stateMonitor.on('print-completed', (event: { contextId: string; jobName: string; status: PrinterStatus }) => {
         const duration = event.status.currentJob?.progress.elapsedTime;
         void discordService.notifyPrintComplete(event.contextId, event.jobName, duration);
       });
@@ -583,8 +595,9 @@ const setupPrinterContextEventForwarding = (): void => {
       // ====================================================================
       console.log(`[Main] Context ${contextId} fully initialized with all monitors and coordinators`);
 
-    } catch (error) {
-      console.error(`[Main] Error initializing context ${contextId}:`, error);
+    } catch (error: unknown) {
+      const contextError = toError(error);
+      console.error(`[Main] Error initializing context ${contextId}:`, contextError);
     }
 
     // Setup camera for this context
@@ -593,7 +606,12 @@ const setupPrinterContextEventForwarding = (): void => {
 
   // Forward polling data from active context to renderer
   multiContextPollingCoordinator.on('polling-data', (contextId: string, data: unknown) => {
-    const pollingData = data as PollingData;
+    if (!isPollingDataPayload(data)) {
+      console.warn('[Main] Received malformed polling payload');
+      return;
+    }
+
+    const pollingData: PollingData = data;
 
     // Update Discord service with current printer status
     if (pollingData.printerStatus) {
@@ -606,7 +624,7 @@ const setupPrinterContextEventForwarding = (): void => {
     if (contextId === activeContextId) {
       const mainWindow = windowManager.getMainWindow();
       if (mainWindow && !mainWindow.isDestroyed()) {
-        mainWindow.webContents.send('polling-update', data);
+        mainWindow.webContents.send('polling-update', pollingData);
       }
 
       // Forward to WebUI for WebSocket clients
@@ -617,17 +635,27 @@ const setupPrinterContextEventForwarding = (): void => {
 
   // Forward context-switched events
   contextManager.on('context-switched', (event: unknown) => {
+    if (!isContextSwitchEventPayload(event)) {
+      console.warn('[Context Event] Ignoring malformed context-switched payload');
+      return;
+    }
+
+    const contextEvent: ContextSwitchEvent = event;
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('printer-context-switched', event);
-      const contextEvent = event as { contextId: string };
+      mainWindow.webContents.send('printer-context-switched', contextEvent);
       console.log(`Forwarded context-switched event: ${contextEvent.contextId}`);
     }
   });
 
   // Forward context-removed events
   contextManager.on('context-removed', (event: unknown) => {
-    const contextEvent = event as { contextId: string };
+    if (!isContextRemovedEventPayload(event)) {
+      console.warn('[Context Event] Ignoring malformed context-removed payload');
+      return;
+    }
+
+    const contextEvent: ContextRemovedEvent = event;
     const contextId = contextEvent.contextId;
 
     console.log(`[Main] Cleaning up context ${contextId}`);
@@ -655,14 +683,15 @@ const setupPrinterContextEventForwarding = (): void => {
 
       console.log(`[Main] Context ${contextId} cleanup complete`);
 
-    } catch (error) {
-      console.error(`[Main] Error cleaning up context ${contextId}:`, error);
+    } catch (error: unknown) {
+      const cleanupError = toError(error);
+      console.error(`[Main] Error cleaning up context ${contextId}:`, cleanupError);
     }
 
     // Forward to renderer
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
-      mainWindow.webContents.send('printer-context-removed', event);
+      mainWindow.webContents.send('printer-context-removed', contextEvent);
       console.log(`Forwarded context-removed event: ${contextId}`);
     }
   });
@@ -693,12 +722,12 @@ const setupConnectionEventForwarding = (): void => {
   // Backend initialization notification
   // NOTE: In multi-context mode, polling and camera setup happen in context-created events
   connectionManager.on('backend-initialized', (data: unknown) => {
-    const eventData = data as {
-      contextId?: string;
-      printerDetails?: { Name?: string; IPAddress?: string; SerialNumber?: string; webUIEnabled?: boolean };
-      modelType?: string;
-    };
+    if (!isRendererBackendInitializedEvent(data)) {
+      console.warn('[WebUI] Ignoring malformed backend-initialized payload');
+      return;
+    }
 
+    const eventData: RendererBackendInitializedEvent = data;
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('backend-initialized', {
@@ -711,10 +740,8 @@ const setupConnectionEventForwarding = (): void => {
       });
     }
 
-    // Polling and camera setup happen automatically when context is created
     console.log('Backend initialized - polling and camera will start when context is created');
 
-    // Start WebUI server now that printer is connected
     const printerName = eventData.printerDetails?.Name || 'Unknown';
     const serialNumber = eventData.printerDetails?.SerialNumber || '';
     const contextId = eventData.contextId || '';
@@ -728,9 +755,14 @@ const setupConnectionEventForwarding = (): void => {
   });
   
   connectionManager.on('backend-initialization-failed', (data: unknown) => {
+    if (!isBackendInitializationFailedEvent(data)) {
+      console.warn('[WebUI] Ignoring malformed backend-initialization-failed payload');
+      return;
+    }
+
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
-      const eventData = data as { error?: string; printerDetails?: { Name?: string } };
+      const eventData = data;
       mainWindow.webContents.send('backend-initialization-failed', {
         success: false,
         error: eventData.error || 'Unknown error',
@@ -741,13 +773,16 @@ const setupConnectionEventForwarding = (): void => {
   });
   
   connectionManager.on('backend-disposed', (data: unknown) => {
-    const eventData = data as { contextId?: string };
-    // In multi-context mode, polling is stopped automatically when contexts are removed
-    console.log('Backend disposed');
-    // Polling cleanup is handled by context-removed events in MultiContextPollingCoordinator
+    if (!isBackendDisposedEvent(data)) {
+      console.warn('[WebUI] Ignoring malformed backend-disposed payload');
+      return;
+    }
 
-    // Stop WebUI server when printer disconnects
-    if (eventData?.contextId) {
+    console.log('Backend disposed');
+
+    const eventData = data;
+
+    if (eventData.contextId) {
       void webUIManager.stopForPrinter(eventData.contextId);
     } else {
       console.warn('[WebUI] backend-disposed event missing contextId');
@@ -756,7 +791,7 @@ const setupConnectionEventForwarding = (): void => {
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('backend-disposed', {
-        contextId: eventData?.contextId,
+        contextId: eventData.contextId,
         timestamp: new Date().toISOString()
       });
     }
@@ -785,8 +820,9 @@ const performAutoConnect = async (): Promise<void> => {
     } else {
       console.log('Auto-connect failed or no saved printer:', result.error);
     }
-  } catch (error) {
-    console.error('Auto-connect error:', error);
+  } catch (error: unknown) {
+    const autoConnectError = toError(error);
+    console.error('Auto-connect error:', autoConnectError);
   }
 };
 
@@ -942,8 +978,9 @@ const initializeApp = async (): Promise<void> => {
     const autoUpdateService = getAutoUpdateService();
     await autoUpdateService.initialize();
     console.log('Auto-update service initialized');
-  } catch (error) {
-    console.error('Failed to initialize auto-update service:', error);
+  } catch (error: unknown) {
+    const autoUpdateError = toError(error);
+    console.error('Failed to initialize auto-update service:', autoUpdateError);
   }
 
   // Initialize multi-context notification coordinator
@@ -1033,6 +1070,196 @@ async function initializeHeadless(): Promise<void> {
   await headlessManager.initialize(headlessConfig);
 }
 
+type PrinterDetailsSnapshot = {
+  Name?: string;
+  IPAddress?: string;
+  SerialNumber?: string;
+  ClientType?: string;
+  printerModel?: string;
+  webUIEnabled?: boolean;
+};
+
+type BackendInitializedEvent = {
+  contextId: string;
+  modelType?: string;
+};
+
+type RendererBackendInitializedEvent = {
+  contextId?: string;
+  modelType?: string;
+  printerDetails?: PrinterDetailsSnapshot;
+};
+
+type BackendInitializationFailedEvent = {
+  error?: string;
+  printerDetails?: { Name?: string };
+};
+
+type BackendDisposedEvent = {
+  contextId?: string;
+};
+
+function toError(value: unknown): Error {
+  return value instanceof Error ? value : new Error(String(value));
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+function isPrinterDetailsSnapshot(value: unknown): value is PrinterDetailsSnapshot {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const optionalStrings: Array<keyof PrinterDetailsSnapshot> = ['Name', 'IPAddress', 'SerialNumber', 'ClientType', 'printerModel'];
+  return optionalStrings.every((key) => {
+    const property = value[key];
+    return property === undefined || typeof property === 'string';
+  }) && (value.webUIEnabled === undefined || typeof value.webUIEnabled === 'boolean');
+}
+
+function isActiveSpoolData(value: unknown): value is NonNullable<SpoolmanChangedEvent['spool']> {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return (
+    typeof value.id === 'number' &&
+    typeof value.name === 'string' &&
+    (typeof value.vendor === 'string' || value.vendor === null || value.vendor === undefined) &&
+    (typeof value.material === 'string' || value.material === null || value.material === undefined) &&
+    typeof value.colorHex === 'string' &&
+    typeof value.remainingWeight === 'number' &&
+    typeof value.remainingLength === 'number' &&
+    typeof value.lastUpdated === 'string'
+  );
+}
+
+function isSpoolmanChangedEvent(value: unknown): value is SpoolmanChangedEvent {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  if (typeof value.contextId !== 'string') {
+    return false;
+  }
+
+  if (!('spool' in value)) {
+    return false;
+  }
+
+  const spool = value.spool as unknown;
+  return spool === null || isActiveSpoolData(spool);
+}
+
+function hasContextInfo(value: Record<string, unknown>): boolean {
+  if (!('contextInfo' in value)) {
+    return false;
+  }
+  const info = value.contextInfo as unknown;
+  return isRecord(info);
+}
+
+function isContextCreatedEvent(value: unknown): value is ContextCreatedEvent {
+  if (!isRecord(value)) {
+    return false;
+  }
+  return typeof value.contextId === 'string' && hasContextInfo(value);
+}
+
+function isContextSwitchEventPayload(value: unknown): value is ContextSwitchEvent {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const previous = value.previousContextId;
+  return (
+    typeof value.contextId === 'string' &&
+    (previous === null || typeof previous === 'string') &&
+    hasContextInfo(value)
+  );
+}
+
+function isContextRemovedEventPayload(value: unknown): value is ContextRemovedEvent {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return typeof value.contextId === 'string' && typeof value.wasActive === 'boolean';
+}
+
+function isBackendInitializedEvent(value: unknown): value is BackendInitializedEvent {
+  if (!isRecord(value) || typeof value.contextId !== 'string') {
+    return false;
+  }
+
+  return value.modelType === undefined || typeof value.modelType === 'string';
+}
+
+function isRendererBackendInitializedEvent(value: unknown): value is RendererBackendInitializedEvent {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  if (value.contextId !== undefined && typeof value.contextId !== 'string') {
+    return false;
+  }
+
+  if (value.modelType !== undefined && typeof value.modelType !== 'string') {
+    return false;
+  }
+
+  if (value.printerDetails !== undefined && !isPrinterDetailsSnapshot(value.printerDetails)) {
+    return false;
+  }
+
+  return true;
+}
+
+function isBackendInitializationFailedEvent(value: unknown): value is BackendInitializationFailedEvent {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  if (value.error !== undefined && typeof value.error !== 'string') {
+    return false;
+  }
+
+  if (value.printerDetails !== undefined) {
+    const details = value.printerDetails;
+    if (!isRecord(details)) {
+      return false;
+    }
+    if (details.Name !== undefined && typeof details.Name !== 'string') {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function isBackendDisposedEvent(value: unknown): value is BackendDisposedEvent {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return value.contextId === undefined || typeof value.contextId === 'string';
+}
+
+function isPollingDataPayload(value: unknown): value is PollingData {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  const lastPolled = value.lastPolled;
+  return (
+    typeof value.isConnected === 'boolean' &&
+    typeof value.isInitializing === 'boolean' &&
+    lastPolled instanceof Date
+  );
+}
+
 // This method will be called when Electron has finished initialization
 void app.whenReady().then(async () => {
   if (headlessConfig) {
@@ -1101,8 +1328,9 @@ app.on('before-quit', async () => {
     // Then cleanup config manager
     const configManager = getConfigManager();
     await configManager.dispose();
-  } catch (error) {
-    console.error('Error during app cleanup:', error);
+  } catch (error: unknown) {
+    const cleanupError = toError(error);
+    console.error('Error during app cleanup:', cleanupError);
   }
 });
 

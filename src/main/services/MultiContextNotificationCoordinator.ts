@@ -216,13 +216,3 @@ export function getMultiContextNotificationCoordinator(): MultiContextNotificati
   return globalMultiContextNotificationCoordinator;
 }
 
-/**
- * Reset global multi-context notification coordinator (for testing)
- */
-export function resetMultiContextNotificationCoordinator(): void {
-  if (globalMultiContextNotificationCoordinator) {
-    globalMultiContextNotificationCoordinator.dispose();
-    globalMultiContextNotificationCoordinator = null;
-  }
-}
-

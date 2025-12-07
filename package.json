@@ -37,12 +37,7 @@
 		"clean": "rimraf out dist \"NVIDIA Corporation\"",
 		"type-check": "npx tsc --noEmit",
 		"full-check": "npm run type-check && npm run lint",
-		"knip": "knip",
-		"knip:fix": "knip --fix",
-		"knip:production": "knip --production",
-		"knip:exports": "knip --include exports",
-		"knip:dependencies": "knip --include dependencies,devDependencies",
-		"knip:files": "knip --include files"
+		"audit:dead-code": "ts-node --esm scripts/audit-dead-code.ts"
 	},
 	"keywords": [],
 	"author": {
@@ -87,9 +82,9 @@
 		"eslint": "^9.16.0",
 		"identity-obj-proxy": "^3.0.0",
 		"jest": "^29.7.0",
-		"knip": "^5.64.1",
 		"rimraf": "^6.0.1",
 		"ts-jest": "^29.2.5",
+		"ts-morph": "^27.0.2",
 		"ts-node": "^10.9.2",
 		"tsx": "^4.20.6",
 		"typescript": "^5.7.2",

@@ -13,7 +13,7 @@ module.exports = [
       parserOptions: {
         ecmaVersion: 2022,
         sourceType: 'module',
-        project: './tsconfig.eslint.json',
+        project: ['./tsconfig.node.json', './tsconfig.web.json'],
       },
       globals: {
         // Node.js globals for main process and utilities

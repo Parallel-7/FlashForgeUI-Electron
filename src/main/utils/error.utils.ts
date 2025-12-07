@@ -189,60 +189,6 @@ export function fromZodError(error: ZodError, code: ErrorCode = ErrorCode.VALIDA
   );
 }
 
-/**
- * Create network error
- */
-export function networkError(message: string, context?: Record<string, unknown>): AppError {
-  return new AppError(message, ErrorCode.NETWORK, context);
-}
-
-/**
- * Create timeout error
- */
-export function timeoutError(operation: string, timeoutMs: number): AppError {
-  return new AppError(
-    `Operation timed out after ${timeoutMs}ms`,
-    ErrorCode.TIMEOUT,
-    { operation, timeoutMs }
-  );
-}
-
-/**
- * Create printer error
- */
-export function printerError(
-  message: string,
-  code: ErrorCode = ErrorCode.PRINTER_ERROR,
-  context?: Record<string, unknown>
-): AppError {
-  return new AppError(message, code, context);
-}
-
-/**
- * Create backend error
- */
-export function backendError(
-  message: string,
-  operation: string,
-  context?: Record<string, unknown>
-): AppError {
-  return new AppError(
-    message,
-    ErrorCode.BACKEND_OPERATION_FAILED,
-    { operation, ...context }
-  );
-}
-
-/**
- * Create file error
- */
-export function fileError(
-  message: string,
-  fileName: string,
-  code: ErrorCode = ErrorCode.FILE_INVALID_FORMAT
-): AppError {
-  return new AppError(message, code, { fileName });
-}
 
 // ============================================================================
 // ERROR HANDLING UTILITIES
@@ -286,46 +232,3 @@ export function toAppError(error: unknown, defaultCode: ErrorCode = ErrorCode.UN
     { error }
   );
 }
-
-/**
- * Execute function with error handling
- */
-export async function withErrorHandling<T>(
-  fn: () => Promise<T>,
-  errorHandler?: (error: AppError) => void
-): Promise<T | null> {
-  try {
-    return await fn();
-  } catch (error) {
-    const appError = toAppError(error);
-    if (errorHandler) {
-      errorHandler(appError);
-    } else {
-      console.error('Unhandled error:', appError.toJSON());
-    }
-    return null;
-  }
-}
-
-/**
- * Create error result for IPC responses
- */
-export function createErrorResult(error: unknown): { success: false; error: string } {
-  const appError = toAppError(error);
-  return {
-    success: false,
-    error: appError.getUserMessage()
-  };
-}
-
-/**
- * Log error with context
- */
-export function logError(error: unknown, context?: Record<string, unknown>): void {
-  const appError = toAppError(error);
-  console.error('Error occurred:', {
-    ...appError.toJSON(),
-    additionalContext: context
-  });
-}
-

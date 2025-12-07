@@ -141,15 +141,3 @@ export function registerWebUIHandlers(): void {
   console.log('WebUI IPC handlers registered');
 }
 
-/**
- * Unregister WebUI IPC handlers
- */
-export function unregisterWebUIHandlers(): void {
-  ipcMain.removeAllListeners('webui:start');
-  ipcMain.removeAllListeners('webui:stop');
-  ipcMain.removeAllListeners('webui:get-status');
-  ipcMain.removeAllListeners('webui:broadcast-status');
-  
-  console.log('WebUI IPC handlers unregistered');
-}
-

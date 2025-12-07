@@ -29,7 +29,7 @@ import {
   isValidObject,
   hasValue
 } from '../utils/extraction.utils.js';
-import { secondsToMinutes } from '../utils/time.utils.js';
+import { secondsToMinutes } from '@shared/utils/time.utils.js';
 import type {
   PrinterStatus,
   CurrentJobInfo,

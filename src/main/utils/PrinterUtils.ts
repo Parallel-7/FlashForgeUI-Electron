@@ -24,24 +24,18 @@
  * - AD5X: Material station support, no built-in camera/LED/filtration
  * - Generic Legacy: No built-in peripherals, no material station
  *
- * Key Functions:
- * - detectPrinterModelType(typeName): Returns PrinterModelType enum
- * - getPrinterModelInfo(typeName): Returns comprehensive feature info
- * - detectPrinterFamily(typeName): Returns family classification with check code requirement
- * - determineClientType(is5MFamily): Returns 'new' or 'legacy' client type
- * - supportsDualAPI(modelType): Checks if printer can use both APIs
- *
- * Validation Functions:
- * - isValidIPAddress(ip): IPv4 format validation
- * - isValidSerialNumber(serial): Serial number format validation
- * - isValidCheckCode(code): Check code format validation
- * - shouldPromptForCheckCode(): Determines if check code prompt is needed
- *
- * Utilities:
- * - formatPrinterName/sanitizePrinterName: Display and filesystem-safe naming
- * - getConnectionErrorMessage(error): User-friendly error messages
- * - getConnectionTimeout(is5MFamily): Dynamic timeout based on printer type
- * - formatConnectionStatus(isConnected, name): Status string generation
+* Key Functions:
+* - detectPrinterModelType(typeName): Returns PrinterModelType enum
+* - detectPrinterFamily(typeName): Returns family classification with check code requirement
+* - determineClientType(is5MFamily): Returns 'new' or 'legacy' client type
+* - supportsDualAPI(modelType): Checks if printer can use both APIs
+*
+* Validation Functions:
+* - shouldPromptForCheckCode(): Determines if check code prompt is needed
+*
+* Utilities:
+* - formatPrinterName: Display-safe naming
+* - getConnectionErrorMessage(error): User-friendly error messages
  *
  * Context:
  * Central to printer backend selection, connection workflow, and feature availability
@@ -54,17 +48,6 @@
 
 import { PrinterFamilyInfo, PrinterClientType } from '@shared/types/printer.js';
 import { PrinterModelType } from '@shared/types/printer-backend/index.js';
-
-/**
- * Enhanced printer family info with specific model type
- */
-export interface EnhancedPrinterFamilyInfo extends PrinterFamilyInfo {
-  readonly modelType: PrinterModelType;
-  readonly hasBuiltinCamera: boolean;
-  readonly hasBuiltinLED: boolean;
-  readonly hasBuiltinFiltration: boolean;
-  readonly supportsMaterialStation: boolean;
-}
 
 /**
  * Detect specific printer model type from typeName
@@ -91,65 +74,6 @@ export const detectPrinterModelType = (typeName: string): PrinterModelType => {
 };
 
 /**
- * Get detailed printer model information
- * Includes feature capabilities and requirements
- */
-export const getPrinterModelInfo = (typeName: string): EnhancedPrinterFamilyInfo => {
-  const modelType = detectPrinterModelType(typeName);
-  
-  switch (modelType) {
-    case 'adventurer-5m-pro':
-      return {
-        is5MFamily: true,
-        requiresCheckCode: true,
-        familyName: 'Adventurer 5M Pro',
-        modelType,
-        hasBuiltinCamera: true,
-        hasBuiltinLED: true,
-        hasBuiltinFiltration: true,
-        supportsMaterialStation: false
-      };
-      
-    case 'adventurer-5m':
-      return {
-        is5MFamily: true,
-        requiresCheckCode: true,
-        familyName: 'Adventurer 5M',
-        modelType,
-        hasBuiltinCamera: false,
-        hasBuiltinLED: false,
-        hasBuiltinFiltration: false,
-        supportsMaterialStation: false
-      };
-      
-    case 'ad5x':
-      return {
-        is5MFamily: true,
-        requiresCheckCode: true,
-        familyName: 'AD5X',
-        modelType,
-        hasBuiltinCamera: false,
-        hasBuiltinLED: false,
-        hasBuiltinFiltration: false,
-        supportsMaterialStation: true
-      };
-      
-    case 'generic-legacy':
-    default:
-      return {
-        is5MFamily: false,
-        requiresCheckCode: false,
-        familyName: typeName || 'Legacy Printer',
-        modelType: 'generic-legacy',
-        hasBuiltinCamera: false,
-        hasBuiltinLED: false,
-        hasBuiltinFiltration: false,
-        supportsMaterialStation: false
-      };
-  }
-};
-
-/**
  * Check if printer supports dual API usage
  * Modern printers (5M family) can use both new and legacy APIs
  */
@@ -172,14 +96,6 @@ export const getModelDisplayName = (modelType: PrinterModelType): string => {
     default:
       return 'Legacy Printer';
   }
-};
-
-/**
- * Determine if model requires material station configuration
- * Currently only AD5X has material station support
- */
-export const requiresMaterialStation = (modelType: PrinterModelType): boolean => {
-  return modelType === 'ad5x';
 };
 
 /**
@@ -286,68 +202,11 @@ export const formatPrinterName = (name: string, serialNumber?: string): string =
 };
 
 /**
- * Validate IP address format
- * Basic validation for IPv4 addresses
- */
-export const isValidIPAddress = (ip: string): boolean => {
-  if (!ip || typeof ip !== 'string') {
-    return false;
-  }
-  
-  const ipRegex = /^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-  return ipRegex.test(ip);
-};
-
-/**
- * Validate serial number format
- * Basic validation for FlashForge serial numbers
- */
-export const isValidSerialNumber = (serialNumber: string): boolean => {
-  if (!serialNumber || typeof serialNumber !== 'string') {
-    return false;
-  }
-  
-  // Serial numbers should be at least 3 characters and contain alphanumeric characters
-  const trimmed = serialNumber.trim();
-  return trimmed.length >= 3 && /^[A-Za-z0-9\-_]+$/.test(trimmed);
-};
-
-/**
- * Validate check code format
- * Check codes are typically numeric or alphanumeric
- */
-export const isValidCheckCode = (checkCode: string): boolean => {
-  if (!checkCode || typeof checkCode !== 'string') {
-    return false;
-  }
-  
-  // Check codes should be at least 1 character
-  const trimmed = checkCode.trim();
-  return trimmed.length >= 1 && trimmed.length <= 20;
-};
-
-/**
  * Generate a default check code
  * Used as fallback when no check code is required
  */
 export const getDefaultCheckCode = (): string => {
   return '123';
-};
-
-/**
- * Sanitize printer name for file system usage
- * Removes invalid characters that could cause issues
- */
-export const sanitizePrinterName = (name: string): string => {
-  if (!name) {
-    return 'unknown_printer';
-  }
-  
-  return name
-    .trim()
-    .replace(/[<>:"/\\|?*]/g, '_') // Replace invalid file system characters
-    .replace(/\s+/g, '_') // Replace spaces with underscores
-    .toLowerCase();
 };
 
 /**
@@ -387,14 +246,6 @@ export const getConnectionErrorMessage = (error: unknown): string => {
   return 'Connection failed - please check printer and network settings';
 };
 
-/**
- * Calculate connection timeout based on printer type
- * 5M family printers may need longer timeouts for pairing
- */
-export const getConnectionTimeout = (is5MFamily: boolean): number => {
-  // Return timeout in milliseconds
-  return is5MFamily ? 15000 : 10000; // 15s for 5M, 10s for legacy
-};
 
 /**
  * Check if a check code prompt is needed
@@ -415,18 +266,5 @@ export const shouldPromptForCheckCode = (
   
   // 5M printers need check code if not already saved or saved code is default/empty
   return !savedCheckCode || savedCheckCode === getDefaultCheckCode() || savedCheckCode.trim().length === 0;
-};
-
-/**
- * Format connection status message
- */
-export const formatConnectionStatus = (isConnected: boolean, printerName?: string): string => {
-  if (isConnected && printerName) {
-    return `Connected to ${printerName}`;
-  } else if (isConnected) {
-    return 'Connected to printer';
-  } else {
-    return 'Not connected';
-  }
 };
 

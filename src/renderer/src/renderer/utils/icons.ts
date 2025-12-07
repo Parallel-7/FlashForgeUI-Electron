@@ -235,10 +235,6 @@ export function getLucideIcons(...names: string[]): Record<string, IconNode> {
   }, {});
 }
 
-export function getLucideIcon(name: string): IconNode {
-  const iconNode = resolveIconNode(name);
-  return assertIcon(name, iconNode);
-}
 
 export function initializeLucideIcons(
   root: Document | Element | DocumentFragment,
@@ -263,43 +259,6 @@ export function initializeLucideIcons(
     attrs: attributeEntries,
     root,
   });
-}
-
-export function createIcon(icon: IconNode, config: IconConfig = {}): SVGElement {
-  const lucide = resolveLucideRuntime();
-  const {
-    size = 24,
-    strokeWidth = 2,
-    color,
-    className,
-    attrs = {},
-  } = config;
-
-  const normalizedClass = normalizeClassName(className);
-  const elementAttributes: Record<string, string | number> = {
-    width: size,
-    height: size,
-    'stroke-width': strokeWidth,
-    'aria-hidden': 'true',
-    focusable: 'false',
-    ...attrs,
-  };
-
-  if (normalizedClass) {
-    elementAttributes.class = normalizedClass;
-  }
-
-  const element = lucide.createElement(icon, elementAttributes);
-
-  if (color) {
-    element.setAttribute('stroke', color);
-  }
-
-  if (!element.getAttribute('fill')) {
-    element.setAttribute('fill', 'none');
-  }
-
-  return element;
 }
 
 interface WindowLucideHelpers {
@@ -338,29 +297,3 @@ export function initializeUniversalLucideIcons(
   initializeLucideIcons(root, icons);
 }
 
-export function createNumberedBadge(
-  number: 1 | 2 | 3,
-  config: IconConfig = {}
-): SVGElement {
-  const circleIcon = getLucideIcon('circle');
-  const badge = createIcon(circleIcon, {
-    size: config.size ?? 16,
-    strokeWidth: config.strokeWidth ?? 2,
-    className: config.className,
-    color: config.color,
-    attrs: config.attrs,
-  });
-
-  const text = document.createElementNS(SVG_NS, 'text');
-  text.setAttribute('x', '12');
-  text.setAttribute('y', '12');
-  text.setAttribute('text-anchor', 'middle');
-  text.setAttribute('dominant-baseline', 'middle');
-  text.setAttribute('font-size', '12');
-  text.setAttribute('font-weight', 'bold');
-  text.setAttribute('fill', 'currentColor');
-  text.textContent = number.toString();
-
-  badge.appendChild(text);
-  return badge;
-}

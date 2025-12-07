@@ -11,7 +11,6 @@
  * - State Management: NotificationState, NotificationStateTransition for duplicate prevention
  * - Configuration: NotificationSettings extracted from AppConfig
  * - Printer Integration: State transitions, temperature thresholds, trigger conditions
- * - Events: NotificationEvent enum with typed event payloads
  *
  * Factory Functions:
  * - createPrintCompleteNotification: Print job completion alerts
@@ -22,7 +21,6 @@
  * - createConnectionErrorNotification: Connection failures
  *
  * Type Guards:
- * - isPrintCompleteNotification, isPrinterCooledNotification, etc.
  * - shouldSendNotification: Settings-based notification filtering
  * - shouldCheckForNotifications, shouldResetNotificationFlags: State-based logic
  *
@@ -334,16 +332,6 @@ export function isTemperatureCooled(temperature: number): boolean {
 // ============================================================================
 
 /**
- * Events emitted by the notification system
- */
-export enum NotificationEvent {
-  NotificationSent = 'notification-sent',
-  NotificationFailed = 'notification-failed',
-  StateUpdated = 'state-updated',
-  SettingsChanged = 'settings-changed'
-}
-
-/**
  * Event payloads for notification system events
  */
 export interface NotificationEventPayloads {
@@ -470,37 +458,5 @@ export function createConnectionErrorNotification(
     id: createNotificationId(`connection-error-${Date.now()}`),
     errorInfo
   };
-}
-
-// ============================================================================
-// TYPE GUARDS
-// ============================================================================
-
-/**
- * Type guard for print complete notifications
- */
-export function isPrintCompleteNotification(notification: Notification): notification is PrintCompleteNotification {
-  return notification.type === NotificationType.PrintComplete;
-}
-
-/**
- * Type guard for printer cooled notifications
- */
-export function isPrinterCooledNotification(notification: Notification): notification is PrinterCooledNotification {
-  return notification.type === NotificationType.PrinterCooled;
-}
-
-/**
- * Type guard for upload notifications
- */
-export function isUploadNotification(notification: Notification): notification is UploadCompleteNotification | UploadFailedNotification {
-  return notification.type === NotificationType.UploadComplete || notification.type === NotificationType.UploadFailed;
-}
-
-/**
- * Type guard for connection notifications
- */
-export function isConnectionNotification(notification: Notification): notification is ConnectionLostNotification | ConnectionErrorNotification {
-  return notification.type === NotificationType.ConnectionLost || notification.type === NotificationType.ConnectionError;
 }
 

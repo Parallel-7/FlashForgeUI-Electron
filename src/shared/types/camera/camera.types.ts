@@ -239,24 +239,3 @@ export interface CameraUrlValidationResult {
   readonly parsedUrl?: URL;
 }
 
-/**
- * Type guard to check if a camera source is available
- */
-export function isCameraAvailable(config: ResolvedCameraConfig): config is ResolvedCameraConfig & { streamUrl: string } {
-  return config.isAvailable && config.streamUrl !== null;
-}
-
-/**
- * Type guard to check if using custom camera
- */
-export function isCustomCamera(config: ResolvedCameraConfig): boolean {
-  return config.sourceType === 'custom';
-}
-
-/**
- * Type guard to check if using built-in camera
- */
-export function isBuiltinCamera(config: ResolvedCameraConfig): boolean {
-  return config.sourceType === 'builtin';
-}
-

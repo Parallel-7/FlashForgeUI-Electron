@@ -257,12 +257,3 @@ export function getMultiContextTemperatureMonitor(): MultiContextTemperatureMoni
   return globalMultiContextTemperatureMonitor;
 }
 
-/**
- * Reset global multi-context temperature monitor (for testing)
- */
-export function resetMultiContextTemperatureMonitor(): void {
-  if (globalMultiContextTemperatureMonitor) {
-    globalMultiContextTemperatureMonitor.dispose();
-    globalMultiContextTemperatureMonitor = null;
-  }
-}

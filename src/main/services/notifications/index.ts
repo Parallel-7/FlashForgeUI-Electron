@@ -52,7 +52,6 @@ export type {
 } from '@shared/types/notification.js';
 
 // Import types for internal use
-import type { NotificationState, NotificationSettings } from '@shared/types/notification.js';
 
 // Import headless detection
 import { isHeadlessMode } from '../../utils/HeadlessDetection.js';
@@ -123,77 +122,5 @@ export function disposeNotificationSystem(): void {
   resetNotificationService();
   
   console.log('Notification system disposed');
-}
-
-/**
- * Get notification system status
- */
-export function getNotificationSystemStatus(): {
-  notificationService: {
-    supported: boolean;
-    activeCount: number;
-    totalSent: number;
-  };
-  coordinator: {
-    state: NotificationState;
-    settings: NotificationSettings;
-  };
-} {
-  const notificationService = getNotificationService();
-  const coordinator = getPrinterNotificationCoordinator();
-  
-  const serviceStats = notificationService.getNotificationStats();
-  
-  return {
-    notificationService: {
-      supported: serviceStats.supportedPlatform,
-      activeCount: serviceStats.activeCount,
-      totalSent: serviceStats.totalSent
-    },
-    coordinator: {
-      state: coordinator.getNotificationState(),
-      settings: coordinator.getNotificationSettings()
-    }
-  };
-}
-
-// ============================================================================
-// CONVENIENT UPLOAD NOTIFICATION HELPERS
-// ============================================================================
-
-/**
- * Send upload complete notification
- * Convenient wrapper for backend integration
- */
-export async function notifyUploadComplete(fileName: string, fileSize?: number, uploadDuration?: number): Promise<void> {
-  const coordinator = getPrinterNotificationCoordinator();
-  await coordinator.sendUploadCompleteNotification(fileName, fileSize, uploadDuration);
-}
-
-/**
- * Send upload failed notification
- * Convenient wrapper for backend integration
- */
-export async function notifyUploadFailed(fileName: string, errorMessage: string, errorCode?: string): Promise<void> {
-  const coordinator = getPrinterNotificationCoordinator();
-  await coordinator.sendUploadFailedNotification(fileName, errorMessage, errorCode);
-}
-
-/**
- * Send connection lost notification
- * Convenient wrapper for connection managers
- */
-export async function notifyConnectionLost(printerName: string, ipAddress?: string): Promise<void> {
-  const coordinator = getPrinterNotificationCoordinator();
-  await coordinator.sendConnectionLostNotification(printerName, ipAddress);
-}
-
-/**
- * Send connection error notification
- * Convenient wrapper for connection managers
- */
-export async function notifyConnectionError(errorMessage: string, errorCode?: string, printerName?: string): Promise<void> {
-  const coordinator = getPrinterNotificationCoordinator();
-  await coordinator.sendConnectionErrorNotification(errorMessage, errorCode, printerName);
 }
 

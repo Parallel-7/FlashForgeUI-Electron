@@ -75,6 +75,3 @@ export const hideSpoolmanOfflineDialog = (): void => {
   }
 };
 
-export const isSpoolmanOfflineDialogVisible = (): boolean => {
-  return Boolean(offlineDialogWindow && !offlineDialogWindow.isDestroyed());
-};

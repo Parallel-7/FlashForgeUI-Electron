@@ -146,12 +146,3 @@ export function initializePrinterSettingsHandlers(): void {
   console.log('Per-printer settings IPC handlers initialized');
 }
 
-/**
- * Cleanup per-printer settings handlers
- */
-export function disposePrinterSettingsHandlers(): void {
-  ipcMain.removeHandler('printer-settings:get');
-  ipcMain.removeHandler('printer-settings:update');
-  ipcMain.removeHandler('printer-settings:get-printer-name');
-}
-

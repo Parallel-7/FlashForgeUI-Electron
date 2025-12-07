@@ -110,20 +110,22 @@ export interface ComputedThemePalette {
 }
 
 export function computeThemePalette(theme: ThemeColors): ComputedThemePalette {
-  const primaryHover = lightenColor(theme.primary, 15);
-  const secondaryHover = lightenColor(theme.secondary, 15);
-  const surfaceIsLight = getLuminance(theme.surface) > 0.5;
-  const surfaceMuted = darkenColor(theme.surface, 6);
-  const surfaceElevated = surfaceIsLight ? darkenColor(theme.surface, 12) : lightenColor(theme.surface, 12);
-  const borderBaseColor = surfaceIsLight ? darkenColor(theme.surface, 30) : lightenColor(theme.surface, 30);
-  const borderSoftColor = surfaceIsLight ? darkenColor(theme.surface, 18) : lightenColor(theme.surface, 18);
-  const borderFocusColor = surfaceIsLight ? darkenColor(theme.surface, 40) : lightenColor(theme.surface, 40);
-  const uiBorderColor = surfaceIsLight ? darkenColor(theme.surface, 45) : lightenColor(theme.surface, 45);
-  const primaryIsLight = getLuminance(theme.primary) > 0.5;
-  const scrollbarTrackColor = surfaceIsLight ? lightenColor(theme.surface, 10) : darkenColor(theme.surface, 10);
-  const scrollbarThumbColor = primaryIsLight ? darkenColor(theme.primary, 12) : lightenColor(theme.primary, 8);
-  const scrollbarThumbHoverColor = primaryIsLight ? darkenColor(theme.primary, 20) : lightenColor(theme.primary, 14);
-  const scrollbarThumbActiveColor = primaryIsLight ? darkenColor(theme.primary, 28) : lightenColor(theme.primary, 18);
+  const { primary, secondary, surface } = theme;
+
+  const primaryHover = lightenColor(primary, 15);
+  const secondaryHover = lightenColor(secondary, 15);
+  const surfaceIsLight = getLuminance(surface) > 0.5;
+  const surfaceMuted = darkenColor(surface, 6);
+  const surfaceElevated = surfaceIsLight ? darkenColor(surface, 12) : lightenColor(surface, 12);
+  const borderBaseColor = surfaceIsLight ? darkenColor(surface, 30) : lightenColor(surface, 30);
+  const borderSoftColor = surfaceIsLight ? darkenColor(surface, 18) : lightenColor(surface, 18);
+  const borderFocusColor = surfaceIsLight ? darkenColor(surface, 40) : lightenColor(surface, 40);
+  const uiBorderColor = surfaceIsLight ? darkenColor(surface, 45) : lightenColor(surface, 45);
+  const primaryIsLight = getLuminance(primary) > 0.5;
+  const scrollbarTrackColor = surfaceIsLight ? lightenColor(surface, 10) : darkenColor(surface, 10);
+  const scrollbarThumbColor = primaryIsLight ? darkenColor(primary, 12) : lightenColor(primary, 8);
+  const scrollbarThumbHoverColor = primaryIsLight ? darkenColor(primary, 20) : lightenColor(primary, 14);
+  const scrollbarThumbActiveColor = primaryIsLight ? darkenColor(primary, 28) : lightenColor(primary, 18);
 
   return {
     primaryHover,
@@ -133,10 +135,10 @@ export function computeThemePalette(theme: ThemeColors): ComputedThemePalette {
     borderColor: hexToRgba(borderBaseColor, 0.35),
     borderColorLight: hexToRgba(borderSoftColor, 0.25),
     borderColorFocus: hexToRgba(borderFocusColor, 0.5),
-    buttonTextColor: getContrastingTextColor(theme.secondary),
-    accentTextColor: getContrastingTextColor(theme.primary),
+    buttonTextColor: getContrastingTextColor(secondary),
+    accentTextColor: getContrastingTextColor(primary),
      dialogHeaderTextColor: getContrastingTextColor(surfaceMuted),
-    containerTextColor: getContrastingTextColor(theme.surface),
+    containerTextColor: getContrastingTextColor(surface),
     scrollbarTrackColor,
     scrollbarThumbColor,
     scrollbarThumbHoverColor,

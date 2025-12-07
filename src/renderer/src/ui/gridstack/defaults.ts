@@ -11,8 +11,6 @@
  * - DEFAULT_WIDGETS: Component positions matching original layout (8 components)
  * - DEFAULT_LAYOUT: Complete default layout configuration with metadata
  * - getDefaultLayout(): Factory function for fresh default layouts
- * - getDefaultGridOptions(): Returns fresh copy of default grid options
- * - getDefaultWidgets(): Returns fresh copy of default widget configurations
  * - isValidLayout(): Validates layout configuration structure
  * - mergeWithDefaults(): Merges user layout with defaults to fill missing properties
  *
@@ -174,22 +172,6 @@ export function getDefaultLayout(): LayoutConfig {
     widgets: DEFAULT_WIDGETS.map(w => ({ ...w })),
     timestamp: new Date().toISOString(),
   };
-}
-
-/**
- * Get default grid options
- * Returns a fresh copy to avoid mutations
- */
-export function getDefaultGridOptions(): GridOptions {
-  return { ...DEFAULT_GRID_OPTIONS };
-}
-
-/**
- * Get default widget configurations
- * Returns a fresh copy to avoid mutations
- */
-export function getDefaultWidgets(): GridStackWidgetConfig[] {
-  return DEFAULT_WIDGETS.map(w => ({ ...w }));
 }
 
 /**

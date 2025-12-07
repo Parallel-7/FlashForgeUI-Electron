@@ -214,29 +214,3 @@ export function formatCameraProxyUrl(port: number): string {
   return `http://localhost:${port}/stream`;
 }
 
-/**
- * Check if camera feature is available for a printer
- */
-export function isCameraFeatureAvailable(params: CameraUrlResolutionParams): boolean {
-  const config = resolveCameraConfig(params);
-  return config.isAvailable;
-}
-
-/**
- * Get human-readable camera status message
- */
-export function getCameraStatusMessage(config: ResolvedCameraConfig): string {
-  if (config.isAvailable) {
-    switch (config.sourceType) {
-      case 'builtin':
-        return 'Using printer built-in camera';
-      case 'custom':
-        return 'Using custom camera URL';
-      default:
-        return 'Camera available';
-    }
-  } else {
-    return config.unavailableReason || 'Camera not available';
-  }
-}
-
