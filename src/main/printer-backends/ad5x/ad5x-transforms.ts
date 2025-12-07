@@ -20,12 +20,11 @@
  * - Error state creation with appropriate default values
  */
 
-import { 
-  MatlStationInfo, 
+import {
+  MatlStationInfo,
   SlotInfo,
-  MaterialStationStatus, 
-  MaterialSlotInfo, 
-  AD5XMaterialMapping 
+  MaterialStationStatus,
+  MaterialSlotInfo
 } from './ad5x-types.js';
 
 /**

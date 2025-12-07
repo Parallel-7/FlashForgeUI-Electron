@@ -82,7 +82,6 @@ import {
   AutoConnectChoiceDialogData,
   ConnectChoiceDialogData,
   PrinterConnectedWarningData,
-  createPreloadPath,
   WINDOW_SIZES
 } from '../shared/WindowTypes.js';
 import {
@@ -96,7 +95,7 @@ import {
   createUIPreloadPath
 } from '../shared/WindowConfig.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const _dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // Interface for window data storage to avoid any types
 interface WindowDataStorage<T> {

@@ -18,8 +18,6 @@
 // IFS Dialog renderer process logic for material station display
 
 import type { IFSDialogAPI, MaterialSlotData, MaterialStationData } from './ifs-dialog-preload.cts';
-import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
 
 const getIfsDialogAPI = (): IFSDialogAPI => {

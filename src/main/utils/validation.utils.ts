@@ -61,8 +61,8 @@
  * form input validation, and ensuring type safety at runtime for external data sources.
  */
 
-import { z, ZodError, ZodSchema, ZodObject } from 'zod';
-import { AppError, fromZodError } from './error.utils.js';
+import { z } from 'zod';
+import { AppError } from './error.utils.js';
 
 // ============================================================================
 // VALIDATION RESULT TYPES

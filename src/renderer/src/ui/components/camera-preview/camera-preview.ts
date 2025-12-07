@@ -26,7 +26,7 @@ import type { ComponentUpdateData } from '../base/types.js';
 import type { CameraProxyStatus, ResolvedCameraConfig } from '@shared/types/camera/camera.types.js';
 import type { PrinterContextInfo } from '@shared/types/PrinterContext.js';
 import type { PollingData, PrinterState, CurrentJobInfo } from '@shared/types/polling.js';
-import type { JSMpegPlayerInstance, JSMpegStatic } from '@shared/types/jsmpeg.d.ts';
+import type { JSMpegPlayerInstance } from '@shared/types/jsmpeg.d.ts';
 import { logVerbose } from '@shared/logging.js';
 import './camera-preview.css';
 

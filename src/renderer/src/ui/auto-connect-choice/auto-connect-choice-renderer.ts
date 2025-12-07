@@ -5,8 +5,6 @@
  */
 
 import type { AutoConnectChoiceOption, AutoConnectChoiceData } from './auto-connect-choice-preload.cts';
-import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
 
 interface AutoConnectChoiceAPI {
@@ -170,8 +168,6 @@ async function handleChoice(action: AutoConnectChoiceOption['action']): Promise<
  * Export for potential testing purposes
  */
 if (typeof exports !== 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   exports.handleChoice = handleChoice;
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   exports.updateDialogUI = updateDialogUI;
 }

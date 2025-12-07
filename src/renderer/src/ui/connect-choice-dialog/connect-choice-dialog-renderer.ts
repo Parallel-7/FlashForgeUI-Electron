@@ -248,10 +248,7 @@ function showErrorFeedback(message: string): void {
  * Export for potential testing purposes
  */
 if (typeof exports !== 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   exports.handleChoice = handleChoice;
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   exports.updateDialogUI = updateDialogUI;
-  // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
   exports.handleArrowNavigation = handleArrowNavigation;
 }

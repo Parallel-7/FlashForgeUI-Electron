@@ -25,11 +25,7 @@ import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
 import type { PollingData } from '@shared/types/polling.js';
 import { formatWeight, formatLength } from '@shared/types/polling.js';
-import {
-  formatJobTime,
-  formatETA,
-  formatDuration
-} from '@shared/utils/time.utils.js';
+import { formatJobTime } from '@shared/utils/time.utils.js';
 import './job-stats.css';
 
 /**

@@ -9,17 +9,6 @@
  * from the main process service but adapted for direct DOM manipulation in the renderer.
  */
 
-import type {
-  PollingData,
-  PrinterStatus,
-  MaterialStationStatus
-} from '@shared/types/polling.js';
-import {
-  formatTemperature,
-  formatWeight,
-  formatLength
-} from '@shared/types/polling.js';
-
 // ============================================================================
 // UTILITY FUNCTIONS
 // ============================================================================
@@ -33,40 +22,6 @@ function getElement(id: string): HTMLElement | null {
   } catch (error) {
     console.warn(`Element not found: ${id}`, error);
     return null;
-  }
-}
-
-/**
- * Safely set text content of element
- */
-function setElementText(id: string, text: string): void {
-  const element = getElement(id);
-  if (element) {
-    element.textContent = text;
-  }
-}
-
-/**
- * Safely set element attribute
- */
-function setElementAttribute(id: string, attribute: string, value: string | number): void {
-  const element = getElement(id);
-  if (element) {
-    element.setAttribute(attribute, value.toString());
-  }
-}
-
-/**
- * Safely add/remove CSS class
- */
-function setElementClass(id: string, className: string, add: boolean): void {
-  const element = getElement(id);
-  if (element) {
-    if (add) {
-      element.classList.add(className);
-    } else {
-      element.classList.remove(className);
-    }
   }
 }
 

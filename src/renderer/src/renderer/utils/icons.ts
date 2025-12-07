@@ -29,8 +29,6 @@ import AlertTriangle from 'lucide/dist/esm/icons/triangle-alert.js';
 import Circle from 'lucide/dist/esm/icons/circle.js';
 import Info from 'lucide/dist/esm/icons/info.js';
 
-const SVG_NS = 'http://www.w3.org/2000/svg';
-
 type ReplaceElementFn = (
   element: Element,
   options: {
@@ -136,7 +134,7 @@ function resolveLucideRuntime(): LucideRuntime {
   return cachedRuntime;
 }
 
-function assertIcon(name: string, icon: IconNode | undefined): IconNode {
+function _assertIcon(name: string, icon: IconNode | undefined): IconNode {
   if (!icon) {
     throw new Error(`Lucide icon "${name}" was requested but not found.`);
   }

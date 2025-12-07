@@ -30,8 +30,6 @@
 export {};
 
 import { logVerbose } from '@shared/logging.js';
-import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
 
 // Interface for discovered printer information (matches preload)

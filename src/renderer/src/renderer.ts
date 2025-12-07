@@ -54,7 +54,7 @@ import {
 import { getGlobalStateTracker, STATE_EVENTS } from './renderer/services/printer-state.js';
 import { resetUI, handleUIError } from './renderer/services/ui-updater.js';
 import type { PollingData } from '@shared/types/polling.js';
-import type { ThemeColors, AppConfig } from '@shared/types/config.js';
+import type { ThemeColors } from '@shared/types/config.js';
 import { DEFAULT_THEME } from '@shared/types/config.js';
 import { computeThemePalette } from '@shared/themeColorUtils.js';
 import { RendererGridController } from './renderer/gridController.js';

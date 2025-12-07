@@ -21,8 +21,6 @@
 
 import type { AD5XJobInfo } from '@shared/types/printer-backend/index.js';
 import { logVerbose } from '@shared/logging.js';
-import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
 
 interface JobPickerAPI {

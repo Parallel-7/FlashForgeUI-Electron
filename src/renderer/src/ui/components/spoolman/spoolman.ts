@@ -21,7 +21,7 @@ import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
 import type { ActiveSpoolData } from './types.js';
 import type { AppConfig } from '@shared/types/config.js';
-import { getLucideIcons, initializeUniversalLucideIcons } from '../../../renderer/utils/icons.js';
+import { initializeUniversalLucideIcons } from '../../../renderer/utils/icons.js';
 import './spoolman.css';
 
 /**

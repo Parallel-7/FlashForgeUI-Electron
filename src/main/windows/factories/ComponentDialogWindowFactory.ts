@@ -42,7 +42,7 @@ import {
 } from '../shared/WindowConfig.js';
 import { getLogService, type LogMessage } from '../../services/LogService.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const _dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Component dialog size configuration

@@ -27,7 +27,6 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { getWindowManager } from '../WindowManager.js';
 import {
-  createPreloadPath,
   createWindowWidth,
   createWindowHeight,
   createWindowMinWidth,
@@ -44,7 +43,7 @@ import {
   createUIPreloadPath
 } from '../shared/WindowConfig.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const _dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Window data storage type

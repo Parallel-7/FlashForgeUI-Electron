@@ -83,7 +83,7 @@ import {
 } from './WindowTypes.js';
 import { getUIWindowOptions, injectUIStyleVariables } from '../../utils/CSSVariables.js';
 
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const _dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Create standardized secure web preferences for all windows
@@ -115,7 +115,7 @@ export const getWindowDimensions = (windowType: keyof typeof WINDOW_SIZES): Wind
  * Setup development tools for a window if in development mode
  * Centralizes dev tools configuration logic
  */
-export const setupDevTools = (window: BrowserWindow): void => {
+export const setupDevTools = (_window: BrowserWindow): void => {
   // DevTools auto-open is now handled explicitly by the caller (e.g. main window)
   // to prevent spamming dev tools for every dialog.
   // if (process.env.NODE_ENV === 'development') {
