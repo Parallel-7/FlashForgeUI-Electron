@@ -147,7 +147,7 @@ const componentDialogAPI = {
     }
   },
   invoke: async (channel: string, ...data: unknown[]): Promise<unknown> => {
-    const validChannels = ['component-dialog:get-info'];
+    const validChannels = ['component-dialog:get-info', 'component-dialog:get-polling-data'];
     if (validChannels.includes(channel)) {
       return ipcRenderer.invoke(channel, ...data);
     }

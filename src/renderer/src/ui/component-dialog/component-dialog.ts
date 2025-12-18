@@ -132,10 +132,25 @@ async function initializeDialog(componentId: string): Promise<void> {
       throw new Error('Config API unavailable');
     }
     const config = await window.api.config.get();
+
+    // Request initial polling data from main process
+    const api = getComponentDialogAPI();
+    const initialPollingData = await api.invoke('component-dialog:get-polling-data');
+
+    // Build update data with config and optional polling data
     const updateData: ComponentUpdateData = {
       config: config,
       timestamp: new Date().toISOString()
     };
+
+    // Add polling data if available
+    if (initialPollingData && isPollingData(initialPollingData)) {
+      updateData.pollingData = initialPollingData;
+      updateData.printerState = initialPollingData.printerStatus?.state;
+      updateData.connectionState = initialPollingData.isConnected;
+      console.log('[ComponentDialog] Received initial polling data');
+    }
+
     dialogComponentManager.updateAll(updateData);
 
     console.log(`[ComponentDialog] Component initialized: ${componentId}`);

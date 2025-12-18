@@ -627,6 +627,12 @@ const setupPrinterContextEventForwarding = (): void => {
         mainWindow.webContents.send('polling-update', pollingData);
       }
 
+      // Forward to component dialog window (for shortcut button components)
+      const componentDialog = windowManager.getComponentDialogWindow();
+      if (componentDialog && !componentDialog.isDestroyed()) {
+        componentDialog.webContents.send('polling-update', pollingData);
+      }
+
       // Forward to WebUI for WebSocket clients
       const webUIManager = getWebUIManager();
       webUIManager.handlePollingUpdate(pollingData);

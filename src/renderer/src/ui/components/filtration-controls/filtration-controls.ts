@@ -76,8 +76,16 @@ export class FiltrationControlsComponent extends BaseComponent {
 
     try {
       const pollingData = data.pollingData;
-      const printerStatus = pollingData?.printerStatus;
-      const isConnected = pollingData?.isConnected ?? false;
+
+      // If no polling data provided (e.g., config-only update), preserve current state
+      // and wait for actual polling data to arrive
+      if (!pollingData) {
+        this.updateState(data);
+        return;
+      }
+
+      const printerStatus = pollingData.printerStatus;
+      const isConnected = pollingData.isConnected ?? false;
 
       if (printerStatus && isConnected) {
         const filtrationStatus = printerStatus.filtration;
@@ -95,7 +103,7 @@ export class FiltrationControlsComponent extends BaseComponent {
           this.hideComponent();
         }
       } else {
-        // No printer data or not connected
+        // Printer not connected - show disconnected state
         this.showComponent();
         this.updateFiltrationDisplay({
           mode: 'none',
