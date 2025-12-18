@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Upload Job</title>
+    <link rel="stylesheet" href="job-uploader.css" />
+    
+    
+</head>
+<body>
+<div class="dialog-container dialog-container--full">
+    <!-- Dialog Header -->
+    <div class="dialog-header">
+        <div class="dialog-title">Upload Job</div>
+        <button class="dialog-close" id="btn-close" aria-label="Close">
+            <i data-lucide="x" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <!-- Dialog Content -->
+    <div class="dialog-content">
+        <!-- File Selection -->
+        <div class="file-section">
+            <div class="file-path" id="file-path-display">No file selected...</div>
+            <button class="browse-btn" id="btn-browse">Browse...</button>
+        </div>
+
+        <!-- Options -->
+        <div class="options-section">
+            <label class="option">
+                <input type="checkbox" id="cb-start-now" checked> Start Now
+            </label>
+            <label class="option">
+                <input type="checkbox" id="cb-auto-level"> Auto Level
+            </label>
+        </div>
+
+        <!-- Main Content Layout -->
+        <div class="content">
+            <!-- Left Side: Preview -->
+            <div class="preview-section">
+                <div class="thumbnail" id="meta-thumbnail">
+                    <span class="no-preview">No Preview</span>
+                </div>
+            </div>
+
+            <!-- Right Side: Metadata -->
+            <div class="metadata-section">
+                <div class="metadata-group">
+                    <h4 class="group-title">Printer Model:</h4>
+                    <div class="group-value" id="meta-printer">Flashforge-Adventurer-5M-Pro</div>
+                </div>
+                
+                <div class="metadata-group">
+                    <h4 class="group-title">Filament Type:</h4>
+                    <div class="group-value" id="meta-filament-type">PLA</div>
+                </div>
+                
+                <div class="metadata-group">
+                    <h4 class="group-title">Filament Used:</h4>
+                    <div class="group-value" id="meta-filament-len">11.30 g</div>
+                </div>
+                
+                <div class="metadata-group">
+                    <h4 class="group-title">Sliced by:</h4>
+                    <div class="group-value" id="meta-slicer-name">Orca-Flashforge</div>
+                </div>
+                
+                <div class="metadata-group">
+                    <h4 class="group-title">Version:</h4>
+                    <div class="group-value" id="meta-slicer-ver">1.1.0</div>
+                </div>
+                
+                <div class="metadata-group">
+                    <h4 class="group-title">Date:</h4>
+                    <div class="group-value" id="meta-slice-date">2025-01-06</div>
+                </div>
+                
+                <div class="metadata-group">
+                    <h4 class="group-title">Time:</h4>
+                    <div class="group-value" id="meta-slice-time">8:51 PM</div>
+                </div>
+                
+                <div class="metadata-group print-time-highlight">
+                    <h4 class="group-title">Estimated Print Time:</h4>
+                    <div class="group-value print-time-value" id="meta-eta">36m41s</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dialog Footer -->
+    <div class="dialog-footer">
+        <button class="dialog-button cancel" id="btn-cancel">Cancel</button>
+        <button class="dialog-button primary" id="btn-ok" disabled>OK</button>
+    </div>
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay" class="loading-overlay" style="display: none;">
+    Parsing file...
+</div>
+
+<!-- Upload Progress Overlay -->
+<div id="upload-progress-overlay" class="upload-progress-overlay" style="display: none;">
+    <div class="progress-container">
+        <div class="progress-header">
+            <span class="progress-title">Uploading Job</span>
+            <span class="progress-percentage" id="progress-percentage">0%</span>
+        </div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+        <div class="progress-status" id="progress-status">Preparing upload...</div>
+    </div>
+</div>
+
+
+  <script type="module" src="./job-uploader-renderer.ts"></script>
+</body>
+</html>

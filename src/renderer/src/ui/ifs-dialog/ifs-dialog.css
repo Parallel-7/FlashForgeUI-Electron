@@ -1,0 +1,251 @@
+/* IFS Dialog - Rounded Styling Pattern */
+/* Import shared template for consistent styling */
+@import url('../shared/rounded-dialog-template.css');
+
+:root {
+  /* Use theme variables with fallbacks matching settings.css */
+  --success-color: var(--theme-success, #4CAF50);
+  --error-color: var(--theme-error, #f44336);
+  --warning-color: var(--theme-warning, #ff9800);
+}
+
+/* Ensure transparent background for IFS dialog */
+body {
+    background: transparent !important;
+}
+
+.dialog-container {
+    background: var(--surface-muted, var(--theme-surface));
+    border: 1px solid var(--border-color);
+}
+
+/* IFS Dialog Specific Styling */
+
+.station-header {
+  display: flex;
+  justify-content: center; /* Center the title */
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border-color);
+  position: relative; /* For absolute positioning of status */
+}
+
+.station-header h3 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--theme-text);
+  margin: 0;
+  text-align: center;
+}
+
+.active-slot-info {
+  font-size: 14px;
+  color: var(--theme-text);
+  text-align: center;
+  margin-bottom: 20px;
+  width: 100%;
+}
+
+.station-status {
+  position: absolute;
+  right: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--theme-text) 70%, transparent);
+}
+
+.status-indicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: var(--error-color);
+  transition: background-color 0.3s ease;
+  box-shadow: 0 0 4px color-mix(in srgb, var(--theme-background) 30%, black);
+}
+
+.status-indicator.connected {
+  background-color: var(--success-color);
+}
+
+.status-indicator.warning {
+  background-color: var(--warning-color);
+}
+
+/* Slots container */
+.slots-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 32px;
+  margin-bottom: 24px;
+  width: 100%;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.slot-item {
+  background-color: var(--theme-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  transition: all 0.3s ease;
+  width: 200px;
+  height: 160px;
+}
+
+.slot-item.active {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--theme-primary) 40%, transparent);
+  transform: translateY(-2px);
+}
+
+.slot-item.empty {
+  opacity: 0.8;
+}
+
+.slot-item:hover {
+  background-color: var(--surface-elevated);
+  border-color: var(--border-color-light);
+}
+
+/* Spool styling */
+.spool-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+
+.spool {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: var(--surface-elevated);
+  border: 4px solid color-mix(in srgb, var(--theme-text) 10%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  transition: all 0.3s ease;
+  box-shadow:
+    inset 0 4px 8px color-mix(in srgb, var(--theme-background) 30%, black),
+    0 2px 4px color-mix(in srgb, var(--theme-background) 20%, black);
+}
+
+.spool-center {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: var(--surface-muted);
+  border: 2px solid color-mix(in srgb, var(--theme-text) 45%, transparent);
+}
+
+/* Slot information */
+.slot-info {
+  text-align: center;
+  width: 100%;
+}
+
+.slot-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--theme-text);
+  margin-bottom: 6px;
+}
+
+.material-type {
+  font-size: 12px;
+  color: color-mix(in srgb, var(--theme-text) 70%, transparent);
+  padding: 6px 10px;
+  border-radius: 6px;
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  display: inline-block;
+  min-width: 60px;
+  text-align: center;
+}
+
+.material-type.has-material {
+  background-color: color-mix(in srgb, var(--theme-primary) 20%, transparent);
+  border-color: color-mix(in srgb, var(--theme-primary) 40%, transparent);
+  color: var(--theme-primary);
+}
+
+.material-type.empty {
+  color: color-mix(in srgb, var(--theme-text) 50%, transparent);
+  font-style: italic;
+}
+
+/* Active slot info - old rule removed, now styled in header section */
+
+.active-slot-info span:last-child {
+  font-weight: 600;
+  color: var(--theme-primary);
+  margin-left: 4px;
+}
+
+/* Animation for material loading */
+@keyframes pulse {
+  0% { opacity: 0.7; }
+  50% { opacity: 1; }
+  100% { opacity: 0.7; }
+}
+
+.slot-item.loading .spool {
+  animation: pulse 1.5s infinite;
+}
+
+/* Responsive design */
+@media (max-width: 400px) {
+  .slots-container {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .dialog-content {
+    padding: 16px;
+  }
+  
+  .spool-container {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .spool-center {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .station-header {
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+  }
+  
+  .station-header h3 {
+    font-size: 16px;
+  }
+}
+
+/* Utility classes for dynamic coloring */
+.spool-white { background-color: #ffffff; }
+.spool-black { background-color: #333333; }
+.spool-red { background-color: #f44336; }
+.spool-green { background-color: #4caf50; }
+.spool-blue { background-color: #2196f3; }
+.spool-yellow { background-color: #ffeb3b; }
+.spool-orange { background-color: #ff9800; }
+.spool-purple { background-color: #9c27b0; }
+.spool-pink { background-color: #e91e63; }
+.spool-cyan { background-color: #00bcd4; }
+.spool-lime { background-color: #cddc39; }
+.spool-amber { background-color: #ffc107; }
+.spool-brown { background-color: #795548; }
+.spool-gray { background-color: #9e9e9e; } 

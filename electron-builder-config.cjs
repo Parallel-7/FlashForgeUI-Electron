@@ -13,26 +13,19 @@ module.exports = {
     // Optimize web UI assets - only include essential files
     extraResources: [
         {
-            from: "dist/renderer",
-            to: "renderer",
-            filter: ["index.html", "renderer.bundle.js", "vendors.bundle.js", "**/*.{png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot}"]
-        },
-        {
-            from: "dist/webui",
+            from: "out/webui",
             to: "webui",
-            filter: ["**/*.{html,js,css,png,jpg,jpeg,gif,svg,ico,woff,woff2,ttf,eot}"]
+            filter: ["**/*"]
         }
     ],
 
     files: [
-        "lib/**/*.js",         // Main process files
-        "dist/renderer/**/*",  // Renderer bundle and assets - CRITICAL for web UI
+        "out/main/**/*.js",
+        "out/preload/**/*.js",
+        "out/renderer/**/*",
 
         // Include icons for platform builds
         "src/icons/**/*",
-
-        // Include UI files (HTML, CSS) for dialogs
-        "src/ui/**/*",
 
         "package.json",
 

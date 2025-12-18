@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Confirm Print</title>
+  <link rel="stylesheet" href="../../index.css">
+  <link rel="stylesheet" href="single-color-confirmation-dialog.css">
+  
+  
+</head>
+<body>
+  <div class="dialog-container dialog-container--full">
+    <div class="dialog-header">
+      <h2 class="dialog-title">Confirm Print</h2>
+      <button class="dialog-close" id="btn-close" title="Close" aria-label="Close">
+        <i data-lucide="x" aria-hidden="true"></i>
+      </button>
+    </div>
+    
+    <div class="dialog-content">
+      <div class="confirmation-message">
+        <p>Ready to start printing:</p>
+        <h3 id="file-name" class="file-name">Loading...</h3>
+      </div>
+      
+      <div class="material-preview">
+        <h4>Active Material</h4>
+        <div class="material-card">
+          <div class="material-spool">
+            <div id="spool-color" class="spool-color"></div>
+            <div class="spool-hole"></div>
+          </div>
+          <div class="material-info">
+            <div id="slot-label" class="slot-label">Loading...</div>
+            <div id="material-type" class="material-type">Loading...</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="options-section">
+        <label class="checkbox-container">
+          <input type="checkbox" id="cb-leveling">
+          <span class="checkbox-label">Perform bed leveling before print</span>
+        </label>
+      </div>
+      
+      <div id="error-message" class="error-message" style="display: none;"></div>
+    </div>
+    
+    <div class="dialog-footer">
+      <button class="dialog-button cancel" id="btn-cancel">Cancel</button>
+      <button class="dialog-button primary" id="btn-start">Start Print</button>
+    </div>
+  </div>
+  
+  
+  <script type="module" src="./single-color-confirmation-dialog-renderer.ts"></script>
+</body>
+</html>

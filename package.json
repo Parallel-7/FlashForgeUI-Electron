@@ -3,19 +3,14 @@
 	"productName": "FlashForgeUI",
 	"version": "1.0.3-alpha.1",
 	"description": "Monitoring and Control software for FlashForge printers",
-	"main": "electron-main.cjs",
+	"main": "out/main/index.js",
 	"scripts": {
-		"start": "npm run build && electron .",
-		"dev": "npm run build:webui && concurrently \"npm run build:main:watch\" \"npm run build:renderer:watch\" \"npm run electron:wait\"",
+		"start": "electron-vite preview",
+		"dev": "npm run build:webui && electron-vite dev",
 		"dev:clean": "npm run clean && npm run dev",
-		"electron:wait": "node scripts/wait-for-build.cjs",
-		"build": "npm run build:main && npm run build:renderer && npm run build:webui",
+		"build": "npm run build:webui && electron-vite build",
 		"build:clean": "npm run clean && npm run build",
-		"build:main": "tsc",
-		"build:main:watch": "tsc --watch",
-		"build:renderer": "webpack --config webpack.config.cjs",
-		"build:renderer:watch": "webpack --config webpack.config.cjs --watch",
-		"build:webui": "tsc --project src/webui/static/tsconfig.json && npm run build:webui:copy",
+		"build:webui": "tsc --project src/main/webui/static/tsconfig.json && npm run build:webui:copy",
 		"build:webui:copy": "node scripts/copy-webui-assets.cjs",
 		"build:linux": "tsx scripts/platform-build-wrapper.ts --platform linux",
 		"build:linux:raw": "npm run build:clean && electron-builder --linux --publish never --config electron-builder-config.cjs",
@@ -39,15 +34,10 @@
 		"find:lucide": "go run scripts/find-lucide-usage.go",
 		"find:window": "ts-node --esm scripts/find-window-usage.ts",
 		"specs:list": "tsx scripts/list-specs.ts",
-		"clean": "rimraf lib dist \"NVIDIA Corporation\"",
+		"clean": "rimraf out dist \"NVIDIA Corporation\"",
 		"type-check": "npx tsc --noEmit",
 		"full-check": "npm run type-check && npm run lint",
-		"knip": "knip",
-		"knip:fix": "knip --fix",
-		"knip:production": "knip --production",
-		"knip:exports": "knip --include exports",
-		"knip:dependencies": "knip --include dependencies,devDependencies",
-		"knip:files": "knip --include files"
+		"audit:dead-code": "ts-node --esm scripts/audit-dead-code.ts"
 	},
 	"keywords": [],
 	"author": {
@@ -55,7 +45,9 @@
 		"email": "106415648+GhostTypes@users.noreply.github.com"
 	},
 	"license": "MIT",
-	"overrides": {"js-yaml": "4.1.1"},
+	"overrides": {
+		"js-yaml": "4.1.1"
+	},
 	"dependencies": {
 		"@cycjimmy/jsmpeg-player": "^6.1.2",
 		"@ghosttypes/ff-api": "*",
@@ -63,6 +55,7 @@
 		"electron-log": "^5.2.4",
 		"electron-updater": "^6.6.2",
 		"express": "^5.1.0",
+		"glob": "^13.0.0",
 		"gridstack": "^12.3.3",
 		"lucide": "^0.552.0",
 		"node-rtsp-stream": "^0.0.9",
@@ -72,6 +65,8 @@
 	"devDependencies": {
 		"@babel/core": "^7.27.1",
 		"@babel/preset-env": "^7.27.1",
+		"@electron-toolkit/tsconfig": "^2.0.0",
+		"@electron-toolkit/utils": "^4.0.0",
 		"@eslint/js": "^9.30.1",
 		"@types/express": "^4.17.21",
 		"@types/jest": "^29.5.14",
@@ -81,23 +76,19 @@
 		"@typescript-eslint/parser": "^8.14.0",
 		"babel-jest": "^29.7.0",
 		"concurrently": "^9.1.2",
-		"css-loader": "^7.1.2",
 		"electron": "^35.7.5",
 		"electron-builder": "^24.12.0",
+		"electron-vite": "^4.0.1",
 		"eslint": "^9.16.0",
-		"html-webpack-plugin": "^5.6.3",
 		"identity-obj-proxy": "^3.0.0",
 		"jest": "^29.7.0",
-		"knip": "^5.64.1",
 		"rimraf": "^6.0.1",
-		"style-loader": "^4.0.0",
 		"ts-jest": "^29.2.5",
-		"ts-loader": "^9.5.2",
+		"ts-morph": "^27.0.2",
 		"ts-node": "^10.9.2",
 		"tsx": "^4.20.6",
 		"typescript": "^5.7.2",
-		"webpack": "^5.97.1",
-		"webpack-cli": "^6.0.1"
+		"vite": "^7.2.4"
 	},
 	"type": "module"
 }

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Application Logs</title>
+    <link rel="stylesheet" href="log-dialog.css" />
+    
+    
+</head>
+<body>
+<div class="dialog-container dialog-container--full">
+    <!-- Header -->
+    <div class="dialog-header">
+        <div class="dialog-title">Application Logs</div>
+        <button class="dialog-close" id="btn-close" aria-label="Close">
+            <i data-lucide="x" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <!-- Content -->
+    <div class="dialog-content">
+        <div class="log-controls">
+            <button class="dialog-button secondary" id="btn-clear-logs">Clear Logs</button>
+            <span class="log-count" id="log-count">0 messages</span>
+        </div>
+        <div class="log-container" id="log-panel-root"></div>
+    </div>
+
+    <!-- Footer -->
+    <div class="dialog-footer">
+        <div class="dialog-buttons">
+            <button class="dialog-button primary" id="btn-close-footer">Close</button>
+        </div>
+    </div>
+</div>
+
+  <script type="module" src="./log-dialog-renderer.ts"></script>
+</body>
+</html>

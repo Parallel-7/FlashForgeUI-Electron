@@ -1,0 +1,258 @@
+/* 
+ * Dialog Template CSS
+ * This template provides the standard dialog styling pattern that can be
+ * configured to use either rounded or square design based on user preferences.
+ * Styling is controlled via CSS variables injected at window creation.
+ * 
+ * Responsive Padding System:
+ * - Rounded mode: 16px body padding + 24px content padding = optimal spacing
+ * - Square mode: 0px body padding + 16px content padding = minimal spacing
+ * This prevents thick borders in square mode while maintaining nice spacing in rounded mode.
+ */
+
+/* CSS Variables - Injected by the application based on RoundedUI config */
+/* No default values here - must be injected by CSSVariables.ts */
+
+/* Body styling - adapts based on rounded UI setting */
+body {
+    margin: 0;
+    padding: var(--ui-padding);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--ui-background, var(--theme-background));
+    color: var(--container-text-color, var(--theme-text, #ffffff));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+/* Main dialog container - adapts styling based on UI mode */
+.dialog-container {
+    background: var(--container-background, var(--theme-surface));
+    border: var(--ui-border, 1px solid var(--border-color, rgba(255, 255, 255, 0.1)));
+    border-radius: var(--ui-border-radius);
+    box-shadow: var(--ui-box-shadow);
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100vh - calc(var(--ui-padding) * 2));
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transform: scale(0.95);
+    animation: dialogFadeIn 0.2s ease-out forwards;
+}
+
+.dialog-container--full {
+    align-self: stretch;
+    height: calc(100vh - (var(--ui-padding) * 2));
+    max-height: none;
+    max-width: none;
+}
+
+@keyframes dialogFadeIn {
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Header with gradient background - use responsive padding */
+.dialog-header {
+    background: var(--surface-muted, var(--theme-surface));
+    color: var(--dialog-header-text-color, var(--theme-text, #ffffff));
+    padding: 16px 24px; /* Default to compact size for title-only dialogs */
+    text-align: center;
+    border-bottom: var(--ui-border, 1px solid var(--border-color, rgba(255, 255, 255, 0.1)));
+    border-top-left-radius: var(--header-border-radius-top);
+    border-top-right-radius: var(--header-border-radius-top);
+    flex-shrink: 0;
+    -webkit-app-region: drag;
+    position: relative;
+}
+
+/* Header variant for dialogs with sub-text */
+.dialog-header.with-description {
+    padding: 24px; /* Larger padding when there's description text */
+}
+
+.dialog-header h2,
+.dialog-title {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+    text-shadow: 0 1px 2px color-mix(in srgb, var(--theme-background) 20%, black);
+    -webkit-app-region: no-drag;
+}
+
+.dialog-description {
+    margin: 8px 0 0 0;
+    color: color-mix(in srgb, var(--dialog-header-text-color, var(--theme-text)) 80%, transparent);
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+/* Close button styling */
+.close-button,
+.dialog-close {
+    -webkit-app-region: no-drag;
+    position: absolute;
+    top: 16px; /* Default for compact headers */
+    right: 24px;
+    background: none;
+    border: none;
+    color: var(--dialog-header-text-color, var(--theme-text, #ffffff));
+    cursor: pointer;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+/* Close button position for headers with description */
+.dialog-header.with-description .close-button,
+.dialog-header.with-description .dialog-close {
+    top: 24px; /* Match larger padding for headers with sub-text */
+}
+
+.close-button:hover,
+.dialog-close:hover {
+    background-color: var(--border-color-light, rgba(255, 255, 255, 0.15));
+}
+
+.dialog-close .lucide-icon,
+.close-button .lucide-icon {
+    width: 18px;
+    height: 18px;
+}
+
+/* Content area with hidden scrollbars */
+.dialog-content {
+    padding: 24px;
+    flex: 1;
+    overflow-y: auto;
+    /* Hide scrollbars while maintaining scroll functionality */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+/* Hide scrollbars for WebKit browsers (Chrome, Safari, Edge) - Controlled by global setting */
+.dialog-content::-webkit-scrollbar {
+    display: var(--scrollbar-display, initial);
+}
+
+/* Footer/actions area - adjust padding based on content */
+.dialog-footer,
+.dialog-actions {
+    padding: 16px 24px 24px 24px; /* Default padding for multi-button footers */
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    border-top: var(--ui-border, 1px solid var(--border-color, rgba(255, 255, 255, 0.1)));
+    background: var(--surface-muted, var(--theme-surface));
+    flex-shrink: 0;
+    gap: 10px;
+    border-bottom-left-radius: var(--footer-border-radius-bottom);
+    border-bottom-right-radius: var(--footer-border-radius-bottom);
+}
+
+/* Compact footer variant for single button or minimal content */
+.dialog-footer.compact,
+.dialog-actions.compact {
+    padding: 12px 24px 16px 24px; /* Reduced padding for smaller footers */
+}
+
+/* Standard button styling */
+button,
+.btn-secondary,
+.dialog-button {
+    background: var(--surface-elevated, var(--theme-surface));
+    color: var(--theme-text, #ffffff);
+    border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-family: inherit;
+    transition: all 0.2s ease;
+    min-width: 80px;
+}
+
+button:hover,
+.btn-secondary:hover,
+.dialog-button:hover {
+    background: var(--card-bg-hover, #3a3a3a);
+    border-color: var(--border-color-focus, rgba(255, 255, 255, 0.2));
+}
+
+button:active,
+.btn-secondary:active,
+.dialog-button:active {
+    background: var(--surface-muted, #1f1f1f);
+}
+
+button:disabled,
+.btn-secondary:disabled,
+.dialog-button:disabled {
+    background: var(--surface-muted, #1f1f1f);
+    cursor: not-allowed;
+    opacity: 0.6;
+    color: var(--text-color-muted, #808080);
+    border-color: var(--border-color-light, rgba(255, 255, 255, 0.15));
+}
+
+button:focus-visible,
+.btn-secondary:focus-visible,
+.dialog-button:focus-visible {
+    outline: 2px solid var(--border-color-focus, rgba(255, 255, 255, 0.2));
+    outline-offset: 2px;
+}
+
+/* Primary button styling */
+.btn-primary,
+.dialog-button.primary,
+button.primary {
+    background-color: var(--button-bg, #4285f4);
+    border-color: var(--button-bg, #4285f4);
+    color: var(--button-text-color, #ffffff);
+}
+
+.btn-primary:hover,
+.dialog-button.primary:hover,
+button.primary:hover {
+    background-color: var(--button-hover, #5a95f5);
+    border-color: var(--button-hover, #5a95f5);
+}
+
+/* High contrast accessibility support */
+@media (prefers-contrast: high) {
+    .dialog-container {
+        border-color: var(--theme-text);
+    }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+    .dialog-container {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+    
+    button,
+    .btn-secondary,
+    .dialog-button,
+    .close-button,
+    .dialog-close {
+        transition: none;
+    }
+}

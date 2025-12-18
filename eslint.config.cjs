@@ -13,7 +13,7 @@ module.exports = [
       parserOptions: {
         ecmaVersion: 2022,
         sourceType: 'module',
-        project: './tsconfig.eslint.json',
+        project: ['./tsconfig.node.json', './tsconfig.web.json'],
       },
       globals: {
         // Node.js globals for main process and utilities
@@ -44,7 +44,7 @@ module.exports = [
 
       // TypeScript-specific rules - start with warnings, will escalate to errors later
       '@typescript-eslint/no-explicit-any': 'warn', // Warning for now, too many to fix at once
-      '@typescript-eslint/no-unused-vars': ['warn', { 'argsIgnorePattern': '^_' }],
+      '@typescript-eslint/no-unused-vars': ['warn', { 'argsIgnorePattern': '^_', 'varsIgnorePattern': '^_' }],
       '@typescript-eslint/explicit-function-return-type': 'off', // Too noisy initially
       '@typescript-eslint/no-unsafe-assignment': 'warn',
       '@typescript-eslint/no-unsafe-member-access': 'warn',
@@ -80,8 +80,18 @@ module.exports = [
   },
   
   // Renderer-specific configuration (allows window, document, etc.)
+  // Also covers WebUI static client code which has similar dynamic typing patterns
   {
-    files: ['src/**/renderer.ts', 'src/**/preload.ts', 'src/ui/**/*.ts'],
+    files: [
+      'src/**/renderer.ts',
+      'src/**/*-renderer.ts',
+      'src/**/preload.ts',
+      'src/**/*-preload.ts',
+      'src/**/*-preload.cts',
+      'src/renderer/**/*.ts',
+      'src/preload/**/*.ts',
+      'src/main/webui/static/**/*.ts'
+    ],
     languageOptions: {
       globals: {
         window: 'readonly',
@@ -108,6 +118,39 @@ module.exports = [
     rules: {
       // Allow window usage in renderer processes
       'no-restricted-globals': 'off',
+      // Disable unsafe rules for renderer code - window.api bridge has dynamic typing
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+    }
+  },
+
+  // WebUI server configuration - Express routes have dynamic request body types
+  {
+    files: ['src/main/webui/server/**/*.ts'],
+    rules: {
+      // Express req.body is unknown/any by design
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
+    }
+  },
+
+  // Files with ESLint parser resolution issues (Vite handles these imports fine)
+  // These generate false positive "error typed" warnings due to module resolution differences
+  {
+    files: [
+      'src/main/ipc/handlers/shortcut-config-handlers.ts',
+      'src/main/managers/ConnectionFlowManager.ts',
+      'src/main/services/RtspStreamService.ts',
+    ],
+    rules: {
+      '@typescript-eslint/no-unsafe-assignment': 'off',
+      '@typescript-eslint/no-unsafe-member-access': 'off',
+      '@typescript-eslint/no-unsafe-call': 'off',
+      '@typescript-eslint/no-unsafe-return': 'off',
     }
   },
 

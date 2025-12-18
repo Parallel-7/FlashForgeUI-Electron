@@ -102,7 +102,9 @@
       "mcp__code-search-mcp__search_text",
       "mcp__code-search-mcp__search_symbols",
       "mcp__code-search-mcp__search_ast_pattern",
-      "mcp__code-search-mcp__detect_stacks"
+      "mcp__code-search-mcp__detect_stacks",
+      "Bash(Select-String \"error  \")",
+      "Bash(Select-String -NotMatch \"warning\")"
     ],
     "deny": [],
     "additionalDirectories": [
