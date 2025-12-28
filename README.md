@@ -119,7 +119,7 @@
 | Printer Model | Support Status | Testing Status | API Type | Material Station | Built-in Camera |
 | --- | --- | --- | --- | --- | --- |
 | **AD5X** | Full | Tested | HTTP + TCP | Yes (4 slots) | No |
-| **Adventurer 5M Pro** | Full | Tested | HTTP + TCP | No | Yes (RTSP) |
+| **Adventurer 5M Pro** | Full | Tested | HTTP + TCP | No | Yes |
 | **Adventurer 5M** | Full | Tested | HTTP + TCP | No | No |
 | **Adventurer 3/4** | Full | Partial | TCP (Legacy) | No | No |
 | **Older Models** | Legacy Mode | Untested | TCP (Legacy) | No | No |
