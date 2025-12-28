@@ -175,6 +175,7 @@ export interface CameraProxyConfigResponse extends ApiResponse {
   url?: string;
   wsPath?: string;
   ffmpegAvailable?: boolean;
+  showCameraFps?: boolean;  // Whether to show FPS overlay
 }
 
 export interface FileListResponse extends ApiResponse {

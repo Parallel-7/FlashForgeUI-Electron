@@ -1,6 +1,6 @@
 # FlashForgeUI-Electron Development Guide
 
-**Last Updated:** 2025-11-27 18:22 ET (America/New_York)
+**Last Updated:** 2025-12-28 14:04 ET (America/New_York)
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -430,6 +430,7 @@ See `scripts/detect-hardcoded-css.md` for full documentation and flag reference.
 5. Camera proxy keep-alive + port management live in `CameraProxyService`/`PortAllocator` and the camera priority spec. Do not bypass the allocator or reuse ports manually, especially in headless mode.
 6. Headless mode and desktop mode share the same connection/polling/camera stack. Avoid `isHeadlessMode()` forks unless absolutely necessary; duplicating logic leads to drift.
 7. **Theme System**: NEVER hardcode colors in CSS. Always use CSS variables from the theme system (`--theme-primary`, `--theme-primary-hover`, `--surface-elevated`, etc.). The theme system handles light/dark themes automatically. See "Theme System & CSS Variables" section above.
+8. **Per-printer settings access**: `PrinterDetailsManager` does NOT have a `getSettings()` method. Per-printer settings (like `showCameraFps`, `customCameraUrl`, `rtspFrameRate`, etc.) are stored directly on `PrinterDetails`. Access them via `context.printerDetails.showCameraFps` rather than inventing manager methods. See `src/shared/types/printer.ts` for the full `PrinterDetails` interface.
 
 ## Key File Locations
 

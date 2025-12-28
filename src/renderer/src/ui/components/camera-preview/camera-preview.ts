@@ -121,6 +121,10 @@ export class CameraPreviewComponent extends BaseComponent {
   private fpsUpdateIntervalId: number | null = null;
   /** FPS update interval in ms */
   private readonly fpsUpdateIntervalMs = 1000;
+
+  /** RTSP-specific FPS tracking */
+  private isRtspStream = false;
+  private rtspFrameCount = 0;
   private logDebug(message: string, ...args: unknown[]): void {
     logVerbose(CAMERA_PREVIEW_LOG_NAMESPACE, message, ...args);
   }
@@ -182,16 +186,25 @@ export class CameraPreviewComponent extends BaseComponent {
 
   /**
    * Fetch camera stats and calculate actual FPS from frame count
+   * For MJPEG: polls backend stats
+   * For RTSP: uses local frame counter from onVideoDecode callback
    */
   private async updateFpsFromStats(): Promise<void> {
     if (!this.activeContextId || !this.showFpsOverlay) return;
 
     try {
-      const status = await window.api.camera.getStatus(this.activeContextId);
-      if (!status?.stats) return;
-
-      const currentFrames = status.stats.framesReceived ?? 0;
+      let currentFrames: number;
       const currentTime = Date.now();
+
+      if (this.isRtspStream) {
+        // RTSP: Use local frame counter from onVideoDecode
+        currentFrames = this.rtspFrameCount;
+      } else {
+        // MJPEG: Poll backend for stats
+        const status = await window.api.camera.getStatus(this.activeContextId);
+        if (!status?.stats) return;
+        currentFrames = status.stats.framesReceived ?? 0;
+      }
 
       this.calculateFps(currentFrames, currentTime);
     } catch {
@@ -251,6 +264,8 @@ export class CameraPreviewComponent extends BaseComponent {
     this.lastFpsFrameCount = null;
     this.lastFpsTimestamp = null;
     this.currentFps = null;
+    this.rtspFrameCount = 0;
+    this.isRtspStream = false;
     this.stopFpsUpdateInterval();
     this.updateFpsDisplay();
   }
@@ -475,10 +490,12 @@ export class CameraPreviewComponent extends BaseComponent {
         return;
       }
 
-      this.logDebug('[CameraPreview] RTSP stream WebSocket URL:', rtspStreamInfo.wsUrl);
-      this.createRtspStream(rtspStreamInfo.wsUrl, cameraView);
+      // Reset tracking state BEFORE creating stream (so createRtspStream can set isRtspStream)
       this.stopBackendHeartbeat();
       this.resetHeartbeatTracking();
+
+      this.logDebug('[CameraPreview] RTSP stream WebSocket URL:', rtspStreamInfo.wsUrl);
+      this.createRtspStream(rtspStreamInfo.wsUrl, cameraView);
     } else {
       // MJPEG: Use proxy URL
       this.logDebug('[CameraPreview] Calling window.api.camera.getProxyUrl()...');
@@ -522,6 +539,9 @@ export class CameraPreviewComponent extends BaseComponent {
    * Create and setup MJPEG camera stream using img element
    */
   private createMjpegStream(streamUrl: string, cameraView: HTMLElement): void {
+    // Mark as MJPEG stream for FPS tracking
+    this.isRtspStream = false;
+
     // Clear existing content
     cameraView.innerHTML = '';
 
@@ -554,6 +574,10 @@ export class CameraPreviewComponent extends BaseComponent {
    * Create and setup RTSP camera stream using JSMpeg + node-rtsp-stream
    */
   private createRtspStream(wsUrl: string, cameraView: HTMLElement): void {
+    // Mark as RTSP stream for FPS tracking
+    this.isRtspStream = true;
+    this.rtspFrameCount = 0;
+
     // Clear existing content
     cameraView.innerHTML = '';
 
@@ -581,6 +605,10 @@ export class CameraPreviewComponent extends BaseComponent {
         onSourceEstablished: () => {
           this.logDebug('[CameraPreview] RTSP stream established');
           this.updateComponentState('streaming');
+        },
+        // Track frames for FPS calculation
+        onVideoDecode: () => {
+          this.rtspFrameCount++;
         },
       });
 
@@ -619,6 +647,9 @@ export class CameraPreviewComponent extends BaseComponent {
       this.cameraStreamElement = null;
     }
 
+    // Reset RTSP FPS tracking state
+    this.rtspFrameCount = 0;
+    this.isRtspStream = false;
   }
 
   /**

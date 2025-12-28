@@ -76,6 +76,9 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
         );
       }
 
+      // Get FPS overlay setting from printer details
+      const showCameraFps = context.printerDetails.showCameraFps ?? false;
+
       if (cameraConfig.streamType === 'rtsp') {
         const { getRtspStreamService } = await import('../../../services/RtspStreamService.js');
         const rtspStreamService = getRtspStreamService();
@@ -116,7 +119,8 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
           success: true,
           streamType: 'rtsp' as const,
           wsPort: streamStatus.wsPort,
-          ffmpegAvailable: true
+          ffmpegAvailable: true,
+          showCameraFps
         };
         return res.json(response);
       }
@@ -155,7 +159,8 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
         success: true,
         streamType: 'mjpeg' as const,
         port: status.port,
-        url: `http://${host}:${status.port}/stream`
+        url: `http://${host}:${status.port}/stream`,
+        showCameraFps
       };
       return res.json(response);
     } catch (error) {

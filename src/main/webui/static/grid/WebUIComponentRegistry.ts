@@ -94,6 +94,7 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
           <div id="camera-placeholder" class="no-camera">Camera Unavailable</div>
           <img id="camera-stream" class="camera-stream hidden" alt="Printer camera stream">
           <canvas id="camera-canvas" class="camera-stream hidden"></canvas>
+          <div id="camera-fps-overlay" class="camera-fps-overlay hidden">-- FPS</div>
         </div>
       </div>
     `,
