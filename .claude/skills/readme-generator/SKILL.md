@@ -33,6 +33,7 @@ _if icon available_
 ### NEVER USE
 - ❌ Emojis (anywhere in the document)
 - ❌ Standalone bulleted lists (bullets within table cells are OK)
+- ❌ Horizontal rule separators (`---`) between sections
 
 ### ALWAYS USE
 - ✓ Centered layout for all elements except standalone code blocks
@@ -111,10 +112,55 @@ Follow this structure closely (based on meteor-client-webgui):
 - **Multi-line content**: Perfectly fine within cells
 - **Code blocks in cells**: Use triple backticks with language identifier
 
-Example of rich table cell content:
+### Formatting Lists Within Table Cells
+
+**CRITICAL**: When adding lists or multi-line content within table cells, use these exact patterns for proper rendering:
+
+**Numbered lists with line breaks:**
+```markdown
+| **Step** | 1. First action<br>2. Second action<br>3. Third action |
+```
+
+**Indented bullets under numbered items:**
+```markdown
+| **Step** | 1. Main instruction<br>&nbsp;&nbsp;&nbsp;• **Sub-item**: Detail<br>&nbsp;&nbsp;&nbsp;• **Another**: More detail<br>2. Next step |
+```
+
+**Simple bullet lists (inline):**
+```markdown
+| **Feature** | Main description • First point • Second point • Third point |
+```
+
+**Multi-line bullet lists (each bullet on its own line):**
+```markdown
+| **Issue** | Problem description | • First solution item<br>• Second solution item<br>• Third solution item<br>• Fourth solution item |
+```
+
+This renders as a clean vertical list within the cell, like:
+- • First solution item
+- • Second solution item
+- • Third solution item
+- • Fourth solution item
+
+**Important notes:**
+- Use `<br>` for line breaks within cells (NOT actual newlines)
+- Use `&nbsp;&nbsp;&nbsp;•` for indented bullets (3 non-breaking spaces + bullet character)
+- Bold labels within bullets: `• **Label**: description`
+- For vertical lists, place `<br>` BETWEEN bullet items (after item, before next bullet)
+- The pattern MUST be exact or GitHub won't render it correctly
+
+**Real-world example from troubleshooting table:**
 
 ```markdown
-| **Installation** | 1. Download the latest `.jar` from releases<br>2. Copy to `.minecraft/mods/`<br>3. Launch with Fabric profile |
+| **Discovery Not Finding Printer** | Automatic discovery doesn't detect your printer | • Ensure printer is on the same network/subnet as Home Assistant<br>• Check firewall settings (UDP port 18007 must be open)<br>• Verify LAN mode is enabled on the printer<br>• Try manual configuration with IP address |
+```
+
+This renders as a clean, readable vertical list in the Solutions column.
+
+**Complex example with numbered steps and sub-bullets:**
+
+```markdown
+| **Installation** | 1. Open **HACS** in Home Assistant<br>2. Click on **Integrations**<br>3. Add repository:<br>&nbsp;&nbsp;&nbsp;• **URL**: `https://github.com/user/repo`<br>&nbsp;&nbsp;&nbsp;• **Category**: `Integration`<br>4. Click **Download** |
 ```
 
 ## Codebase Analysis Process
@@ -214,11 +260,24 @@ Format as a table organizing by component or task:
 
 Ghost adds this manually when needed.
 
-## Example Reference
+## Example References
 
-Reference implementation: https://github.com/MCDxAI/meteor-client-webgui/blob/main/README.md
+### Primary Reference: Home Assistant Integration
 
-Study this README closely for:
+See `references/homeassistant-example.md` for a comprehensive, perfect example demonstrating:
+- Multi-column tables with rowspan for categorization
+- Section headers as centered H2 (`<h2>`) elements
+- Complex table cells with rich formatting (line breaks, bullets, bold, code)
+- Subsections within centered divs using H3
+- Varied table structures (2-column, 3-column, 4-column)
+- Code blocks properly placed outside center tags
+- Professional technical documentation for a real-world project
+
+### Additional Reference
+
+https://github.com/MCDxAI/meteor-client-webgui/blob/main/README.md
+
+Study these examples closely for:
 - Exact centering approach
 - Table structure and formatting
 - Badge selection and colors
@@ -233,7 +292,9 @@ Before presenting the README, verify:
 - [ ] All elements centered (except standalone code blocks)
 - [ ] Zero emojis anywhere
 - [ ] No standalone bulleted lists
+- [ ] No horizontal rule separators (`---`) between sections
 - [ ] All features/steps in table format
+- [ ] Lists within table cells use `<br>` and `&nbsp;&nbsp;&nbsp;•` formatting
 - [ ] Badges use shields.io with appropriate colors
 - [ ] Version numbers are real (from codebase) or confirmed with user
 - [ ] Code blocks outside tables are NOT in center tags

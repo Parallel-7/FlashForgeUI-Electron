@@ -6,16 +6,21 @@
 
 **A modern cross-platform interface for FlashForge 3D printers**
 
-![Platforms](https://img.shields.io/badge/Platforms-Win%20%7C%20macOS%20%7C%20Linux-3178c6?style=for-the-badge)
-![Downloads](https://img.shields.io/github/downloads/Parallel-7/FlashForgeUI-Electron/total?style=for-the-badge&color=brightgreen)
-![Latest](https://img.shields.io/github/downloads/Parallel-7/FlashForgeUI-Electron/latest/total?style=for-the-badge&color=blue)
-![Version](https://img.shields.io/badge/Version-1.0.3--alpha.1-orange?style=for-the-badge)
+![Platforms](https://img.shields.io/badge/Platforms-Win%20%7C%20macOS%20%7C%20Linux-3178c6?style=flat)
+![Downloads](https://img.shields.io/github/downloads/Parallel-7/FlashForgeUI-Electron/total?style=flat&color=brightgreen)
+![Latest](https://img.shields.io/github/downloads/Parallel-7/FlashForgeUI-Electron/latest/total?style=flat&color=blue)
+![Version](https://img.shields.io/badge/Version-1.0.3--alpha.1-orange?style=flat)
+
+![Electron](https://img.shields.io/badge/Electron-35.7.5-47848f?style=flat&logo=electron)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.7.2-3178c6?style=flat&logo=typescript)
+![Vite](https://img.shields.io/badge/Vite-7.2.4-646cff?style=flat&logo=vite)
+![Express](https://img.shields.io/badge/Express-5.1.0-000000?style=flat&logo=express)
+![GridStack](https://img.shields.io/badge/GridStack-12.3.3-purple?style=flat)
+![Lucide](https://img.shields.io/badge/Lucide-0.552.0-f56565?style=flat)
 
 **FlashForgeUI provides more features than all FlashForge software and is fully open-source**
 
 </div>
-
----
 
 <div align="center">
 
@@ -28,8 +33,6 @@
 | **[User Guide](https://github.com/Parallel-7/FlashForgeUI-Electron/tree/main/docs)** | Documentation and setup instructions |
 
 </div>
-
----
 
 <div align="center">
 
@@ -56,8 +59,6 @@
 | **Headless Mode** | Yes | No | No | No |
 
 </div>
-
----
 
 <div align="center">
 
@@ -86,8 +87,6 @@
 
 </div>
 
----
-
 <div align="center">
 
 ## Core Capabilities
@@ -98,18 +97,16 @@
 
 | Category | Features |
 | --- | --- |
-| **Multi-Printer Management** | Concurrent connections to multiple printers • Context-based architecture with unique IDs • Tab-based desktop UI and dropdown WebUI selector • Independent polling (3s active, 30s inactive) • Per-printer settings and saved configurations |
-| **Camera Streaming** | MJPEG camera proxy (ports 8181-8191) • RTSP-to-WebSocket streaming with ffmpeg • Multi-device concurrent viewing • Auto-reconnection with exponential backoff • Custom camera URL support • FPS display overlay |
-| **Job Management** | Local and recent job listing • File upload (.gcode, .gx, .3mf) • Start, pause, resume, cancel operations • Thumbnail preview caching • Metadata parsing (slicer info, print time, material usage) • AD5X multi-material 3MF support |
-| **Real-Time Monitoring** | 3-second polling for active contexts • Live status updates (state, progress, temperatures) • Layer count and ETA tracking • Material usage monitoring • Material station status (AD5X) • Filtration state (AD5M Pro) |
-| **Spoolman Integration** | Active spool assignment per printer • Automatic usage tracking on print completion • Weight and length-based tracking modes • Connection health monitoring • Search and select from Spoolman database • Badge display in UI |
-| **Notifications** | Desktop notifications (complete, cooled) • Discord webhook integration with rich embeds • Configurable update intervals • Audio and visual alert options • Multi-context notification coordination • Rate limiting and error handling |
-| **Remote Access (WebUI)** | Headless mode operation • Password-protected authentication • Real-time WebSocket updates • Responsive mobile design • GridStack layout with persistence • Full feature parity with desktop UI |
-| **Advanced Controls** | G-code/M-code terminal • Temperature control (bed, nozzle, cooling) • LED control (built-in and custom) • Filtration modes (AD5M Pro) • Axis homing and platform clearing • Custom command execution |
+| **Multi-Printer Management** | Concurrent connections to multiple printers<br>Context-based architecture with unique IDs<br>Tab-based desktop UI and dropdown WebUI selector<br>Independent polling (3s active, 30s inactive)<br>Per-printer settings and saved configurations |
+| **Camera Streaming** | MJPEG camera proxy (ports 8181-8191)<br>RTSP-to-WebSocket streaming with ffmpeg<br>Multi-device concurrent viewing<br>Auto-reconnection with exponential backoff<br>Custom camera URL support<br>FPS display overlay |
+| **Job Management** | Local and recent job listing<br>File upload (.gcode, .gx, .3mf)<br>Start, pause, resume, cancel operations<br>Thumbnail preview caching<br>Metadata parsing (slicer info, print time, material usage)<br>AD5X multi-material 3MF support |
+| **Real-Time Monitoring** | 3-second polling for active contexts<br>Live status updates (state, progress, temperatures)<br>Layer count and ETA tracking<br>Material usage monitoring<br>Material station status (AD5X)<br>Filtration state (AD5M Pro) |
+| **Spoolman Integration** | Active spool assignment per printer<br>Automatic usage tracking on print completion<br>Weight and length-based tracking modes<br>Connection health monitoring<br>Search and select from Spoolman database<br>Badge display in UI |
+| **Notifications** | Desktop notifications (complete, cooled)<br>Discord webhook integration with rich embeds<br>Configurable update intervals<br>Audio and visual alert options<br>Multi-context notification coordination<br>Rate limiting and error handling |
+| **Remote Access (WebUI)** | Headless mode operation<br>Password-protected authentication<br>Real-time WebSocket updates<br>Responsive mobile design<br>GridStack layout with persistence<br>Full feature parity with desktop UI |
+| **Advanced Controls** | G-code/M-code terminal<br>Temperature control (bed, nozzle, cooling)<br>LED control (built-in and custom)<br>Filtration modes (AD5M Pro)<br>Axis homing and platform clearing<br>Custom command execution |
 
 </div>
-
----
 
 <div align="center">
 
@@ -130,8 +127,6 @@
 **Note:** Full local file listing is not available on AD5X and may be removed by FlashForge in future firmware updates to 5M/Pro models.
 
 </div>
-
----
 
 <div align="center">
 
@@ -158,8 +153,6 @@
 
 </div>
 
----
-
 <div align="center">
 
 ## Platform Support
@@ -178,8 +171,6 @@
 
 </div>
 
----
-
 <div align="center">
 
 ## Quick Start
@@ -191,13 +182,11 @@
 | Step | Instructions |
 | --- | --- |
 | **1. Download** | Get the latest release for your platform from the [Releases](https://github.com/Parallel-7/FlashForgeUI-Electron/releases) page |
-| **2. Install** | **Windows:** Run `.exe` installer • **macOS:** Open `.dmg` and drag to Applications • **Linux:** Use `.AppImage`, `.deb`, or `.rpm` package |
-| **3. Connect Printer** | Launch FlashForgeUI • Use auto-discovery or manual IP entry • Enter pairing code if required (AD5M/Pro/AD5X) |
-| **4. Configure (Optional)** | Set up WebUI password • Configure Discord webhook • Connect Spoolman server • Customize themes and camera settings |
+| **2. Install** | **Windows:** Run `.exe` installer<br>**macOS:** Open `.dmg` and drag to Applications<br>**Linux:** Use `.AppImage`, `.deb`, or `.rpm` package |
+| **3. Connect Printer** | Launch FlashForgeUI<br>Use auto-discovery or manual IP entry<br>Enter pairing code if required (AD5M/Pro/AD5X) |
+| **4. Configure (Optional)** | Set up WebUI password<br>Configure Discord webhook<br>Connect Spoolman server<br>Customize themes and camera settings |
 
 </div>
-
----
 
 <div align="center">
 
@@ -218,12 +207,10 @@
 | `--webui-port` | Set WebUI port (default: 3000) | `--webui-port=8080` |
 | `--webui-password` | Override WebUI password | `--webui-password=mypassword` |
 
-**Format for `--printers`:** `<ip>:<type>:<checkcode>[,<ip>:<type>:<checkcode>...]`
+**Format for `--printers`:** `<ip>:<type>:<checkcode>[,<ip>:<type>:<checkcode>...]`<br>
 **Types:** `AD5X`, `AD5M`, `AD5M_PRO`, `LEGACY`
 
 </div>
-
----
 
 <div align="center">
 
@@ -248,34 +235,6 @@
 
 </div>
 
----
-
-<div align="center">
-
-## Technology Stack
-
-</div>
-
-<div align="center">
-
-| Component | Technology | Version |
-| --- | --- | --- |
-| **Framework** | Electron | ^35.7.5 |
-| **Build Tool** | Vite (via electron-vite) | ^7.2.4 |
-| **Language** | TypeScript | ^5.7.2 |
-| **UI Framework** | GridStack | ^12.3.3 |
-| **Icons** | Lucide | ^0.552.0 |
-| **Backend** | Express | ^5.1.0 |
-| **WebSocket** | ws | ^8.18.3 |
-| **RTSP Streaming** | node-rtsp-stream | ^0.0.9 |
-| **Validation** | Zod | ^4.0.5 |
-| **Metadata Parsing** | @parallel-7/slicer-meta | ^1.1.0 |
-| **FF API** | @ghosttypes/ff-api | latest |
-
-</div>
-
----
-
 <div align="center">
 
 ## Configuration
@@ -286,21 +245,16 @@
 
 | Category | Settings |
 | --- | --- |
-| **Notifications** | Print completion alerts • Cooling alerts • Audio alerts • Visual alerts • Discord webhook integration |
-| **Camera** | Custom camera URL • RTSP frame rate and quality • MJPEG proxy port • FPS overlay display |
-| **WebUI** | Enable/disable • Port configuration • Password protection • Authentication settings |
-| **Spoolman** | Server URL • Weight vs length tracking mode • Connection testing • Active spool selection |
-| **Theme** | Desktop theme profiles • WebUI theme profiles • Custom color palettes • Rounded UI mode |
-| **Updates** | Update channel (stable/alpha) • Check on launch • Auto-download updates |
-| **Advanced** | Debug mode • Force legacy API • Custom LED support • Always on top window |
-
-**Settings are stored in:**
-- **Global:** `config.json` in app data directory
-- **Per-Printer:** `printer_details.json` in app data directory
+| **Notifications** | Print completion alerts<br>Cooling alerts<br>Audio alerts<br>Visual alerts<br>Discord webhook integration |
+| **Camera** | Custom camera URL<br>RTSP frame rate and quality<br>MJPEG proxy port<br>FPS overlay display |
+| **WebUI** | Enable/disable<br>Port configuration<br>Password protection<br>Authentication settings |
+| **Spoolman** | Server URL<br>Weight vs length tracking mode<br>Connection testing<br>Active spool selection |
+| **Theme** | Desktop theme profiles<br>WebUI theme profiles<br>Custom color palettes<br>Rounded UI mode |
+| **Updates** | Update channel (stable/alpha)<br>Check on launch<br>Auto-download updates |
+| **Advanced** | Debug mode<br>Force legacy API<br>Custom LED support<br>Always on top window |
+| **Storage** | **Global:** `config.json` in app data directory<br>**Per-Printer:** `printer_details.json` in app data directory |
 
 </div>
-
----
 
 <div align="center">
 
@@ -322,8 +276,6 @@
 
 </div>
 
----
-
 <div align="center">
 
 ## Material Station (AD5X)
@@ -336,14 +288,12 @@
 
 | Feature | Description |
 | --- | --- |
-| **Slot Monitoring** | Real-time tracking of all 4 material slots • Material type and color detection • Active slot indication |
-| **Multi-Material Printing** | Upload 3MF files with material mappings • Assign virtual extruders to physical slots • Color matching and validation |
-| **Status Display** | Per-slot heating temperatures • Loaded material information • Material station component in UI |
-| **Spoolman Exclusion** | Spoolman integration automatically disabled for AD5X • Material station takes precedence for filament tracking |
+| **Slot Monitoring** | Real-time tracking of all 4 material slots<br>Material type and color detection<br>Active slot indication |
+| **Multi-Material Printing** | Upload 3MF files with material mappings<br>Assign virtual extruders to physical slots<br>Color matching and validation |
+| **Status Display** | Per-slot heating temperatures<br>Loaded material information<br>Material station component in UI |
+| **Spoolman Exclusion** | Spoolman integration automatically disabled for AD5X<br>Material station takes precedence for filament tracking |
 
 </div>
-
----
 
 <div align="center">
 
@@ -355,16 +305,14 @@
 
 | Component | Description |
 | --- | --- |
-| **Main Process** | Electron main process • Manager singletons (Config, Context, Backend, HeadlessDetails) • Service coordination • IPC handler registration |
-| **Renderer Process** | Component system • GridStack layout engine • Tab management • Real-time polling updates |
-| **WebUI Server** | Express REST API • WebSocket manager • JWT authentication • Static file serving |
-| **Printer Backends** | Backend abstraction layer • AD5X, AD5M, AD5M Pro, Legacy implementations • Feature detection and capability flags |
-| **Service Layer** | Polling coordinators • Print state monitors • Temperature monitors • Notification coordinators • Spoolman trackers |
-| **IPC Layer** | 15+ handler modules • Type-safe preload bridge • Channel whitelisting • Multi-window support |
+| **Main Process** | Electron main process<br>Manager singletons (Config, Context, Backend, Details)<br>Service coordination<br>IPC handler registration |
+| **Renderer Process** | Component system<br>GridStack layout engine<br>Tab management<br>Real-time polling updates |
+| **WebUI Server** | Express REST API<br>WebSocket manager<br>JWT authentication<br>Static file serving |
+| **Printer Backends** | Backend abstraction layer<br>AD5X, AD5M, AD5M Pro, Legacy implementations<br>Feature detection and capability flags |
+| **Service Layer** | Polling coordinators<br>Print state monitors<br>Temperature monitors<br>Notification coordinators<br>Spoolman trackers |
+| **IPC Layer** | 15+ handler modules<br>Type-safe preload bridge<br>Channel whitelisting<br>Multi-window support |
 
 </div>
-
----
 
 <div align="center">
 
@@ -373,8 +321,6 @@
 MIT License - Copyright (c) 2025 GhostTypes
 
 </div>
-
----
 
 <div align="center">
 
