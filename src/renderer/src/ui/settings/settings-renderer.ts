@@ -32,6 +32,7 @@
 // src/ui/settings/settings-renderer.ts
 
 import { AppConfig, ThemeColors, ThemeProfile, DEFAULT_THEME } from '@shared/types/config.js';
+import { PER_PRINTER_SETTINGS_DEFAULTS } from '@shared/utils/printerSettingsDefaults.js';
 import type { MutableSettings } from './types.js';
 import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI, ThemeProfileOperationData } from '@shared/types/external.js';
 import { applyDialogTheme } from '../shared/theme-utils.js';
@@ -573,8 +574,15 @@ class SettingsRenderer {
     }
 
     const storedValue = this.settings.perPrinter.webUIEnabled;
-    const isEnabled = storedValue !== false;
+    // Use centralized default from printerSettingsDefaults
+    const isEnabled = storedValue ?? PER_PRINTER_SETTINGS_DEFAULTS.webUIEnabled;
     this.webUIEnabledToggle.checked = isEnabled;
+
+    // Backfill default into settings object so it gets saved (consistent with other per-printer settings)
+    if (storedValue === undefined) {
+      this.settings.perPrinter.webUIEnabled = PER_PRINTER_SETTINGS_DEFAULTS.webUIEnabled;
+      console.log('[Settings] Backfilled default for webUIEnabled:', PER_PRINTER_SETTINGS_DEFAULTS.webUIEnabled);
+    }
   }
 
   private handleWebUIEnabledToggle(): void {

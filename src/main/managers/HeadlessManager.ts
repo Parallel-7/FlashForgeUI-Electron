@@ -20,6 +20,7 @@ import { getSavedPrinterService } from '../services/SavedPrinterService.js';
 import { cameraIPCHandler } from '../ipc/camera-ipc-handler.js';
 import type { PrinterDetails } from '@shared/types/printer.js';
 import type { PrinterClientType } from '@shared/types/printer.js';
+import { applyPerPrinterDefaults } from '@shared/utils/printerSettingsDefaults.js';
 
 /**
  * HeadlessManager - Orchestrates all headless mode operations
@@ -146,8 +147,9 @@ export class HeadlessManager extends EventEmitter {
       return [];
     }
 
-    // Convert StoredPrinterDetails to PrinterDetails
-    const printerDetails: PrinterDetails = {
+    // Convert StoredPrinterDetails to PrinterDetails with all per-printer settings
+    // Using utility to ensure all settings have defaults applied
+    const printerDetails: PrinterDetails = applyPerPrinterDefaults({
       Name: lastUsedPrinter.Name,
       IPAddress: lastUsedPrinter.IPAddress,
       SerialNumber: lastUsedPrinter.SerialNumber,
@@ -155,11 +157,16 @@ export class HeadlessManager extends EventEmitter {
       ClientType: lastUsedPrinter.ClientType as PrinterClientType,
       printerModel: lastUsedPrinter.printerModel,
       modelType: lastUsedPrinter.modelType,
+      // Spread all per-printer settings from saved data
       customCameraEnabled: lastUsedPrinter.customCameraEnabled,
       customCameraUrl: lastUsedPrinter.customCameraUrl,
       customLedsEnabled: lastUsedPrinter.customLedsEnabled,
-      forceLegacyMode: lastUsedPrinter.forceLegacyMode
-    };
+      forceLegacyMode: lastUsedPrinter.forceLegacyMode,
+      webUIEnabled: lastUsedPrinter.webUIEnabled,
+      rtspFrameRate: lastUsedPrinter.rtspFrameRate,
+      rtspQuality: lastUsedPrinter.rtspQuality,
+      showCameraFps: lastUsedPrinter.showCameraFps
+    });
 
     const results = await this.connectionManager.connectHeadlessFromSaved([printerDetails]);
 
@@ -179,8 +186,9 @@ export class HeadlessManager extends EventEmitter {
 
     this.logger.logInfo(`Connecting to ${savedPrinters.length} saved printer(s)...`);
 
-    // Convert StoredPrinterDetails to PrinterDetails
-    const printerDetailsList: PrinterDetails[] = savedPrinters.map(saved => ({
+    // Convert StoredPrinterDetails to PrinterDetails with all per-printer settings
+    // Using utility to ensure all settings have defaults applied
+    const printerDetailsList: PrinterDetails[] = savedPrinters.map(saved => applyPerPrinterDefaults({
       Name: saved.Name,
       IPAddress: saved.IPAddress,
       SerialNumber: saved.SerialNumber,
@@ -188,10 +196,15 @@ export class HeadlessManager extends EventEmitter {
       ClientType: saved.ClientType as PrinterClientType,
       printerModel: saved.printerModel,
       modelType: saved.modelType,
+      // Spread all per-printer settings from saved data
       customCameraEnabled: saved.customCameraEnabled,
       customCameraUrl: saved.customCameraUrl,
       customLedsEnabled: saved.customLedsEnabled,
-      forceLegacyMode: saved.forceLegacyMode
+      forceLegacyMode: saved.forceLegacyMode,
+      webUIEnabled: saved.webUIEnabled,
+      rtspFrameRate: saved.rtspFrameRate,
+      rtspQuality: saved.rtspQuality,
+      showCameraFps: saved.showCameraFps
     }));
 
     const results = await this.connectionManager.connectHeadlessFromSaved(printerDetailsList);

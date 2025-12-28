@@ -58,6 +58,11 @@ import {
   detectPrinterModelType
 } from '../utils/PrinterUtils.js';
 
+import {
+  applyPerPrinterDefaults,
+  hasMissingDefaults
+} from '@shared/utils/printerSettingsDefaults.js';
+
 // Input dialog options interface (matching preload.ts)
 interface InputDialogOptions {
   title?: string;
@@ -648,7 +653,8 @@ export class ConnectionFlowManager extends EventEmitter {
 
       // Spread existing settings first, then override with current connection details
       // This preserves all per-printer settings (camera, RTSP, LEDs, FPS overlay, etc.)
-      const printerDetails: PrinterDetails = {
+      // Apply defaults for any missing per-printer settings using centralized utility
+      const printerDetails: PrinterDetails = applyPerPrinterDefaults({
         // Spread all existing per-printer settings (preserves user preferences)
         ...existingPrinter,
         // Override core connection fields with current values
@@ -659,7 +665,7 @@ export class ConnectionFlowManager extends EventEmitter {
         ClientType: ForceLegacyAPI ? 'legacy' : clientType,
         printerModel: tempResult.typeName,
         modelType
-      };
+      });
 
       console.log('[ConnectionFlow] Final printer details to save:', printerDetails);
 
@@ -864,20 +870,11 @@ export class ConnectionFlowManager extends EventEmitter {
     const flowId = this.startFlow();
 
     try {
-      // Ensure per-printer settings have defaults if not set
-      const detailsWithDefaults: PrinterDetails = {
-        ...details,
-        customCameraEnabled: details.customCameraEnabled ?? false,
-        customCameraUrl: details.customCameraUrl ?? '',
-        customLedsEnabled: details.customLedsEnabled ?? false,
-        forceLegacyMode: details.forceLegacyMode ?? false
-      };
+      // Ensure per-printer settings have defaults using centralized utility
+      const detailsWithDefaults = applyPerPrinterDefaults(details);
 
       // If we added defaults, save them back to printer_details.json
-      if (details.customCameraEnabled === undefined ||
-          details.customCameraUrl === undefined ||
-          details.customLedsEnabled === undefined ||
-          details.forceLegacyMode === undefined) {
+      if (hasMissingDefaults(details)) {
         await this.savedPrinterService.savePrinter(detailsWithDefaults);
         console.log(`Initialized default per-printer settings for ${detailsWithDefaults.Name}`);
       }
@@ -1196,7 +1193,8 @@ export class ConnectionFlowManager extends EventEmitter {
         }
 
         // Save printer details - spread existing settings to preserve all per-printer preferences
-        const printerDetails: PrinterDetails = {
+        // Apply defaults for any missing per-printer settings using centralized utility
+        const printerDetails: PrinterDetails = applyPerPrinterDefaults({
           // Spread all existing per-printer settings (preserves user preferences)
           ...existingPrinter,
           // Override core connection fields with current values
@@ -1207,7 +1205,7 @@ export class ConnectionFlowManager extends EventEmitter {
           ClientType: spec.type,
           printerModel: tempResult.typeName,
           modelType
-        };
+        });
 
         await this.savedPrinterService.savePrinter(printerDetails);
         await this.savedPrinterService.updateLastConnected(serialNumber);

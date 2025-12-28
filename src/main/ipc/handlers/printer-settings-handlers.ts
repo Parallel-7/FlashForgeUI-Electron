@@ -8,6 +8,7 @@
 import { ipcMain } from 'electron';
 import { getPrinterDetailsManager } from '../../managers/PrinterDetailsManager.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
+import { PER_PRINTER_SETTINGS_DEFAULTS } from '@shared/utils/printerSettingsDefaults.js';
 
 /**
  * Per-printer settings interface
@@ -48,26 +49,18 @@ export function initializePrinterSettingsHandlers(): void {
       console.log('[printer-settings:get] Active context:', activeContext.id);
       console.log('[printer-settings:get] Printer details:', activeContext.printerDetails);
 
-      const {
-        customCameraEnabled,
-        customCameraUrl,
-        customLedsEnabled,
-        forceLegacyMode,
-        webUIEnabled,
-        rtspFrameRate,
-        rtspQuality,
-        showCameraFps
-      } = activeContext.printerDetails;
+      const details = activeContext.printerDetails;
 
-      const settings = {
-        customCameraEnabled,
-        customCameraUrl,
-        customLedsEnabled,
-        forceLegacyMode,
-        webUIEnabled,
-        rtspFrameRate,
-        rtspQuality,
-        showCameraFps
+      // Apply defaults for any missing per-printer settings
+      const settings: PrinterSettings = {
+        customCameraEnabled: details.customCameraEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.customCameraEnabled,
+        customCameraUrl: details.customCameraUrl ?? PER_PRINTER_SETTINGS_DEFAULTS.customCameraUrl,
+        customLedsEnabled: details.customLedsEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.customLedsEnabled,
+        forceLegacyMode: details.forceLegacyMode ?? PER_PRINTER_SETTINGS_DEFAULTS.forceLegacyMode,
+        webUIEnabled: details.webUIEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.webUIEnabled,
+        rtspFrameRate: details.rtspFrameRate ?? PER_PRINTER_SETTINGS_DEFAULTS.rtspFrameRate,
+        rtspQuality: details.rtspQuality ?? PER_PRINTER_SETTINGS_DEFAULTS.rtspQuality,
+        showCameraFps: details.showCameraFps ?? PER_PRINTER_SETTINGS_DEFAULTS.showCameraFps
       };
 
       console.log('[printer-settings:get] Returning settings:', settings);
@@ -94,11 +87,17 @@ export function initializePrinterSettingsHandlers(): void {
       // Get current printer details
       const currentDetails = activeContext.printerDetails;
 
+      // Apply centralized defaults for any missing per-printer settings
       const settingsWithDefaults: PrinterSettings = {
         ...settings,
-        rtspFrameRate: settings.rtspFrameRate ?? 30,
-        rtspQuality: settings.rtspQuality ?? 3,
-        showCameraFps: settings.showCameraFps ?? false
+        customCameraEnabled: settings.customCameraEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.customCameraEnabled,
+        customCameraUrl: settings.customCameraUrl ?? PER_PRINTER_SETTINGS_DEFAULTS.customCameraUrl,
+        customLedsEnabled: settings.customLedsEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.customLedsEnabled,
+        forceLegacyMode: settings.forceLegacyMode ?? PER_PRINTER_SETTINGS_DEFAULTS.forceLegacyMode,
+        webUIEnabled: settings.webUIEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.webUIEnabled,
+        rtspFrameRate: settings.rtspFrameRate ?? PER_PRINTER_SETTINGS_DEFAULTS.rtspFrameRate,
+        rtspQuality: settings.rtspQuality ?? PER_PRINTER_SETTINGS_DEFAULTS.rtspQuality,
+        showCameraFps: settings.showCameraFps ?? PER_PRINTER_SETTINGS_DEFAULTS.showCameraFps
       };
 
       // Remove explicit undefined values so validation sees either a boolean or the existing value
