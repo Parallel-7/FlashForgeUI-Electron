@@ -96,6 +96,7 @@ interface ContextStreamInfo {
     bytesSent: number;
     successfulConnections: number;
     failedConnections: number;
+    framesReceived: number;
   };
 }
 
@@ -225,7 +226,8 @@ export class CameraProxyService extends EventEmitter {
         bytesReceived: 0,
         bytesSent: 0,
         successfulConnections: 0,
-        failedConnections: 0
+        failedConnections: 0,
+        framesReceived: 0
       }
     };
 
@@ -462,6 +464,12 @@ export class CameraProxyService extends EventEmitter {
         // Pipe data to all clients
         response.on('data', (chunk: Buffer) => {
           streamInfo.stats.bytesReceived += chunk.length;
+          // Count JPEG frames by detecting start markers (0xFFD8)
+          for (let i = 0; i < chunk.length - 1; i++) {
+            if (chunk[i] === 0xFF && chunk[i + 1] === 0xD8) {
+              streamInfo.stats.framesReceived++;
+            }
+          }
           this.distributeToClientsForContext(streamInfo, chunk);
         });
 
@@ -678,7 +686,8 @@ export class CameraProxyService extends EventEmitter {
             bytesSent: streamInfo.stats.bytesSent,
             successfulConnections: streamInfo.stats.successfulConnections,
             failedConnections: streamInfo.stats.failedConnections,
-            currentRetryCount: streamInfo.retryCount
+            currentRetryCount: streamInfo.retryCount,
+            framesReceived: streamInfo.stats.framesReceived
           }
         };
       }
@@ -699,7 +708,8 @@ export class CameraProxyService extends EventEmitter {
         bytesSent: 0,
         successfulConnections: 0,
         failedConnections: 0,
-        currentRetryCount: 0
+        currentRetryCount: 0,
+        framesReceived: 0
       }
     };
   }

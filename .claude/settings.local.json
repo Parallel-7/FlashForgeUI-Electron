@@ -104,7 +104,8 @@
       "mcp__code-search-mcp__search_ast_pattern",
       "mcp__code-search-mcp__detect_stacks",
       "Bash(Select-String \"error  \")",
-      "Bash(Select-String -NotMatch \"warning\")"
+      "Bash(Select-String -NotMatch \"warning\")",
+      "Skill(readme-generator)"
     ],
     "deny": [],
     "additionalDirectories": [

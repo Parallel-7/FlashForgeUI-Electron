@@ -22,6 +22,9 @@ export interface PrinterSettings {
   // RTSP configuration
   rtspFrameRate?: number;
   rtspQuality?: number;
+
+  // Camera overlay
+  showCameraFps?: boolean;
 }
 
 /**
@@ -52,7 +55,8 @@ export function initializePrinterSettingsHandlers(): void {
         forceLegacyMode,
         webUIEnabled,
         rtspFrameRate,
-        rtspQuality
+        rtspQuality,
+        showCameraFps
       } = activeContext.printerDetails;
 
       const settings = {
@@ -62,7 +66,8 @@ export function initializePrinterSettingsHandlers(): void {
         forceLegacyMode,
         webUIEnabled,
         rtspFrameRate,
-        rtspQuality
+        rtspQuality,
+        showCameraFps
       };
 
       console.log('[printer-settings:get] Returning settings:', settings);
@@ -86,16 +91,14 @@ export function initializePrinterSettingsHandlers(): void {
         return false;
       }
 
-      console.log('[printer-settings:update] Active context:', activeContext.id);
-      console.log('[printer-settings:update] Current printer details:', activeContext.printerDetails);
-
       // Get current printer details
       const currentDetails = activeContext.printerDetails;
 
       const settingsWithDefaults: PrinterSettings = {
         ...settings,
         rtspFrameRate: settings.rtspFrameRate ?? 30,
-        rtspQuality: settings.rtspQuality ?? 3
+        rtspQuality: settings.rtspQuality ?? 3,
+        showCameraFps: settings.showCameraFps ?? false
       };
 
       // Remove explicit undefined values so validation sees either a boolean or the existing value
@@ -109,8 +112,6 @@ export function initializePrinterSettingsHandlers(): void {
         ...currentDetails,
         ...settingsWithDefaults
       };
-
-      console.log('[printer-settings:update] Updated details to save:', updatedDetails);
 
       // Save updated details
       await printerDetailsManager.savePrinter(updatedDetails, activeContext.id);

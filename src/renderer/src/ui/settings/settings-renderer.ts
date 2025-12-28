@@ -78,6 +78,7 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'web-ui-password': 'WebUIPassword',
   'web-ui-password-required': 'WebUIPasswordRequired',
   'camera-proxy-port': 'CameraProxyPort',
+  'show-camera-fps': 'ShowCameraFPS',
   'discord-sync': 'DiscordSync',
   'always-on-top': 'AlwaysOnTop',
   'alert-when-complete': 'AlertWhenComplete',
@@ -478,7 +479,6 @@ class SettingsRenderer {
         if (Object.keys(this.settings.perPrinter).length > 0 && this.printerSettingsAPI && this.printerName) {
           console.log('[Settings] Saving per-printer settings:', this.settings.perPrinter);
           const perPrinterSuccess = await this.printerSettingsAPI.update(this.settings.perPrinter);
-          console.log('[Settings] Per-printer save result:', perPrinterSuccess);
 
           if (!perPrinterSuccess) {
             this.showSaveStatus('Failed to save per-printer settings', true);
@@ -546,7 +546,8 @@ class SettingsRenderer {
       'CustomLeds',
       'ForceLegacyAPI',
       'RtspFrameRate',
-      'RtspQuality'
+      'RtspQuality',
+      'ShowCameraFPS'
     ].includes(configKey);
   }
 
@@ -560,7 +561,8 @@ class SettingsRenderer {
       'CustomLeds': 'customLedsEnabled',
       'ForceLegacyAPI': 'forceLegacyMode',
       'RtspFrameRate': 'rtspFrameRate',
-      'RtspQuality': 'rtspQuality'
+      'RtspQuality': 'rtspQuality',
+      'ShowCameraFPS': 'showCameraFps'
     };
     return map[configKey] || configKey;
   }

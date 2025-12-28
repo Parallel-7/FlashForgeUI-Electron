@@ -52,6 +52,7 @@ export class CameraPreviewComponent extends BaseComponent {
       <div class="camera-view">
         <div class="no-camera">Preview Disabled</div>
       </div>
+      <div class="fps-overlay" id="fps-overlay" hidden>-- FPS</div>
     </div>
     <div class="job-info-overlay">
       <div class="job-row">
@@ -111,8 +112,147 @@ export class CameraPreviewComponent extends BaseComponent {
 
   /** Reference to remove the global visibility listener */
   private readonly visibilityChangeHandler: () => void;
+
+  /** FPS overlay state */
+  private showFpsOverlay = false;
+  private lastFpsFrameCount: number | null = null;
+  private lastFpsTimestamp: number | null = null;
+  private currentFps: number | null = null;
+  private fpsUpdateIntervalId: number | null = null;
+  /** FPS update interval in ms */
+  private readonly fpsUpdateIntervalMs = 1000;
   private logDebug(message: string, ...args: unknown[]): void {
     logVerbose(CAMERA_PREVIEW_LOG_NAMESPACE, message, ...args);
+  }
+
+  /**
+   * Load FPS overlay setting from per-printer settings
+   */
+  private async loadFpsOverlaySetting(): Promise<void> {
+    try {
+      const settings = await window.api.invoke('printer-settings:get') as { showCameraFps?: boolean } | null;
+      this.showFpsOverlay = settings?.showCameraFps ?? false;
+      this.updateFpsOverlayVisibility();
+    } catch (error) {
+      console.warn('[CameraPreview] Failed to load FPS overlay setting:', error);
+      this.showFpsOverlay = false;
+    }
+  }
+
+  /**
+   * Update FPS overlay element visibility based on setting and stream state
+   */
+  private updateFpsOverlayVisibility(): void {
+    const fpsOverlay = this.findElementById('fps-overlay');
+    if (!fpsOverlay) return;
+
+    const shouldShow = this.showFpsOverlay && this.previewEnabled && this.currentState === 'streaming';
+    if (shouldShow) {
+      fpsOverlay.removeAttribute('hidden');
+      this.startFpsUpdateInterval();
+    } else {
+      fpsOverlay.setAttribute('hidden', '');
+      this.stopFpsUpdateInterval();
+    }
+  }
+
+  /**
+   * Start dedicated FPS update interval for smoother display
+   */
+  private startFpsUpdateInterval(): void {
+    if (this.fpsUpdateIntervalId !== null) return;
+
+    this.fpsUpdateIntervalId = window.setInterval(() => {
+      void this.updateFpsFromStats();
+    }, this.fpsUpdateIntervalMs);
+
+    // Initial update
+    void this.updateFpsFromStats();
+  }
+
+  /**
+   * Stop FPS update interval
+   */
+  private stopFpsUpdateInterval(): void {
+    if (this.fpsUpdateIntervalId !== null) {
+      window.clearInterval(this.fpsUpdateIntervalId);
+      this.fpsUpdateIntervalId = null;
+    }
+  }
+
+  /**
+   * Fetch camera stats and calculate actual FPS from frame count
+   */
+  private async updateFpsFromStats(): Promise<void> {
+    if (!this.activeContextId || !this.showFpsOverlay) return;
+
+    try {
+      const status = await window.api.camera.getStatus(this.activeContextId);
+      if (!status?.stats) return;
+
+      const currentFrames = status.stats.framesReceived ?? 0;
+      const currentTime = Date.now();
+
+      this.calculateFps(currentFrames, currentTime);
+    } catch {
+      // Silently ignore errors during FPS polling
+    }
+  }
+
+  /**
+   * Update FPS display with current calculated value
+   */
+  private updateFpsDisplay(): void {
+    const fpsOverlay = this.findElementById('fps-overlay');
+    if (!fpsOverlay) return;
+
+    if (this.currentFps !== null && this.currentFps > 0) {
+      fpsOverlay.textContent = `${Math.round(this.currentFps)} FPS`;
+    } else {
+      fpsOverlay.textContent = '-- FPS';
+    }
+  }
+
+  /**
+   * Calculate FPS from actual frame count delta
+   */
+  private calculateFps(currentFrames: number, currentTime: number): void {
+    if (this.lastFpsFrameCount === null || this.lastFpsTimestamp === null) {
+      this.lastFpsFrameCount = currentFrames;
+      this.lastFpsTimestamp = currentTime;
+      return;
+    }
+
+    const framesDelta = currentFrames - this.lastFpsFrameCount;
+    const timeDeltaMs = currentTime - this.lastFpsTimestamp;
+
+    if (timeDeltaMs > 0 && framesDelta >= 0) {
+      // Calculate actual FPS from frame count
+      const fps = (framesDelta / timeDeltaMs) * 1000;
+
+      // Apply light smoothing to reduce jitter
+      if (this.currentFps !== null && this.currentFps > 0) {
+        this.currentFps = this.currentFps * 0.2 + fps * 0.8;
+      } else {
+        this.currentFps = fps;
+      }
+
+      this.updateFpsDisplay();
+    }
+
+    this.lastFpsFrameCount = currentFrames;
+    this.lastFpsTimestamp = currentTime;
+  }
+
+  /**
+   * Reset FPS calculation state
+   */
+  private resetFpsTracking(): void {
+    this.lastFpsFrameCount = null;
+    this.lastFpsTimestamp = null;
+    this.currentFps = null;
+    this.stopFpsUpdateInterval();
+    this.updateFpsDisplay();
   }
 
   constructor(parentElement: HTMLElement) {
@@ -127,7 +267,13 @@ export class CameraPreviewComponent extends BaseComponent {
     this.updateComponentState('disabled');
     this.logDebug('Camera preview component initialized');
     await this.initializeActiveContext();
+    await this.loadFpsOverlaySetting();
     document.addEventListener('visibilitychange', this.visibilityChangeHandler);
+
+    // Listen for config updates to reload FPS overlay setting
+    window.api.config.onUpdated(() => {
+      void this.loadFpsOverlaySetting();
+    });
   }
 
   /**
@@ -172,6 +318,9 @@ export class CameraPreviewComponent extends BaseComponent {
     this.logDebug(`[CameraPreview] Context switched to ${contextId}`);
     this.activeContextId = contextId;
     this.resetHeartbeatTracking();
+
+    // Reload FPS overlay setting for new printer context
+    await this.loadFpsOverlaySetting();
 
     const button = this.findElementById<HTMLButtonElement>('btn-preview');
     const cameraView = this.findElement('.camera-view');
@@ -279,6 +428,9 @@ export class CameraPreviewComponent extends BaseComponent {
     this.updateComponentState('loading');
 
     this.logDebug('[CameraPreview] Enabling camera preview...');
+
+    // Reload FPS overlay setting in case it changed since init
+    await this.loadFpsOverlaySetting();
 
     if (!this.activeContextId) {
       await this.initializeActiveContext();
@@ -489,11 +641,14 @@ export class CameraPreviewComponent extends BaseComponent {
 
     // Remove all state classes
     this.container.classList.remove('state-disabled', 'state-loading', 'state-streaming', 'state-error');
-    
+
     // Add current state class
     this.container.classList.add(`state-${state}`);
-    
+
     this.currentState = state;
+
+    // Update FPS overlay visibility based on new state
+    this.updateFpsOverlayVisibility();
   }
 
   /**
@@ -584,6 +739,7 @@ export class CameraPreviewComponent extends BaseComponent {
   private resetHeartbeatTracking(): void {
     this.lastBackendBytesReceived = null;
     this.lastBackendActivityTimestamp = null;
+    this.resetFpsTracking();
   }
 
   /**

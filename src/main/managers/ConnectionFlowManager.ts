@@ -644,28 +644,21 @@ export class ConnectionFlowManager extends EventEmitter {
 
       // Check if printer already exists to preserve per-printer settings
       const existingPrinter = this.savedPrinterService.getSavedPrinter(serialNumber);
-      console.log('[ConnectionFlow] Existing printer check for', serialNumber, ':', existingPrinter);
-      console.log('[ConnectionFlow] Existing settings:', {
-        customCameraEnabled: existingPrinter?.customCameraEnabled,
-        customCameraUrl: existingPrinter?.customCameraUrl,
-        customLedsEnabled: existingPrinter?.customLedsEnabled,
-        forceLegacyMode: existingPrinter?.forceLegacyMode
-      });
+      console.log('[ConnectionFlow] Existing printer check for', serialNumber, ':', existingPrinter ? 'found' : 'not found');
 
+      // Spread existing settings first, then override with current connection details
+      // This preserves all per-printer settings (camera, RTSP, LEDs, FPS overlay, etc.)
       const printerDetails: PrinterDetails = {
+        // Spread all existing per-printer settings (preserves user preferences)
+        ...existingPrinter,
+        // Override core connection fields with current values
         Name: formatPrinterName(printerName, serialNumber),
         IPAddress: discoveredPrinter.ipAddress,
         SerialNumber: serialNumber,
         CheckCode: checkCode,
         ClientType: ForceLegacyAPI ? 'legacy' : clientType,
         printerModel: tempResult.typeName,
-        modelType,
-        // Preserve existing per-printer settings or use defaults for new printers
-        customCameraEnabled: existingPrinter?.customCameraEnabled ?? false,
-        customCameraUrl: existingPrinter?.customCameraUrl ?? '',
-        customLedsEnabled: existingPrinter?.customLedsEnabled ?? false,
-        forceLegacyMode: existingPrinter?.forceLegacyMode ?? false,
-        activeSpoolData: existingPrinter?.activeSpoolData ?? null
+        modelType
       };
 
       console.log('[ConnectionFlow] Final printer details to save:', printerDetails);
@@ -1202,20 +1195,18 @@ export class ConnectionFlowManager extends EventEmitter {
           continue;
         }
 
-        // Save printer details
+        // Save printer details - spread existing settings to preserve all per-printer preferences
         const printerDetails: PrinterDetails = {
+          // Spread all existing per-printer settings (preserves user preferences)
+          ...existingPrinter,
+          // Override core connection fields with current values
           Name: formatPrinterName(printerName, serialNumber),
           IPAddress: spec.ip,
           SerialNumber: serialNumber,
           CheckCode: checkCode,
           ClientType: spec.type,
           printerModel: tempResult.typeName,
-          modelType,
-          // Preserve previously configured per-printer overrides when present
-          customCameraEnabled: existingPrinter?.customCameraEnabled ?? false,
-          customCameraUrl: existingPrinter?.customCameraUrl ?? '',
-          customLedsEnabled: existingPrinter?.customLedsEnabled ?? false,
-          forceLegacyMode: existingPrinter?.forceLegacyMode ?? false
+          modelType
         };
 
         await this.savedPrinterService.savePrinter(printerDetails);

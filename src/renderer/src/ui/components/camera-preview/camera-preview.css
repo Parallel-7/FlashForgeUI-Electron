@@ -24,6 +24,7 @@
   flex-direction: column;
   overflow: hidden;
   min-height: 0; /* Allow it to shrink if needed */
+  position: relative; /* Positioning context for FPS overlay */
 }
 
 .component-camera-preview .camera-view {
@@ -67,6 +68,25 @@
   justify-content: center;
   align-items: center;
   z-index: 1;
+}
+
+/* FPS overlay badge */
+.component-camera-preview .fps-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: color-mix(in srgb, var(--theme-background) 80%, transparent);
+  color: var(--theme-text);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: monospace;
+  z-index: 10;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--border-color-light);
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--theme-background) 50%, black);
 }
 
 /* Integrated job info overlay at bottom - Enhanced modern design */

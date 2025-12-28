@@ -143,6 +143,8 @@ export interface CameraProxyStatus {
     readonly failedConnections: number;
     /** Current retry count */
     readonly currentRetryCount: number;
+    /** Total JPEG frames received (detected by 0xFFD8 markers) */
+    readonly framesReceived: number;
   };
 }
 
