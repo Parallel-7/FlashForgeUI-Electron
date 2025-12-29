@@ -1,11 +1,11 @@
 /**
  * @fileoverview Job Statistics Component
- * 
- * This component displays real-time job statistics including layer information, 
+ *
+ * This component displays real-time job statistics including layer information,
  * ETA, job timing, and material usage data. It extends the BaseComponent class
  * and integrates with the existing polling data system to provide live updates
  * of printer job progress.
- * 
+ *
  * Key features:
  * - Displays layer progress (current/total layers)
  * - Shows ETA with proper time formatting and calculation
@@ -14,18 +14,18 @@
  * - Handles ETA calculation from formattedEta and timeRemaining fields
  * - Clears display when no active job
  * - Uses existing formatting utilities from polling types
- * 
+ *
  * Data Sources:
  * - PollingData.printerStatus.currentJob for job information
  * - JobProgress for progress tracking and timing
  * - Formatting utilities from polling types
  */
 
+import type { PollingData } from '@shared/types/polling.js';
+import { formatLength, formatWeight } from '@shared/types/polling.js';
+import { formatJobTime } from '@shared/utils/time.utils.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
-import type { PollingData } from '@shared/types/polling.js';
-import { formatWeight, formatLength } from '@shared/types/polling.js';
-import { formatJobTime } from '@shared/utils/time.utils.js';
 import './job-stats.css';
 
 /**
@@ -95,13 +95,12 @@ export class JobStatsComponent extends BaseComponent {
 
       // Extract polling data
       const pollingData = data.pollingData;
-      
+
       // Update all job statistics displays
       this.updateLayerInfo(pollingData);
       this.updateETA(pollingData);
       this.updateJobTime(pollingData);
       this.updateMaterialUsage(pollingData);
-
     } catch (error) {
       console.error('JobStatsComponent: Error updating component:', error);
       // Set fallback display on error
@@ -116,7 +115,7 @@ export class JobStatsComponent extends BaseComponent {
    */
   private updateLayerInfo(pollingData?: PollingData): void {
     const currentJob = pollingData?.printerStatus?.currentJob;
-    
+
     if (currentJob?.isActive && currentJob.progress) {
       const current = currentJob.progress.currentLayer ?? 0;
       const total = currentJob.progress.totalLayers ?? 0;
@@ -134,7 +133,7 @@ export class JobStatsComponent extends BaseComponent {
    */
   private updateETA(pollingData?: PollingData): void {
     const currentJob = pollingData?.printerStatus?.currentJob;
-    
+
     if (currentJob?.isActive && currentJob.progress) {
       const progress = currentJob.progress;
       let etaDisplay = '--:--';
@@ -143,7 +142,7 @@ export class JobStatsComponent extends BaseComponent {
         // Try to use formattedEta first (e.g., "14:30" from ff-api)
         if (progress.formattedEta && progress.formattedEta !== '--:--') {
           etaDisplay = this.formatETAToCompletionTime(progress.formattedEta);
-        } 
+        }
         // Fall back to timeRemaining calculation
         else if (progress.timeRemaining && progress.timeRemaining > 0) {
           etaDisplay = this.calculateCompletionTime(progress.timeRemaining);
@@ -183,15 +182,15 @@ export class JobStatsComponent extends BaseComponent {
    */
   private updateMaterialUsage(pollingData?: PollingData): void {
     const currentJob = pollingData?.printerStatus?.currentJob;
-    
+
     if (currentJob?.isActive && currentJob.progress) {
       const progress = currentJob.progress;
-      
+
       // Update weight display
       const weightDisplay = formatWeight(progress.weightUsed);
       this.setElementText('#weight', weightDisplay);
-      
-      // Update length display  
+
+      // Update length display
       const lengthDisplay = formatLength(progress.lengthUsed);
       this.setElementText('#length', lengthDisplay);
     } else {
@@ -211,20 +210,20 @@ export class JobStatsComponent extends BaseComponent {
     try {
       // Parse the ETA time (assuming it's time remaining, not clock time)
       const [hours, minutes] = formattedEta.split(':').map(Number);
-      
+
       if (isNaN(hours) || isNaN(minutes)) {
         return '--:--';
       }
-      
+
       // Calculate completion time
       const now = new Date();
       const completionTime = new Date(now.getTime() + (hours * 60 + minutes) * 60 * 1000);
-      
+
       // Format to 12-hour format
       return completionTime.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
-        hour12: true
+        hour12: true,
       });
     } catch (error) {
       console.warn('JobStatsComponent: Error formatting ETA:', error);
@@ -242,14 +241,14 @@ export class JobStatsComponent extends BaseComponent {
       if (timeRemainingMinutes <= 0) {
         return '--:--';
       }
-      
+
       const now = new Date();
       const completionTime = new Date(now.getTime() + timeRemainingMinutes * 60 * 1000);
-      
+
       return completionTime.toLocaleTimeString('en-US', {
         hour: 'numeric',
         minute: '2-digit',
-        hour12: true
+        hour12: true,
       });
     } catch (error) {
       console.warn('JobStatsComponent: Error calculating completion time:', error);

@@ -14,11 +14,11 @@
  * - WindowManager + Dialog factory for update notification dialog management
  */
 
-import { app, ipcMain, type IpcMainInvokeEvent } from 'electron';
+import { app, type IpcMainInvokeEvent, ipcMain } from 'electron';
 import type { ConfigManager } from '../../managers/ConfigManager.js';
-import type { getWindowManager } from '../../windows/WindowManager.js';
 import { getAutoUpdateService, UpdateState, type UpdateStatePayload } from '../../services/AutoUpdateService.js';
 import { createUpdateAvailableDialog } from '../../windows/factories/DialogWindowFactory.js';
+import type { getWindowManager } from '../../windows/WindowManager.js';
 
 type WindowManager = ReturnType<typeof getWindowManager>;
 
@@ -84,7 +84,7 @@ export function registerUpdateHandlers(configManager: ConfigManager, windowManag
       downloadProgress: updateService.getDownloadProgress(),
       error: error ? { message: error.message } : null,
       currentVersion: app.getVersion(),
-      supportsDownload: updateService.supportsDownload()
+      supportsDownload: updateService.supportsDownload(),
     };
   });
 

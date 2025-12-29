@@ -20,53 +20,53 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 // Type definitions for material info dialog data
 export interface MaterialInfoDialogData {
-    readonly fileName: string;
-    readonly toolDatas: readonly {
-        readonly toolId: number;
-        readonly materialName: string;
-        readonly materialColor: string;
-        readonly filamentWeight: number;
-        readonly slotId: number;
-    }[];
-    readonly totalFilamentWeight?: number;
-    readonly useMatlStation?: boolean;
+  readonly fileName: string;
+  readonly toolDatas: readonly {
+    readonly toolId: number;
+    readonly materialName: string;
+    readonly materialColor: string;
+    readonly filamentWeight: number;
+    readonly slotId: number;
+  }[];
+  readonly totalFilamentWeight?: number;
+  readonly useMatlStation?: boolean;
 }
 
 /**
  * Secure API interface exposed to renderer process
  */
 const materialInfoDialogAPI = {
-    /**
-     * Listen for initialization data from main process
-     */
-    onInit: (callback: (data: MaterialInfoDialogData) => void): void => {
-        ipcRenderer.on('material-info-dialog-init', (_event, data) => {
-            callback(data);
-        });
-    },
+  /**
+   * Listen for initialization data from main process
+   */
+  onInit: (callback: (data: MaterialInfoDialogData) => void): void => {
+    ipcRenderer.on('material-info-dialog-init', (_event, data) => {
+      callback(data);
+    });
+  },
 
-    /**
-     * Close the material info dialog
-     */
-    closeDialog: (): void => {
-        console.log('Material info dialog preload: Sending close dialog request');
-        ipcRenderer.send('close-material-info-dialog');
-    },
+  /**
+   * Close the material info dialog
+   */
+  closeDialog: (): void => {
+    console.log('Material info dialog preload: Sending close dialog request');
+    ipcRenderer.send('close-material-info-dialog');
+  },
 
-    /**
-     * Listen for theme changes
-     */
-    receive: (channel: string, func: (...args: unknown[]) => void): void => {
-        const validChannels = ['theme-changed'];
-        if (validChannels.includes(channel)) {
-            ipcRenderer.on(channel, (_event, ...args) => func(...args));
-        }
+  /**
+   * Listen for theme changes
+   */
+  receive: (channel: string, func: (...args: unknown[]) => void): void => {
+    const validChannels = ['theme-changed'];
+    if (validChannels.includes(channel)) {
+      ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
+  },
 } as const;
 
 // Expose secure API to renderer process
 contextBridge.exposeInMainWorld('api', {
   dialog: {
-    materialInfo: materialInfoDialogAPI
-  }
+    materialInfo: materialInfoDialogAPI,
+  },
 });

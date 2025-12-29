@@ -18,32 +18,31 @@
  * contexts with dynamic frequency adjustment based on active context.
  */
 
-import { EventEmitter } from 'events';
+import type { MaterialStationStatus, PollingData, PrinterStatus } from '@shared/types/polling.js';
 import { BrowserWindow } from 'electron';
+import { EventEmitter } from 'events';
 import { getPrinterBackendManager } from '../managers/PrinterBackendManager.js';
 import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
 import { getWebUIManager } from '../webui/server/WebUIManager.js';
 import { getPrinterNotificationCoordinator } from './notifications/index.js';
 import { printerDataTransformer } from './PrinterDataTransformer.js';
-import type { PollingData, PrinterStatus, MaterialStationStatus } from '@shared/types/polling.js';
-
 
 /**
  * Polling coordinator that runs in the main process
  */
 export class MainProcessPollingCoordinator extends EventEmitter {
   private static instance: MainProcessPollingCoordinator | null = null;
-  
+
   private pollingInterval: NodeJS.Timeout | null = null;
   private isPolling = false;
   private isPaused = false;
   private readonly POLLING_INTERVAL = 2500; // 2.5 seconds
-  
+
   private readonly backendManager = getPrinterBackendManager();
   private readonly contextManager = getPrinterContextManager();
   private readonly webUIManager = getWebUIManager();
   private readonly notificationCoordinator = getPrinterNotificationCoordinator();
-  
+
   // Cache for last polling data
   private lastPollingData: PollingData = {
     printerStatus: printerDataTransformer.createDefaultStatus(),
@@ -51,13 +50,13 @@ export class MainProcessPollingCoordinator extends EventEmitter {
     thumbnailData: null,
     isConnected: false,
     isInitializing: false,
-    lastPolled: new Date()
+    lastPolled: new Date(),
   };
-  
+
   private constructor() {
     super();
   }
-  
+
   /**
    * Get singleton instance
    */
@@ -67,7 +66,7 @@ export class MainProcessPollingCoordinator extends EventEmitter {
     }
     return MainProcessPollingCoordinator.instance;
   }
-  
+
   /**
    * Start polling when backend is ready
    */
@@ -100,7 +99,7 @@ export class MainProcessPollingCoordinator extends EventEmitter {
       void this.performPoll();
     }, this.POLLING_INTERVAL);
   }
-  
+
   /**
    * Stop polling
    */
@@ -108,16 +107,16 @@ export class MainProcessPollingCoordinator extends EventEmitter {
     if (!this.isPolling) {
       return;
     }
-    
+
     console.log('[MainPolling] Stopping polling service');
     this.isPolling = false;
     this.isPaused = false; // Reset pause state when stopping
-    
+
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
       this.pollingInterval = null;
     }
-    
+
     // Clear cached data with defaults
     this.lastPollingData = {
       printerStatus: printerDataTransformer.createDefaultStatus(),
@@ -125,10 +124,10 @@ export class MainProcessPollingCoordinator extends EventEmitter {
       thumbnailData: null,
       isConnected: false,
       isInitializing: false,
-      lastPolled: new Date()
+      lastPolled: new Date(),
     };
   }
-  
+
   /**
    * Pause polling while keeping the service active
    * Used during operations that need exclusive access to the printer connection
@@ -137,16 +136,16 @@ export class MainProcessPollingCoordinator extends EventEmitter {
     if (!this.isPolling || this.isPaused) {
       return;
     }
-    
+
     console.log('[MainPolling] Pausing polling for job picker');
     this.isPaused = true;
-    
+
     if (this.pollingInterval) {
       clearInterval(this.pollingInterval);
       this.pollingInterval = null;
     }
   }
-  
+
   /**
    * Resume polling if it was paused
    */
@@ -154,19 +153,19 @@ export class MainProcessPollingCoordinator extends EventEmitter {
     if (!this.isPolling || !this.isPaused) {
       return;
     }
-    
+
     console.log('[MainPolling] Resuming polling after job picker');
     this.isPaused = false;
-    
+
     // Restart the polling interval
     this.pollingInterval = setInterval(() => {
       void this.performPoll();
     }, this.POLLING_INTERVAL);
-    
+
     // Perform immediate poll to get current state
     void this.performPoll();
   }
-  
+
   /**
    * Perform a single poll
    */
@@ -195,16 +194,16 @@ export class MainProcessPollingCoordinator extends EventEmitter {
         // Transform to polling type format
         materialStation = {
           connected: materialStationRaw.connected,
-          slots: materialStationRaw.slots.map(slot => ({
+          slots: materialStationRaw.slots.map((slot) => ({
             slotId: slot.slotId,
             isEmpty: slot.isEmpty,
             materialType: slot.materialType,
             materialColor: slot.materialColor,
-            isActive: slot.slotId === materialStationRaw.activeSlot
+            isActive: slot.slotId === materialStationRaw.activeSlot,
           })),
           activeSlot: materialStationRaw.activeSlot,
           errorMessage: materialStationRaw.errorMessage,
-          lastUpdate: new Date()
+          lastUpdate: new Date(),
         };
       }
 
@@ -215,7 +214,7 @@ export class MainProcessPollingCoordinator extends EventEmitter {
       } catch {
         // Ignore thumbnail errors
       }
-      
+
       // Transform the data
       let printerStatus: PrinterStatus | null = null;
       if (statusResult.success && statusResult.status) {
@@ -224,7 +223,7 @@ export class MainProcessPollingCoordinator extends EventEmitter {
         // Always provide default status structure when not connected or no data
         printerStatus = printerDataTransformer.createDefaultStatus();
       }
-      
+
       // Create polling data with all fields populated
       const pollingData: PollingData = {
         printerStatus, // Always non-null now
@@ -232,38 +231,37 @@ export class MainProcessPollingCoordinator extends EventEmitter {
         thumbnailData,
         isConnected: statusResult.success && !!statusResult.status,
         isInitializing: false,
-        lastPolled: new Date()
+        lastPolled: new Date(),
       };
-      
+
       // Cache the data
       this.lastPollingData = pollingData;
-      
+
       // Distribute updates
       this.distributeUpdates(pollingData);
-      
     } catch (error) {
       console.error('[MainPolling] Polling error:', error);
     }
   }
-  
+
   /**
    * Distribute updates to all consumers
    */
   private distributeUpdates(data: PollingData): void {
     // Send to renderer via IPC
     const windows = BrowserWindow.getAllWindows();
-    windows.forEach(window => {
+    windows.forEach((window) => {
       if (!window.isDestroyed()) {
         window.webContents.send('polling-update', data);
       }
     });
-    
+
     // Send to WebUI
     this.webUIManager.handlePollingUpdate(data);
-    
+
     // Send to notification coordinator
     void this.notificationCoordinator.handlePollingDataUpdate(data);
-    
+
     // Log for debugging
     if (data.printerStatus) {
       console.log('[MainPolling] Distributed update:', {
@@ -271,18 +269,18 @@ export class MainProcessPollingCoordinator extends EventEmitter {
         bedTemp: `${data.printerStatus.temperatures.bed.current}°C`,
         extruderTemp: `${data.printerStatus.temperatures.extruder.current}°C`,
         hasJob: !!data.printerStatus.currentJob,
-        webUIClients: this.webUIManager.getStatus().clientCount
+        webUIClients: this.webUIManager.getStatus().clientCount,
       });
     }
   }
-  
+
   /**
    * Get last polling data (for new connections)
    */
   public getLastPollingData(): PollingData {
     return this.lastPollingData;
   }
-  
+
   /**
    * Check if currently polling
    */
@@ -295,4 +293,3 @@ export class MainProcessPollingCoordinator extends EventEmitter {
 export function getMainProcessPollingCoordinator(): MainProcessPollingCoordinator {
   return MainProcessPollingCoordinator.getInstance();
 }
-

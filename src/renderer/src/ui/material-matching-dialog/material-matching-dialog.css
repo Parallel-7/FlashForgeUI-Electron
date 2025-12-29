@@ -1,6 +1,6 @@
 /* Material Matching Dialog - Rounded Styling Pattern */
 /* Import shared template for consistent styling */
-@import url('../shared/rounded-dialog-template.css');
+@import url("../shared/rounded-dialog-template.css");
 
 /* Material Matching Dialog Specific Styling */
 
@@ -314,24 +314,23 @@
     grid-template-rows: auto auto auto;
     gap: 12px;
   }
-  
+
   .requirements-section {
     grid-column: 1;
     grid-row: 1;
   }
-  
+
   .ifs-section {
     grid-column: 1;
     grid-row: 2;
   }
-  
+
   .mappings-section {
     grid-column: 1;
     grid-row: 3;
   }
-  
+
   .dialog-content {
     padding: 16px;
   }
 }
-

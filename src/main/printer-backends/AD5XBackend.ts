@@ -19,22 +19,19 @@
  * multi-color job preparation using the integrated filament feeding system.
  */
 
-import { DualAPIBackend } from './DualAPIBackend.js';
+import type { AD5XMaterialMapping, AD5XUploadParams } from '@ghosttypes/ff-api';
 import {
-  PrinterFeatureSet,
-  MaterialStationStatus,
   AD5XJobInfo,
   BasicJobInfo,
   JobListResult,
+  JobOperationParams,
   JobStartResult,
-  JobOperationParams
+  MaterialStationStatus,
+  PrinterFeatureSet,
 } from '@shared/types/printer-backend/index.js';
-import {
-  isAD5XMachineInfo,
-  extractMaterialStationStatus
-} from './ad5x/index.js';
-import type { AD5XMaterialMapping, AD5XUploadParams } from '@ghosttypes/ff-api';
 import * as path from 'path';
+import { extractMaterialStationStatus, isAD5XMachineInfo } from './ad5x/index.js';
+import { DualAPIBackend } from './DualAPIBackend.js';
 
 /**
  * Backend implementation for AD5X printer
@@ -42,7 +39,7 @@ import * as path from 'path';
  */
 export class AD5XBackend extends DualAPIBackend {
   private lastMachineInfo: unknown = null; // Store last machine info for material station data
-  
+
   /**
    * Get child-specific base features for AD5X - includes material station functionality
    * LED and filtration will be auto-detected from product endpoint
@@ -50,63 +47,63 @@ export class AD5XBackend extends DualAPIBackend {
   protected getChildBaseFeatures(): PrinterFeatureSet {
     return {
       camera: {
-        builtin: false,  // AD5X doesn't have built-in camera
+        builtin: false, // AD5X doesn't have built-in camera
         customUrl: null,
-        customEnabled: false
+        customEnabled: false,
       },
       ledControl: {
-        builtin: false,  // AD5X requires CustomLeds to be enabled for any LED control
+        builtin: false, // AD5X requires CustomLeds to be enabled for any LED control
         customControlEnabled: false, // Will be overridden by settings
-        usesLegacyAPI: true
+        usesLegacyAPI: true,
       },
       filtration: {
-        available: false,  // AD5X doesn't have built-in filtration
+        available: false, // AD5X doesn't have built-in filtration
         controllable: false,
-        reason: 'Hardware does not support filtration control'
+        reason: 'Hardware does not support filtration control',
       },
       gcodeCommands: {
         available: true,
         usesLegacyAPI: true,
-        supportedCommands: this.getSupportedGCodeCommands()
+        supportedCommands: this.getSupportedGCodeCommands(),
       },
       statusMonitoring: {
         available: true,
         usesNewAPI: true,
         usesLegacyAPI: true,
-        realTimeUpdates: true
+        realTimeUpdates: true,
       },
       jobManagement: {
-        localJobs: false,  // AD5X doesn't support local file listing
+        localJobs: false, // AD5X doesn't support local file listing
         recentJobs: true,
         uploadJobs: true,
-        startJobs: true,  // AD5X now supports job starting with new ff-api
+        startJobs: true, // AD5X now supports job starting with new ff-api
         pauseResume: true,
         cancelJobs: true,
-        usesNewAPI: true
+        usesNewAPI: true,
       },
       materialStation: {
-        available: true,  // AD5X has material station - this is the key difference
-        slotCount: 4,     // AD5X typically has 4 material slots
+        available: true, // AD5X has material station - this is the key difference
+        slotCount: 4, // AD5X typically has 4 material slots
         perSlotInfo: true,
-        materialDetection: true
-      }
+        materialDetection: true,
+      },
     };
   }
-  
+
   /**
    * Perform AD5X-specific initialization
    */
   protected async initializeBackend(): Promise<void> {
     // Call parent initialization
     await super.initializeBackend();
-    
+
     console.log('- Material station: Available with 4 slots');
     console.log('- Job starting: Enabled with material station support');
-    
+
     // Initialize material station monitoring
     this.initializeMaterialStationMonitoring();
   }
-  
+
   /**
    * Initialize material station monitoring
    */
@@ -121,7 +118,7 @@ export class AD5XBackend extends DualAPIBackend {
       console.warn('Failed to initialize material station monitoring:', error);
     }
   }
-  
+
   /**
    * Process machine info for material station data extraction
    * Override from DualAPIBackend
@@ -135,7 +132,7 @@ export class AD5XBackend extends DualAPIBackend {
       this.lastMachineInfo = null;
     }
   }
-  
+
   /**
    * Get additional status fields specific to AD5X
    * Override from DualAPIBackend
@@ -144,7 +141,7 @@ export class AD5XBackend extends DualAPIBackend {
     // AD5X doesn't add any additional fields beyond the base implementation
     return {};
   }
-  
+
   /**
    * Transform job list for AD5X-specific formatting
    * Override from DualAPIBackend to handle AD5XJobInfo
@@ -164,11 +161,11 @@ export class AD5XBackend extends DualAPIBackend {
   public async getRecentJobs(): Promise<JobListResult> {
     try {
       const recentJobs = await this.fiveMClient.files.getRecentFileList();
-      
+
       if (!recentJobs || !Array.isArray(recentJobs)) {
         throw new Error('Failed to get recent jobs');
       }
-      
+
       // For AD5X, preserve full FFGcodeFileEntry data as AD5XJobInfo
       const jobs: AD5XJobInfo[] = recentJobs.map((fileEntry) => ({
         fileName: fileEntry.gcodeFileName,
@@ -177,15 +174,15 @@ export class AD5XBackend extends DualAPIBackend {
         toolDatas: fileEntry.gcodeToolDatas,
         totalFilamentWeight: fileEntry.totalFilamentWeight,
         useMatlStation: fileEntry.useMatlStation,
-        _type: 'ad5x' as const
+        _type: 'ad5x' as const,
       }));
-      
+
       return {
         success: true,
         jobs,
         totalCount: jobs.length,
         source: 'recent',
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     } catch (error) {
       return {
@@ -194,11 +191,11 @@ export class AD5XBackend extends DualAPIBackend {
         jobs: [],
         totalCount: 0,
         source: 'recent',
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
   }
-  
+
   /**
    * Start a job on AD5X printer
    * Uses new ff-api methods for AD5X-specific job starting
@@ -207,74 +204,72 @@ export class AD5XBackend extends DualAPIBackend {
     try {
       // Handle file upload case
       if (params.filePath) {
-        const success = await this.fiveMClient.jobControl.uploadFile(
-          params.filePath,
-          params.startNow,
-          params.leveling
-        );
-        
+        const success = await this.fiveMClient.jobControl.uploadFile(params.filePath, params.startNow, params.leveling);
+
         if (!success) {
           throw new Error('Failed to upload and start job');
         }
-        
+
         return {
           success: true,
           fileName: params.fileName || params.filePath,
           started: params.startNow,
-          timestamp: new Date()
+          timestamp: new Date(),
         };
       }
-      
+
       // Handle local file printing case
       if (!params.fileName) {
         throw new Error('fileName or filePath is required');
       }
-      
+
       // Only proceed with printing if startNow is true
       if (!params.startNow) {
         return {
           success: true,
           fileName: params.fileName,
           started: false,
-          timestamp: new Date()
+          timestamp: new Date(),
         };
       }
-      
+
       // Check if material mappings are provided for multi-color job
       const materialMappings = params.additionalParams?.materialMappings as AD5XMaterialMapping[] | undefined;
-      
+
       if (materialMappings && materialMappings.length > 0) {
         // Multi-color job with material station
-        console.log(`Starting AD5X multi-color job: ${params.fileName} with ${materialMappings.length} material mappings`);
-        
+        console.log(
+          `Starting AD5X multi-color job: ${params.fileName} with ${materialMappings.length} material mappings`
+        );
+
         const success = await this.fiveMClient.jobControl.startAD5XMultiColorJob({
           fileName: params.fileName,
           levelingBeforePrint: params.leveling,
-          materialMappings
+          materialMappings,
         });
-        
+
         if (!success) {
           throw new Error('Failed to start multi-color job');
         }
       } else {
         // Single-color job without material station
         console.log(`Starting AD5X single-color job: ${params.fileName}`);
-        
+
         const success = await this.fiveMClient.jobControl.startAD5XSingleColorJob({
           fileName: params.fileName,
-          levelingBeforePrint: params.leveling
+          levelingBeforePrint: params.leveling,
         });
-        
+
         if (!success) {
           throw new Error('Failed to start single-color job');
         }
       }
-      
+
       return {
         success: true,
         fileName: params.fileName,
         started: true,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     } catch (error) {
       return {
@@ -282,11 +277,11 @@ export class AD5XBackend extends DualAPIBackend {
         error: error instanceof Error ? error.message : String(error),
         fileName: params.fileName || '',
         started: false,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
   }
-  
+
   /**
    * Upload a file to AD5X printer with material station support
    * Uses the new ff-api uploadFileAD5X method for enhanced 3MF multi-color functionality
@@ -305,22 +300,24 @@ export class AD5XBackend extends DualAPIBackend {
         flowCalibration: false,
         firstLayerInspection: false,
         timeLapseVideo: false,
-        materialMappings: materialMappings || []
+        materialMappings: materialMappings || [],
       };
-      
-      console.log(`AD5X upload: ${path.basename(filePath)}, start: ${startPrint}, level: ${levelingBeforePrint}, mappings: ${materialMappings?.length || 0}`);
-      
+
+      console.log(
+        `AD5X upload: ${path.basename(filePath)}, start: ${startPrint}, level: ${levelingBeforePrint}, mappings: ${materialMappings?.length || 0}`
+      );
+
       const success = await this.fiveMClient.jobControl.uploadFileAD5X(uploadParams);
-      
+
       if (!success) {
         throw new Error('Failed to upload file to AD5X printer');
       }
-      
+
       return {
         success: true,
         fileName: path.basename(filePath),
         started: startPrint,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     } catch (error) {
       return {
@@ -328,34 +325,33 @@ export class AD5XBackend extends DualAPIBackend {
         error: error instanceof Error ? error.message : String(error),
         fileName: path.basename(filePath),
         started: false,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
   }
-  
+
   /**
    * Get material station status (supported on AD5X)
    */
   public getMaterialStationStatus(): MaterialStationStatus | null {
     return extractMaterialStationStatus(this.lastMachineInfo);
   }
-  
+
   // Feature detection methods specific to AD5X
-  
+
   protected supportsMaterialStation(): boolean {
     return true; // AD5X has material station
   }
-  
+
   protected supportsLocalJobs(): boolean {
     return false; // AD5X doesn't support local job listing
   }
-  
+
   protected supportsStartJobs(): boolean {
     return true; // AD5X now supports job starting with new ff-api
   }
-  
+
   protected getMaterialStationSlotCount(): number {
     return 4; // AD5X has 4 material slots
   }
 }
-

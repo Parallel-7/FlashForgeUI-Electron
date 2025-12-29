@@ -42,7 +42,7 @@
   flex-direction: column;
   justify-content: center;
   gap: 6px;
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
   overflow: auto;
 }
 
@@ -54,7 +54,9 @@
   background: var(--card-bg);
   border-radius: 6px;
   border: 1px solid var(--border-color);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-text) 3%, transparent), var(--shadow-sm);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 3%, transparent),
+    var(--shadow-sm);
   transition: all var(--transition-normal);
   min-height: 36px;
   width: 100%;
@@ -63,7 +65,9 @@
 
 .component-job-stats .info-display-row:hover {
   border-color: var(--border-color-light);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-text) 6%, transparent), var(--shadow-md);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 6%, transparent),
+    var(--shadow-md);
   background: var(--card-bg-hover);
   transform: translateY(-1px);
 }
@@ -82,12 +86,14 @@
   font-size: 14px;
   font-weight: 600;
   color: var(--text-color);
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
   letter-spacing: 0.2px;
   text-align: right;
   flex-grow: 1;
   margin-left: 8px;
-  transition: color var(--transition-normal), text-shadow var(--transition-normal);
+  transition:
+    color var(--transition-normal),
+    text-shadow var(--transition-normal);
 }
 
 .component-job-stats .info-value:hover {
@@ -118,7 +124,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-.component-job-stats .info-value {
-  transition: none;
-}
+  .component-job-stats .info-value {
+    transition: none;
+  }
 }

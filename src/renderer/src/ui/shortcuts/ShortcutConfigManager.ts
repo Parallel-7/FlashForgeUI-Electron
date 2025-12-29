@@ -17,11 +17,7 @@
  * @module ui/shortcuts/ShortcutConfigManager
  */
 
-import type {
-  ShortcutButtonConfig,
-  SlotNumber,
-  SlotAssignment,
-} from './types.js';
+import type { ShortcutButtonConfig, SlotAssignment, SlotNumber } from './types.js';
 import { DEFAULT_SHORTCUT_CONFIG } from './types.js';
 
 /**
@@ -92,9 +88,7 @@ export class ShortcutConfigManager {
 
       // Validate structure
       if (!this.isValidConfig(parsed)) {
-        console.warn(
-          '[ShortcutConfig] Invalid configuration structure, using defaults',
-        );
+        console.warn('[ShortcutConfig] Invalid configuration structure, using defaults');
         return { ...DEFAULT_SHORTCUT_CONFIG };
       }
 
@@ -102,9 +96,7 @@ export class ShortcutConfigManager {
 
       // Perform migration if needed
       if (config.version < CURRENT_VERSION) {
-        console.log(
-          `[ShortcutConfig] Migrating from version ${config.version} to ${CURRENT_VERSION}`,
-        );
+        console.log(`[ShortcutConfig] Migrating from version ${config.version} to ${CURRENT_VERSION}`);
         return this.migrate(config);
       }
 
@@ -157,9 +149,7 @@ export class ShortcutConfigManager {
     if (componentId !== null) {
       const existingSlot = this.findSlotForComponent(componentId, serialNumber);
       if (existingSlot !== null && existingSlot !== slot) {
-        throw new Error(
-          `Component ${componentId} is already assigned to slot ${existingSlot}`,
-        );
+        throw new Error(`Component ${componentId} is already assigned to slot ${existingSlot}`);
       }
     }
 
@@ -235,9 +225,7 @@ export class ShortcutConfigManager {
    */
   getPinnedComponentIds(serialNumber?: string | null): string[] {
     const config = this.load(serialNumber);
-    return Object.values(config.slots).filter(
-      (id): id is string => id !== null,
-    );
+    return Object.values(config.slots).filter((id): id is string => id !== null);
   }
 
   /**

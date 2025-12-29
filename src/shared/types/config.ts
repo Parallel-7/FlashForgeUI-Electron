@@ -32,11 +32,11 @@
  * Defines the color palette for the application UI
  */
 export interface ThemeColors {
-  primary: string;    // Main accent colour (used for buttons, highlights)
-  secondary: string;  // Secondary accent colour or gradient end
+  primary: string; // Main accent colour (used for buttons, highlights)
+  secondary: string; // Secondary accent colour or gradient end
   background: string; // Base background for content (not the window itself)
-  surface: string;    // Card/panel background inside windows
-  text: string;       // Primary text colour
+  surface: string; // Card/panel background inside windows
+  text: string; // Primary text colour
 }
 
 /**
@@ -99,8 +99,8 @@ export interface AppConfig {
   readonly CheckForUpdatesOnLaunch: boolean;
   readonly UpdateChannel: 'stable' | 'alpha';
   readonly AutoDownloadUpdates: boolean;
-  readonly RtspFrameRate: number;        // Per-printer, not saved to config.json
-  readonly RtspQuality: number;          // Per-printer, not saved to config.json
+  readonly RtspFrameRate: number; // Per-printer, not saved to config.json
+  readonly RtspQuality: number; // Per-printer, not saved to config.json
   readonly SpoolmanEnabled: boolean;
   readonly SpoolmanServerUrl: string;
   readonly SpoolmanUpdateMode: 'length' | 'weight';
@@ -153,11 +153,11 @@ export interface MutableAppConfig {
  * Default theme colors - dark theme matching current UI
  */
 export const DEFAULT_THEME: ThemeColors = {
-  primary: '#4285f4',     // accent blue
-  secondary: '#357abd',   // gradient end
-  background: '#121212',  // dark base for content
-  surface: '#1e1e1e',     // card background
-  text: '#e0e0e0',        // light text
+  primary: '#4285f4', // accent blue
+  secondary: '#357abd', // gradient end
+  background: '#121212', // dark base for content
+  surface: '#1e1e1e', // card background
+  text: '#e0e0e0', // light text
 };
 
 /**
@@ -282,8 +282,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   CheckForUpdatesOnLaunch: true,
   UpdateChannel: 'stable',
   AutoDownloadUpdates: false,
-  RtspFrameRate: 30,           // Default 30 FPS
-  RtspQuality: 3,              // Default quality 3
+  RtspFrameRate: 30, // Default 30 FPS
+  RtspQuality: 3, // Default quality 3
   SpoolmanEnabled: false,
   SpoolmanServerUrl: '',
   SpoolmanUpdateMode: 'weight', // Default to weight-based updates
@@ -316,18 +316,18 @@ export function isValidConfig(config: unknown): config is AppConfig {
   if (!config || typeof config !== 'object') {
     return false;
   }
-  
+
   const obj = config as Record<string, unknown>;
-  
+
   // Check all required keys exist and have correct types
   for (const [key, defaultValue] of Object.entries(DEFAULT_CONFIG)) {
     if (!(key in obj)) {
       return false;
     }
-    
+
     const value = obj[key];
     const expectedType = typeof defaultValue;
-    
+
     if (typeof value !== expectedType) {
       // Bypass for theme profiles since they are arrays of objects
       if (key === 'desktopThemeProfiles' || key === 'webUIThemeProfiles') {
@@ -335,13 +335,13 @@ export function isValidConfig(config: unknown): config is AppConfig {
       }
       return false;
     }
-    
+
     // Additional validation for specific types
     if (expectedType === 'number' && (!Number.isFinite(value) || (value as number) < 0)) {
       return false;
     }
   }
-  
+
   return true;
 }
 
@@ -396,13 +396,15 @@ function sanitizeThemeProfile(profile: Partial<ThemeProfile>): ThemeProfile {
  * System profiles are always replaced with the canonical definitions so palette updates propagate.
  */
 function mergeSystemThemeProfiles(profiles: readonly ThemeProfile[]): ThemeProfile[] {
-  const customProfiles = profiles.filter(profile => !profile.isSystem).map(profile => ({
-    ...profile,
-    colors: { ...profile.colors },
-    isSystem: false,
-  }));
+  const customProfiles = profiles
+    .filter((profile) => !profile.isSystem)
+    .map((profile) => ({
+      ...profile,
+      colors: { ...profile.colors },
+      isSystem: false,
+    }));
 
-  const systemProfiles = SYSTEM_THEME_PROFILES.map(profile => ({
+  const systemProfiles = SYSTEM_THEME_PROFILES.map((profile) => ({
     ...profile,
     colors: { ...profile.colors },
     isSystem: true,
@@ -410,7 +412,6 @@ function mergeSystemThemeProfiles(profiles: readonly ThemeProfile[]): ThemeProfi
 
   return [...systemProfiles, ...customProfiles];
 }
-
 
 /**
  * Sanitizes and ensures a config object contains only valid keys with correct types

@@ -78,27 +78,27 @@ export type { InputDialogOptions } from './shared/WindowTypes.js';
 
 // Core application windows
 export {
+  createAboutDialog,
+  createLogDialog,
   createSettingsWindow,
   createStatusWindow,
-  createLogDialog,
-  createAboutDialog
 } from './factories/CoreWindowFactory.js';
 
 // Dialog windows with user interaction
 export {
-  createInputDialog,
-  createMaterialMatchingDialog,
-  createSingleColorConfirmationDialog,
-  createMaterialInfoDialog,
-  createIFSDialog,
   createConnectChoiceDialog,
-  createPrinterConnectedWarningDialog
+  createIFSDialog,
+  createInputDialog,
+  createMaterialInfoDialog,
+  createMaterialMatchingDialog,
+  createPrinterConnectedWarningDialog,
+  createSingleColorConfirmationDialog,
 } from './factories/DialogWindowFactory.js';
 
 // Utility and feature windows
 export {
-  createJobUploaderWindow,
   createJobPickerWindow,
+  createJobUploaderWindow,
   createPrinterSelectionWindow,
-  createSendCommandsWindow
+  createSendCommandsWindow,
 } from './factories/UtilityWindowFactory.js';

@@ -10,62 +10,62 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 // Interface for printer connected warning data
 interface PrinterConnectedWarningData {
-    readonly printerName: string;
-    readonly responseChannel: string;
+  readonly printerName: string;
+  readonly responseChannel: string;
 }
 
 // Expose secure dialog API to renderer process
 const printerWarningDialogAPI = {
-    /**
-     * Receive dialog initialization data from main process
-     * @param channel The IPC channel to listen on
-     * @param func Callback function to handle received data
-     */
-    receive: (channel: string, func: (data: PrinterConnectedWarningData) => void): void => {
-        // Validate channel name for security
-        const validChannels = ['dialog-init', 'theme-changed'];
-        if (validChannels.includes(channel)) {
-            if (channel === 'dialog-init') {
-                ipcRenderer.once(channel, (_event, data: PrinterConnectedWarningData) => {
-                    func(data);
-                });
-            } else {
-                ipcRenderer.on(channel, (_event, ...args) => func(...(args as [PrinterConnectedWarningData])));
-            }
-        } else {
-            console.error('Printer connected warning preload: Invalid channel:', channel);
-        }
-    },
-
-    /**
-     * Send continue response to main process (user chose to continue)
-     * @returns Promise that resolves when message is sent
-     */
-    continue: async (): Promise<void> => {
-        return ipcRenderer.invoke('printer-connected-warning-continue') as Promise<void>;
-    },
-
-    /**
-     * Send cancel response to main process (user chose to cancel)
-     * @returns Promise that resolves when message is sent
-     */
-    cancel: async (): Promise<void> => {
-        return ipcRenderer.invoke('printer-connected-warning-cancel') as Promise<void>;
+  /**
+   * Receive dialog initialization data from main process
+   * @param channel The IPC channel to listen on
+   * @param func Callback function to handle received data
+   */
+  receive: (channel: string, func: (data: PrinterConnectedWarningData) => void): void => {
+    // Validate channel name for security
+    const validChannels = ['dialog-init', 'theme-changed'];
+    if (validChannels.includes(channel)) {
+      if (channel === 'dialog-init') {
+        ipcRenderer.once(channel, (_event, data: PrinterConnectedWarningData) => {
+          func(data);
+        });
+      } else {
+        ipcRenderer.on(channel, (_event, ...args) => func(...(args as [PrinterConnectedWarningData])));
+      }
+    } else {
+      console.error('Printer connected warning preload: Invalid channel:', channel);
     }
+  },
+
+  /**
+   * Send continue response to main process (user chose to continue)
+   * @returns Promise that resolves when message is sent
+   */
+  continue: async (): Promise<void> => {
+    return ipcRenderer.invoke('printer-connected-warning-continue') as Promise<void>;
+  },
+
+  /**
+   * Send cancel response to main process (user chose to cancel)
+   * @returns Promise that resolves when message is sent
+   */
+  cancel: async (): Promise<void> => {
+    return ipcRenderer.invoke('printer-connected-warning-cancel') as Promise<void>;
+  },
 } as const;
 
 contextBridge.exposeInMainWorld('api', {
   dialog: {
-    printerWarning: printerWarningDialogAPI
-  }
+    printerWarning: printerWarningDialogAPI,
+  },
 });
 
 // Handle platform information for styling
 ipcRenderer.once('platform-info', (_event, platform: string) => {
-    // Add platform class to body for platform-specific styling
-    document.addEventListener('DOMContentLoaded', () => {
-        document.body.classList.add(`platform-${platform}`);
-    });
+  // Add platform class to body for platform-specific styling
+  document.addEventListener('DOMContentLoaded', () => {
+    document.body.classList.add(`platform-${platform}`);
+  });
 });
 
 // Log preload completion for debugging

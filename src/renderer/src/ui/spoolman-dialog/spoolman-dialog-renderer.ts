@@ -17,10 +17,10 @@
 
 /// <reference types="../../types/global.d.ts" />
 
-import type { SpoolResponse, ActiveSpoolData, SpoolSearchQuery } from '@shared/types/spoolman.js';
 import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
+import type { ActiveSpoolData, SpoolResponse, SpoolSearchQuery } from '@shared/types/spoolman.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 interface SpoolmanDialogAPI {
   searchSpools: (query: SpoolSearchQuery) => Promise<SpoolResponse[]>;
@@ -129,14 +129,12 @@ function filterSpoolsByQuery(spools: SpoolResponse[], query: string): SpoolRespo
   if (!query) return spools; // No filter if query is empty
 
   const lowerQuery = query.toLowerCase();
-  return spools.filter(spool => {
+  return spools.filter((spool) => {
     const name = (spool.filament.name || '').toLowerCase();
     const vendor = (spool.filament.vendor?.name || '').toLowerCase();
     const material = (spool.filament.material || '').toLowerCase();
 
-    return name.includes(lowerQuery) ||
-           vendor.includes(lowerQuery) ||
-           material.includes(lowerQuery);
+    return name.includes(lowerQuery) || vendor.includes(lowerQuery) || material.includes(lowerQuery);
   });
 }
 
@@ -231,9 +229,7 @@ function createSpoolCard(spool: SpoolResponse): HTMLElement {
   const name = spool.filament.name || 'Unknown';
   const displayName = vendor ? `${vendor} ${name}` : name;
   const material = spool.filament.material || 'Unknown';
-  const remaining = spool.remaining_weight
-    ? `${Math.round(spool.remaining_weight)}g remaining`
-    : 'Unknown weight';
+  const remaining = spool.remaining_weight ? `${Math.round(spool.remaining_weight)}g remaining` : 'Unknown weight';
 
   card.innerHTML = `
     <div class="card-spool-visual" style="background-color: ${colorHex};">
@@ -267,7 +263,7 @@ async function handleSpoolSelect(spool: SpoolResponse): Promise<void> {
     colorHex: ensureHashPrefix(spool.filament.color_hex),
     remainingWeight: spool.remaining_weight || 0,
     remainingLength: spool.remaining_length || 0,
-    lastUpdated: new Date().toISOString()
+    lastUpdated: new Date().toISOString(),
   };
 
   // Send selection to main process

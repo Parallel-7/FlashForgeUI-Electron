@@ -47,7 +47,9 @@
   background: var(--card-bg);
   border-radius: 6px;
   border: 1px solid var(--border-color);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-text) 3%, transparent), var(--shadow-sm);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 3%, transparent),
+    var(--shadow-sm);
   padding: 10px 12px;
   display: flex;
   flex-direction: column;
@@ -60,7 +62,9 @@
 .temp-card:hover {
   transform: translateY(-1px);
   border-color: var(--border-color-light);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-text) 6%, transparent), var(--shadow-md);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 6%, transparent),
+    var(--shadow-md);
   background: var(--card-bg-hover);
 }
 
@@ -86,9 +90,11 @@
   font-size: clamp(13px, 1.5vw, 16px);
   font-weight: 600;
   color: var(--text-color);
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
   letter-spacing: 0.2px;
-  transition: color var(--transition-normal), text-shadow var(--transition-normal);
+  transition:
+    color var(--transition-normal),
+    text-shadow var(--transition-normal);
   text-align: right;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -119,7 +125,9 @@
   cursor: pointer;
   transition: all var(--transition-fast);
   min-width: 50px;
-  box-shadow: var(--shadow-sm), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 15%, transparent);
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 15%, transparent);
 }
 
 .temp-btn--primary {
@@ -134,7 +142,9 @@
 
 .temp-btn:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 15%, transparent);
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 15%, transparent);
   border-color: var(--border-color-light);
 }
 
@@ -170,7 +180,9 @@
   justify-content: space-between;
   gap: 8px;
   min-height: 42px;
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-text) 3%, transparent), var(--shadow-sm);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 3%, transparent),
+    var(--shadow-sm);
   transition: all var(--transition-normal);
   backdrop-filter: blur(8px);
 }
@@ -178,7 +190,9 @@
 .fan-card:hover {
   transform: translateY(-1px);
   border-color: var(--border-color-light);
-  box-shadow: inset 0 1px 0 color-mix(in srgb, var(--theme-text) 6%, transparent), var(--shadow-md);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 6%, transparent),
+    var(--shadow-md);
   background: var(--card-bg-hover);
 }
 
@@ -195,7 +209,7 @@
   font-size: clamp(13px, 1.8vw, 15px);
   font-weight: 700;
   color: var(--text-color);
-  font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
   padding: 4px 10px;
   border-radius: 4px;
   background: color-mix(in srgb, var(--theme-primary) 12%, transparent);

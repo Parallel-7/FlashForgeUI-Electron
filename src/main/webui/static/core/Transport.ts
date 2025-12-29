@@ -6,18 +6,11 @@
  * spoolman updates. Keeps transport concerns isolated from UI orchestration.
  */
 
-import type {
-  ActiveSpoolData,
-  PrinterStatus,
-  WebSocketCommand,
-  WebSocketMessage,
-} from '../app.js';
+import type { ActiveSpoolData, PrinterStatus, WebSocketCommand, WebSocketMessage } from '../app.js';
 import { showToast } from '../shared/dom.js';
 import { state } from './AppState.js';
 
-export function buildAuthHeaders(
-  extra: Record<string, string> = {},
-): Record<string, string> {
+export function buildAuthHeaders(extra: Record<string, string> = {}): Record<string, string> {
   if (state.authRequired && state.authToken) {
     return {
       ...extra,
@@ -56,10 +49,7 @@ type ApiResponseMetadata<T> = {
   ok: boolean;
 };
 
-async function performRequest<T>(
-  endpoint: string,
-  options: RequestInit = {},
-): Promise<ApiResponseMetadata<T>> {
+async function performRequest<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponseMetadata<T>> {
   const { headers, ...rest } = options;
   const response = await fetch(endpoint, {
     ...rest,
@@ -86,17 +76,14 @@ async function performRequest<T>(
   }
 }
 
-export async function apiRequest<T>(
-  endpoint: string,
-  options: RequestInit = {},
-): Promise<T> {
+export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const result = await performRequest<T>(endpoint, options);
   return result.data;
 }
 
 export async function apiRequestWithMetadata<T>(
   endpoint: string,
-  options: RequestInit = {},
+  options: RequestInit = {}
 ): Promise<ApiResponseMetadata<T>> {
   return performRequest<T>(endpoint, options);
 }
@@ -169,10 +156,7 @@ export function connectWebSocket(): void {
 
       if (state.isAuthenticated && state.reconnectAttempts < state.maxReconnectAttempts) {
         state.reconnectAttempts++;
-        setTimeout(
-          () => connectWebSocket(),
-          state.reconnectDelay * state.reconnectAttempts,
-        );
+        setTimeout(() => connectWebSocket(), state.reconnectDelay * state.reconnectAttempts);
       }
     };
   } catch (error) {
@@ -227,9 +211,7 @@ function handleWebSocketMessage(message: WebSocketMessage): void {
 
     case 'SPOOLMAN_UPDATE':
       if (message.contextId) {
-        spoolmanUpdateCallbacks.forEach((callback) =>
-          callback(message.contextId!, message.spool ?? null),
-        );
+        spoolmanUpdateCallbacks.forEach((callback) => callback(message.contextId!, message.spool ?? null));
       }
       break;
   }

@@ -1,6 +1,6 @@
 /* Single Color Confirmation Dialog - Rounded Styling Pattern */
 /* Import shared template for consistent styling */
-@import url('../shared/rounded-dialog-template.css');
+@import url("../shared/rounded-dialog-template.css");
 
 /* Single Color Confirmation Dialog Specific Styling */
 
@@ -182,21 +182,21 @@
     gap: 16px;
     text-align: center;
   }
-  
+
   .material-spool {
     width: 60px;
     height: 60px;
   }
-  
+
   .spool-hole {
     width: 24px;
     height: 24px;
   }
-  
+
   .confirmation-message {
     margin-bottom: 20px;
   }
-  
+
   .material-preview {
     padding: 16px;
     margin-bottom: 16px;

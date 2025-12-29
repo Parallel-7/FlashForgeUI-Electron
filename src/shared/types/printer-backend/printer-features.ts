@@ -20,7 +20,7 @@
 /**
  * Printer feature types that can be available on different printer models
  */
-export type PrinterFeatureType = 
+export type PrinterFeatureType =
   | 'camera'
   | 'led-control'
   | 'filtration'
@@ -162,4 +162,3 @@ export interface FeatureDisableReason {
   readonly canBeOverridden: boolean;
   readonly settingsKey?: string;
 }
-

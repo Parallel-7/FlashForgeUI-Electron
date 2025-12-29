@@ -4,7 +4,7 @@
 
 // src/ui/settings/sections/RoundedUISection.ts
 
-import type { RoundedUISupportInfo, ISettingsAPI } from '@shared/types/external.js';
+import type { ISettingsAPI, RoundedUISupportInfo } from '@shared/types/external.js';
 import type { MutableSettings } from '../types.js';
 
 interface RoundedUISectionOptions {

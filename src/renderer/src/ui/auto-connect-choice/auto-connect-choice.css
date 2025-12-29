@@ -2,7 +2,7 @@
  * Auto-Connect Choice Dialog Styles - Uses Shared Template for Conditional Styling
  * Import shared template for consistent rounded/square UI switching
  */
-@import url('../shared/rounded-dialog-template.css');
+@import url("../shared/rounded-dialog-template.css");
 
 /* Template provides: body styles */
 
@@ -12,242 +12,243 @@
 
 /* Dialog-specific content customizations */
 .dialog-content {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
 .message {
-    text-align: center;
-    margin-bottom: 8px;
+  text-align: center;
+  margin-bottom: 8px;
 }
-
 
 .message-text {
-    font-size: 1rem;
-    color: var(--text-color);
-    margin-bottom: 12px;
-    font-weight: 500;
+  font-size: 1rem;
+  color: var(--text-color);
+  margin-bottom: 12px;
+  font-weight: 500;
 }
-
 
 .last-used-info {
-    font-size: 0.85rem;
-    color: var(--text-color-secondary);
-    padding: 8px 16px;
-    background: var(--surface-muted);
-    border-radius: 6px;
-    margin: 0 auto;
-    display: inline-block;
-    border: 1px solid var(--border-color);
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+  padding: 8px 16px;
+  background: var(--surface-muted);
+  border-radius: 6px;
+  margin: 0 auto;
+  display: inline-block;
+  border: 1px solid var(--border-color);
 }
 
-
 .last-used-info strong {
-    color: var(--text-color);
+  color: var(--text-color);
 }
 
 .options-container {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    max-width: none;
-    margin: 0;
-    width: 100%;
-    box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  max-width: none;
+  margin: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-
 .option-button {
-    display: flex;
-    align-items: center;
-    background: var(--card-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 16px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-align: left;
-    width: 100%;
-    color: var(--text-color);
-    font-family: inherit;
-    box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+  color: var(--text-color);
+  font-family: inherit;
+  box-sizing: border-box;
 }
 
 .option-button:hover {
-    border-color: var(--border-color-light);
-    background: var(--card-bg-hover);
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-sm);
+  border-color: var(--border-color-light);
+  background: var(--card-bg-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm);
 }
 
 .option-button:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px color-mix(in srgb, var(--theme-primary) 30%, transparent);
+  transform: translateY(0);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--theme-primary) 30%, transparent);
 }
-
 
 .option-button:focus {
-    outline: none;
-    border-color: var(--border-color-focus);
-    box-shadow: 0 0 0 2px var(--border-color-focus);
+  outline: none;
+  border-color: var(--border-color-focus);
+  box-shadow: 0 0 0 2px var(--border-color-focus);
 }
 
-
 .option-button.primary {
-    background: var(--accent-color);
-    border-color: var(--accent-color);
-    color: var(--accent-text-color);
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: var(--accent-text-color);
 }
 
 .option-button.primary:hover {
-    background: var(--button-hover);
-    border-color: var(--button-hover);
-    box-shadow: var(--shadow-md);
+  background: var(--button-hover);
+  border-color: var(--button-hover);
+  box-shadow: var(--shadow-md);
 }
 
 .option-button.cancel {
-    background: var(--error-color);
-    border-color: var(--error-color);
-    color: var(--button-text-color);
+  background: var(--error-color);
+  border-color: var(--error-color);
+  color: var(--button-text-color);
 }
 
 .option-button.cancel:hover {
-    background: color-mix(in srgb, var(--error-color) 85%, white);
-    border-color: color-mix(in srgb, var(--error-color) 85%, white);
-    box-shadow: var(--shadow-md);
+  background: color-mix(in srgb, var(--error-color) 85%, white);
+  border-color: color-mix(in srgb, var(--error-color) 85%, white);
+  box-shadow: var(--shadow-md);
 }
 
 .option-icon {
-    flex-shrink: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: inherit;
-    margin-right: 16px;
-    transition: transform 0.2s ease;
-    font-size: 24px;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  margin-right: 16px;
+  transition: transform 0.2s ease;
+  font-size: 24px;
 }
 
 .option-icon i {
-    display: inline-flex;
-    width: 24px;
-    height: 24px;
-    color: inherit;
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  color: inherit;
 }
 
 .option-icon .lucide-icon {
-    width: 100%;
-    height: 100%;
+  width: 100%;
+  height: 100%;
 }
 
 .option-button:hover .option-icon {
-    transform: scale(1.05);
+  transform: scale(1.05);
 }
 
 .option-content {
-    flex: 1;
+  flex: 1;
 }
 
 .option-title {
-    margin: 0 0 6px 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: inherit;
+  margin: 0 0 6px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: inherit;
 }
 
 .option-description {
-    margin: 0;
-    font-size: 0.85rem;
-    color: var(--text-color-secondary);
-    line-height: 1.4;
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-color-secondary);
+  line-height: 1.4;
 }
 
 .option-button.primary .option-description,
 .option-button.cancel .option-description {
-    color: color-mix(in srgb, var(--accent-text-color) 85%, transparent);
+  color: color-mix(in srgb, var(--accent-text-color) 85%, transparent);
 }
 
 /* Disabled state */
 .option-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
-
 .option-button:disabled:hover {
-    border-color: var(--border-color);
-    background: var(--card-bg);
-    transform: none;
-    box-shadow: none;
+  border-color: var(--border-color);
+  background: var(--card-bg);
+  transform: none;
+  box-shadow: none;
 }
 
 .option-button:disabled .option-icon {
-    transform: none;
+  transform: none;
 }
 
 /* Animation for showing options */
 .option-button {
-    opacity: 0;
-    animation: fadeInUp 0.3s ease forwards;
+  opacity: 0;
+  animation: fadeInUp 0.3s ease forwards;
 }
 
-.option-button:nth-child(1) { animation-delay: 0.1s; }
-.option-button:nth-child(2) { animation-delay: 0.2s; }
-.option-button:nth-child(3) { animation-delay: 0.3s; }
-.option-button:nth-child(4) { animation-delay: 0.4s; }
+.option-button:nth-child(1) {
+  animation-delay: 0.1s;
+}
+.option-button:nth-child(2) {
+  animation-delay: 0.2s;
+}
+.option-button:nth-child(3) {
+  animation-delay: 0.3s;
+}
+.option-button:nth-child(4) {
+  animation-delay: 0.4s;
+}
 
 @keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* High contrast accessibility support */
 @media (prefers-contrast: high) {
-    .dialog-container {
-        border-color: var(--theme-text);
-    }
+  .dialog-container {
+    border-color: var(--theme-text);
+  }
 
-    .option-button {
-        border-color: var(--theme-text);
-    }
+  .option-button {
+    border-color: var(--theme-text);
+  }
 
-    .option-description {
-        color: color-mix(in srgb, var(--theme-text) 70%, transparent);
-    }
+  .option-description {
+    color: color-mix(in srgb, var(--theme-text) 70%, transparent);
+  }
 }
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-    .dialog-container {
-        animation: none;
-        opacity: 1;
-        transform: none;
-    }
-    
-    .option-button {
-        transition: none;
-        animation: none;
-        opacity: 1;
-        transform: none;
-    }
-    
-    .option-icon {
-        transition: none;
-    }
+  .dialog-container {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .option-button {
+    transition: none;
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .option-icon {
+    transition: none;
+  }
 }
 
 /* Focus management for keyboard navigation */
 .option-button.keyboard-focused {
-    border-color: var(--theme-primary);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 50%, transparent);
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 50%, transparent);
 }

@@ -55,11 +55,11 @@ const aboutDialogAPI = {
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
-  }
+  },
 } as const;
 
 contextBridge.exposeInMainWorld('api', {
   dialog: {
-    about: aboutDialogAPI
-  }
+    about: aboutDialogAPI,
+  },
 });

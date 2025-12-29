@@ -26,10 +26,7 @@ export interface DialogHandlers {
   onStartPrintJob?: () => Promise<void> | void;
   onMaterialMatchingClosed?: () => void;
   onMaterialMatchingConfirm?: () => Promise<void> | void;
-  onTemperatureSubmit?: (
-    type: 'bed' | 'extruder',
-    temperature: number,
-  ) => Promise<void> | void;
+  onTemperatureSubmit?: (type: 'bed' | 'extruder', temperature: number) => Promise<void> | void;
 }
 
 let dialogHandlers: DialogHandlers = {};
@@ -177,9 +174,7 @@ export function showTemperatureDialog(type: 'bed' | 'extruder'): void {
 
   if (state.printerStatus) {
     const currentTarget =
-      type === 'bed'
-        ? state.printerStatus.bedTargetTemperature
-        : state.printerStatus.nozzleTargetTemperature;
+      type === 'bed' ? state.printerStatus.bedTargetTemperature : state.printerStatus.nozzleTargetTemperature;
     input.value = Math.round(currentTarget).toString();
   } else {
     input.value = '0';

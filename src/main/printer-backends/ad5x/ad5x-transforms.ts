@@ -20,12 +20,7 @@
  * - Error state creation with appropriate default values
  */
 
-import {
-  MatlStationInfo,
-  SlotInfo,
-  MaterialStationStatus,
-  MaterialSlotInfo
-} from './ad5x-types.js';
+import { MaterialSlotInfo, MaterialStationStatus, MatlStationInfo, SlotInfo } from './ad5x-types.js';
 
 /**
  * Transform ff-api MatlStationInfo to our MaterialStationStatus
@@ -37,7 +32,7 @@ export function transformMaterialStation(info: MatlStationInfo): MaterialStation
     slots: info.slotInfos.map((slot, index) => transformSlotInfo(slot, index)),
     activeSlot: info.currentSlot,
     overallStatus: determineOverallStatus(info),
-    errorMessage: null
+    errorMessage: null,
   };
 }
 
@@ -50,7 +45,7 @@ export function transformSlotInfo(slot: SlotInfo, index: number): MaterialSlotIn
     slotId: index, // Convert to 0-based for UI
     materialType: slot.hasFilament ? slot.materialName : null,
     materialColor: slot.hasFilament ? slot.materialColor : null,
-    isEmpty: !slot.hasFilament
+    isEmpty: !slot.hasFilament,
   };
 }
 
@@ -63,7 +58,7 @@ export function createEmptyMaterialStation(): MaterialStationStatus {
     slots: [],
     activeSlot: null,
     overallStatus: 'disconnected',
-    errorMessage: 'Material station not available'
+    errorMessage: 'Material station not available',
   };
 }
 
@@ -75,12 +70,11 @@ function determineOverallStatus(info: MatlStationInfo): 'ready' | 'warming' | 'e
   if (info.stateAction === 0 && info.stateStep === 0) {
     return 'ready';
   }
-  
+
   // Loading or unloading states
   if (info.stateAction > 0) {
     return 'warming'; // Using 'warming' to indicate busy state
   }
-  
+
   return 'ready'; // Default to ready for unknown states
 }
-

@@ -70,4 +70,3 @@ export async function hydrateLogPanelWithHistory(logPanel: LogPanelComponent): P
     console.error('Failed to hydrate log panel with history:', error);
   }
 }
-

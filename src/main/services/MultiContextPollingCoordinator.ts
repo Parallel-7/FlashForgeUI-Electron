@@ -45,12 +45,12 @@
  * - PrinterBackendManager: Backend instances for polling
  */
 
-import { EventEmitter } from 'events';
-import { PrinterPollingService, POLLING_EVENTS } from './PrinterPollingService.js';
-import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
-import type { PollingData, PollingConfig } from '@shared/types/polling.js';
-import type { ContextSwitchEvent, ContextRemovedEvent } from '@shared/types/PrinterContext.js';
 import { logVerbose } from '@shared/logging.js';
+import type { ContextRemovedEvent, ContextSwitchEvent } from '@shared/types/PrinterContext.js';
+import type { PollingConfig, PollingData } from '@shared/types/polling.js';
+import { EventEmitter } from 'events';
+import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
+import { POLLING_EVENTS, PrinterPollingService } from './PrinterPollingService.js';
 
 // ============================================================================
 // CONFIGURATION CONSTANTS
@@ -125,7 +125,8 @@ export class MultiContextPollingCoordinator extends EventEmitter {
    */
   public static getInstance(): MultiContextPollingCoordinatorInstance {
     if (!MultiContextPollingCoordinator.instance) {
-      MultiContextPollingCoordinator.instance = new MultiContextPollingCoordinator() as MultiContextPollingCoordinatorInstance;
+      MultiContextPollingCoordinator.instance =
+        new MultiContextPollingCoordinator() as MultiContextPollingCoordinatorInstance;
     }
     return MultiContextPollingCoordinator.instance;
   }
@@ -230,7 +231,7 @@ export class MultiContextPollingCoordinator extends EventEmitter {
     const config: Partial<PollingConfig> = {
       intervalMs,
       maxRetries: 3,
-      retryDelayMs: 2000
+      retryDelayMs: 2000,
     };
 
     // Create and configure polling service
@@ -251,7 +252,7 @@ export class MultiContextPollingCoordinator extends EventEmitter {
       },
       getJobThumbnail: async (fileName: string) => {
         return await context.backend!.getJobThumbnail(fileName);
-      }
+      },
     };
 
     pollingService.setBackendManager(backendWrapper as Parameters<typeof pollingService.setBackendManager>[0]);
@@ -397,7 +398,9 @@ export class MultiContextPollingCoordinator extends EventEmitter {
    * Useful for application shutdown or reset
    */
   public stopAllPolling(): void {
-    console.info(`[MultiContextPollingCoordinator] Stopping all polling services (${this.pollingServices.size} active)`);
+    console.info(
+      `[MultiContextPollingCoordinator] Stopping all polling services (${this.pollingServices.size} active)`
+    );
 
     const contextIds = Array.from(this.pollingServices.keys());
     for (const contextId of contextIds) {
@@ -435,7 +438,7 @@ export class MultiContextPollingCoordinator extends EventEmitter {
       pollingConfigs[contextId] = {
         intervalMs: stats.intervalMs,
         isPolling: stats.isPolling,
-        retryCount: stats.retryCount
+        retryCount: stats.retryCount,
       };
     });
 
@@ -443,7 +446,7 @@ export class MultiContextPollingCoordinator extends EventEmitter {
       activePollingCount: this.pollingServices.size,
       activeContexts: Array.from(this.pollingServices.keys()),
       listenersRegistered: this.listenersRegistered,
-      pollingConfigs
+      pollingConfigs,
     };
   }
 }
@@ -459,4 +462,3 @@ export class MultiContextPollingCoordinator extends EventEmitter {
 export function getMultiContextPollingCoordinator(): MultiContextPollingCoordinatorInstance {
   return MultiContextPollingCoordinator.getInstance();
 }
-

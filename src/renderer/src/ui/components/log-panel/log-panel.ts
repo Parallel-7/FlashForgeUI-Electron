@@ -1,27 +1,27 @@
 /**
  * @fileoverview Log Panel Component
- * 
+ *
  * This component provides a real-time log display panel that shows application
  * events, printer status changes, and system messages. It extends the BaseComponent
  * class and implements the log message display functionality that was previously
  * part of the monolithic UI.
- * 
+ *
  * Key features:
  * - Real-time log message display with timestamps
  * - Auto-scrolling to show latest messages
  * - Monospace font for consistent formatting
  * - Component-scoped styling and behavior
  * - Integration with existing global logMessage function
- * 
+ *
  * Usage:
  *   const logPanel = new LogPanelComponent(parentElement);
  *   await logPanel.initialize();
  *   logPanel.addLogMessage('Status update: Printer connected');
  */
 
+import { createLogPanel, type LogEntry, type LogPanelController } from '../../shared/log-panel/index.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
-import { createLogPanel, type LogEntry, type LogPanelController } from '../../shared/log-panel/index.js';
 import './log-panel.css';
 
 /**
@@ -63,7 +63,7 @@ export class LogPanelComponent extends BaseComponent {
       title: 'Application Logs',
       showHeader: true,
       placeholder: 'No log messages yet',
-      autoScroll: true
+      autoScroll: true,
     });
 
     console.log('Log Panel Component: Successfully initialized');
@@ -82,7 +82,7 @@ export class LogPanelComponent extends BaseComponent {
    * Update component with new data
    * The log panel doesn't need to process polling data updates,
    * but implements this method as required by the BaseComponent
-   * 
+   *
    * @param data - Component update data (not used by log panel)
    */
   public update(data: ComponentUpdateData): void {
@@ -94,7 +94,7 @@ export class LogPanelComponent extends BaseComponent {
   /**
    * Add a log message to the display with timestamp
    * This is the primary public method for adding messages to the log
-   * 
+   *
    * @param message - The log message to display
    */
   public addLogMessage(message: string): void {
@@ -165,7 +165,7 @@ export class LogPanelComponent extends BaseComponent {
   /**
    * Get the current number of log messages
    * Useful for monitoring log message count
-   * 
+   *
    * @returns The number of log messages currently displayed
    */
   public getMessageCount(): number {

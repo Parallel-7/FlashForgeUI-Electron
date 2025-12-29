@@ -47,14 +47,9 @@
  * @module ui/gridstack/GridStackManager
  */
 
-import { GridStack } from 'gridstack';
-import type {
-  GridStackInstance,
-  GridStackWidgetConfig,
-  GridStackWidget,
-  GridOptions,
-} from './types.js';
 import { logVerbose } from '@shared/logging.js';
+import { GridStack } from 'gridstack';
+import type { GridOptions, GridStackInstance, GridStackWidget, GridStackWidgetConfig } from './types.js';
 
 /**
  * Event callback types
@@ -111,9 +106,7 @@ export class GridStackManager {
       // Get container element
       const container = document.querySelector(this.containerSelector);
       if (!container) {
-        throw new Error(
-          `GridStackManager: Container '${this.containerSelector}' not found`
-        );
+        throw new Error(`GridStackManager: Container '${this.containerSelector}' not found`);
       }
 
       // Initialize GridStack
@@ -121,7 +114,7 @@ export class GridStackManager {
         {
           ...options,
           // Force these options for proper initialization
-          staticGrid: true,     // Static by default
+          staticGrid: true, // Static by default
         },
         container as HTMLElement
       );
@@ -143,10 +136,7 @@ export class GridStackManager {
    * @param element - Widget HTML element
    * @returns The added widget element or null if failed
    */
-  addWidget(
-    config: GridStackWidgetConfig,
-    element: HTMLElement
-  ): HTMLElement | null {
+  addWidget(config: GridStackWidgetConfig, element: HTMLElement): HTMLElement | null {
     if (!this.grid) {
       console.error('GridStackManager: Grid not initialized');
       return null;
@@ -201,7 +191,7 @@ export class GridStackManager {
         autoPosition: config.autoPosition,
         noMove: config.noMove,
         noResize: config.noResize,
-        locked: config.locked
+        locked: config.locked,
       });
 
       this.logDebug(
@@ -211,10 +201,7 @@ export class GridStackManager {
       // makeWidget modifies element in-place and returns it
       return element;
     } catch (error) {
-      console.error(
-        `GridStackManager: Failed to add widget '${config.componentId}':`,
-        error
-      );
+      console.error(`GridStackManager: Failed to add widget '${config.componentId}':`, error);
       return null;
     }
   }
@@ -380,7 +367,7 @@ export class GridStackManager {
 
       // Get all grid items that were just added
       const gridItems = this.grid.getGridItems();
-      gridItems.forEach(item => {
+      gridItems.forEach((item) => {
         createdElements.push(item as HTMLElement);
       });
 
@@ -553,7 +540,7 @@ export class GridStackManager {
       GridStack.setupDragIn(selector, {
         appendTo: options?.appendTo || 'body',
         helper: options?.helper || 'clone',
-        ...options
+        ...options,
       });
 
       this.logDebug('[GridStackManager] Drag-in configured for selector', selector);

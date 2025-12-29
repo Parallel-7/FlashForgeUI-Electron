@@ -17,18 +17,15 @@
 
 import { ipcMain } from 'electron';
 import type { PrinterBackendManager } from '../../managers/PrinterBackendManager.js';
-import type { getWindowManager } from '../../windows/WindowManager.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
+import type { getWindowManager } from '../../windows/WindowManager.js';
 
 type WindowManager = ReturnType<typeof getWindowManager>;
 
 /**
  * Register all backend-related IPC handlers
  */
-export function registerBackendHandlers(
-  backendManager: PrinterBackendManager,
-  _windowManager: WindowManager
-): void {
+export function registerBackendHandlers(backendManager: PrinterBackendManager, _windowManager: WindowManager): void {
   // Note: Polling is now handled centrally in the main process via MainProcessPollingCoordinator
   // The renderer receives updates through the 'polling-update' IPC channel
 
@@ -75,13 +72,13 @@ export function registerBackendHandlers(
 
       const [printerStatus, materialStatus] = await Promise.allSettled([
         backendManager.getPrinterStatus(contextId),
-        Promise.resolve(backendManager.getMaterialStationStatus(contextId))
+        Promise.resolve(backendManager.getMaterialStationStatus(contextId)),
       ]);
 
       const data = {
         printerStatus: printerStatus.status === 'fulfilled' ? printerStatus.value : null,
         materialStation: materialStatus.status === 'fulfilled' ? materialStatus.value : null,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
 
       event.sender.send('printer-data', data);
@@ -127,7 +124,9 @@ export function registerBackendHandlers(
         return null;
       }
 
-      const backendManager = await import('../../managers/PrinterBackendManager.js').then(m => m.getPrinterBackendManager());
+      const backendManager = await import('../../managers/PrinterBackendManager.js').then((m) =>
+        m.getPrinterBackendManager()
+      );
       const features = backendManager.getFeatures(contextId);
       const capabilities = backendManager.getBackendCapabilities(contextId);
       console.log('IPC printer:get-features - features:', features);
@@ -137,7 +136,7 @@ export function registerBackendHandlers(
       // Return both features and modelType
       return {
         ...features,
-        modelType: capabilities?.modelType
+        modelType: capabilities?.modelType,
       };
     } catch (error) {
       console.error('Failed to get printer features:', error);
@@ -145,4 +144,3 @@ export function registerBackendHandlers(
     }
   });
 }
-

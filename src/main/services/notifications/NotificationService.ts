@@ -32,14 +32,10 @@
  * @exports NotificationTrackingInfo - Type for notification tracking data
  */
 
-import { Notification as ElectronNotification, app } from 'electron';
+import type { Notification, NotificationEventPayloads, NotificationId } from '@shared/types/notification.js';
+import { app, Notification as ElectronNotification } from 'electron';
 import path from 'path';
 import { EventEmitter } from '../../utils/EventEmitter.js';
-import type {
-  Notification,
-  NotificationId,
-  NotificationEventPayloads
-} from '@shared/types/notification.js';
 
 // ============================================================================
 // NOTIFICATION SERVICE EVENTS
@@ -146,16 +142,15 @@ export class NotificationService extends EventEmitter<NotificationServiceEventMa
       // Emit success event
       this.emit('notification-sent', {
         notification,
-        success: true
+        success: true,
       });
 
       console.log(`Notification sent: ${notification.type} - ${notification.title}`);
       return true;
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error('Failed to send notification:', errorMessage);
-      
+
       this.emitNotificationFailed(notification, errorMessage);
       return false;
     }
@@ -166,7 +161,7 @@ export class NotificationService extends EventEmitter<NotificationServiceEventMa
    */
   public closeNotification(notificationId: NotificationId): boolean {
     const trackingInfo = this.sentNotifications.get(notificationId);
-    
+
     if (!trackingInfo || !trackingInfo.isActive) {
       return false;
     }
@@ -209,7 +204,7 @@ export class NotificationService extends EventEmitter<NotificationServiceEventMa
       title: notification.title,
       body: notification.body,
       silent: notification.options?.silent ?? false,
-      timeoutType: this.getTimeoutType(notification.priority)
+      timeoutType: this.getTimeoutType(notification.priority),
     };
 
     // Add icon - use custom icon if specified, otherwise use app icon
@@ -301,7 +296,7 @@ export class NotificationService extends EventEmitter<NotificationServiceEventMa
       // Mark as inactive (we can't modify the readonly object, so we recreate)
       this.sentNotifications.set(notificationId, {
         ...trackingInfo,
-        isActive: false
+        isActive: false,
       });
     }
 
@@ -317,15 +312,12 @@ export class NotificationService extends EventEmitter<NotificationServiceEventMa
   /**
    * Track a sent notification
    */
-  private trackNotification(
-    notification: Notification,
-    electronNotification: ElectronNotification
-  ): void {
+  private trackNotification(notification: Notification, electronNotification: ElectronNotification): void {
     const trackingInfo: NotificationTrackingInfo = {
       notification,
       electronNotification,
       sentAt: new Date(),
-      isActive: true
+      isActive: true,
     };
 
     this.sentNotifications.set(notification.id, trackingInfo);
@@ -343,7 +335,7 @@ export class NotificationService extends EventEmitter<NotificationServiceEventMa
 
     for (const [notificationId, trackingInfo] of this.sentNotifications) {
       const age = now - trackingInfo.sentAt.getTime();
-      
+
       if (age > maxAge && !trackingInfo.isActive) {
         this.sentNotifications.delete(notificationId);
       }
@@ -361,8 +353,7 @@ export class NotificationService extends EventEmitter<NotificationServiceEventMa
    * Get all active notifications
    */
   public getActiveNotifications(): NotificationTrackingInfo[] {
-    return Array.from(this.sentNotifications.values())
-      .filter(info => info.isActive);
+    return Array.from(this.sentNotifications.values()).filter((info) => info.isActive);
   }
 
   /**
@@ -378,7 +369,7 @@ export class NotificationService extends EventEmitter<NotificationServiceEventMa
     return {
       totalSent: this.sentNotifications.size,
       activeCount: activeNotifications.length,
-      supportedPlatform: this.isNotificationSupported()
+      supportedPlatform: this.isNotificationSupported(),
     };
   }
 
@@ -392,7 +383,7 @@ export class NotificationService extends EventEmitter<NotificationServiceEventMa
   private emitNotificationFailed(notification: Notification, error: string): void {
     this.emit('notification-failed', {
       type: notification.type,
-      error
+      error,
     });
   }
 
@@ -412,12 +403,12 @@ export class NotificationService extends EventEmitter<NotificationServiceEventMa
       const testNotification = new ElectronNotification({
         title: 'Notification Test',
         body: 'This is a test notification to verify functionality.',
-        silent: true
+        silent: true,
       });
 
       testNotification.show();
       testNotification.close();
-      
+
       return true;
     } catch (error) {
       console.error('Notification test failed:', error);
@@ -476,4 +467,3 @@ export function resetNotificationService(): void {
 // ============================================================================
 
 export type { NotificationTrackingInfo };
-

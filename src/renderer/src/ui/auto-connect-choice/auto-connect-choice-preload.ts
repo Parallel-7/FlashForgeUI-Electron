@@ -33,7 +33,7 @@ const autoConnectChoiceAPI = {
 
   // Send user choice back to main process
   sendChoice: async (choice: AutoConnectChoiceOption): Promise<void> => {
-    const data = await ipcRenderer.invoke('auto-connect-choice:get-response-channel') as AutoConnectChoiceData;
+    const data = (await ipcRenderer.invoke('auto-connect-choice:get-response-channel')) as AutoConnectChoiceData;
     await ipcRenderer.invoke(data.responseChannel, choice);
   },
 
@@ -53,11 +53,11 @@ const autoConnectChoiceAPI = {
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
-  }
+  },
 };
 
 contextBridge.exposeInMainWorld('api', {
   dialog: {
-    autoConnectChoice: autoConnectChoiceAPI
-  }
+    autoConnectChoice: autoConnectChoiceAPI,
+  },
 });

@@ -1,13 +1,13 @@
 /* src/index.css */
 
 /* Import GridStack CSS first */
-@import './ui/gridstack/gridstack.css';
+@import "./ui/gridstack/gridstack.css";
 
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
 }
 
 :root {
@@ -158,7 +158,9 @@ body {
   font-size: 1.2rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color var(--transition-fast), transform var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    transform var(--transition-fast);
 }
 
 #placeholder-connect-btn:hover {
@@ -219,7 +221,9 @@ body {
   border: 1px solid var(--border-color);
   border-radius: 4px;
   cursor: pointer;
-  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 .main-menu-button:hover {
@@ -252,7 +256,9 @@ body {
   opacity: 0;
   transform: translateY(-10px);
   pointer-events: none;
-  transition: opacity 0.15s ease, transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  transition:
+    opacity 0.15s ease,
+    transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   z-index: 1000;
   -webkit-app-region: no-drag;
 }
@@ -280,7 +286,9 @@ body {
   color: var(--text-color);
   cursor: pointer;
   text-align: left;
-  transition: background-color var(--transition-fast), transform var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    transform var(--transition-fast);
   -webkit-app-region: no-drag;
 }
 
@@ -416,7 +424,7 @@ body {
 }
 
 #btn-close::after {
-  content: '';
+  content: "";
   position: absolute;
   top: 0;
   right: calc(-1 * var(--header-padding-inline));
@@ -475,15 +483,15 @@ body.platform-darwin .traffic-lights {
 
 /* Traffic light colors - authentic macOS */
 .traffic-light.close {
-  background-color: #FF5F57;
+  background-color: #ff5f57;
 }
 
 .traffic-light.minimize {
-  background-color: #FFBD2E;
+  background-color: #ffbd2e;
 }
 
 .traffic-light.maximize {
-  background-color: #28CA42;
+  background-color: #28ca42;
 }
 
 /* Hover effects with symbols */
@@ -588,7 +596,6 @@ body.platform-darwin .traffic-lights {
   align-items: stretch;
 }
 
-
 .status-bar > div {
   flex: 1;
   min-width: 120px;
@@ -604,13 +611,12 @@ body.platform-darwin .traffic-lights {
   border-right: none;
 }
 
-
 /* Responsive status bar adjustments */
 @media (max-width: 800px) {
   .status-bar {
     height: 160px; /* Increased from 120px */
   }
-  
+
   .status-bar > div {
     min-width: 100px;
   }
@@ -620,7 +626,7 @@ body.platform-darwin .traffic-lights {
   .status-bar {
     height: 140px; /* Increased from 100px */
   }
-  
+
   .status-bar > div {
     min-width: 80px;
   }
@@ -652,7 +658,9 @@ body.platform-darwin .traffic-lights {
   background-color: var(--scrollbar-thumb-color, var(--card-bg, #404040));
   border-radius: 5px;
   border: 2px solid var(--surface-muted, var(--darker-bg));
-  transition: background-color var(--transition-fast), border-color var(--transition-fast);
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -693,7 +701,8 @@ body.platform-darwin .traffic-lights {
     flex-direction: column;
   }
 
-  .left-side, .right-side {
+  .left-side,
+  .right-side {
     width: 100%;
   }
 
@@ -766,8 +775,12 @@ body.platform-darwin .traffic-lights {
 }
 
 @keyframes loading-spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 .loading-message {

@@ -33,7 +33,7 @@ import type {
   IAutoUpdateAPI,
   ThemeProfileOperationData,
   UpdateStatusResponse,
-  RoundedUISupportInfo
+  RoundedUISupportInfo,
 } from '@renderer/ui/settings/types/external.js';
 
 // IPC event listener function type
@@ -122,7 +122,9 @@ interface SpoolmanAPI {
   openSpoolSelection: () => Promise<void>;
   getActiveSpool: (contextId?: string) => Promise<unknown>;
   setActiveSpool: (spool: unknown, contextId?: string) => Promise<void>;
-  getStatus: (contextId?: string) => Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
+  getStatus: (
+    contextId?: string
+  ) => Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
   onSpoolSelected: (callback: (spool: unknown) => void) => void;
   onSpoolUpdated?: (callback: (spool: unknown) => void) => void;
 }
@@ -240,7 +242,7 @@ const registerVoidEventListener = (channel: string, callback: () => void): Event
   };
 };
 
-const registerPayloadEventListener = <T,>(channel: string, callback: (payload: T) => void): EventDisposer => {
+const registerPayloadEventListener = <T>(channel: string, callback: (payload: T) => void): EventDisposer => {
   const wrapped: IPCListener = (_event: unknown, payload: unknown) => {
     callback(payload as T);
   };
@@ -315,7 +317,7 @@ const settingsDialogBridge: ISettingsAPI = {
       return { supported: false, reason: null };
     }
     return info;
-  }
+  },
 };
 
 const printerSettingsBridge: PrinterSettingsAPI = {
@@ -330,7 +332,7 @@ const printerSettingsBridge: PrinterSettingsAPI = {
   getPrinterName: async (): Promise<string | null> => {
     const result: unknown = await ipcRenderer.invoke('printer-settings:get-printer-name');
     return typeof result === 'string' ? result : null;
-  }
+  },
 };
 
 const autoUpdateBridge: IAutoUpdateAPI = {
@@ -350,7 +352,7 @@ const autoUpdateBridge: IAutoUpdateAPI = {
         downloadProgress: null,
         error: null,
         currentVersion: 'unknown',
-        supportsDownload: false
+        supportsDownload: false,
       };
     }
     return status;
@@ -361,13 +363,13 @@ const autoUpdateBridge: IAutoUpdateAPI = {
       return { success: false };
     }
     return { success: response.success };
-  }
+  },
 };
 
 const dialogBridge = {
   settings: settingsDialogBridge,
   printerSettings: printerSettingsBridge,
-  autoUpdate: autoUpdateBridge
+  autoUpdate: autoUpdateBridge,
 } satisfies DialogNamespace;
 
 // Valid IPC channels for security
@@ -434,7 +436,7 @@ const validSendChannels = [
   'palette:opened',
   'palette:toggle-edit-mode',
   'shortcut-config:open',
-  'component-dialog:open'
+  'component-dialog:open',
 ];
 
 const validReceiveChannels = [
@@ -482,21 +484,24 @@ const validReceiveChannels = [
   'config-updated',
   'config-loaded',
   'desktop-theme-preview',
-  'theme-changed'
+  'theme-changed',
 ];
 
 // Expose camera URL for renderer
 try {
   // Get camera proxy URL from IPC (this will be available after initialization)
-  ipcRenderer.invoke('camera:get-proxy-url').then((url: unknown) => {
-    if (typeof url === 'string') {
-      contextBridge.exposeInMainWorld('CAMERA_URL', url);
-    }
-  }).catch((error: unknown) => {
-    console.warn('Could not get camera proxy URL:', error);
-    const sessionId = 'desktop_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-    contextBridge.exposeInMainWorld('CAMERA_URL', `http://localhost:8181/camera?session=${sessionId}`);
-  });
+  ipcRenderer
+    .invoke('camera:get-proxy-url')
+    .then((url: unknown) => {
+      if (typeof url === 'string') {
+        contextBridge.exposeInMainWorld('CAMERA_URL', url);
+      }
+    })
+    .catch((error: unknown) => {
+      console.warn('Could not get camera proxy URL:', error);
+      const sessionId = 'desktop_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+      contextBridge.exposeInMainWorld('CAMERA_URL', `http://localhost:8181/camera?session=${sessionId}`);
+    });
 } catch (error) {
   console.warn('Could not get camera service URL, using default:', error);
   const sessionId = 'desktop_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
@@ -530,17 +535,17 @@ const configAPI: ConfigAPI = {
         callback(theme);
       }
     });
-  }
+  },
 };
 
 const electronAPI: ElectronAPI = {
   isProxyAvailable: true,
-  
+
   send: (channel: string, data?: unknown) => {
     // Allow response channels (they start with specific prefixes and end with timestamps)
     const isResponseChannel =
-      channel.startsWith('shortcut-config:') && channel.includes('-response-') ||
-      channel.startsWith('component-dialog:') && channel.includes('-response-');
+      (channel.startsWith('shortcut-config:') && channel.includes('-response-')) ||
+      (channel.startsWith('component-dialog:') && channel.includes('-response-'));
 
     if (validSendChannels.includes(channel) || isResponseChannel) {
       ipcRenderer.send(channel, data);
@@ -582,7 +587,7 @@ const electronAPI: ElectronAPI = {
 
   showInputDialog: async (options: InputDialogOptions): Promise<string | null> => {
     const result: unknown = await ipcRenderer.invoke('show-input-dialog', options);
-    
+
     // Validate result is string or null
     if (typeof result === 'string' || result === null) {
       return result;
@@ -595,7 +600,7 @@ const electronAPI: ElectronAPI = {
   invoke: async (channel: string, ...args: unknown[]): Promise<unknown> => {
     // Only allow invoke on specific channels for security
     const validInvokeChannels = [
-      'renderer-ready',  // CRITICAL: Allow renderer to signal it's ready for auto-connect
+      'renderer-ready', // CRITICAL: Allow renderer to signal it's ready for auto-connect
       'set-bed-temp',
       'set-extruder-temp',
       'turn-off-bed-temp',
@@ -644,9 +649,9 @@ const electronAPI: ElectronAPI = {
       'spoolman:open-dialog',
       'spoolman:get-active-spool',
       'spoolman:set-active-spool',
-      'spoolman:get-status'
+      'spoolman:get-status',
     ];
-    
+
     if (validInvokeChannels.includes(channel)) {
       return await ipcRenderer.invoke(channel, ...args);
     } else {
@@ -693,7 +698,7 @@ const electronAPI: ElectronAPI = {
         console.warn('Invalid platform info received:', platform);
       }
     };
-    
+
     listeners.set('platform-info', { original: callback as IPCListener, wrapped: wrappedCallback });
     ipcRenderer.once('platform-info', wrappedCallback);
   },
@@ -702,32 +707,32 @@ const electronAPI: ElectronAPI = {
     show: (options: LoadingOptions) => {
       ipcRenderer.send('loading-show', options);
     },
-    
+
     hide: () => {
       ipcRenderer.send('loading-hide');
     },
-    
+
     showSuccess: (message: string, autoHideAfter?: number) => {
       ipcRenderer.send('loading-show-success', { message, autoHideAfter });
     },
-    
+
     showError: (message: string, autoHideAfter?: number) => {
       ipcRenderer.send('loading-show-error', { message, autoHideAfter });
     },
-    
+
     setProgress: (progress: number) => {
       ipcRenderer.send('loading-set-progress', { progress });
     },
-    
+
     updateMessage: (message: string) => {
       ipcRenderer.send('loading-update-message', { message });
     },
-    
+
     cancel: () => {
       ipcRenderer.send('loading-cancel-request');
-    }
+    },
   },
-  
+
   camera: {
     getProxyPort: async (): Promise<number> => {
       const result: unknown = await ipcRenderer.invoke('camera:get-proxy-port');
@@ -764,7 +769,7 @@ const electronAPI: ElectronAPI = {
     getStreamUrl: async (contextId?: string): Promise<string | null> => {
       const result: unknown = await ipcRenderer.invoke('camera:get-stream-url', contextId);
       return typeof result === 'string' ? result : null;
-    }
+    },
   },
 
   printerContexts: {
@@ -787,7 +792,7 @@ const electronAPI: ElectronAPI = {
     create: async (printerDetails: unknown): Promise<string> => {
       const result: unknown = await ipcRenderer.invoke('printer-contexts:create', printerDetails);
       return typeof result === 'string' ? result : '';
-    }
+    },
   },
 
   connectionState: {
@@ -798,7 +803,7 @@ const electronAPI: ElectronAPI = {
 
     getState: async (contextId?: string): Promise<unknown> => {
       return await ipcRenderer.invoke('connection-state:get-state', contextId);
-    }
+    },
   },
 
   printerSettings: printerSettingsBridge,
@@ -816,7 +821,9 @@ const electronAPI: ElectronAPI = {
       await ipcRenderer.invoke('spoolman:set-active-spool', spool, contextId);
     },
 
-    getStatus: async (contextId?: string): Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }> => {
+    getStatus: async (
+      contextId?: string
+    ): Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }> => {
       const result: unknown = await ipcRenderer.invoke('spoolman:get-status', contextId);
       if (!isSpoolmanStatusResponse(result)) {
         return { enabled: false, disabledReason: 'Invalid response', contextId: null };
@@ -838,8 +845,8 @@ const electronAPI: ElectronAPI = {
       };
       listeners.set('spoolman:spool-updated', { original: callback as IPCListener, wrapped: wrappedCallback });
       ipcRenderer.on('spoolman:spool-updated', wrappedCallback);
-    }
-  }
+    },
+  },
 };
 
 // Expose the API to the renderer process
@@ -852,4 +859,3 @@ declare global {
     CAMERA_URL: string;
   }
 }
-

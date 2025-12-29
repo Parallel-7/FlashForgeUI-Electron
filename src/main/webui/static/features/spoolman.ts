@@ -10,10 +10,10 @@
 import type {
   ActiveSpoolResponse,
   ApiResponse,
+  SpoolmanConfigResponse,
   SpoolSearchResponse,
   SpoolSelectResponse,
   SpoolSummary,
-  SpoolmanConfigResponse,
 } from '../app.js';
 import { getCurrentSettings, state } from '../core/AppState.js';
 import { apiRequest } from '../core/Transport.js';
@@ -64,9 +64,7 @@ export async function fetchActiveSpoolForContext(contextId?: string): Promise<vo
   }
 
   try {
-    const result = await apiRequest<ActiveSpoolResponse>(
-      `/api/spoolman/active/${encodeURIComponent(targetContextId)}`,
-    );
+    const result = await apiRequest<ActiveSpoolResponse>(`/api/spoolman/active/${encodeURIComponent(targetContextId)}`);
 
     if (result.success) {
       state.activeSpool = result.spool;
@@ -88,9 +86,7 @@ export async function fetchSpools(searchQuery: string = ''): Promise<void> {
     showElement('spoolman-loading');
     hideElement('spoolman-no-results');
 
-    const url = `/api/spoolman/spools${
-      searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''
-    }`;
+    const url = `/api/spoolman/spools${searchQuery ? `?search=${encodeURIComponent(searchQuery)}` : ''}`;
     const result = await apiRequest<SpoolSearchResponse>(url);
 
     if (result.success && result.spools) {

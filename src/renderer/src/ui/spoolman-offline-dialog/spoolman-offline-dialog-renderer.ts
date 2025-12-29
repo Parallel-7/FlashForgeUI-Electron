@@ -5,8 +5,8 @@
 export {};
 
 import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 interface RetryResult {
   connected: boolean;
@@ -38,7 +38,6 @@ interface DialogElements {
 
 const ICONS = ['server-off', 'refresh-ccw', 'x'];
 
-
 function registerThemeListener(): void {
   getSpoolmanOfflineAPI().receive?.('theme-changed', (data: unknown) => {
     applyDialogTheme(data as ThemeColors);
@@ -51,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
     statusMessage: document.getElementById('status-message'),
     retryButton: document.getElementById('retry-button') as HTMLButtonElement | null,
     cancelButton: document.getElementById('dialog-cancel') as HTMLButtonElement | null,
-    closeButton: document.getElementById('dialog-close') as HTMLButtonElement | null
+    closeButton: document.getElementById('dialog-close') as HTMLButtonElement | null,
   };
 
   setupEventHandlers(elements);

@@ -8,8 +8,8 @@
  */
 
 import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 interface PaletteAPI {
   close: () => void;
@@ -46,7 +46,7 @@ class PaletteManager {
   private readonly state: PaletteState = {
     componentsInUse: new Set(),
     pinnedComponents: new Set(),
-    availableComponents: []
+    availableComponents: [],
   };
 
   private componentListElement: HTMLElement | null = null;
@@ -166,7 +166,7 @@ class PaletteManager {
 
     // Disable button if component is in use or pinned
     const isUnavailable = isInUse || isPinned;
-    actionButton.textContent = isPinned ? 'Pinned' : (isInUse ? 'Added' : 'Add');
+    actionButton.textContent = isPinned ? 'Pinned' : isInUse ? 'Added' : 'Add';
     actionButton.disabled = isUnavailable;
 
     if (isUnavailable) {

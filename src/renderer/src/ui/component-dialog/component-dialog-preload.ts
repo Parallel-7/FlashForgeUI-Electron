@@ -14,15 +14,14 @@
  * @module ui/component-dialog/component-dialog-preload
  */
 
-import { contextBridge, ipcRenderer } from 'electron';
 import type { CameraProxyStatus } from '@shared/types/camera/camera.types.js';
 import type { AppConfig, ThemeColors } from '@shared/types/config.js';
 import type {} from '@shared/types/global.d.ts';
+import { contextBridge, ipcRenderer } from 'electron';
 
 // ---------------------------------------------------------------------------
 // Shared type definitions
 // ---------------------------------------------------------------------------
-
 
 // ---------------------------------------------------------------------------
 // Channel validation setup (mirrors main preload)
@@ -79,7 +78,9 @@ interface DialogSpoolmanAPI {
   openSpoolSelection: () => Promise<void>;
   getActiveSpool: (contextId?: string) => Promise<unknown>;
   setActiveSpool: (spool: unknown, contextId?: string) => Promise<void>;
-  getStatus: (contextId?: string) => Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
+  getStatus: (
+    contextId?: string
+  ) => Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
   onSpoolSelected: (callback: (spool: unknown) => void) => void;
   onSpoolUpdated: (callback: (spool: unknown) => void) => void;
 }
@@ -152,7 +153,7 @@ const componentDialogAPI = {
       return ipcRenderer.invoke(channel, ...data);
     }
     return null;
-  }
+  },
 };
 
 const registerDialogVoidListener = (channel: string, callback: () => void): DialogEventDisposer => {
@@ -163,7 +164,7 @@ const registerDialogVoidListener = (channel: string, callback: () => void): Dial
   };
 };
 
-const registerDialogPayloadListener = <T,>(channel: string, callback: (payload: T) => void): DialogEventDisposer => {
+const registerDialogPayloadListener = <T>(channel: string, callback: (payload: T) => void): DialogEventDisposer => {
   const wrapped: DialogIPCListener = (_event: unknown, payload: unknown) => {
     callback(payload as T);
   };
@@ -237,7 +238,7 @@ const validSendChannels = [
   'palette:toggle-edit-mode',
   'shortcut-config:open',
   'component-dialog:open',
-  'component-dialog:close'
+  'component-dialog:close',
 ];
 
 const validReceiveChannels = [
@@ -282,7 +283,7 @@ const validReceiveChannels = [
   'log-dialog-new-message',
   'log-dialog-cleared',
   'spoolman:spool-selected',
-  'spoolman:spool-updated'
+  'spoolman:spool-updated',
 ];
 
 const validInvokeChannels = [
@@ -330,7 +331,7 @@ const validInvokeChannels = [
   'log-dialog-clear-logs',
   'spoolman:open-dialog',
   'spoolman:get-active-spool',
-  'spoolman:set-active-spool'
+  'spoolman:set-active-spool',
 ];
 
 // ---------------------------------------------------------------------------
@@ -360,7 +361,7 @@ const dialogConfigAPI: DialogConfigAPI = {
         callback(theme);
       }
     });
-  }
+  },
 };
 
 contextBridge.exposeInMainWorld('api', {
@@ -454,7 +455,7 @@ contextBridge.exposeInMainWorld('api', {
       ipcRenderer.send('loading-show-error', { message, autoHideAfter }),
     setProgress: (progress: number) => ipcRenderer.send('loading-set-progress', { progress }),
     updateMessage: (message: string) => ipcRenderer.send('loading-update-message', { message }),
-    cancel: () => ipcRenderer.send('loading-cancel-request')
+    cancel: () => ipcRenderer.send('loading-cancel-request'),
   },
 
   camera: {
@@ -485,7 +486,7 @@ contextBridge.exposeInMainWorld('api', {
     getStreamUrl: async (contextId?: string): Promise<string | null> => {
       const result: unknown = await ipcRenderer.invoke('camera:get-stream-url', contextId);
       return typeof result === 'string' ? result : null;
-    }
+    },
   },
 
   printerContexts: {
@@ -500,7 +501,7 @@ contextBridge.exposeInMainWorld('api', {
     create: async (printerDetails: unknown): Promise<string> => {
       const result: unknown = await ipcRenderer.invoke('printer-contexts:create', printerDetails);
       return typeof result === 'string' ? result : '';
-    }
+    },
   },
 
   connectionState: {
@@ -508,7 +509,8 @@ contextBridge.exposeInMainWorld('api', {
       const result: unknown = await ipcRenderer.invoke('connection-state:is-connected', contextId);
       return typeof result === 'boolean' ? result : false;
     },
-    getState: async (contextId?: string): Promise<unknown> => ipcRenderer.invoke('connection-state:get-state', contextId)
+    getState: async (contextId?: string): Promise<unknown> =>
+      ipcRenderer.invoke('connection-state:get-state', contextId),
   },
 
   printerSettings: {
@@ -520,7 +522,7 @@ contextBridge.exposeInMainWorld('api', {
     getPrinterName: async (): Promise<string | null> => {
       const result: unknown = await ipcRenderer.invoke('printer-settings:get-printer-name');
       return typeof result === 'string' ? result : null;
-    }
+    },
   },
 
   spoolman: {
@@ -533,8 +535,14 @@ contextBridge.exposeInMainWorld('api', {
     setActiveSpool: async (spool: unknown, contextId?: string): Promise<void> => {
       await ipcRenderer.invoke('spoolman:set-active-spool', spool, contextId);
     },
-    getStatus: async (contextId?: string): Promise<{ enabled: boolean; contextId: string | null; disabledReason: string | null }> => {
-      return await ipcRenderer.invoke('spoolman:get-status', contextId) as { enabled: boolean; contextId: string | null; disabledReason: string | null };
+    getStatus: async (
+      contextId?: string
+    ): Promise<{ enabled: boolean; contextId: string | null; disabledReason: string | null }> => {
+      return (await ipcRenderer.invoke('spoolman:get-status', contextId)) as {
+        enabled: boolean;
+        contextId: string | null;
+        disabledReason: string | null;
+      };
     },
     onSpoolSelected: (callback: (spool: unknown) => void) => {
       const wrapped: DialogIPCListener = (_event: unknown, spool: unknown) => callback(spool);
@@ -545,14 +553,13 @@ contextBridge.exposeInMainWorld('api', {
       const wrapped: DialogIPCListener = (_event: unknown, spool: unknown) => callback(spool);
       listeners.set('spoolman:spool-updated', { original: callback as DialogIPCListener, wrapped });
       ipcRenderer.on('spoolman:spool-updated', wrapped);
-    }
+    },
   },
   dialog: {
-    component: componentDialogAPI
-  }
+    component: componentDialogAPI,
+  },
 } as DialogElectronAPI);
 
 // ---------------------------------------------------------------------------
 // Component dialog specific API
 // ---------------------------------------------------------------------------
-

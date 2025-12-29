@@ -9,10 +9,7 @@
  * contained and browser-friendly.
  */
 
-import type {
-  GridStackOptions,
-  GridStackWidget as GridStackWidgetConfig,
-} from 'gridstack';
+import type { GridStackOptions, GridStackWidget as GridStackWidgetConfig } from 'gridstack';
 
 export interface WebUIComponentSize {
   w: number;
@@ -33,9 +30,7 @@ export interface WebUIComponentDefinition {
   defaultPosition?: WebUIComponentPosition;
 }
 
-export interface WebUIComponentLayout
-  extends WebUIComponentSize,
-    WebUIComponentPosition {
+export interface WebUIComponentLayout extends WebUIComponentSize, WebUIComponentPosition {
   minW?: number;
   minH?: number;
   maxW?: number;
@@ -43,10 +38,7 @@ export interface WebUIComponentLayout
   locked?: boolean;
 }
 
-export type WebUIComponentLayoutMap = Record<
-  string,
-  WebUIComponentLayout | undefined
->;
+export type WebUIComponentLayoutMap = Record<string, WebUIComponentLayout | undefined>;
 
 export interface WebUIGridLayout {
   components: WebUIComponentLayoutMap;
@@ -69,4 +61,3 @@ export interface WebUIStoredLayout {
   updatedAt: number;
   layout: WebUIGridLayout;
 }
-

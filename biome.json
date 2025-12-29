@@ -1,0 +1,268 @@
+{
+	"$schema": "https://biomejs.dev/schemas/2.3.10/schema.json",
+	"vcs": { "enabled": true, "clientKind": "git", "useIgnoreFile": true },
+	"files": { "includes": ["**", "!!**/dist", "!**/*.css", "!**/*.html"] },
+	"formatter": {
+		"enabled": true,
+		"indentStyle": "space",
+		"indentWidth": 2,
+		"lineWidth": 120,
+		"lineEnding": "lf"
+	},
+	"linter": {
+		"enabled": true,
+		"rules": { "recommended": false },
+		"includes": [
+			"**",
+			"!lib/**/*",
+			"!dist/**/*",
+			"!node_modules/**/*",
+			"!*.js",
+			"!src/**/*.js"
+		]
+	},
+	"javascript": {
+		"formatter": {
+			"quoteStyle": "single",
+			"semicolons": "always",
+			"trailingCommas": "es5",
+			"bracketSpacing": true,
+			"arrowParentheses": "always"
+		}
+	},
+	"overrides": [
+		{
+			"includes": [
+				"src/**/*.ts",
+				"src/**/*.tsx",
+				"!**/*.test.ts",
+				"!**/*.test.tsx",
+				"!src/**/__tests__/**/*"
+			],
+			"javascript": {
+				"globals": [
+					"require",
+					"console",
+					"__filename",
+					"global",
+					"module",
+					"process",
+					"__dirname",
+					"Buffer",
+					"exports",
+					"setInterval",
+					"clearTimeout",
+					"setTimeout",
+					"NodeJS",
+					"clearInterval"
+				]
+			},
+			"linter": {
+				"rules": {
+					"complexity": {
+						"noAdjacentSpacesInRegex": "error",
+						"noExtraBooleanCast": "error",
+						"noUselessCatch": "error",
+						"noUselessEscapeInRegex": "error",
+						"noUselessThisAlias": "error",
+						"noUselessTypeConstraint": "error"
+					},
+					"correctness": {
+						"noConstAssign": "error",
+						"noConstantCondition": "error",
+						"noEmptyCharacterClassInRegex": "error",
+						"noEmptyPattern": "error",
+						"noGlobalObjectCalls": "error",
+						"noInvalidBuiltinInstantiation": "error",
+						"noInvalidConstructorSuper": "error",
+						"noNonoctalDecimalEscape": "error",
+						"noPrecisionLoss": "error",
+						"noSelfAssign": "error",
+						"noSetterReturn": "error",
+						"noSwitchDeclarations": "error",
+						"noUndeclaredVariables": "off",
+						"noUnreachable": "error",
+						"noUnreachableSuper": "error",
+						"noUnsafeFinally": "error",
+						"noUnsafeOptionalChaining": "error",
+						"noUnusedLabels": "error",
+						"noUnusedPrivateClassMembers": "off",
+						"noUnusedVariables": "warn",
+						"useIsNan": "error",
+						"useValidForDirection": "error",
+						"useValidTypeof": "error",
+						"useYield": "error"
+					},
+					"style": {
+						"noCommonJs": "off",
+						"noNamespace": "error",
+						"noRestrictedGlobals": { "level": "off", "options": {} },
+						"useArrayLiterals": "error",
+						"useAsConstAssertion": "error",
+						"useBlockStatements": "off",
+						"useConst": "error",
+						"useReadonlyClassProperties": "warn",
+						"useThrowOnlyError": "error"
+					},
+					"suspicious": {
+						"noAssignInExpressions": "error",
+						"noAsyncPromiseExecutor": "error",
+						"noCatchAssign": "error",
+						"noClassAssign": "error",
+						"noCompareNegZero": "error",
+						"noConsole": "off",
+						"noConstantBinaryExpressions": "error",
+						"noControlCharactersInRegex": "error",
+						"noDebugger": "error",
+						"noDoubleEquals": "error",
+						"noDuplicateCase": "error",
+						"noDuplicateClassMembers": "error",
+						"noDuplicateElseIf": "error",
+						"noDuplicateObjectKeys": "error",
+						"noDuplicateParameters": "error",
+						"noEmptyBlockStatements": "error",
+						"noExplicitAny": "warn",
+						"noExtraNonNullAssertion": "error",
+						"noFallthroughSwitchClause": "error",
+						"noFunctionAssign": "error",
+						"noGlobalAssign": "error",
+						"noImportAssign": "error",
+						"noIrregularWhitespace": "error",
+						"noMisleadingCharacterClass": "error",
+						"noMisleadingInstantiator": "error",
+						"noNonNullAssertedOptionalChain": "error",
+						"noPrototypeBuiltins": "off",
+						"noRedeclare": "error",
+						"noShadowRestrictedNames": "error",
+						"noSparseArray": "error",
+						"noTsIgnore": "error",
+						"noUnsafeDeclarationMerging": "error",
+						"noUnsafeNegation": "error",
+						"noUselessRegexBackrefs": "error",
+						"noVar": "error",
+						"noWith": "error",
+						"useGetterReturn": "error",
+						"useNamespaceKeyword": "error"
+					}
+				}
+			}
+		},
+		{
+			"includes": [
+				"src/**/renderer.ts",
+				"src/**/*-renderer.ts",
+				"src/**/preload.ts",
+				"src/**/*-preload.ts",
+				"src/**/*-preload.cts",
+				"src/renderer/**/*.ts",
+				"src/preload/**/*.ts",
+				"src/main/webui/static/**/*.ts"
+			],
+			"javascript": {
+				"globals": [
+					"window",
+					"HTMLTextAreaElement",
+					"HTMLElement",
+					"KeyboardEvent",
+					"confirm",
+					"FormData",
+					"MouseEvent",
+					"File",
+					"alert",
+					"FileList",
+					"HTMLTableRowElement",
+					"Event",
+					"HTMLTableElement",
+					"HTMLDivElement",
+					"HTMLSelectElement",
+					"HTMLInputElement",
+					"prompt",
+					"HTMLButtonElement",
+					"document"
+				]
+			},
+			"linter": {
+				"rules": {
+					"style": { "noRestrictedGlobals": { "level": "off", "options": {} } }
+				}
+			}
+		},
+		{
+			"includes": ["src/main/webui/server/**/*.ts"],
+			"linter": { "rules": {} }
+		},
+		{
+			"includes": [
+				"src/main/ipc/handlers/shortcut-config-handlers.ts",
+				"src/main/managers/ConnectionFlowManager.ts",
+				"src/main/services/RtspStreamService.ts"
+			],
+			"linter": { "rules": {} }
+		},
+		{
+			"includes": ["**/*.test.ts", "**/*.spec.ts", "src/**/__tests__/**/*.ts"],
+			"javascript": {
+				"globals": [
+					"console",
+					"setInterval",
+					"beforeAll",
+					"beforeEach",
+					"exports",
+					"__dirname",
+					"expect",
+					"afterEach",
+					"clearTimeout",
+					"clearInterval",
+					"require",
+					"setTimeout",
+					"__filename",
+					"global",
+					"module",
+					"process",
+					"Buffer",
+					"NodeJS",
+					"describe",
+					"it",
+					"test",
+					"afterAll",
+					"jest"
+				]
+			},
+			"linter": { "rules": { "suspicious": { "noExplicitAny": "off" } } }
+		},
+		{
+			"includes": ["*.config.js", "*.config.ts", "eslint.config.js"],
+			"javascript": {
+				"globals": ["exports", "require", "module", "process", "__dirname"]
+			},
+			"linter": {
+				"rules": { "correctness": { "noUndeclaredVariables": "off" } }
+			}
+		},
+		{
+			"includes": ["src/main/index.ts", "src/preload/index.ts"],
+			"assist": {
+				"enabled": true,
+				"actions": {
+					"source": {
+						"organizeImports": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["**/*.d.ts"],
+			"linter": {
+				"rules": {
+					"style": {
+						"noNamespace": "off"
+					}
+				}
+			}
+		}
+	],
+	"assist": {
+		"enabled": true,
+		"actions": { "source": { "organizeImports": "on" } }
+	}
+}

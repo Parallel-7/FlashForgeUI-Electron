@@ -19,18 +19,30 @@
  * @module ipc/handlers/spoolman-handlers
  */
 
-import { ipcMain, BrowserWindow } from 'electron';
+import type { ActiveSpoolData, SpoolSearchQuery } from '@shared/types/spoolman.js';
+import { BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { getConfigManager } from '../../managers/ConfigManager.js';
-import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegrationService.js';
-import { SpoolmanService } from '../../services/SpoolmanService.js';
-import type { SpoolSearchQuery, ActiveSpoolData } from '@shared/types/spoolman.js';
-import { createModalWindow, loadWindowHTML, setupDevTools, setupWindowLifecycle, validateParentWindow } from '../../windows/shared/WindowConfig.js';
-import { createPreloadPath, createWindowWidth, createWindowHeight, createWindowMinWidth, createWindowMinHeight } from '../../windows/shared/WindowTypes.js';
-import type { WindowDimensions } from '../../windows/shared/WindowTypes.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 import { getSpoolmanHealthMonitor } from '../../services/SpoolmanHealthMonitor.js';
+import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegrationService.js';
+import { SpoolmanService } from '../../services/SpoolmanService.js';
+import {
+  createModalWindow,
+  loadWindowHTML,
+  setupDevTools,
+  setupWindowLifecycle,
+  validateParentWindow,
+} from '../../windows/shared/WindowConfig.js';
+import type { WindowDimensions } from '../../windows/shared/WindowTypes.js';
+import {
+  createPreloadPath,
+  createWindowHeight,
+  createWindowMinHeight,
+  createWindowMinWidth,
+  createWindowWidth,
+} from '../../windows/shared/WindowTypes.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -74,12 +86,9 @@ export function registerSpoolmanHandlers(): void {
     void loadWindowHTML(spoolmanDialogWindow, 'spoolman-dialog');
 
     // Setup window lifecycle with cleanup
-    setupWindowLifecycle(
-      spoolmanDialogWindow,
-      () => {
-        spoolmanDialogWindow = null;
-      }
-    );
+    setupWindowLifecycle(spoolmanDialogWindow, () => {
+      spoolmanDialogWindow = null;
+    });
 
     setupDevTools(spoolmanDialogWindow);
   });
@@ -144,7 +153,7 @@ export function registerSpoolmanHandlers(): void {
       console.error('[SpoolmanHandlers] Test connection error:', error);
       return {
         connected: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });
@@ -158,7 +167,7 @@ export function registerSpoolmanHandlers(): void {
       return {
         enabled: false,
         contextId: targetContextId,
-        disabledReason: 'Spoolman integration is disabled. Enable it in Settings.'
+        disabledReason: 'Spoolman integration is disabled. Enable it in Settings.',
       };
     }
 
@@ -166,7 +175,7 @@ export function registerSpoolmanHandlers(): void {
       return {
         enabled: false,
         contextId: null,
-        disabledReason: 'Connect a printer to use Spoolman.'
+        disabledReason: 'Connect a printer to use Spoolman.',
       };
     }
 
@@ -174,14 +183,14 @@ export function registerSpoolmanHandlers(): void {
       return {
         enabled: false,
         contextId: targetContextId,
-        disabledReason: service.getDisabledReason(targetContextId)
+        disabledReason: service.getDisabledReason(targetContextId),
       };
     }
 
     return {
       enabled: true,
       contextId: targetContextId,
-      disabledReason: null
+      disabledReason: null,
     };
   });
 

@@ -2,24 +2,19 @@
  * @fileoverview Temperature control API routes for the WebUI server.
  */
 
-import type { Router, Response } from 'express';
-import type { AuthenticatedRequest } from '../auth-middleware.js';
-import { TemperatureSetRequestSchema } from '../../schemas/web-api.schemas.js';
-import { createValidationError } from '../../schemas/web-api.schemas.js';
-import { toAppError } from '../../../utils/error.utils.js';
 import { StandardAPIResponse } from '@shared/types/web-api.types.js';
-import { resolveContext, sendErrorResponse, type RouteDependencies } from './route-helpers.js';
+import type { Response, Router } from 'express';
+import { toAppError } from '../../../utils/error.utils.js';
+import { createValidationError, TemperatureSetRequestSchema } from '../../schemas/web-api.schemas.js';
+import type { AuthenticatedRequest } from '../auth-middleware.js';
+import { type RouteDependencies, resolveContext, sendErrorResponse } from './route-helpers.js';
 
 export function registerTemperatureRoutes(router: Router, deps: RouteDependencies): void {
   router.post('/printer/temperature/bed', async (req: AuthenticatedRequest, res: Response) => {
     try {
       const contextResult = resolveContext(req, deps, { requireBackendReady: true });
       if (!contextResult.success) {
-        return sendErrorResponse<StandardAPIResponse>(
-          res,
-          contextResult.statusCode,
-          contextResult.error
-        );
+        return sendErrorResponse<StandardAPIResponse>(res, contextResult.statusCode, contextResult.error);
       }
 
       const validation = TemperatureSetRequestSchema.safeParse(req.body);
@@ -29,15 +24,12 @@ export function registerTemperatureRoutes(router: Router, deps: RouteDependencie
       }
 
       const temperature = Math.round(validation.data.temperature);
-      const result = await deps.backendManager.executeGCodeCommand(
-        contextResult.contextId,
-        `~M140 S${temperature}`
-      );
+      const result = await deps.backendManager.executeGCodeCommand(contextResult.contextId, `~M140 S${temperature}`);
 
       const response: StandardAPIResponse = {
         success: result.success,
         message: result.success ? `Setting bed temperature to ${temperature}°C` : undefined,
-        error: result.error
+        error: result.error,
       };
       return res.status(result.success ? 200 : 500).json(response);
     } catch (error) {
@@ -54,11 +46,7 @@ export function registerTemperatureRoutes(router: Router, deps: RouteDependencie
     try {
       const contextResult = resolveContext(req, deps, { requireBackendReady: true });
       if (!contextResult.success) {
-        return sendErrorResponse<StandardAPIResponse>(
-          res,
-          contextResult.statusCode,
-          contextResult.error
-        );
+        return sendErrorResponse<StandardAPIResponse>(res, contextResult.statusCode, contextResult.error);
       }
 
       const validation = TemperatureSetRequestSchema.safeParse(req.body);
@@ -68,15 +56,12 @@ export function registerTemperatureRoutes(router: Router, deps: RouteDependencie
       }
 
       const temperature = Math.round(validation.data.temperature);
-      const result = await deps.backendManager.executeGCodeCommand(
-        contextResult.contextId,
-        `~M104 S${temperature}`
-      );
+      const result = await deps.backendManager.executeGCodeCommand(contextResult.contextId, `~M104 S${temperature}`);
 
       const response: StandardAPIResponse = {
         success: result.success,
         message: result.success ? `Setting extruder temperature to ${temperature}°C` : undefined,
-        error: result.error
+        error: result.error,
       };
       return res.status(result.success ? 200 : 500).json(response);
     } catch (error) {
@@ -85,12 +70,9 @@ export function registerTemperatureRoutes(router: Router, deps: RouteDependencie
     }
   });
 
-  router.post(
-    '/printer/temperature/extruder/off',
-    async (req: AuthenticatedRequest, res: Response) => {
-      await handleSimpleTemperatureCommand(req, res, deps, '~M104 S0', 'Extruder heating turned off');
-    }
-  );
+  router.post('/printer/temperature/extruder/off', async (req: AuthenticatedRequest, res: Response) => {
+    await handleSimpleTemperatureCommand(req, res, deps, '~M104 S0', 'Extruder heating turned off');
+  });
 }
 
 async function handleSimpleTemperatureCommand(
@@ -103,22 +85,15 @@ async function handleSimpleTemperatureCommand(
   try {
     const contextResult = resolveContext(req, deps, { requireBackendReady: true });
     if (!contextResult.success) {
-      return sendErrorResponse<StandardAPIResponse>(
-        res,
-        contextResult.statusCode,
-        contextResult.error
-      );
+      return sendErrorResponse<StandardAPIResponse>(res, contextResult.statusCode, contextResult.error);
     }
 
-    const result = await deps.backendManager.executeGCodeCommand(
-      contextResult.contextId,
-      command
-    );
+    const result = await deps.backendManager.executeGCodeCommand(contextResult.contextId, command);
 
     const response: StandardAPIResponse = {
       success: result.success,
       message: result.success ? successMessage : undefined,
-      error: result.error
+      error: result.error,
     };
     return res.status(result.success ? 200 : 500).json(response);
   } catch (error) {

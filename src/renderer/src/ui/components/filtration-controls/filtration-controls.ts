@@ -1,10 +1,10 @@
 /**
  * @fileoverview Filtration Controls Component
- * 
+ *
  * Interactive component for controlling printer filtration systems and monitoring
  * TVOC (Total Volatile Organic Compounds) levels. Provides mode selection buttons
  * for External/Internal/None filtration modes with feature availability checking.
- * 
+ *
  * Key features:
  * - Current filtration mode display and selection
  * - TVOC level monitoring with color-coded indicators
@@ -14,10 +14,10 @@
  * - Visual feedback for active filtration mode
  */
 
-import { BaseComponent } from '../base/component.js';
-import type { ComponentUpdateData } from '../base/types.js';
 import type { FiltrationStatus, PrinterState } from '@shared/types/polling.js';
 import { isActiveState } from '@shared/types/polling.js';
+import { BaseComponent } from '../base/component.js';
+import type { ComponentUpdateData } from '../base/types.js';
 import './filtration-controls.css';
 
 /**
@@ -108,14 +108,13 @@ export class FiltrationControlsComponent extends BaseComponent {
         this.updateFiltrationDisplay({
           mode: 'none',
           tvocLevel: 0,
-          available: false
+          available: false,
         });
         this.updateButtonStates('Ready', false, null);
       }
 
       // Update component state tracking
       this.updateState(data);
-
     } catch (error) {
       console.error(`Error updating ${this.componentId}:`, error);
     }
@@ -137,7 +136,7 @@ export class FiltrationControlsComponent extends BaseComponent {
     const tvocDisplay = this.findElementById('tvoc-level-display');
     if (tvocDisplay) {
       tvocDisplay.textContent = filtration.tvocLevel.toString();
-      
+
       // Apply TVOC level color coding
       tvocDisplay.classList.remove('tvoc-low', 'tvoc-medium', 'tvoc-high');
       const tvocClass = this.getTvocLevelClass(filtration.tvocLevel);
@@ -157,18 +156,13 @@ export class FiltrationControlsComponent extends BaseComponent {
    * @param filtration - Current filtration status (null if unavailable)
    */
   private updateButtonStates(printerState: string, isConnected: boolean, filtration: FiltrationStatus | null): void {
-    const buttons = [
-      'btn-external-filtration',
-      'btn-internal-filtration',
-      'btn-no-filtration'
-    ];
+    const buttons = ['btn-external-filtration', 'btn-internal-filtration', 'btn-no-filtration'];
 
     // Disable buttons if not connected, in active state, or filtration unavailable
-    const shouldDisable = !isConnected ||
-                          isActiveState(printerState as PrinterState) ||
-                          (filtration !== null && !filtration.available);
+    const shouldDisable =
+      !isConnected || isActiveState(printerState as PrinterState) || (filtration !== null && !filtration.available);
 
-    buttons.forEach(buttonId => {
+    buttons.forEach((buttonId) => {
       const button = this.findElementById<HTMLButtonElement>(buttonId);
       if (button) {
         button.disabled = shouldDisable;
@@ -185,7 +179,7 @@ export class FiltrationControlsComponent extends BaseComponent {
     const buttons = [
       { id: 'btn-external-filtration', mode: 'external' },
       { id: 'btn-internal-filtration', mode: 'internal' },
-      { id: 'btn-no-filtration', mode: 'none' }
+      { id: 'btn-no-filtration', mode: 'none' },
     ];
 
     buttons.forEach(({ id, mode: buttonMode }) => {

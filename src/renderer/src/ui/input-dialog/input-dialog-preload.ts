@@ -25,73 +25,73 @@ const validReceiveChannels = ['dialog-init', 'theme-changed'];
 
 // Define the shape of dialog initialization options
 interface DialogInitOptions {
-    title?: string;
-    message?: string;
-    defaultValue?: string;
-    inputType?: 'text' | 'password' | 'hidden';
-    placeholder?: string;
-    responseChannel: string;
+  title?: string;
+  message?: string;
+  defaultValue?: string;
+  inputType?: 'text' | 'password' | 'hidden';
+  placeholder?: string;
+  responseChannel: string;
 }
 
 // API exposed to renderer process
 interface DialogAPI {
-    receive: (channel: string, func: (options: DialogInitOptions) => void) => void;
-    submit: (result: string) => Promise<void>;
-    cancel: () => Promise<void>;
+  receive: (channel: string, func: (options: DialogInitOptions) => void) => void;
+  submit: (result: string) => Promise<void>;
+  cancel: () => Promise<void>;
 }
 
 // Expose the dialog API to the renderer process
 const inputDialogAPI: DialogAPI = {
-    // Receive initialization data from main process
-    receive: (channel: string, func: (options: DialogInitOptions) => void): void => {
-        if (validReceiveChannels.includes(channel)) {
-            ipcRenderer.on(channel, (event, options: DialogInitOptions) => {
-                // Store the unique response channel for this dialog instance
-                if (options && options.responseChannel) {
-                    responseChannel = options.responseChannel;
-                }
-                func(options);
-            });
+  // Receive initialization data from main process
+  receive: (channel: string, func: (options: DialogInitOptions) => void): void => {
+    if (validReceiveChannels.includes(channel)) {
+      ipcRenderer.on(channel, (event, options: DialogInitOptions) => {
+        // Store the unique response channel for this dialog instance
+        if (options && options.responseChannel) {
+          responseChannel = options.responseChannel;
         }
-    },
-
-    // Submit result to main process
-    submit: async (result: string): Promise<void> => {
-        if (responseChannel) {
-            try {
-                await ipcRenderer.invoke(responseChannel, result);
-            } catch (error) {
-                console.error('Failed to submit dialog result:', error);
-                throw error;
-            }
-        } else {
-            const error = new Error('Dialog response channel not set!');
-            console.error(error.message);
-            throw error;
-        }
-    },
-
-    // Cancel dialog (send null result)
-    cancel: async (): Promise<void> => {
-        if (responseChannel) {
-            try {
-                await ipcRenderer.invoke(responseChannel, null);
-            } catch (error) {
-                console.error('Failed to cancel dialog:', error);
-                throw error;
-            }
-        } else {
-            const error = new Error('Dialog response channel not set!');
-            console.error(error.message);
-            throw error;
-        }
+        func(options);
+      });
     }
+  },
+
+  // Submit result to main process
+  submit: async (result: string): Promise<void> => {
+    if (responseChannel) {
+      try {
+        await ipcRenderer.invoke(responseChannel, result);
+      } catch (error) {
+        console.error('Failed to submit dialog result:', error);
+        throw error;
+      }
+    } else {
+      const error = new Error('Dialog response channel not set!');
+      console.error(error.message);
+      throw error;
+    }
+  },
+
+  // Cancel dialog (send null result)
+  cancel: async (): Promise<void> => {
+    if (responseChannel) {
+      try {
+        await ipcRenderer.invoke(responseChannel, null);
+      } catch (error) {
+        console.error('Failed to cancel dialog:', error);
+        throw error;
+      }
+    } else {
+      const error = new Error('Dialog response channel not set!');
+      console.error(error.message);
+      throw error;
+    }
+  },
 };
 
 contextBridge.exposeInMainWorld('api', {
   dialog: {
-    input: inputDialogAPI
-  }
+    input: inputDialogAPI,
+  },
 });
 
 // Export type for use in renderer

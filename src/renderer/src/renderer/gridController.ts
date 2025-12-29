@@ -5,37 +5,37 @@
  * helpers for reloading layouts when printer contexts change.
  */
 
+import { logVerbose } from '@shared/logging.js';
+import type { AppConfig } from '@shared/types/config.js';
+import type { PollingData } from '@shared/types/polling.js';
 import {
-  componentManager,
-  CameraPreviewComponent,
-  ControlsGridComponent,
-  ModelPreviewComponent,
-  JobStatsComponent,
-  PrinterStatusComponent,
-  TemperatureControlsComponent,
-  FiltrationControlsComponent,
   AdditionalInfoComponent,
-  LogPanelComponent,
-  SpoolmanComponent,
   type BaseComponent,
-  type ComponentUpdateData
+  CameraPreviewComponent,
+  type ComponentUpdateData,
+  ControlsGridComponent,
+  componentManager,
+  FiltrationControlsComponent,
+  JobStatsComponent,
+  LogPanelComponent,
+  ModelPreviewComponent,
+  PrinterStatusComponent,
+  SpoolmanComponent,
+  TemperatureControlsComponent,
 } from '../ui/components/index.js';
+import { getComponentDefinition } from '../ui/gridstack/ComponentRegistry.js';
+import { editModeController } from '../ui/gridstack/EditModeController.js';
 import { gridStackManager } from '../ui/gridstack/GridStackManager.js';
 import { layoutPersistence } from '../ui/gridstack/LayoutPersistence.js';
-import { editModeController } from '../ui/gridstack/EditModeController.js';
-import { getComponentDefinition } from '../ui/gridstack/ComponentRegistry.js';
 import type { GridStackWidgetConfig, LayoutConfig } from '../ui/gridstack/types.js';
 import type { ShortcutButtonConfig } from '../ui/shortcuts/types.js';
-import type { PollingData } from '@shared/types/polling.js';
-import type { AppConfig } from '@shared/types/config.js';
+import { hydrateLogPanelWithHistory, logMessage, setLogPanelComponent } from './logging.js';
 import {
   getPinnedComponentIdsForSerial,
   loadLayoutForSerial,
+  loadShortcutsForSerial,
   saveLayoutForSerial,
-  loadShortcutsForSerial
 } from './perPrinterStorage.js';
-import { hydrateLogPanelWithHistory, logMessage, setLogPanelComponent } from './logging.js';
-import { logVerbose } from '@shared/logging.js';
 
 interface GridControllerOptions {
   getActiveSerial: () => string | null;
@@ -142,10 +142,7 @@ export class RendererGridController {
     this.logDebug(`[PerPrinter] Grid reload complete for serial: ${serialLabel}`);
   }
 
-  async addComponentFromPalette(
-    componentId: string,
-    dropPosition?: { x: number; y: number }
-  ): Promise<void> {
+  async addComponentFromPalette(componentId: string, dropPosition?: { x: number; y: number }): Promise<void> {
     this.logDebug('[GridStack] Attempting to add component from palette', componentId);
 
     const definition = getComponentDefinition(componentId);
@@ -179,7 +176,7 @@ export class RendererGridController {
       maxW: definition.maxSize?.w,
       maxH: definition.maxSize?.h,
       id: `widget-${componentId}`,
-      autoPosition: dropPosition ? false : true
+      autoPosition: dropPosition ? false : true,
     };
 
     try {
@@ -214,7 +211,7 @@ export class RendererGridController {
           config: configData,
           timestamp: new Date().toISOString(),
           printerState: lastPollingData.printerStatus?.state,
-          connectionState: lastPollingData.isConnected
+          connectionState: lastPollingData.isConnected,
         };
         component.update(updateData);
       }
@@ -225,7 +222,7 @@ export class RendererGridController {
       saveLayoutForSerial(
         {
           ...currentLayout,
-          widgets: updatedWidgets
+          widgets: updatedWidgets,
         },
         serial
       );
@@ -261,7 +258,7 @@ export class RendererGridController {
     saveLayoutForSerial(
       {
         ...currentLayout,
-        widgets: updatedWidgets
+        widgets: updatedWidgets,
       },
       serial
     );
@@ -335,7 +332,7 @@ export class RendererGridController {
         config,
         timestamp: new Date().toISOString(),
         printerState: lastPollingData.printerStatus?.state,
-        connectionState: lastPollingData.isConnected
+        connectionState: lastPollingData.isConnected,
       };
       componentManager.updateAll(updateData);
       this.logDebug('GridStack: Sent initial config update to all components (or queued if not ready)');
@@ -349,7 +346,7 @@ export class RendererGridController {
       saveLayoutForSerial(
         {
           ...currentLayout,
-          widgets: updatedWidgets
+          widgets: updatedWidgets,
         },
         serial
       );
@@ -466,7 +463,7 @@ export class RendererGridController {
       minW: componentDef.minSize?.w,
       minH: componentDef.minSize?.h,
       id: `widget-${componentId}`,
-      autoPosition: true
+      autoPosition: true,
     };
 
     const addedWidget = gridStackManager.addWidget(config, widgetElement);
@@ -484,7 +481,7 @@ export class RendererGridController {
             pollingData: lastPollingData,
             timestamp: new Date().toISOString(),
             printerState: lastPollingData.printerStatus?.state,
-            connectionState: lastPollingData.isConnected
+            connectionState: lastPollingData.isConnected,
           };
           if (configData) {
             updateData.config = configData;
@@ -536,7 +533,7 @@ export class RendererGridController {
 
     window.api.send('palette:update-status', {
       componentsInUse,
-      pinnedComponents: pinnedComponentIds
+      pinnedComponents: pinnedComponentIds,
     });
   }
 

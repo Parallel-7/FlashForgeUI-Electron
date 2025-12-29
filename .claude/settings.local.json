@@ -105,7 +105,10 @@
       "mcp__code-search-mcp__detect_stacks",
       "Bash(Select-String \"error  \")",
       "Bash(Select-String -NotMatch \"warning\")",
-      "Skill(readme-generator)"
+      "Skill(readme-generator)",
+      "Skill(biome)",
+      "Bash(npx @biomejs/biome check:*)",
+      "Bash(npx @biomejs/biome lint:*)"
     ],
     "deny": [],
     "additionalDirectories": [

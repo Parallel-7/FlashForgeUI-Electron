@@ -19,9 +19,9 @@
  */
 
 import { ipcMain } from 'electron';
-import { getWindowManager } from '../windows/WindowManager.js';
 import { getPrinterConnectionManager } from '../managers/ConnectionFlowManager.js';
 import { getLoadingManager } from '../managers/LoadingManager.js';
+import { getWindowManager } from '../windows/WindowManager.js';
 
 /**
  * Setup dialog-specific handlers and enhancements
@@ -64,10 +64,10 @@ export const setupDialogHandlers = (): void => {
       try {
         console.log('Connect button pressed - showing connection choice dialog');
         const { createConnectChoiceDialog } = await import('../windows/WindowFactory.js');
-        
+
         // Show the connect choice dialog
         const userChoice = await createConnectChoiceDialog({});
-        
+
         if (userChoice === 'enter-ip') {
           console.log('User chose to enter IP manually');
           // Show input dialog for IP entry
@@ -76,9 +76,9 @@ export const setupDialogHandlers = (): void => {
             title: 'Enter Printer IP',
             message: 'Enter the IP address of your FlashForge printer:',
             placeholder: '192.168.1.100',
-            inputType: 'text'
+            inputType: 'text',
           });
-          
+
           if (ipAddress) {
             // Connect directly to the provided IP
             console.log(`Connecting directly to IP: ${ipAddress}`);
@@ -89,28 +89,24 @@ export const setupDialogHandlers = (): void => {
               console.log('Manual IP connection failed:', result.error);
             }
           }
-          
         } else if (userChoice === 'scan-network') {
           console.log('User chose to scan network');
           // Start the network discovery flow (existing behavior)
           const result = await connectionManager.startConnectionFlow({ checkForActiveConnection: false });
-          
+
           if (result.success) {
             console.log('Network scan connection flow completed successfully');
           } else if (result.error && !result.error.includes('cancelled')) {
             console.log('Network scan connection flow failed:', result.error);
           }
-          
         } else {
           console.log('User cancelled connection choice dialog');
         }
-        
       } catch (error) {
         console.error('Connect choice dialog error:', error);
       }
     });
   };
-
 
   // Loading overlay handlers
   const setupLoadingHandlers = (): void => {
@@ -206,4 +202,3 @@ export const setupDialogHandlers = (): void => {
   setupConnectChoiceEnhancement();
   setupLoadingHandlers();
 };
-

@@ -8,12 +8,12 @@
  * - setupPrinterContextHandlers(): Registers all printer context IPC handlers
  */
 
-import { ipcMain, IpcMainInvokeEvent } from 'electron';
-import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
-import { getPrinterConnectionManager } from '../managers/ConnectionFlowManager.js';
-import { getConnectionStateManager } from '../services/ConnectionStateManager.js';
-import { getCameraProxyService } from '../services/CameraProxyService.js';
 import type { PrinterDetails } from '@shared/types/printer.js';
+import { IpcMainInvokeEvent, ipcMain } from 'electron';
+import { getPrinterConnectionManager } from '../managers/ConnectionFlowManager.js';
+import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
+import { getCameraProxyService } from '../services/CameraProxyService.js';
+import { getConnectionStateManager } from '../services/ConnectionStateManager.js';
 
 /**
  * Set up all printer context IPC handlers
@@ -43,7 +43,7 @@ export function setupPrinterContextHandlers(): void {
       }
 
       // Convert to serializable info
-      return contextManager.getAllContextsInfo().find(ctx => ctx.id === activeContext.id) || null;
+      return contextManager.getAllContextsInfo().find((ctx) => ctx.id === activeContext.id) || null;
     } catch (error) {
       console.error('Failed to get active printer context:', error);
       return null;
@@ -161,4 +161,3 @@ export function setupCameraContextHandlers(): void {
 
   console.log('Camera context IPC handlers registered successfully');
 }
-

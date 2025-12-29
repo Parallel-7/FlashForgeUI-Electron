@@ -18,17 +18,13 @@
 // Type definitions for backend operations, commands, and results
 // MAJOR REWRITE: Fixed to match actual API behavior - no more fake jobId concept
 
-import { FiveMClient, FlashForgeClient, FFGcodeToolData } from '@ghosttypes/ff-api';
-import { PrinterFeatureSet, MaterialStationStatus } from './printer-features.js';
+import { FFGcodeToolData, FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
+import { MaterialStationStatus, PrinterFeatureSet } from './printer-features.js';
 
 /**
  * Printer model types supported by the backend system
  */
-export type PrinterModelType = 
-  | 'generic-legacy'
-  | 'adventurer-5m'
-  | 'adventurer-5m-pro' 
-  | 'ad5x';
+export type PrinterModelType = 'generic-legacy' | 'adventurer-5m' | 'adventurer-5m-pro' | 'ad5x';
 
 /**
  * Backend initialization options
@@ -147,13 +143,7 @@ export interface JobStartResult extends CommandResult {
 /**
  * Job operation types
  */
-export type JobOperation = 
-  | 'start'
-  | 'pause'
-  | 'resume'
-  | 'cancel'
-  | 'list-local'
-  | 'list-recent';
+export type JobOperation = 'start' | 'pause' | 'resume' | 'cancel' | 'list-local' | 'list-recent';
 
 /**
  * Job operation parameters - FIXED to use fileName instead of jobId
@@ -218,7 +208,7 @@ export interface FeatureStubInfo {
 /**
  * Backend event types
  */
-export type BackendEventType = 
+export type BackendEventType =
   | 'initialized'
   | 'connected'
   | 'disconnected'
@@ -262,4 +252,3 @@ export interface BackendFactoryOptions {
     readonly ForceLegacyAPI: boolean;
   };
 }
-

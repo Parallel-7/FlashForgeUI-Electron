@@ -13,10 +13,10 @@
  * - Material Station: MaterialSlot, MaterialStationStatus for AD5X multi-material
  * - Polling Container: PollingData aggregates all polling information for UI updates
  *
-* Utility Functions:
-* - State Checking: isActiveState, isReadyForJob
-* - Formatting: formatTemperature, formatWeight, formatLength
-* - Factory: createEmptyPollingData for initialization
+ * Utility Functions:
+ * - State Checking: isActiveState, isReadyForJob
+ * - Formatting: formatTemperature, formatWeight, formatLength
+ * - Factory: createEmptyPollingData for initialization
  *
  * Configuration:
  * - DEFAULT_POLLING_CONFIG: 2.5s interval, 3 retries, 1s retry delay
@@ -37,9 +37,9 @@
 /**
  * Simple printer state enum - tracks current operating status
  */
-export type PrinterState = 
+export type PrinterState =
   | 'Ready'
-  | 'Printing' 
+  | 'Printing'
   | 'Paused'
   | 'Completed'
   | 'Error'
@@ -217,7 +217,7 @@ export interface PollingConfig {
 export const DEFAULT_POLLING_CONFIG: PollingConfig = {
   intervalMs: 2500, // 2.5 seconds
   maxRetries: 3,
-  retryDelayMs: 1000 // 1 second
+  retryDelayMs: 1000, // 1 second
 };
 
 // ============================================================================
@@ -228,11 +228,9 @@ export const DEFAULT_POLLING_CONFIG: PollingConfig = {
  * Check if printer is in an active state (disables most buttons for safety)
  */
 export function isActiveState(state: PrinterState): boolean {
-  return state === 'Printing' || 
-         state === 'Paused' ||
-         state === 'Calibrating' ||
-         state === 'Heating' ||
-         state === 'Pausing';
+  return (
+    state === 'Printing' || state === 'Paused' || state === 'Calibrating' || state === 'Heating' || state === 'Pausing'
+  );
 }
 
 /**
@@ -270,7 +268,6 @@ export function createEmptyPollingData(): PollingData {
     thumbnailData: null,
     isConnected: false,
     isInitializing: true,
-    lastPolled: new Date()
+    lastPolled: new Date(),
   };
 }
-

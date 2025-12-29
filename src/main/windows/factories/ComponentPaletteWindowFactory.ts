@@ -51,17 +51,17 @@
  */
 
 import { BrowserWindow } from 'electron';
-import { getWindowManager } from '../WindowManager.js';
 import {
+  createSecureWebPreferences,
   createUIPreloadPath,
-  loadWindowHTML,
-  setupWindowLifecycle,
-  setupDevTools,
-  validateParentWindow,
   focusExistingWindow,
-  createSecureWebPreferences
+  loadWindowHTML,
+  setupDevTools,
+  setupWindowLifecycle,
+  validateParentWindow,
 } from '../shared/WindowConfig.js';
 import { WINDOW_SIZES } from '../shared/WindowTypes.js';
+import { getWindowManager } from '../WindowManager.js';
 
 /**
  * Create the component palette window with always-on-top floating behavior
@@ -103,26 +103,20 @@ export const createComponentPaletteWindow = (): void => {
     skipTaskbar: true,
     resizable: true,
     show: false,
-    webPreferences: createSecureWebPreferences(preloadPath)
+    webPreferences: createSecureWebPreferences(preloadPath),
   });
 
   // Position window to the right of main window with 10px gap
   const mainBounds = mainWindow.getBounds();
-  paletteWindow.setPosition(
-    mainBounds.x + mainBounds.width + 10,
-    mainBounds.y
-  );
+  paletteWindow.setPosition(mainBounds.x + mainBounds.width + 10, mainBounds.y);
 
   // Load HTML content
   void loadWindowHTML(paletteWindow, 'palette');
 
   // Setup lifecycle handlers with WindowManager cleanup
-  setupWindowLifecycle(
-    paletteWindow,
-    () => {
-      windowManager.setPaletteWindow(null);
-    }
-  );
+  setupWindowLifecycle(paletteWindow, () => {
+    windowManager.setPaletteWindow(null);
+  });
 
   // Setup development tools
   setupDevTools(paletteWindow);

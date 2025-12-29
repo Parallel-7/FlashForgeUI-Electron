@@ -1,11 +1,11 @@
 /**
  * @fileoverview Job Info Component Styles
- * 
+ *
  * Component-scoped CSS for the Job Info Component. These styles are extracted
  * and adapted from the main index.css file to work within the component system.
  * All selectors are prefixed with .component-job-info to ensure proper scoping
  * and prevent style conflicts with other components.
- * 
+ *
  * The component maintains the same visual appearance as the original job info
  * panel but with better modularity and isolation.
  */
@@ -128,12 +128,12 @@
   .component-job-info .job-info-panel {
     padding: var(--ui-padding, 6px);
   }
-  
+
   .component-job-info .job-row,
   .component-job-info .progress-row {
     font-size: 0.8em;
   }
-  
+
   .component-job-info .camera-controls button {
     padding: 3px 8px;
     font-size: 0.8em;
@@ -149,7 +149,7 @@
   .component-job-info progress::-moz-progress-bar {
     background: var(--theme-primary);
   }
-  
+
   .component-job-info .camera-controls button {
     border: 1px solid var(--text-color);
   }
@@ -160,11 +160,11 @@
   .component-job-info progress::-webkit-progress-value {
     transition: none;
   }
-  
+
   .component-job-info progress::-moz-progress-bar {
     transition: none;
   }
-  
+
   .component-job-info .camera-controls button {
     transition: none;
   }

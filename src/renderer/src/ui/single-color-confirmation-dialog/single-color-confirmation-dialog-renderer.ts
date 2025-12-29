@@ -41,8 +41,8 @@
 // Shows active IFS slot material before starting single-color print
 
 import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 // Type definitions (inlined to avoid require errors)
 interface MaterialStationStatus {
@@ -117,8 +117,15 @@ function initializeDialog(): void {
   errorMessageElement = document.getElementById('error-message');
   startButton = document.getElementById('btn-start') as HTMLButtonElement;
 
-  if (!fileNameElement || !slotLabelElement || !materialTypeElement || 
-      !spoolColorElement || !levelingCheckbox || !errorMessageElement || !startButton) {
+  if (
+    !fileNameElement ||
+    !slotLabelElement ||
+    !materialTypeElement ||
+    !spoolColorElement ||
+    !levelingCheckbox ||
+    !errorMessageElement ||
+    !startButton
+  ) {
     console.error('Single color confirm: Failed to find required DOM elements');
     return;
   }
@@ -164,16 +171,20 @@ function setupIpcListeners(api: SingleColorConfirmDialogAPI): void {
 async function loadActiveSlotInfo(api: SingleColorConfirmDialogAPI): Promise<void> {
   try {
     const materialStation = await api.getMaterialStationStatus();
-    
+
     if (!materialStation || !materialStation.connected) {
       showError('Material station is not connected');
       return;
     }
 
     // Get the active slot
-    if (materialStation.activeSlot !== null && materialStation.activeSlot >= 0 && materialStation.activeSlot < materialStation.slots.length) {
+    if (
+      materialStation.activeSlot !== null &&
+      materialStation.activeSlot >= 0 &&
+      materialStation.activeSlot < materialStation.slots.length
+    ) {
       activeSlotInfo = materialStation.slots[materialStation.activeSlot];
-      
+
       if (activeSlotInfo && activeSlotInfo.isEmpty) {
         showError(`Active slot ${materialStation.activeSlot + 1} is empty. Please load material before printing.`);
         if (startButton) startButton.disabled = true;
@@ -208,7 +219,7 @@ function displayMaterialInfo(): void {
   if (activeSlotInfo) {
     // Update slot label
     slotLabelElement.textContent = getSlotDisplayName(activeSlotInfo.slotId);
-    
+
     // Update material type
     if (activeSlotInfo.materialType) {
       materialTypeElement.textContent = activeSlotInfo.materialType;
@@ -217,7 +228,7 @@ function displayMaterialInfo(): void {
       materialTypeElement.textContent = 'No material';
       materialTypeElement.parentElement?.parentElement?.classList.add('no-material');
     }
-    
+
     // Update spool color
     if (activeSlotInfo.materialColor) {
       spoolColorElement.style.backgroundColor = activeSlotInfo.materialColor;
@@ -243,7 +254,6 @@ function showError(message: string): void {
   errorMessageElement.textContent = message;
   errorMessageElement.style.display = 'block';
 }
-
 
 /**
  * Handle close
@@ -276,13 +286,13 @@ function cleanup(): void {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    initializeDialog();
+  initializeDialog();
 });
 
 function registerThemeListener(api: SingleColorConfirmDialogAPI): void {
-    api.receive?.('theme-changed', (data: unknown) => {
-        applyDialogTheme(data as ThemeColors);
-    });
+  api.receive?.('theme-changed', (data: unknown) => {
+    applyDialogTheme(data as ThemeColors);
+  });
 }
 
 // Cleanup when window is unloaded
@@ -290,4 +300,3 @@ window.addEventListener('unload', cleanup);
 
 // Export for module
 export {};
-

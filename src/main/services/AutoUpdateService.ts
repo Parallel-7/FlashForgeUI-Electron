@@ -17,16 +17,12 @@
  * platform-specific behavior, and graceful degradation when running in development builds.
  */
 
-import { EventEmitter } from 'events';
 import { app, shell } from 'electron';
 import log from 'electron-log';
-import electronUpdater, {
-  type UpdateInfo,
-  type ProgressInfo,
-  type UpdateDownloadedEvent
-} from 'electron-updater';
-import { getConfigManager } from '../managers/ConfigManager.js';
+import electronUpdater, { type ProgressInfo, type UpdateDownloadedEvent, type UpdateInfo } from 'electron-updater';
+import { EventEmitter } from 'events';
 import type { ConfigManager } from '../managers/ConfigManager.js';
+import { getConfigManager } from '../managers/ConfigManager.js';
 
 const { autoUpdater } = electronUpdater;
 
@@ -40,7 +36,7 @@ export enum UpdateState {
   NOT_AVAILABLE = 'not-available',
   DOWNLOADING = 'downloading',
   DOWNLOADED = 'downloaded',
-  ERROR = 'error'
+  ERROR = 'error',
 }
 
 /**
@@ -357,7 +353,7 @@ class AutoUpdateService extends EventEmitter {
       state,
       updateInfo: this.updateInfo,
       downloadProgress: this.downloadProgress,
-      error: this.lastError
+      error: this.lastError,
     });
   }
 }

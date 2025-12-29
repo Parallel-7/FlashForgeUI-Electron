@@ -25,22 +25,22 @@
 import { BrowserWindow } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getWindowManager } from '../WindowManager.js';
-import {
-  createWindowWidth,
-  createWindowHeight,
-  createWindowMinWidth,
-  createWindowMinHeight,
-} from '../shared/WindowTypes.js';
+import { getLogService, type LogMessage } from '../../services/LogService.js';
 import {
   createModalWindow,
+  createUIPreloadPath,
+  loadWindowHTML,
   setupDevTools,
   setupWindowLifecycle,
   validateParentWindow,
-  loadWindowHTML,
-  createUIPreloadPath,
 } from '../shared/WindowConfig.js';
-import { getLogService, type LogMessage } from '../../services/LogService.js';
+import {
+  createWindowHeight,
+  createWindowMinHeight,
+  createWindowMinWidth,
+  createWindowWidth,
+} from '../shared/WindowTypes.js';
+import { getWindowManager } from '../WindowManager.js';
 
 const _dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -48,10 +48,7 @@ const _dirname = path.dirname(fileURLToPath(import.meta.url));
  * Component dialog size configuration
  * Maps component IDs to their preferred dialog dimensions
  */
-const COMPONENT_DIALOG_SIZES: Record<
-  string,
-  { width: number; height: number }
-> = {
+const COMPONENT_DIALOG_SIZES: Record<string, { width: number; height: number }> = {
   'temperature-controls': { width: 500, height: 400 },
   'camera-preview': { width: 960, height: 720 },
   'job-stats': { width: 700, height: 600 },
@@ -92,8 +89,7 @@ export function createComponentDialog(componentId: string): BrowserWindow {
   }
 
   // Get size for this component
-  const size =
-    COMPONENT_DIALOG_SIZES[componentId] || COMPONENT_DIALOG_SIZES.default;
+  const size = COMPONENT_DIALOG_SIZES[componentId] || COMPONENT_DIALOG_SIZES.default;
 
   // Create modal dialog
   const dialogWindow = createModalWindow(

@@ -16,9 +16,9 @@
  */
 
 import { ipcMain } from 'electron';
+import type { ShortcutButtonConfig } from '../../ui/shortcuts/types.js';
 import { createShortcutConfigDialog } from '../../windows/factories/ShortcutConfigWindowFactory.js';
 import { getWindowManager } from '../../windows/WindowManager.js';
-import type { ShortcutButtonConfig } from '../../ui/shortcuts/types.js';
 
 // Import these will be implemented in renderer context
 // For now we'll handle them via IPC to renderer
@@ -66,39 +66,33 @@ export function registerShortcutConfigHandlers(): void {
    * Save shortcut configuration
    * Forwards to main window renderer to save in localStorage
    */
-  ipcMain.handle(
-    'shortcut-config:save',
-    async (_event, config: ShortcutButtonConfig) => {
-      console.log('[IPC] Saving shortcut configuration:', config);
+  ipcMain.handle('shortcut-config:save', async (_event, config: ShortcutButtonConfig) => {
+    console.log('[IPC] Saving shortcut configuration:', config);
 
-      const mainWindow = getWindowManager().getMainWindow();
-      if (!mainWindow || mainWindow.isDestroyed()) {
-        console.error('[IPC] Main window not available for saving config');
-        return { success: false, error: 'Main window not available' };
-      }
-
-      // Forward to main window renderer to save
-      return new Promise((resolve) => {
-        const responseChannel = `shortcut-config:save-response-${Date.now()}`;
-
-        ipcMain.once(
-          responseChannel,
-          (_event, result: { success: boolean; error?: string }) => {
-            if (result.success) {
-              // Notify main window to update topbar
-              mainWindow.webContents.send('shortcut-config:updated', config);
-            }
-            resolve(result);
-          }
-        );
-
-        mainWindow.webContents.send('shortcut-config:save-request', {
-          config,
-          responseChannel,
-        });
-      });
+    const mainWindow = getWindowManager().getMainWindow();
+    if (!mainWindow || mainWindow.isDestroyed()) {
+      console.error('[IPC] Main window not available for saving config');
+      return { success: false, error: 'Main window not available' };
     }
-  );
+
+    // Forward to main window renderer to save
+    return new Promise((resolve) => {
+      const responseChannel = `shortcut-config:save-response-${Date.now()}`;
+
+      ipcMain.once(responseChannel, (_event, result: { success: boolean; error?: string }) => {
+        if (result.success) {
+          // Notify main window to update topbar
+          mainWindow.webContents.send('shortcut-config:updated', config);
+        }
+        resolve(result);
+      });
+
+      mainWindow.webContents.send('shortcut-config:save-request', {
+        config,
+        responseChannel,
+      });
+    });
+  });
 
   /**
    * Get available components with pinned status
@@ -119,10 +113,7 @@ export function registerShortcutConfigHandlers(): void {
         resolve(components);
       });
 
-      mainWindow.webContents.send(
-        'shortcut-config:get-components-request',
-        responseChannel
-      );
+      mainWindow.webContents.send('shortcut-config:get-components-request', responseChannel);
     });
   });
 

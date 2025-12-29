@@ -56,33 +56,33 @@ export enum ErrorCode {
   VALIDATION = 'VALIDATION',
   NETWORK = 'NETWORK',
   TIMEOUT = 'TIMEOUT',
-  
+
   // Printer errors
   PRINTER_NOT_CONNECTED = 'PRINTER_NOT_CONNECTED',
   PRINTER_BUSY = 'PRINTER_BUSY',
   PRINTER_ERROR = 'PRINTER_ERROR',
   PRINTER_COMMUNICATION = 'PRINTER_COMMUNICATION',
-  
+
   // Backend errors
   BACKEND_NOT_INITIALIZED = 'BACKEND_NOT_INITIALIZED',
   BACKEND_OPERATION_FAILED = 'BACKEND_OPERATION_FAILED',
   BACKEND_UNSUPPORTED = 'BACKEND_UNSUPPORTED',
-  
+
   // File errors
   FILE_NOT_FOUND = 'FILE_NOT_FOUND',
   FILE_TOO_LARGE = 'FILE_TOO_LARGE',
   FILE_INVALID_FORMAT = 'FILE_INVALID_FORMAT',
   FILE_UPLOAD_FAILED = 'FILE_UPLOAD_FAILED',
-  
+
   // Configuration errors
   CONFIG_INVALID = 'CONFIG_INVALID',
   CONFIG_SAVE_FAILED = 'CONFIG_SAVE_FAILED',
   CONFIG_LOAD_FAILED = 'CONFIG_LOAD_FAILED',
-  
+
   // IPC errors
   IPC_CHANNEL_INVALID = 'IPC_CHANNEL_INVALID',
   IPC_TIMEOUT = 'IPC_TIMEOUT',
-  IPC_HANDLER_NOT_FOUND = 'IPC_HANDLER_NOT_FOUND'
+  IPC_HANDLER_NOT_FOUND = 'IPC_HANDLER_NOT_FOUND',
 }
 
 // ============================================================================
@@ -97,7 +97,7 @@ export class AppError extends Error {
   public readonly context?: Record<string, unknown>;
   public readonly timestamp: Date;
   public readonly originalError?: Error;
-  
+
   constructor(
     message: string,
     code: ErrorCode = ErrorCode.UNKNOWN,
@@ -110,13 +110,13 @@ export class AppError extends Error {
     this.context = context;
     this.timestamp = new Date();
     this.originalError = originalError;
-    
+
     // Maintain proper stack trace
     if (Error.captureStackTrace) {
       Error.captureStackTrace(this, AppError);
     }
   }
-  
+
   /**
    * Convert to plain object for serialization
    */
@@ -128,14 +128,16 @@ export class AppError extends Error {
       context: this.context,
       timestamp: this.timestamp,
       stack: this.stack,
-      originalError: this.originalError ? {
-        name: this.originalError.name,
-        message: this.originalError.message,
-        stack: this.originalError.stack
-      } : undefined
+      originalError: this.originalError
+        ? {
+            name: this.originalError.name,
+            message: this.originalError.message,
+            stack: this.originalError.stack,
+          }
+        : undefined,
     };
   }
-  
+
   /**
    * Get user-friendly error message
    */
@@ -175,20 +177,14 @@ export class AppError extends Error {
  * Create error from Zod validation error
  */
 export function fromZodError(error: ZodError, code: ErrorCode = ErrorCode.VALIDATION): AppError {
-  const issues = error.issues.map(issue => ({
+  const issues = error.issues.map((issue) => ({
     path: issue.path.join('.'),
     message: issue.message,
-    code: issue.code
+    code: issue.code,
   }));
-  
-  return new AppError(
-    'Validation failed',
-    code,
-    { issues },
-    error
-  );
-}
 
+  return new AppError('Validation failed', code, { issues }, error);
+}
 
 // ============================================================================
 // ERROR HANDLING UTILITIES
@@ -208,27 +204,18 @@ export function toAppError(error: unknown, defaultCode: ErrorCode = ErrorCode.UN
   if (isAppError(error)) {
     return error;
   }
-  
+
   if (error instanceof ZodError) {
     return fromZodError(error);
   }
-  
+
   if (error instanceof Error) {
-    return new AppError(
-      error.message,
-      defaultCode,
-      undefined,
-      error
-    );
+    return new AppError(error.message, defaultCode, undefined, error);
   }
-  
+
   if (typeof error === 'string') {
     return new AppError(error, defaultCode);
   }
-  
-  return new AppError(
-    'An unknown error occurred',
-    defaultCode,
-    { error }
-  );
+
+  return new AppError('An unknown error occurred', defaultCode, { error });
 }

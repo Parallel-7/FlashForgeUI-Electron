@@ -21,9 +21,14 @@
 
 // src/ui/settings/settings-preload.ts
 
-import { contextBridge, ipcRenderer } from 'electron';
 import type { AppConfig, ThemeColors } from '@shared/types/config.js';
-import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI, UpdateStatusResponse } from '@shared/types/external.js';
+import type {
+  IAutoUpdateAPI,
+  IPrinterSettingsAPI,
+  ISettingsAPI,
+  UpdateStatusResponse,
+} from '@shared/types/external.js';
+import { contextBridge, ipcRenderer } from 'electron';
 
 // Ensure this file is treated as a module
 export {};
@@ -53,7 +58,7 @@ const settingsAPI: ISettingsAPI = {
   },
   testSpoolmanConnection: (url: string) => ipcRenderer.invoke('spoolman:test-connection', url),
   testDiscordWebhook: (url: string) => ipcRenderer.invoke('discord:test-webhook', url),
-  getRoundedUISupportInfo: () => ipcRenderer.invoke('rounded-ui:get-support-info')
+  getRoundedUISupportInfo: () => ipcRenderer.invoke('rounded-ui:get-support-info'),
 };
 
 const printerSettingsAPI: IPrinterSettingsAPI = {
@@ -69,32 +74,32 @@ const printerSettingsAPI: IPrinterSettingsAPI = {
   getPrinterName: async (): Promise<string | null> => {
     const result: unknown = await ipcRenderer.invoke('printer-settings:get-printer-name');
     return typeof result === 'string' ? result : null;
-  }
+  },
 };
 
 const autoUpdateAPI: IAutoUpdateAPI = {
   checkForUpdates: async (): Promise<{ success: boolean; error?: string }> => {
-    return await ipcRenderer.invoke('check-for-updates') as { success: boolean; error?: string };
+    return (await ipcRenderer.invoke('check-for-updates')) as { success: boolean; error?: string };
   },
   getStatus: async (): Promise<UpdateStatusResponse> => {
-    return await ipcRenderer.invoke('get-update-status') as UpdateStatusResponse;
+    return (await ipcRenderer.invoke('get-update-status')) as UpdateStatusResponse;
   },
   setUpdateChannel: async (channel: 'stable' | 'alpha'): Promise<{ success: boolean }> => {
-    return await ipcRenderer.invoke('set-update-channel', channel) as { success: boolean };
-  }
+    return (await ipcRenderer.invoke('set-update-channel', channel)) as { success: boolean };
+  },
 };
 
 contextBridge.exposeInMainWorld('api', {
   dialog: {
     settings: settingsAPI,
     printerSettings: printerSettingsAPI,
-    autoUpdate: autoUpdateAPI
-  }
+    autoUpdate: autoUpdateAPI,
+  },
 });
 
 // Generic window controls for sub-windows
 contextBridge.exposeInMainWorld('windowControls', {
   minimize: () => ipcRenderer.send('dialog-window-minimize'),
   close: () => ipcRenderer.send('dialog-window-close'),
-  closeGeneric: () => ipcRenderer.send('close-current-window')
+  closeGeneric: () => ipcRenderer.send('close-current-window'),
 });

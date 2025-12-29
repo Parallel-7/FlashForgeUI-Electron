@@ -30,7 +30,11 @@ import { getWindowManager } from './windows/WindowManager.js';
 import { setupWindowControlHandlers } from './ipc/WindowControlHandlers.js';
 import { setupDialogHandlers } from './ipc/DialogHandlers.js';
 import { registerAllIpcHandlers } from './ipc/handlers/index.js';
-import { setupPrinterContextHandlers, setupConnectionStateHandlers, setupCameraContextHandlers } from './ipc/printer-context-handlers.js';
+import {
+  setupPrinterContextHandlers,
+  setupConnectionStateHandlers,
+  setupCameraContextHandlers,
+} from './ipc/printer-context-handlers.js';
 import type { PollingData, PrinterStatus } from '@shared/types/polling.js';
 import type { AppConfig } from '@shared/types/config.js';
 // import { getMainProcessPollingCoordinator } from './services/MainProcessPollingCoordinator';
@@ -48,14 +52,21 @@ import { getStaticFileManager } from './services/StaticFileManager.js';
 import { initializeNotificationSystem, disposeNotificationSystem } from './services/notifications/index.js';
 import { getThumbnailCacheService } from './services/ThumbnailCacheService.js';
 import { injectUIStyleVariables } from './utils/CSSVariables.js';
-import { getRoundedUIUnsupportedReason, isRoundedUISupported, type RoundedUIUnsupportedReason } from './utils/RoundedUICompatibility.js';
+import {
+  getRoundedUIUnsupportedReason,
+  isRoundedUISupported,
+  type RoundedUIUnsupportedReason,
+} from './utils/RoundedUICompatibility.js';
 import { parseHeadlessArguments, validateHeadlessConfig } from './utils/HeadlessArguments.js';
 import type { SpoolmanOfflineEvent, SpoolmanOnlineEvent } from './services/SpoolmanHealthMonitor.js';
 import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection.js';
 import { getHeadlessManager } from './managers/HeadlessManager.js';
 import { getLoadingManager } from './managers/LoadingManager.js';
 import { getAutoUpdateService } from './services/AutoUpdateService.js';
-import { initializeSpoolmanIntegrationService, getSpoolmanIntegrationService } from './services/SpoolmanIntegrationService.js';
+import {
+  initializeSpoolmanIntegrationService,
+  getSpoolmanIntegrationService,
+} from './services/SpoolmanIntegrationService.js';
 import type { SpoolmanIntegrationService, SpoolmanChangedEvent } from './services/SpoolmanIntegrationService.js';
 import { getDiscordNotificationService } from './services/discord/index.js';
 import { getSpoolmanHealthMonitor } from './services/SpoolmanHealthMonitor.js';
@@ -123,30 +134,30 @@ const validateWebUIAssets = async (): Promise<{ valid: boolean; errors: string[]
 
   const staticFileManager = getStaticFileManager();
   const environmentService = getEnvironmentDetectionService();
-  
+
   console.log('=== Web UI Asset Validation ===');
-  
+
   // Log environment information for debugging
   environmentService.logEnvironmentInfo();
   await staticFileManager.logDiagnosticInfo();
-  
+
   // Validate critical assets
   const validation = await staticFileManager.validateCriticalAssets();
-  
+
   if (!validation.isValid) {
     console.error('Critical asset validation failed:');
     console.error(`Missing assets: ${validation.missingAssets.join(', ')}`);
     console.error(`Inaccessible assets: ${validation.inaccessibleAssets.join(', ')}`);
-    validation.errors.forEach(error => console.error(`Error: ${error}`));
+    validation.errors.forEach((error) => console.error(`Error: ${error}`));
   } else {
     console.log('All critical assets validated successfully');
   }
-  
+
   console.log('===============================');
-  
+
   return {
     valid: validation.isValid,
-    errors: [...validation.errors]
+    errors: [...validation.errors],
   };
 };
 
@@ -156,24 +167,24 @@ const validateWebUIAssets = async (): Promise<{ valid: boolean; errors: string[]
 const handleWebUILoadError = async (error: Error, htmlPath: string): Promise<void> => {
   const environmentService = getEnvironmentDetectionService();
   const staticFileManager = getStaticFileManager();
-  
+
   console.error('=== Web UI Loading Error ===');
   console.error(`Failed to load web UI from: ${htmlPath}`);
   console.error(`Error: ${error.message}`);
-  
+
   // Get diagnostic information
   const envDiagnostics = environmentService.getDiagnosticInfo();
   const staticDiagnostics = staticFileManager.getDiagnosticInfo();
-  
+
   console.error('Environment Diagnostics:', JSON.stringify(envDiagnostics, null, 2));
   console.error('Static File Diagnostics:', JSON.stringify(staticDiagnostics, null, 2));
-  
+
   // Validate assets to get detailed error information
   const validation = await staticFileManager.validateCriticalAssets();
   console.error('Asset Validation Results:', JSON.stringify(validation, null, 2));
-  
+
   console.error('============================');
-  
+
   // Show user-friendly error dialog
   const errorMessage = `Failed to load the application interface.
 
@@ -212,13 +223,13 @@ const handleRoundedUICompatibilityIssues = async (): Promise<void> => {
     macos: {
       message: 'Rounded UI has been automatically disabled on macOS',
       detail:
-        'The rounded UI feature causes window control positioning issues on macOS. It has been disabled automatically to ensure proper functionality. Please restart the application to avoid any UI inconsistencies.'
+        'The rounded UI feature causes window control positioning issues on macOS. It has been disabled automatically to ensure proper functionality. Please restart the application to avoid any UI inconsistencies.',
     },
     windows11: {
       message: 'Rounded UI has been automatically disabled on Windows 11',
       detail:
-        'Windows 11 already applies platform-rounded window chrome that conflicts with this experimental Rounded UI mode, causing duplicate titlebars and invisible controls. It has been disabled automatically to maintain a stable experience. Please restart the application to ensure consistent window visuals.'
-    }
+        'Windows 11 already applies platform-rounded window chrome that conflicts with this experimental Rounded UI mode, causing duplicate titlebars and invisible controls. It has been disabled automatically to maintain a stable experience. Please restart the application to ensure consistent window visuals.',
+    },
   };
 
   const copy = dialogCopy[unsupportedReason];
@@ -229,7 +240,7 @@ const handleRoundedUICompatibilityIssues = async (): Promise<void> => {
     detail: copy.detail,
     buttons: ['Restart Now', 'Continue'],
     defaultId: 0,
-    cancelId: 1
+    cancelId: 1,
   });
 
   if (result.response === 0) {
@@ -245,37 +256,37 @@ const createMainWindow = async (): Promise<void> => {
   const windowManager = getWindowManager();
   const environmentService = getEnvironmentDetectionService();
   const staticFileManager = getStaticFileManager();
-  
+
   // Handle rounded UI compatibility before creating windows
   await handleRoundedUICompatibilityIssues();
-  
+
   // Validate assets before creating window
   const assetValidation = await validateWebUIAssets();
-  
+
   if (!assetValidation.valid) {
     console.error('Asset validation failed, but proceeding with window creation');
     // Continue anyway - the error will be caught during loadFile
   }
-  
+
   // Get environment-aware paths
   const preloadPath = staticFileManager.getPreloadScriptPath();
   const htmlPath = staticFileManager.getMainHTMLPath();
-  
+
   console.log(`Creating main window with preload: ${preloadPath}`);
   console.log(`Will load HTML from: ${htmlPath}`);
-  
+
   // Get UI configuration for main window (only for transparency)
   const configManager = getConfigManager();
   const config: Readonly<AppConfig> = configManager.getConfig();
   const roundedUI = config.RoundedUI;
   const useRoundedUI = roundedUI && isRoundedUISupported();
-  
+
   // Create the browser window - always frameless for custom titlebar
   const mainWindow = new BrowserWindow({
     height: 950,
     width: 970,
-    minWidth: 970,  // Set to match the optimal width shown in the image
-    minHeight: 930,  // Set to match the optimal height shown in the image
+    minWidth: 970, // Set to match the optimal width shown in the image
+    minHeight: 930, // Set to match the optimal height shown in the image
     webPreferences: {
       preload: preloadPath,
       nodeIntegration: false,
@@ -307,17 +318,17 @@ const createMainWindow = async (): Promise<void> => {
       await mainWindow.loadFile(htmlPath);
     }
     console.log('Web UI loaded successfully');
-    
+
     // Inject CSS variables for conditional UI styling
     injectUIStyleVariables(mainWindow);
     console.log('CSS variables injected for main window');
   } catch (error: unknown) {
     const loadError = toError(error);
     console.error('Failed to load web UI:', loadError.message);
-    
+
     // Handle the error with comprehensive diagnostics
     await handleWebUILoadError(loadError, htmlPath);
-    
+
     // Try to continue anyway - the window might still be usable
     console.log('Continuing despite load error...');
   }
@@ -339,14 +350,12 @@ const createMainWindow = async (): Promise<void> => {
       mainWindow.webContents.send('config-loaded');
     }
   });
-  
-
 
   // Handle web contents errors
   mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
     console.error(`Web contents failed to load: ${errorDescription} (${errorCode})`);
     console.error(`Failed URL: ${validatedURL}`);
-    
+
     // Log additional diagnostic information
     const diagnostics = {
       errorCode,
@@ -354,7 +363,7 @@ const createMainWindow = async (): Promise<void> => {
       validatedURL,
       currentURL: mainWindow.webContents.getURL(),
       environment: environmentService.getEnvironment(),
-      isPackaged: environmentService.isPackaged()
+      isPackaged: environmentService.isPackaged(),
     };
     console.error('Load failure diagnostics:', JSON.stringify(diagnostics, null, 2));
   });
@@ -369,22 +378,22 @@ const createMainWindow = async (): Promise<void> => {
   mainWindow.on('focus', () => {
     console.log('Window focused');
   });
-  
+
   mainWindow.on('blur', () => {
     console.log('Window blurred - maintaining background activity');
   });
-  
+
   mainWindow.on('minimize', () => {
     console.log('Window minimized - maintaining background activity');
   });
-  
+
   mainWindow.on('restore', () => {
     console.log('Window restored');
   });
 
   // Register the main window with WindowManager
   windowManager.setMainWindow(mainWindow);
-  
+
   console.log('Main window created and registered');
 };
 
@@ -530,7 +539,7 @@ const setupPrinterContextEventForwarding = (): void => {
       tempMonitor.createMonitorForContext(
         contextId,
         pollingService,
-        stateMonitor  // Pass state monitor
+        stateMonitor // Pass state monitor
       );
       const temperatureMonitor = tempMonitor.getMonitor(contextId);
 
@@ -547,7 +556,7 @@ const setupPrinterContextEventForwarding = (): void => {
       const spoolmanTracker = getMultiContextSpoolmanTracker();
       spoolmanTracker.createTrackerForContext(
         contextId,
-        stateMonitor  // Pass state monitor (not temperature monitor)
+        stateMonitor // Pass state monitor (not temperature monitor)
       );
 
       console.log(`[Main] Created SpoolmanTracker for context ${contextId}`);
@@ -559,7 +568,7 @@ const setupPrinterContextEventForwarding = (): void => {
       notificationCoordinator.createCoordinatorForContext(
         contextId,
         pollingService,
-        stateMonitor  // Pass state monitor
+        stateMonitor // Pass state monitor
       );
 
       const coordinator = notificationCoordinator.getCoordinator(contextId);
@@ -594,7 +603,6 @@ const setupPrinterContextEventForwarding = (): void => {
       // INITIALIZATION COMPLETE
       // ====================================================================
       console.log(`[Main] Context ${contextId} fully initialized with all monitors and coordinators`);
-
     } catch (error: unknown) {
       const contextError = toError(error);
       console.error(`[Main] Error initializing context ${contextId}:`, contextError);
@@ -688,7 +696,6 @@ const setupPrinterContextEventForwarding = (): void => {
       console.log(`[Main] Destroyed PrintStateMonitor for context ${contextId}`);
 
       console.log(`[Main] Context ${contextId} cleanup complete`);
-
     } catch (error: unknown) {
       const cleanupError = toError(error);
       console.error(`[Main] Error cleaning up context ${contextId}:`, cleanupError);
@@ -713,7 +720,7 @@ const setupConnectionEventForwarding = (): void => {
 
   // Set global reference for camera IPC handler
   global.printerBackendManager = backendManager;
-  
+
   // Stop polling BEFORE disconnect to prevent commands during logout
   // NOTE: In multi-context mode, polling is managed per-context by MultiContextPollingCoordinator
   // which automatically stops polling when contexts are removed
@@ -724,7 +731,7 @@ const setupConnectionEventForwarding = (): void => {
     // Also handle camera disconnection for the specific context
     void cameraIPCHandler.handlePrinterDisconnected(contextId);
   });
-  
+
   // Backend initialization notification
   // NOTE: In multi-context mode, polling and camera setup happen in context-created events
   connectionManager.on('backend-initialized', (data: unknown) => {
@@ -742,7 +749,7 @@ const setupConnectionEventForwarding = (): void => {
         modelType: eventData.modelType || 'unknown',
         contextId: eventData.contextId,
         serialNumber: eventData.printerDetails?.SerialNumber,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
 
@@ -759,7 +766,7 @@ const setupConnectionEventForwarding = (): void => {
       console.warn('[WebUI] Missing contextId or serialNumber, cannot start WebUI for this printer');
     }
   });
-  
+
   connectionManager.on('backend-initialization-failed', (data: unknown) => {
     if (!isBackendInitializationFailedEvent(data)) {
       console.warn('[WebUI] Ignoring malformed backend-initialization-failed payload');
@@ -773,11 +780,11 @@ const setupConnectionEventForwarding = (): void => {
         success: false,
         error: eventData.error || 'Unknown error',
         printerName: eventData.printerDetails?.Name || 'Unknown',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   });
-  
+
   connectionManager.on('backend-disposed', (data: unknown) => {
     if (!isBackendDisposedEvent(data)) {
       console.warn('[WebUI] Ignoring malformed backend-disposed payload');
@@ -798,7 +805,7 @@ const setupConnectionEventForwarding = (): void => {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('backend-disposed', {
         contextId: eventData.contextId,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   });
@@ -813,7 +820,7 @@ const performAutoConnect = async (): Promise<void> => {
     const connectionManager = getPrinterConnectionManager();
     const windowManager = getWindowManager();
     const result = await connectionManager.tryAutoConnect();
-    
+
     if (result.success) {
       console.log('Auto-connected to saved printer:', result.printerDetails?.Name);
       const mainWindow = windowManager.getMainWindow();
@@ -821,7 +828,7 @@ const performAutoConnect = async (): Promise<void> => {
         name: result.printerDetails?.Name,
         ipAddress: result.printerDetails?.IPAddress,
         serialNumber: result.printerDetails?.SerialNumber,
-        clientType: result.printerDetails?.ClientType
+        clientType: result.printerDetails?.ClientType,
       });
     } else {
       console.log('Auto-connect failed or no saved printer:', result.error);
@@ -907,19 +914,19 @@ const setupEventDrivenServices = (): void => {
 const initializeApp = async (): Promise<void> => {
   // CRITICAL: Set up IPC handlers BEFORE creating window to prevent race conditions
   console.log('Setting up IPC handlers before window creation...');
-  
+
   // Setup event-driven auto-connect FIRST (before window creation)
   setupEventDrivenServices();
   console.log('Event-driven services handlers registered (WebUI starts on printer connection)');
   setupConfigLoadedForwarding();
   console.log('Config-loaded forwarding initialized');
-  
+
   // Register all IPC handlers using the modular system
   const managers = {
     configManager: getConfigManager(),
     connectionManager: getPrinterConnectionManager(),
     backendManager: getPrinterBackendManager(),
-    windowManager: getWindowManager()
+    windowManager: getWindowManager(),
   };
   registerAllIpcHandlers(managers);
   console.log('All IPC handlers registered');
@@ -945,10 +952,10 @@ const initializeApp = async (): Promise<void> => {
   );
   console.log('Spoolman integration service initialized');
   setupSpoolmanHealthMonitoring(spoolmanService);
-  
+
   // Continue with remaining initialization
   setupWindowControlHandlers();
-  
+
   // Setup event forwarding
   setupConnectionEventForwarding();
   setupPrinterContextEventForwarding();
@@ -1017,7 +1024,7 @@ async function initializeHeadless(): Promise<void> {
   const validation = validateHeadlessConfig(headlessConfig);
   if (!validation.valid) {
     console.error('[Headless] Configuration validation failed:');
-    validation.errors.forEach(error => console.error(`  - ${error}`));
+    validation.errors.forEach((error) => console.error(`  - ${error}`));
     process.exit(1);
   }
 
@@ -1118,11 +1125,20 @@ function isPrinterDetailsSnapshot(value: unknown): value is PrinterDetailsSnapsh
     return false;
   }
 
-  const optionalStrings: Array<keyof PrinterDetailsSnapshot> = ['Name', 'IPAddress', 'SerialNumber', 'ClientType', 'printerModel'];
-  return optionalStrings.every((key) => {
-    const property = value[key];
-    return property === undefined || typeof property === 'string';
-  }) && (value.webUIEnabled === undefined || typeof value.webUIEnabled === 'boolean');
+  const optionalStrings: Array<keyof PrinterDetailsSnapshot> = [
+    'Name',
+    'IPAddress',
+    'SerialNumber',
+    'ClientType',
+    'printerModel',
+  ];
+  return (
+    optionalStrings.every((key) => {
+      const property = value[key];
+      return property === undefined || typeof property === 'string';
+    }) &&
+    (value.webUIEnabled === undefined || typeof value.webUIEnabled === 'boolean')
+  );
 }
 
 function isActiveSpoolData(value: unknown): value is NonNullable<SpoolmanChangedEvent['spool']> {
@@ -1181,9 +1197,7 @@ function isContextSwitchEventPayload(value: unknown): value is ContextSwitchEven
 
   const previous = value.previousContextId;
   return (
-    typeof value.contextId === 'string' &&
-    (previous === null || typeof previous === 'string') &&
-    hasContextInfo(value)
+    typeof value.contextId === 'string' && (previous === null || typeof previous === 'string') && hasContextInfo(value)
   );
 }
 
@@ -1260,29 +1274,30 @@ function isPollingDataPayload(value: unknown): value is PollingData {
 
   const lastPolled = value.lastPolled;
   return (
-    typeof value.isConnected === 'boolean' &&
-    typeof value.isInitializing === 'boolean' &&
-    lastPolled instanceof Date
+    typeof value.isConnected === 'boolean' && typeof value.isInitializing === 'boolean' && lastPolled instanceof Date
   );
 }
 
 // This method will be called when Electron has finished initialization
-void app.whenReady().then(async () => {
-  if (headlessConfig) {
-    // Headless mode - no UI
-    await initializeHeadless();
-  } else {
-    // Standard mode with UI
-    await initializeApp();
+void app
+  .whenReady()
+  .then(async () => {
+    if (headlessConfig) {
+      // Headless mode - no UI
+      await initializeHeadless();
+    } else {
+      // Standard mode with UI
+      await initializeApp();
 
-    app.on('activate', () => {
-      // On macOS, re-create a window when the dock icon is clicked
-      if (BrowserWindow.getAllWindows().length === 0) {
-        void createMainWindow();
-      }
-    });
-  }
-}).catch(console.error);
+      app.on('activate', () => {
+        // On macOS, re-create a window when the dock icon is clicked
+        if (BrowserWindow.getAllWindows().length === 0) {
+          void createMainWindow();
+        }
+      });
+    }
+  })
+  .catch(console.error);
 
 // Quit when all windows are closed, except on macOS or headless mode
 app.on('window-all-closed', () => {
@@ -1305,32 +1320,32 @@ app.on('before-quit', async () => {
       powerSaveBlockerId = null;
       console.log('Power save blocker stopped');
     }
-    
+
     // Stop polling first (multi-context mode)
     const multiContextPollingCoordinator = getMultiContextPollingCoordinator();
     multiContextPollingCoordinator.stopAllPolling();
-    
+
     // Dispose notification system
     disposeNotificationSystem();
     console.log('Notification system disposed');
-    
+
     // First disconnect from printer with proper logout
     const connectionManager = getPrinterConnectionManager();
     await connectionManager.disconnect();
     console.log('Printer disconnected and logged out during app close');
-    
+
     // Shutdown camera proxy service
     const cameraProxyService = getCameraProxyService();
     await cameraProxyService.shutdown();
     console.log('Camera proxy service shut down');
-    
+
     // Dispose camera IPC handler
     cameraIPCHandler.dispose();
-    
+
     // Shutdown WebUI server
     const webUIManager = getWebUIManager();
     await webUIManager.dispose();
-    
+
     // Then cleanup config manager
     const configManager = getConfigManager();
     await configManager.dispose();
@@ -1339,4 +1354,3 @@ app.on('before-quit', async () => {
     console.error('Error during app cleanup:', cleanupError);
   }
 });
-

@@ -36,13 +36,11 @@ function resolveVerboseLoggingFlag(): boolean {
   }
 
   const globalFlag =
-    typeof globalThis !== 'undefined' &&
-    (globalThis as VerboseFlagContainer).FLASHFORGE_VERBOSE_LOGGING;
+    typeof globalThis !== 'undefined' && (globalThis as VerboseFlagContainer).FLASHFORGE_VERBOSE_LOGGING;
 
   cachedVerboseFlag = globalFlag === true;
   return cachedVerboseFlag;
 }
-
 
 /**
  * Emits a verbose log statement when the verbose flag is enabled.
@@ -51,11 +49,7 @@ function resolveVerboseLoggingFlag(): boolean {
  * @param message Message to log
  * @param args Optional args forwarded to console.debug
  */
-export function logVerbose(
-  namespace: string,
-  message: string,
-  ...args: unknown[]
-): void {
+export function logVerbose(namespace: string, message: string, ...args: unknown[]): void {
   if (!resolveVerboseLoggingFlag()) {
     return;
   }
@@ -66,4 +60,3 @@ export function logVerbose(
     console.debug(`[${namespace}] ${message}`);
   }
 }
-

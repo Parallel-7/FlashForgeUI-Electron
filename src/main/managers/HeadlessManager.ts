@@ -8,19 +8,18 @@
  * - Graceful shutdown with resource cleanup
  */
 
+import type { PrinterClientType, PrinterDetails } from '@shared/types/printer.js';
+import { applyPerPrinterDefaults } from '@shared/utils/printerSettingsDefaults.js';
 import { EventEmitter } from 'events';
+import { cameraIPCHandler } from '../ipc/camera-ipc-handler.js';
+import { getMultiContextPollingCoordinator } from '../services/MultiContextPollingCoordinator.js';
+import { getSavedPrinterService } from '../services/SavedPrinterService.js';
 import type { HeadlessConfig, PrinterSpec } from '../utils/HeadlessArguments.js';
 import { HeadlessLogger } from '../utils/HeadlessLogger.js';
+import { getWebUIManager } from '../webui/server/WebUIManager.js';
 import { getConfigManager } from './ConfigManager.js';
 import { getConnectionFlowManager } from './ConnectionFlowManager.js';
 import { getPrinterContextManager } from './PrinterContextManager.js';
-import { getWebUIManager } from '../webui/server/WebUIManager.js';
-import { getMultiContextPollingCoordinator } from '../services/MultiContextPollingCoordinator.js';
-import { getSavedPrinterService } from '../services/SavedPrinterService.js';
-import { cameraIPCHandler } from '../ipc/camera-ipc-handler.js';
-import type { PrinterDetails } from '@shared/types/printer.js';
-import type { PrinterClientType } from '@shared/types/printer.js';
-import { applyPerPrinterDefaults } from '@shared/utils/printerSettingsDefaults.js';
 
 /**
  * HeadlessManager - Orchestrates all headless mode operations
@@ -62,7 +61,7 @@ export class HeadlessManager extends EventEmitter {
 
       this.connectedContexts = contexts;
       this.logger.logConnectionSummary(
-        contexts.map(contextId => this.contextManager.getContext(contextId)).filter(Boolean)
+        contexts.map((contextId) => this.contextManager.getContext(contextId)).filter(Boolean)
       );
 
       // Log active context
@@ -165,12 +164,12 @@ export class HeadlessManager extends EventEmitter {
       webUIEnabled: lastUsedPrinter.webUIEnabled,
       rtspFrameRate: lastUsedPrinter.rtspFrameRate,
       rtspQuality: lastUsedPrinter.rtspQuality,
-      showCameraFps: lastUsedPrinter.showCameraFps
+      showCameraFps: lastUsedPrinter.showCameraFps,
     });
 
     const results = await this.connectionManager.connectHeadlessFromSaved([printerDetails]);
 
-    return results.map(r => r.contextId);
+    return results.map((r) => r.contextId);
   }
 
   /**
@@ -188,28 +187,30 @@ export class HeadlessManager extends EventEmitter {
 
     // Convert StoredPrinterDetails to PrinterDetails with all per-printer settings
     // Using utility to ensure all settings have defaults applied
-    const printerDetailsList: PrinterDetails[] = savedPrinters.map(saved => applyPerPrinterDefaults({
-      Name: saved.Name,
-      IPAddress: saved.IPAddress,
-      SerialNumber: saved.SerialNumber,
-      CheckCode: saved.CheckCode,
-      ClientType: saved.ClientType as PrinterClientType,
-      printerModel: saved.printerModel,
-      modelType: saved.modelType,
-      // Spread all per-printer settings from saved data
-      customCameraEnabled: saved.customCameraEnabled,
-      customCameraUrl: saved.customCameraUrl,
-      customLedsEnabled: saved.customLedsEnabled,
-      forceLegacyMode: saved.forceLegacyMode,
-      webUIEnabled: saved.webUIEnabled,
-      rtspFrameRate: saved.rtspFrameRate,
-      rtspQuality: saved.rtspQuality,
-      showCameraFps: saved.showCameraFps
-    }));
+    const printerDetailsList: PrinterDetails[] = savedPrinters.map((saved) =>
+      applyPerPrinterDefaults({
+        Name: saved.Name,
+        IPAddress: saved.IPAddress,
+        SerialNumber: saved.SerialNumber,
+        CheckCode: saved.CheckCode,
+        ClientType: saved.ClientType as PrinterClientType,
+        printerModel: saved.printerModel,
+        modelType: saved.modelType,
+        // Spread all per-printer settings from saved data
+        customCameraEnabled: saved.customCameraEnabled,
+        customCameraUrl: saved.customCameraUrl,
+        customLedsEnabled: saved.customLedsEnabled,
+        forceLegacyMode: saved.forceLegacyMode,
+        webUIEnabled: saved.webUIEnabled,
+        rtspFrameRate: saved.rtspFrameRate,
+        rtspQuality: saved.rtspQuality,
+        showCameraFps: saved.showCameraFps,
+      })
+    );
 
     const results = await this.connectionManager.connectHeadlessFromSaved(printerDetailsList);
 
-    return results.map(r => r.contextId);
+    return results.map((r) => r.contextId);
   }
 
   /**
@@ -225,7 +226,7 @@ export class HeadlessManager extends EventEmitter {
 
     const results = await this.connectionManager.connectHeadlessDirect(printerSpecs);
 
-    return results.map(r => r.contextId);
+    return results.map((r) => r.contextId);
   }
 
   /**
@@ -255,7 +256,7 @@ export class HeadlessManager extends EventEmitter {
       this.logger.logWebUIStatus({
         running: status.isRunning,
         port: status.port,
-        address: status.serverIP
+        address: status.serverIP,
       });
 
       // Verify it's running
@@ -283,7 +284,9 @@ export class HeadlessManager extends EventEmitter {
         console.log(`[HeadlessManager] Forwarding polling data for active context ${contextId} to WebUI`);
         this.webUIManager.handlePollingUpdate(data);
       } else {
-        console.log(`[HeadlessManager] Skipping polling data for inactive context ${contextId}; active context is ${activeContextId ?? 'none'}`);
+        console.log(
+          `[HeadlessManager] Skipping polling data for inactive context ${contextId}; active context is ${activeContextId ?? 'none'}`
+        );
       }
     });
 
@@ -381,7 +384,7 @@ export class HeadlessManager extends EventEmitter {
       initialized: this.isInitialized,
       connectedPrinters: this.connectedContexts.length,
       webUIRunning: status.isRunning,
-      activeContext: this.contextManager.getActiveContextId()
+      activeContext: this.contextManager.getActiveContextId(),
     };
   }
 }
@@ -395,4 +398,3 @@ export const getHeadlessManager = (): HeadlessManager => {
   }
   return headlessManager;
 };
-

@@ -47,19 +47,19 @@
  * - CameraProxyService: Per-context camera streaming
  */
 
-import { EventEmitter } from 'events';
-import { PrinterDetails } from '@shared/types/printer.js';
-import type { BasePrinterBackend } from '../printer-backends/BasePrinterBackend.js';
-import type { PrinterPollingService } from '../services/PrinterPollingService.js';
-import type { PrinterNotificationCoordinator } from '../services/notifications/PrinterNotificationCoordinator.js';
 import type {
-  PrinterContextInfo,
   ContextConnectionState,
-  ContextSwitchEvent,
   ContextCreatedEvent,
-  ContextRemovedEvent
+  ContextRemovedEvent,
+  ContextSwitchEvent,
+  PrinterContextInfo,
 } from '@shared/types/PrinterContext.js';
+import { PrinterDetails } from '@shared/types/printer.js';
 import type { ActiveSpoolData } from '@shared/types/spoolman.js';
+import { EventEmitter } from 'events';
+import type { BasePrinterBackend } from '../printer-backends/BasePrinterBackend.js';
+import type { PrinterNotificationCoordinator } from '../services/notifications/PrinterNotificationCoordinator.js';
+import type { PrinterPollingService } from '../services/PrinterPollingService.js';
 import { getSpoolmanIntegrationService } from '../services/SpoolmanIntegrationService.js';
 
 /**
@@ -176,7 +176,7 @@ export class PrinterContextManager extends EventEmitter {
       createdAt: now,
       lastActivity: now,
       activeSpoolId: null,
-      activeSpoolData: null
+      activeSpoolData: null,
     };
 
     this.contexts.set(contextId, context);
@@ -184,7 +184,7 @@ export class PrinterContextManager extends EventEmitter {
     // Emit creation event
     const event: ContextCreatedEvent = {
       contextId,
-      contextInfo: this.contextToInfo(context)
+      contextInfo: this.contextToInfo(context),
     };
     this.emit('context-created', event);
 
@@ -220,7 +220,7 @@ export class PrinterContextManager extends EventEmitter {
     // Emit removal event
     const event: ContextRemovedEvent = {
       contextId,
-      wasActive
+      wasActive,
     };
     this.emit('context-removed', event);
 
@@ -260,7 +260,7 @@ export class PrinterContextManager extends EventEmitter {
     const event: ContextSwitchEvent = {
       contextId,
       previousContextId,
-      contextInfo: this.contextToInfo(context)
+      contextInfo: this.contextToInfo(context),
     };
     this.emit('context-switched', event);
 
@@ -313,7 +313,7 @@ export class PrinterContextManager extends EventEmitter {
    * @returns Array of context info objects safe for IPC
    */
   public getAllContextsInfo(): PrinterContextInfo[] {
-    return this.getAllContexts().map(ctx => this.contextToInfo(ctx));
+    return this.getAllContexts().map((ctx) => this.contextToInfo(ctx));
   }
 
   /**
@@ -401,7 +401,10 @@ export class PrinterContextManager extends EventEmitter {
    * @param contextId - Context to update
    * @param notificationCoordinator - Notification coordinator instance or null
    */
-  public updateNotificationCoordinator(contextId: string, notificationCoordinator: PrinterNotificationCoordinator | null): void {
+  public updateNotificationCoordinator(
+    contextId: string,
+    notificationCoordinator: PrinterNotificationCoordinator | null
+  ): void {
     const context = this.contexts.get(contextId);
     if (context) {
       context.notificationCoordinator = notificationCoordinator;
@@ -446,9 +449,7 @@ export class PrinterContextManager extends EventEmitter {
    * @returns Serializable context info
    */
   private contextToInfo(context: PrinterContext): PrinterContextInfo {
-    const cameraUrl = context.cameraProxyPort
-      ? `http://localhost:${context.cameraProxyPort}/stream`
-      : undefined;
+    const cameraUrl = context.cameraProxyPort ? `http://localhost:${context.cameraProxyPort}/stream` : undefined;
 
     return {
       id: context.id,
@@ -461,7 +462,7 @@ export class PrinterContextManager extends EventEmitter {
       hasCamera: context.cameraProxyPort !== null,
       cameraUrl,
       createdAt: context.createdAt.toISOString(),
-      lastActivity: context.lastActivity.toISOString()
+      lastActivity: context.lastActivity.toISOString(),
     };
   }
 
@@ -539,4 +540,3 @@ export class PrinterContextManager extends EventEmitter {
 export function getPrinterContextManager(): PrinterContextManagerInstance {
   return PrinterContextManager.getInstance();
 }
-

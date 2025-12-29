@@ -1,18 +1,18 @@
 /* Job Picker CSS - Uses Shared Template for Conditional Styling */
 /* Import shared template for consistent rounded/square UI switching */
-@import url('../shared/rounded-dialog-template.css');
+@import url("../shared/rounded-dialog-template.css");
 
 /* Universal CSS reset for consistent spacing */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 /* Fix dialog container to fill window height */
 .dialog-container {
-    height: 100%;
+  height: 100%;
 }
 
 /* Template provides: body styles */
@@ -22,233 +22,237 @@
 /* Template provides: .dialog-header, .dialog-title, .close-button styles */
 
 .dialog-content {
-    padding: 24px;
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    /* Hide scrollbars while maintaining scroll functionality */
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* Internet Explorer 10+ */
+  padding: 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  /* Hide scrollbars while maintaining scroll functionality */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
 }
 
 /* Hide scrollbars for WebKit browsers (Chrome, Safari, Edge) */
 .dialog-content::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
 
 .file-list {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-    gap: 15px;
-    padding: 10px;
-    overflow-y: auto;
-    flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 15px;
+  padding: 10px;
+  overflow-y: auto;
+  flex: 1;
 }
 
 .file-item {
-    background-color: var(--theme-surface);
-    border: 1px solid var(--border-color);
-    border-radius: 4px;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
+  background-color: var(--theme-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
 }
 
 .file-item-header {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    z-index: 10;
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
 }
 
 .info-icon {
-    background: var(--theme-primary);
-    color: var(--accent-text-color);
-    border: none;
-    border-radius: 10px;
-    width: 20px;
-    height: 20px;
-    font-size: 12px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
-    font-weight: bold;
+  background: var(--theme-primary);
+  color: var(--accent-text-color);
+  border: none;
+  border-radius: 10px;
+  width: 20px;
+  height: 20px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  font-weight: bold;
 }
 
 .info-icon:hover {
-    background: var(--theme-primary-hover);
-    transform: scale(1.1);
+  background: var(--theme-primary-hover);
+  transform: scale(1.1);
 }
 
 .file-item:hover {
-    background-color: var(--surface-elevated);
-    border-color: var(--border-color-focus);
+  background-color: var(--surface-elevated);
+  border-color: var(--border-color-focus);
 }
 
 .file-item.selected {
-    background-color: color-mix(in srgb, var(--theme-primary) 20%, transparent);
-    border-color: var(--theme-primary);
+  background-color: color-mix(in srgb, var(--theme-primary) 20%, transparent);
+  border-color: var(--theme-primary);
 }
 
 .thumbnail {
-    width: 100px;
-    height: 100px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background-color: var(--surface-muted);
-    margin-bottom: 8px;
+  width: 100px;
+  height: 100px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--surface-muted);
+  margin-bottom: 8px;
 }
 
 .thumbnail img {
-    max-width: 100%;
-    max-height: 100%;
+  max-width: 100%;
+  max-height: 100%;
 }
 
 .no-preview {
-    color: color-mix(in srgb, var(--theme-text) 45%, transparent);
-    font-style: italic;
-    font-size: 12px;
-    text-align: center;
+  color: color-mix(in srgb, var(--theme-text) 45%, transparent);
+  font-style: italic;
+  font-size: 12px;
+  text-align: center;
 }
 
 .filename {
-    text-align: center;
-    font-size: 12px;
-    word-break: break-word;
-    max-width: 100%;
+  text-align: center;
+  font-size: 12px;
+  word-break: break-word;
+  max-width: 100%;
 }
 
 /* Template provides: .dialog-footer styles */
 
 .options {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
 }
 
 .checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
 }
 
 .action-buttons {
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
 }
 
 button {
-    background: var(--surface-elevated);
-    color: var(--theme-text);
-    border: 1px solid var(--border-color);
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-family: inherit;
-    transition: all 0.2s ease;
-    min-width: 80px;
+  background: var(--surface-elevated);
+  color: var(--theme-text);
+  border: 1px solid var(--border-color);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  min-width: 80px;
 }
 
 button:hover {
-    background: var(--surface-muted);
-    border-color: var(--border-color-focus);
+  background: var(--surface-muted);
+  border-color: var(--border-color-focus);
 }
 
 button:active {
-    background: var(--surface-muted);
+  background: var(--surface-muted);
 }
 
 button:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 50%, transparent);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 50%, transparent);
 }
 
 button:disabled {
-    background-color: var(--surface-muted);
-    color: color-mix(in srgb, var(--theme-text) 40%, transparent);
-    cursor: not-allowed;
-    opacity: 0.6;
+  background-color: var(--surface-muted);
+  color: color-mix(in srgb, var(--theme-text) 40%, transparent);
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 button.cancel {
-    background: var(--surface-elevated);
+  background: var(--surface-elevated);
 }
 
 button.cancel:hover {
-    background: var(--surface-muted);
+  background: var(--surface-muted);
 }
 
 button#btn-select {
-    background-color: var(--theme-secondary);
-    border-color: var(--theme-secondary);
-    color: var(--button-text-color);
+  background-color: var(--theme-secondary);
+  border-color: var(--theme-secondary);
+  color: var(--button-text-color);
 }
 
 button#btn-select:hover:not(:disabled) {
-    background-color: var(--theme-secondary-hover);
-    border-color: var(--theme-secondary-hover);
+  background-color: var(--theme-secondary-hover);
+  border-color: var(--theme-secondary-hover);
 }
 
 /* Loading indicator */
 .loading {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 200px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
 }
 
 .loading-spinner {
-    border: 4px solid color-mix(in srgb, var(--theme-text) 30%, transparent);
-    border-radius: 50%;
-    border-top: 4px solid var(--theme-primary);
-    width: 30px;
-    height: 30px;
-    animation: spin 1s linear infinite;
+  border: 4px solid color-mix(in srgb, var(--theme-text) 30%, transparent);
+  border-radius: 50%;
+  border-top: 4px solid var(--theme-primary);
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* No files message */
 .no-files {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 200px;
-    color: color-mix(in srgb, var(--theme-text) 45%, transparent);
-    font-style: italic;
-    grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 200px;
+  color: color-mix(in srgb, var(--theme-text) 45%, transparent);
+  font-style: italic;
+  grid-column: 1 / -1;
 }
 
 /* Scrollbar styling */
 ::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+  width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-    background: var(--scrollbar-track-color);
+  background: var(--scrollbar-track-color);
 }
 
 ::-webkit-scrollbar-thumb {
-    background: var(--scrollbar-thumb-color);
-    border-radius: 4px;
+  background: var(--scrollbar-thumb-color);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-    background: var(--scrollbar-thumb-hover-color);
+  background: var(--scrollbar-thumb-hover-color);
 }

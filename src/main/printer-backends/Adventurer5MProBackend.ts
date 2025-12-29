@@ -18,18 +18,14 @@
  * RTSP camera and filtration control capabilities.
  */
 
+import { MaterialStationStatus, PrinterFeatureSet } from '@shared/types/printer-backend/index.js';
 import { DualAPIBackend } from './DualAPIBackend.js';
-import {
-  PrinterFeatureSet,
-  MaterialStationStatus
-} from '@shared/types/printer-backend/index.js';
 
 /**
  * Backend implementation for Adventurer 5M Pro
  * Uses dual API with enhanced features including filtration
  */
 export class Adventurer5MProBackend extends DualAPIBackend {
-  
   /**
    * Get child-specific base features for Adventurer 5M Pro
    * LED and filtration will be auto-detected from product endpoint
@@ -39,28 +35,28 @@ export class Adventurer5MProBackend extends DualAPIBackend {
       camera: {
         builtin: true,
         customUrl: null,
-        customEnabled: false
+        customEnabled: false,
       },
       ledControl: {
         builtin: true,
         customControlEnabled: false, // Will be overridden by settings
-        usesLegacyAPI: true
+        usesLegacyAPI: true,
       },
       filtration: {
         available: true,
         controllable: true,
-        reason: 'Hardware supports filtration control'
+        reason: 'Hardware supports filtration control',
       },
       gcodeCommands: {
         available: true,
         usesLegacyAPI: true,
-        supportedCommands: this.getSupportedGCodeCommands()
+        supportedCommands: this.getSupportedGCodeCommands(),
       },
       statusMonitoring: {
         available: true,
         usesNewAPI: true,
         usesLegacyAPI: true,
-        realTimeUpdates: true
+        realTimeUpdates: true,
       },
       jobManagement: {
         localJobs: true,
@@ -69,17 +65,17 @@ export class Adventurer5MProBackend extends DualAPIBackend {
         startJobs: true,
         pauseResume: true,
         cancelJobs: true,
-        usesNewAPI: true
+        usesNewAPI: true,
       },
       materialStation: {
         available: false,
         slotCount: 0,
         perSlotInfo: false,
-        materialDetection: false
-      }
+        materialDetection: false,
+      },
     };
   }
-  
+
   /**
    * Get additional status fields specific to 5M Pro
    * Override from DualAPIBackend to add filtration fan fields
@@ -89,25 +85,24 @@ export class Adventurer5MProBackend extends DualAPIBackend {
     const info = machineInfo as Record<string, unknown> | null;
     return {
       externalFanOn: info?.ExternalFanOn || false,
-      internalFanOn: info?.InternalFanOn || false
+      internalFanOn: info?.InternalFanOn || false,
     };
   }
-  
+
   /**
    * Get material station status - not supported on 5M Pro
    */
   public getMaterialStationStatus(): MaterialStationStatus | null {
     return null; // 5M Pro doesn't have material station
   }
-  
+
   // Feature detection methods specific to 5M Pro
-  
+
   protected supportsMaterialStation(): boolean {
     return false; // 5M Pro doesn't have material station
   }
-  
+
   protected getMaterialStationSlotCount(): number {
     return 0; // 5M Pro doesn't have material station
   }
 }
-

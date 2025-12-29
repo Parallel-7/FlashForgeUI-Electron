@@ -2,19 +2,19 @@
  * Connect Choice Dialog Styles - Uses Shared Template for Conditional Styling
  * Import shared template for consistent rounded/square UI switching
  */
-@import url('../shared/rounded-dialog-template.css');
+@import url("../shared/rounded-dialog-template.css");
 
 /* Universal CSS reset for consistent spacing */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 /* Fix dialog container to fill window height */
 .dialog-container {
-    height: 100%;
+  height: 100%;
 }
 
 /* Template provides: body, .dialog-container, animation, .dialog-header base styles */
@@ -22,178 +22,178 @@
 /* Template provides: .dialog-header, h2, .dialog-description, .dialog-content styles */
 
 .choice-options {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .choice-button {
-    display: flex;
-    align-items: center;
-    background: var(--surface-elevated);
-    border: 2px solid var(--border-color);
-    border-radius: 8px;
-    padding: 16px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    text-align: left;
-    width: 100%;
-    color: inherit;
-    font-family: inherit;
+  display: flex;
+  align-items: center;
+  background: var(--surface-elevated);
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+  color: inherit;
+  font-family: inherit;
 }
 
 .choice-button:hover {
-    border-color: var(--theme-primary);
-    background: var(--surface-elevated);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px color-mix(in srgb, var(--theme-primary) 20%, transparent);
+  border-color: var(--theme-primary);
+  background: var(--surface-elevated);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--theme-primary) 20%, transparent);
 }
 
 .choice-button:active {
-    transform: translateY(0);
-    box-shadow: 0 2px 8px color-mix(in srgb, var(--theme-primary) 30%, transparent);
+  transform: translateY(0);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--theme-primary) 30%, transparent);
 }
 
 .choice-button:focus {
-    outline: none;
-    border-color: var(--theme-primary);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 30%, transparent);
+  outline: none;
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 30%, transparent);
 }
 
 .choice-icon {
-    flex-shrink: 0;
-    width: 32px;
-    height: 32px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: inherit;
-    margin-right: 16px;
-    transition: transform 0.2s ease;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: inherit;
+  margin-right: 16px;
+  transition: transform 0.2s ease;
 }
 
 .choice-icon i {
-    display: inline-flex;
-    width: 24px;
-    height: 24px;
-    color: inherit;
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  color: inherit;
 }
 
 .choice-icon .lucide-icon {
-    width: 100%;
-    height: 100%;
+  width: 100%;
+  height: 100%;
 }
 
 .choice-button:hover .choice-icon {
-    transform: scale(1.05);
+  transform: scale(1.05);
 }
 
 .choice-content {
-    flex: 1;
+  flex: 1;
 }
 
 .choice-content h3 {
-    margin: 0 0 6px 0;
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--theme-text);
+  margin: 0 0 6px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--theme-text);
 }
 
 .choice-content p {
-    margin: 0;
-    font-size: 0.85rem;
-    color: color-mix(in srgb, var(--theme-text) 70%, transparent);
-    line-height: 1.4;
+  margin: 0;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--theme-text) 70%, transparent);
+  line-height: 1.4;
 }
 
 .dialog-actions {
-    padding: 16px 24px 24px 24px;
-    display: flex;
-    justify-content: flex-end;
-    border-top: 1px solid var(--border-color);
-    background: var(--theme-surface);
-    flex-shrink: 0;
+  padding: 16px 24px 24px 24px;
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-color);
+  background: var(--theme-surface);
+  flex-shrink: 0;
 }
 
 .dialog-actions.compact {
-    padding: 12px 24px 16px 24px;
+  padding: 12px 24px 16px 24px;
 }
 
 .btn-secondary {
-    background: var(--surface-elevated);
-    color: var(--theme-text);
-    border: 1px solid var(--border-color-light);
-    padding: 8px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    font-family: inherit;
-    transition: all 0.2s ease;
-    min-width: 80px;
+  background: var(--surface-elevated);
+  color: var(--theme-text);
+  border: 1px solid var(--border-color-light);
+  padding: 8px 16px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  min-width: 80px;
 }
 
 .btn-secondary:hover {
-    background: var(--surface-elevated);
-    border-color: var(--border-color);
+  background: var(--surface-elevated);
+  border-color: var(--border-color);
 }
 
 .btn-secondary:active {
-    background: var(--surface-muted);
+  background: var(--surface-muted);
 }
 
 .btn-secondary:focus {
-    outline: none;
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface-elevated) 50%, transparent);
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface-elevated) 50%, transparent);
 }
 
 /* High contrast accessibility support */
 @media (prefers-contrast: high) {
-    .dialog-container {
-        border-color: var(--theme-text);
-    }
+  .dialog-container {
+    border-color: var(--theme-text);
+  }
 
-    .choice-button {
-        border-color: var(--theme-text);
-    }
+  .choice-button {
+    border-color: var(--theme-text);
+  }
 
-    .choice-content p {
-        color: color-mix(in srgb, var(--theme-text) 80%, transparent);
-    }
+  .choice-content p {
+    color: color-mix(in srgb, var(--theme-text) 80%, transparent);
+  }
 }
 
 /* Reduced motion support */
 @media (prefers-reduced-motion: reduce) {
-    .dialog-container {
-        animation: none;
-        opacity: 1;
-        transform: none;
-    }
-    
-    .choice-button {
-        transition: none;
-    }
-    
-    .choice-icon {
-        transition: none;
-    }
+  .dialog-container {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .choice-button {
+    transition: none;
+  }
+
+  .choice-icon {
+    transition: none;
+  }
 }
 
 /* Focus management for keyboard navigation */
 .choice-button.keyboard-focused {
-    border-color: var(--theme-primary);
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 50%, transparent);
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 50%, transparent);
 }
 
 /* Loading state (future enhancement) */
 .choice-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-    transform: none;
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .choice-button:disabled:hover {
-    border-color: var(--border-color);
-    background: var(--surface-muted);
-    transform: none;
-    box-shadow: none;
+  border-color: var(--border-color);
+  background: var(--surface-muted);
+  transform: none;
+  box-shadow: none;
 }

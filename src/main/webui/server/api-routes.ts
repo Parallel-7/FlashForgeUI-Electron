@@ -7,21 +7,21 @@
  */
 
 import { Router } from 'express';
-import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.js';
-import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager.js';
-import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 import { getConfigManager } from '../../managers/ConfigManager.js';
+import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager.js';
+import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.js';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegrationService.js';
-import type { RouteDependencies } from './routes/route-helpers.js';
-import { registerPrinterStatusRoutes } from './routes/printer-status-routes.js';
-import { registerPrinterControlRoutes } from './routes/printer-control-routes.js';
-import { registerTemperatureRoutes } from './routes/temperature-routes.js';
-import { registerFiltrationRoutes } from './routes/filtration-routes.js';
-import { registerJobRoutes } from './routes/job-routes.js';
 import { registerCameraRoutes } from './routes/camera-routes.js';
 import { registerContextRoutes } from './routes/context-routes.js';
-import { registerThemeRoutes } from './routes/theme-routes.js';
+import { registerFiltrationRoutes } from './routes/filtration-routes.js';
+import { registerJobRoutes } from './routes/job-routes.js';
+import { registerPrinterControlRoutes } from './routes/printer-control-routes.js';
+import { registerPrinterStatusRoutes } from './routes/printer-status-routes.js';
+import type { RouteDependencies } from './routes/route-helpers.js';
 import { registerSpoolmanRoutes } from './routes/spoolman-routes.js';
+import { registerTemperatureRoutes } from './routes/temperature-routes.js';
+import { registerThemeRoutes } from './routes/theme-routes.js';
 
 export function buildRouteDependencies(): RouteDependencies {
   return {
@@ -29,7 +29,7 @@ export function buildRouteDependencies(): RouteDependencies {
     connectionManager: getPrinterConnectionManager(),
     contextManager: getPrinterContextManager(),
     configManager: getConfigManager(),
-    spoolmanService: getSpoolmanIntegrationService()
+    spoolmanService: getSpoolmanIntegrationService(),
   };
 }
 

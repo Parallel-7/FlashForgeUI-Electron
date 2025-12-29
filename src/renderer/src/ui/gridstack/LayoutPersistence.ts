@@ -13,8 +13,8 @@
  * - Layout history and versioning support
  */
 
-import type { LayoutConfig, LayoutPersistenceOptions } from './types.js';
 import { getDefaultLayout, isValidLayout, mergeWithDefaults } from './defaults.js';
+import type { LayoutConfig, LayoutPersistenceOptions } from './types.js';
 
 /**
  * Default persistence options
@@ -92,11 +92,7 @@ export class LayoutPersistence {
    * @param contextId - Optional context ID for multi-printer layouts
    * @param immediate - Whether to save immediately (skip debouncing)
    */
-  save(
-    layout: LayoutConfig,
-    contextId?: string,
-    immediate = false
-  ): void {
+  save(layout: LayoutConfig, contextId?: string, immediate = false): void {
     if (!this.initialized) {
       console.warn('[LayoutPersistence] Not initialized, skipping save');
       return;
@@ -144,8 +140,7 @@ export class LayoutPersistence {
         // Handle quota exceeded error
         if (
           storageError instanceof DOMException &&
-          (storageError.name === 'QuotaExceededError' ||
-            storageError.name === 'NS_ERROR_DOM_QUOTA_REACHED')
+          (storageError.name === 'QuotaExceededError' || storageError.name === 'NS_ERROR_DOM_QUOTA_REACHED')
         ) {
           console.error('[LayoutPersistence] localStorage quota exceeded, clearing history...');
 
@@ -189,9 +184,7 @@ export class LayoutPersistence {
    */
   load(contextId?: string): LayoutConfig {
     if (!this.initialized) {
-      console.warn(
-        '[LayoutPersistence] Not initialized, returning default layout'
-      );
+      console.warn('[LayoutPersistence] Not initialized, returning default layout');
       return getDefaultLayout();
     }
 
@@ -200,9 +193,7 @@ export class LayoutPersistence {
       const stored = localStorage.getItem(storageKey);
 
       if (!stored) {
-        console.log(
-          `[LayoutPersistence] No saved layout for context ${contextId || 'default'}, using default`
-        );
+        console.log(`[LayoutPersistence] No saved layout for context ${contextId || 'default'}, using default`);
         return getDefaultLayout();
       }
 
@@ -211,18 +202,14 @@ export class LayoutPersistence {
 
       // Validate layout structure
       if (!isValidLayout(parsed)) {
-        console.warn(
-          '[LayoutPersistence] Stored layout is invalid, using default'
-        );
+        console.warn('[LayoutPersistence] Stored layout is invalid, using default');
         return getDefaultLayout();
       }
 
       // Merge with defaults to fill any missing properties
       const layout = mergeWithDefaults(parsed);
 
-      console.log(
-        `[LayoutPersistence] Loaded layout for context ${contextId || 'default'}`
-      );
+      console.log(`[LayoutPersistence] Loaded layout for context ${contextId || 'default'}`);
       return layout;
     } catch (error) {
       console.error('[LayoutPersistence] Failed to load layout:', error);
@@ -244,9 +231,7 @@ export class LayoutPersistence {
    * @returns Default layout that was saved
    */
   reset(contextId?: string): LayoutConfig {
-    console.log(
-      `[LayoutPersistence] Resetting layout for context ${contextId || 'default'}`
-    );
+    console.log(`[LayoutPersistence] Resetting layout for context ${contextId || 'default'}`);
 
     const defaultLayout = getDefaultLayout();
 
@@ -277,9 +262,7 @@ export class LayoutPersistence {
     const storageKey = this.getStorageKey(contextId);
     localStorage.removeItem(storageKey);
     this.clearHistory(contextId);
-    console.log(
-      `[LayoutPersistence] Deleted layout for context ${contextId || 'default'}`
-    );
+    console.log(`[LayoutPersistence] Deleted layout for context ${contextId || 'default'}`);
   }
 
   /**
@@ -292,9 +275,7 @@ export class LayoutPersistence {
       const historyKey = `${this.getStorageKey(contextId)}-history`;
       const storedHistory = localStorage.getItem(historyKey);
 
-      let history: LayoutConfig[] = storedHistory
-        ? this.parseHistory(storedHistory)
-        : [];
+      let history: LayoutConfig[] = storedHistory ? this.parseHistory(storedHistory) : [];
 
       // Add new layout to history
       history.unshift(layout);

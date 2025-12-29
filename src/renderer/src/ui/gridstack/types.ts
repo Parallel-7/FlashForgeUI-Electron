@@ -11,8 +11,8 @@
  * - ComponentDefinition: Component metadata for registry
  */
 
+import type { ComponentDefinition, ComponentSize } from '@shared/types/components.js';
 import type { GridStack, GridStackWidget as GSWidget } from 'gridstack';
-import type { ComponentSize, ComponentDefinition } from '@shared/types/components.js';
 
 export type { ComponentSize, ComponentDefinition };
 

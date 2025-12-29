@@ -82,7 +82,9 @@
   background: var(--accent-color);
   color: var(--accent-text-color, #ffffff);
   border-color: var(--button-hover);
-  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent-color) 40%, transparent), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent);
+  box-shadow:
+    0 2px 8px color-mix(in srgb, var(--accent-color) 40%, transparent),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent);
   border-bottom-color: transparent;
 }
 
@@ -134,7 +136,8 @@
 
 /* Pulse animation for connecting state */
 @keyframes pulse {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 1;
     transform: scale(1);
   }
@@ -237,13 +240,17 @@
   cursor: pointer;
   transition: all var(--transition-fast);
   flex-shrink: 0;
-  box-shadow: var(--shadow-sm), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent);
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent);
   letter-spacing: 0.5px;
 }
 
 .add-tab-button:hover {
   background: var(--button-hover);
-  box-shadow: var(--shadow-md), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 30%, transparent);
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 30%, transparent);
   transform: translateY(-2px);
   border-color: var(--border-color-light);
 }

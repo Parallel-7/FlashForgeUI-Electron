@@ -199,7 +199,7 @@ describe('PortAllocator', () => {
         totalPorts: 5,
         allocatedCount: 2,
         availableCount: 3,
-        allocatedPorts: [8181, 8182]
+        allocatedPorts: [8181, 8182],
       });
     });
   });
@@ -246,4 +246,3 @@ describe('PortAllocator', () => {
     });
   });
 });
-

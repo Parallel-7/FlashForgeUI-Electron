@@ -8,11 +8,11 @@
  * Also injects theme color variables for consistent theming across all dialogs.
  */
 
+import { computeThemePalette } from '@shared/themeColorUtils.js';
+import { DEFAULT_THEME } from '@shared/types/config.js';
 import { BrowserWindow } from 'electron';
 import { getConfigManager } from '../managers/ConfigManager.js';
 import { isRoundedUISupported } from './RoundedUICompatibility.js';
-import { DEFAULT_THEME } from '@shared/types/config.js';
-import { computeThemePalette } from '@shared/themeColorUtils.js';
 
 /**
  * Injects CSS variables into a window based on the current RoundedUI configuration
@@ -89,12 +89,12 @@ export function getUIWindowOptions(): { frame: boolean; transparent: boolean } {
   const configManager = getConfigManager();
   const config = configManager.getConfig();
   const roundedUI = config.RoundedUI;
-  
+
   // Use rounded UI configuration only when enabled and supported on this platform
   const useRoundedUI = roundedUI && isRoundedUISupported();
-  
+
   return {
     frame: !useRoundedUI,
-    transparent: useRoundedUI
+    transparent: useRoundedUI,
   };
 }

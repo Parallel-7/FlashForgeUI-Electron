@@ -6,17 +6,17 @@
  */
 
 import { componentManager } from '../ui/components/index.js';
+import { getAllComponents, getComponentDefinition } from '../ui/gridstack/ComponentRegistry.js';
 import { gridStackManager } from '../ui/gridstack/GridStackManager.js';
-import { getComponentDefinition, getAllComponents } from '../ui/gridstack/ComponentRegistry.js';
 import { DEFAULT_SHORTCUT_CONFIG, type ShortcutButtonConfig } from '../ui/shortcuts/types.js';
+import type { RendererGridController } from './gridController.js';
 import { logMessage } from './logging.js';
 import {
   loadLayoutForSerial,
   loadShortcutsForSerial,
   saveLayoutForSerial,
-  saveShortcutsForSerial
+  saveShortcutsForSerial,
 } from './perPrinterStorage.js';
-import type { RendererGridController } from './gridController.js';
 
 interface ShortcutButtonDependencies {
   getActiveSerial: () => string | null;
@@ -119,7 +119,7 @@ export class ShortcutButtonController {
         if (window.api?.send) {
           window.api.send(responseChannel, {
             success: false,
-            error: String(error)
+            error: String(error),
           });
         }
       }
@@ -142,9 +142,7 @@ export class ShortcutButtonController {
     isPinned: boolean;
   }> {
     const config = loadShortcutsForSerial(this.deps.getActiveSerial());
-    const pinnedIds = new Set(
-      Object.values(config.slots).filter((id): id is string => id !== null)
-    );
+    const pinnedIds = new Set(Object.values(config.slots).filter((id): id is string => id !== null));
 
     const activeGridComponents = this.getActiveGridComponentIds();
 
@@ -158,7 +156,7 @@ export class ShortcutButtonController {
       })
       .map((component) => ({
         ...component,
-        isPinned: pinnedIds.has(component.id)
+        isPinned: pinnedIds.has(component.id),
       }));
   }
 
@@ -237,7 +235,7 @@ export class ShortcutButtonController {
       saveLayoutForSerial(
         {
           ...currentLayout,
-          widgets: updatedLayout
+          widgets: updatedLayout,
         },
         serial
       );

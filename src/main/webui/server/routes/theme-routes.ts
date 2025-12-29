@@ -2,17 +2,17 @@
  * @fileoverview WebUI theme configuration routes.
  */
 
-import type { Router, Response } from 'express';
-import type { AuthenticatedRequest } from '../auth-middleware.js';
-import type { RouteDependencies } from './route-helpers.js';
 import {
   sanitizeTheme,
   ThemeProfileAddData,
-  ThemeProfileUpdateData,
   ThemeProfileDeleteData,
+  ThemeProfileUpdateData,
 } from '@shared/types/config.js';
 import { StandardAPIResponse } from '@shared/types/web-api.types.js';
+import type { Response, Router } from 'express';
 import { toAppError } from '../../../utils/error.utils.js';
+import type { AuthenticatedRequest } from '../auth-middleware.js';
+import type { RouteDependencies } from './route-helpers.js';
 
 interface ThemeProfileOperationRequestBody {
   operation: 'add' | 'update' | 'delete';
@@ -28,7 +28,7 @@ export function registerPublicThemeRoutes(router: Router, deps: RouteDependencie
       const appError = toAppError(error);
       const response: StandardAPIResponse = {
         success: false,
-        error: appError.message
+        error: appError.message,
       };
       return res.status(500).json(response);
     }
@@ -42,7 +42,7 @@ export function registerPublicThemeRoutes(router: Router, deps: RouteDependencie
       const appError = toAppError(error);
       const response: StandardAPIResponse = {
         success: false,
-        error: appError.message
+        error: appError.message,
       };
       return res.status(500).json(response);
     }
@@ -56,19 +56,19 @@ export function registerThemeRoutes(router: Router, deps: RouteDependencies): vo
       const currentConfig = deps.configManager.getConfig();
       deps.configManager.updateConfig({
         ...currentConfig,
-        WebUITheme: sanitizedTheme
+        WebUITheme: sanitizedTheme,
       });
 
       const response: StandardAPIResponse = {
         success: true,
-        message: 'WebUI theme updated successfully'
+        message: 'WebUI theme updated successfully',
       };
       return res.json(response);
     } catch (error) {
       const appError = toAppError(error);
       const response: StandardAPIResponse = {
         success: false,
-        error: appError.message
+        error: appError.message,
       };
       return res.status(500).json(response);
     }

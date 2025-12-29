@@ -13,9 +13,9 @@
  */
 
 import { ipcMain } from 'electron';
-import { createComponentDialog } from '../../windows/factories/ComponentDialogWindowFactory.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 import { getMultiContextPollingCoordinator } from '../../services/MultiContextPollingCoordinator.js';
+import { createComponentDialog } from '../../windows/factories/ComponentDialogWindowFactory.js';
 
 /**
  * Register all component dialog IPC handlers

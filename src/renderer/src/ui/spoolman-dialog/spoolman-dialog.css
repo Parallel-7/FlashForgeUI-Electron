@@ -6,7 +6,7 @@
  */
 
 /* Import shared dialog template */
-@import url('../shared/rounded-dialog-template.css');
+@import url("../shared/rounded-dialog-template.css");
 
 body {
   background: transparent !important;
@@ -100,7 +100,9 @@ body {
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .error-icon,

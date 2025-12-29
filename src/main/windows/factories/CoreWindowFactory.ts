@@ -48,18 +48,18 @@
  * @exports createLogDialog - Create log dialog for application logging and debugging
  */
 
-import { getWindowManager } from '../WindowManager.js';
-import {
-  getWindowDimensions,
-  createUIPreloadPath,
-  loadWindowHTML,
-  setupWindowLifecycle,
-  setupDevTools,
-  validateParentWindow,
-  focusExistingWindow,
-  createModalWindow
-} from '../shared/WindowConfig.js';
 import { getUIWindowOptions } from '../../utils/CSSVariables.js';
+import {
+  createModalWindow,
+  createUIPreloadPath,
+  focusExistingWindow,
+  getWindowDimensions,
+  loadWindowHTML,
+  setupDevTools,
+  setupWindowLifecycle,
+  validateParentWindow,
+} from '../shared/WindowConfig.js';
+import { getWindowManager } from '../WindowManager.js';
 
 /**
  * Create the settings window with modal behavior and parent window relationship
@@ -67,7 +67,7 @@ import { getUIWindowOptions } from '../../utils/CSSVariables.js';
  */
 export const createSettingsWindow = (): void => {
   const windowManager = getWindowManager();
-  
+
   // Check if settings window already exists and focus it
   if (windowManager.hasSettingsWindow()) {
     const existingWindow = windowManager.getSettingsWindow();
@@ -84,24 +84,16 @@ export const createSettingsWindow = (): void => {
   // Get standardized dimensions and create modal window
   const dimensions = getWindowDimensions('SETTINGS');
   const preloadPath = createUIPreloadPath('settings');
-  
-  const settingsWindow = createModalWindow(
-    mainWindow,
-    dimensions,
-    preloadPath,
-    { resizable: true, frame: false }
-  );
+
+  const settingsWindow = createModalWindow(mainWindow, dimensions, preloadPath, { resizable: true, frame: false });
 
   // Load HTML file with error handling
   void loadWindowHTML(settingsWindow, 'settings');
 
   // Setup window lifecycle with WindowManager integration
-  setupWindowLifecycle(
-    settingsWindow,
-    () => {
-      windowManager.setSettingsWindow(null);
-    }
-  );
+  setupWindowLifecycle(settingsWindow, () => {
+    windowManager.setSettingsWindow(null);
+  });
 
   // Setup development tools if in development mode
   setupDevTools(settingsWindow);
@@ -116,7 +108,7 @@ export const createSettingsWindow = (): void => {
  */
 export const createStatusWindow = (): void => {
   const windowManager = getWindowManager();
-  
+
   // Check if status window already exists and focus it
   if (windowManager.hasStatusWindow()) {
     const existingWindow = windowManager.getStatusWindow();
@@ -133,25 +125,21 @@ export const createStatusWindow = (): void => {
   // Get standardized dimensions and create modal window
   const dimensions = getWindowDimensions('STATUS');
   const preloadPath = createUIPreloadPath('status-dialog');
-  
+
   const uiOptions = getUIWindowOptions();
-  const statusWindow = createModalWindow(
-    mainWindow,
-    dimensions,
-    preloadPath,
-    { resizable: true, frame: false, transparent: uiOptions.transparent }
-  );
+  const statusWindow = createModalWindow(mainWindow, dimensions, preloadPath, {
+    resizable: true,
+    frame: false,
+    transparent: uiOptions.transparent,
+  });
 
   // Load HTML file with error handling
   void loadWindowHTML(statusWindow, 'status-dialog');
 
   // Setup window lifecycle with WindowManager integration
-  setupWindowLifecycle(
-    statusWindow,
-    () => {
-      windowManager.setStatusWindow(null);
-    }
-  );
+  setupWindowLifecycle(statusWindow, () => {
+    windowManager.setStatusWindow(null);
+  });
 
   // Setup development tools if in development mode
   setupDevTools(statusWindow);
@@ -166,7 +154,7 @@ export const createStatusWindow = (): void => {
  */
 export const createLogDialog = (): void => {
   const windowManager = getWindowManager();
-  
+
   // Check if log dialog already exists and focus it
   if (windowManager.hasLogDialog()) {
     const existingWindow = windowManager.getLogDialog();
@@ -183,25 +171,21 @@ export const createLogDialog = (): void => {
   // Get standardized dimensions and create modal window
   const dimensions = getWindowDimensions('LOG_DIALOG');
   const preloadPath = createUIPreloadPath('log-dialog');
-  
+
   const uiOptions = getUIWindowOptions();
-  const logDialog = createModalWindow(
-    mainWindow,
-    dimensions,
-    preloadPath,
-    { resizable: true, frame: false, transparent: uiOptions.transparent }
-  );
+  const logDialog = createModalWindow(mainWindow, dimensions, preloadPath, {
+    resizable: true,
+    frame: false,
+    transparent: uiOptions.transparent,
+  });
 
   // Load HTML file with error handling
   void loadWindowHTML(logDialog, 'log-dialog');
 
   // Setup window lifecycle with WindowManager integration
-  setupWindowLifecycle(
-    logDialog,
-    () => {
-      windowManager.setLogDialog(null);
-    }
-  );
+  setupWindowLifecycle(logDialog, () => {
+    windowManager.setLogDialog(null);
+  });
 
   // Setup development tools if in development mode
   setupDevTools(logDialog);
@@ -233,19 +217,15 @@ export const createAboutDialog = (): void => {
   const preloadPath = createUIPreloadPath('about-dialog');
   const uiOptions = getUIWindowOptions();
 
-  const aboutDialog = createModalWindow(
-    mainWindow,
-    dimensions,
-    preloadPath,
-    { resizable: true, frame: false, transparent: uiOptions.transparent }
-  );
+  const aboutDialog = createModalWindow(mainWindow, dimensions, preloadPath, {
+    resizable: true,
+    frame: false,
+    transparent: uiOptions.transparent,
+  });
 
   void loadWindowHTML(aboutDialog, 'about-dialog');
 
-  setupWindowLifecycle(
-    aboutDialog,
-    () => windowManager.setAboutDialogWindow(null)
-  );
+  setupWindowLifecycle(aboutDialog, () => windowManager.setAboutDialogWindow(null));
 
   setupDevTools(aboutDialog);
   windowManager.setAboutDialogWindow(aboutDialog);

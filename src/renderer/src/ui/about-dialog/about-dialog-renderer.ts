@@ -2,10 +2,10 @@
  * @fileoverview Renderer controller for the About dialog showing app metadata and resource links.
  */
 
-import type { AboutDialogInfo } from './about-dialog-preload.cts';
 import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
+import type { AboutDialogInfo } from './about-dialog-preload.cts';
 
 interface AboutAPI {
   readonly getAppInfo: () => Promise<AboutDialogInfo | null>;
@@ -28,7 +28,9 @@ class AboutDialogRenderer {
   private readonly releaseLabelEl = document.getElementById('release-label');
   private readonly developerCreditEl = document.getElementById('developer-credit');
   private readonly linkGridEl = document.getElementById('about-link-grid');
-  private readonly closeButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('#btn-close, #btn-close-footer'));
+  private readonly closeButtons = Array.from(
+    document.querySelectorAll<HTMLButtonElement>('#btn-close, #btn-close-footer')
+  );
 
   async initialize(): Promise<void> {
     this.registerCloseHandlers();
@@ -119,7 +121,6 @@ class AboutDialogRenderer {
       button.addEventListener('click', () => getAboutAPI().closeWindow());
     });
   }
-
 }
 
 void document.addEventListener('DOMContentLoaded', () => {

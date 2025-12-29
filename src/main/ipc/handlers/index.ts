@@ -26,21 +26,22 @@ import type { PrinterBackendManager } from '../../managers/PrinterBackendManager
 import type { getWindowManager } from '../../windows/WindowManager.js';
 
 type WindowManager = ReturnType<typeof getWindowManager>;
-import { registerConnectionHandlers } from './connection-handlers.js';
+
 import { registerBackendHandlers } from './backend-handlers.js';
-import { registerJobHandlers } from './job-handlers.js';
-import { registerDialogHandlers } from './dialog-handlers.js';
-import { registerMaterialHandlers } from './material-handlers.js';
-import { registerControlHandlers } from './control-handlers.js';
-import { registerWebUIHandlers } from './webui-handlers.js';
 import { registerCameraHandlers } from './camera-handlers.js';
-import { initializePrinterSettingsHandlers } from './printer-settings-handlers.js';
-import { registerPaletteHandlers } from './palette-handlers.js';
-import { registerShortcutConfigHandlers } from './shortcut-config-handlers.js';
 import { registerComponentDialogHandlers } from './component-dialog-handlers.js';
-import { registerUpdateHandlers } from './update-handlers.js';
+import { registerConnectionHandlers } from './connection-handlers.js';
+import { registerControlHandlers } from './control-handlers.js';
+import { registerDialogHandlers } from './dialog-handlers.js';
+import { registerJobHandlers } from './job-handlers.js';
+import { registerMaterialHandlers } from './material-handlers.js';
+import { registerPaletteHandlers } from './palette-handlers.js';
+import { initializePrinterSettingsHandlers } from './printer-settings-handlers.js';
+import { registerShortcutConfigHandlers } from './shortcut-config-handlers.js';
 import { registerSpoolmanHandlers } from './spoolman-handlers.js';
 import { registerThemeHandlers } from './theme-handlers.js';
+import { registerUpdateHandlers } from './update-handlers.js';
+import { registerWebUIHandlers } from './webui-handlers.js';
 
 /**
  * Application managers required by IPC handlers
@@ -76,4 +77,3 @@ export function registerAllIpcHandlers(managers: AppManagers): void {
   registerSpoolmanHandlers();
   registerThemeHandlers();
 }
-

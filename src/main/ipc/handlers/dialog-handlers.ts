@@ -19,37 +19,38 @@
  * functionality. Supports context-aware operations for multi-printer architecture.
  */
 
+import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
 import { app, BrowserWindow, ipcMain, shell } from 'electron';
 import * as os from 'os';
 import type { ConfigManager } from '../../managers/ConfigManager.js';
-import type { getWindowManager } from '../../windows/WindowManager.js';
-import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.js';
 import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager.js';
-import { getWebUIManager } from '../../webui/server/WebUIManager.js';
+import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.js';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 import { getCameraProxyService } from '../../services/CameraProxyService.js';
+import { getLogService } from '../../services/LogService.js';
 import { getModelDisplayName } from '../../utils/PrinterUtils.js';
 import { getRoundedUISupportInfo } from '../../utils/RoundedUICompatibility.js';
-import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
-import { getLogService } from '../../services/LogService.js';
-import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
+import { getWebUIManager } from '../../webui/server/WebUIManager.js';
+import type { getWindowManager } from '../../windows/WindowManager.js';
 
 type WindowManager = ReturnType<typeof getWindowManager>;
+
 import type { AppConfig, ThemeColors } from '@shared/types/config.js';
 import { sanitizeTheme } from '@shared/types/config.js';
-import { 
-  createSettingsWindow, 
-  createStatusWindow, 
-  createLogDialog,
-  createInputDialog, 
-  createJobUploaderWindow, 
-  createJobPickerWindow, 
-  createSendCommandsWindow,
+import {
+  createAboutDialog,
   createIFSDialog,
+  createInputDialog,
+  createJobPickerWindow,
+  createJobUploaderWindow,
+  createLogDialog,
   createMaterialInfoDialog,
   createMaterialMatchingDialog,
+  createSendCommandsWindow,
+  createSettingsWindow,
   createSingleColorConfirmationDialog,
-  createAboutDialog,
-  type InputDialogOptions
+  createStatusWindow,
+  type InputDialogOptions,
 } from '../../windows/WindowFactory.js';
 
 // Type definitions for window data structures
@@ -82,22 +83,22 @@ const ABOUT_DIALOG_LINKS: readonly AboutDialogLink[] = [
     label: 'GhostTypes on GitHub',
     description: 'Follow the developer behind FlashForgeUI',
     url: 'https://github.com/GhostTypes',
-    icon: 'github'
+    icon: 'github',
   },
   {
     id: 'project',
     label: 'FlashForgeUI Repository',
     description: 'View the source code and contribute on GitHub',
     url: 'https://github.com/Parallel-7/FlashForgeUI-Electron',
-    icon: 'code-2'
+    icon: 'code-2',
   },
   {
     id: 'docs',
     label: 'User Guide & Docs',
     description: 'Read setup instructions and feature documentation',
     url: 'https://github.com/Parallel-7/FlashForgeUI-Electron/tree/main/docs',
-    icon: 'book-open'
-  }
+    icon: 'book-open',
+  },
 ] as const;
 
 const ABOUT_DIALOG_LINK_SET = new Set(ABOUT_DIALOG_LINKS.map((link) => link.url));
@@ -105,10 +106,7 @@ const ABOUT_DIALOG_LINK_SET = new Set(ABOUT_DIALOG_LINKS.map((link) => link.url)
 /**
  * Register all dialog-related IPC handlers
  */
-export function registerDialogHandlers(
-  configManager: ConfigManager,
-  windowManager: WindowManager
-): void {
+export function registerDialogHandlers(configManager: ConfigManager, windowManager: WindowManager): void {
   // Settings window handlers
   ipcMain.on('open-settings-window', () => {
     createSettingsWindow();
@@ -158,12 +156,14 @@ export function registerDialogHandlers(
       const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
       const testPayload = {
-        embeds: [{
-          title: '🧪 Test Webhook',
-          description: 'Test message from FlashForgeUI',
-          color: 0x4285f4,
-          timestamp: new Date().toISOString()
-        }]
+        embeds: [
+          {
+            title: '🧪 Test Webhook',
+            description: 'Test message from FlashForgeUI',
+            color: 0x4285f4,
+            timestamp: new Date().toISOString(),
+          },
+        ],
       };
 
       try {
@@ -171,7 +171,7 @@ export function registerDialogHandlers(
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(testPayload),
-          signal: controller.signal
+          signal: controller.signal,
         });
 
         clearTimeout(timeoutId);
@@ -179,7 +179,7 @@ export function registerDialogHandlers(
         if (!response.ok) {
           return {
             success: false,
-            error: `Discord webhook returned ${response.status}: ${response.statusText}`
+            error: `Discord webhook returned ${response.status}: ${response.statusText}`,
           };
         }
 
@@ -192,7 +192,7 @@ export function registerDialogHandlers(
       console.error('[DialogHandlers] Discord webhook test failed:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   });
@@ -234,7 +234,7 @@ export function registerDialogHandlers(
       releaseTag,
       releaseLabel: releaseTag === 'stable' ? 'Stable Release' : 'Pre-release Build',
       developerName: 'GhostTypes',
-      links: ABOUT_DIALOG_LINKS
+      links: ABOUT_DIALOG_LINKS,
     };
   });
 
@@ -278,7 +278,7 @@ export function registerDialogHandlers(
         serialNumber: 'Unknown',
         toolCount: 0,
         ipAddress: 'Not Connected',
-        isConnected: false
+        isConnected: false,
       };
 
       if (isConnected && contextId && backendManager.isBackendReady(contextId)) {
@@ -287,26 +287,26 @@ export function registerDialogHandlers(
           const backendStatus = backend.getBackendStatus();
           const connectionState = connectionManager.getConnectionState();
           const capabilities = backendStatus.capabilities;
-          
+
           // Get model display name from capabilities
           const modelDisplayName = getModelDisplayName(capabilities.modelType);
-          
+
           // Determine tool count based on model type
           let toolCount = 1; // Default to single extruder
           if (capabilities.modelType === 'ad5x') {
             toolCount = 1; // AD5X has single extruder but uses material station
           }
-          
+
           // Determine machine type from client type
           const machineType = connectionState.clientType === 'new' ? '5M Series' : 'Legacy';
-          
+
           // Get firmware version and serial number from the backend clients
           let firmwareVersion = 'Unknown';
           let serialNumber = 'Unknown';
-          
+
           // Get the primary client
           const primaryClient = backend.getPrimaryClient();
-          
+
           // For dual API backends using FiveMClient
           if (primaryClient instanceof FiveMClient) {
             firmwareVersion = primaryClient.firmwareVersion || 'Unknown';
@@ -324,7 +324,7 @@ export function registerDialogHandlers(
               console.error('Failed to get printer info from legacy client:', error);
             }
           }
-          
+
           printerInfo = {
             model: connectionState.printerName || modelDisplayName || 'Unknown',
             machineType: machineType,
@@ -332,23 +332,23 @@ export function registerDialogHandlers(
             serialNumber: serialNumber,
             toolCount: toolCount,
             ipAddress: connectionState.ipAddress || 'Unknown',
-            isConnected: true
+            isConnected: true,
           };
         }
       }
-      
+
       // Get WebUI status
       const webUIManager = getWebUIManager();
       const webUIStatus = webUIManager.getStatus();
-      
+
       // Get camera proxy status
       const cameraProxyService = getCameraProxyService();
       const cameraStatus = cameraProxyService.getStatus();
-      
+
       // Get network interfaces for WebUI URL
       const networkInterfaces = os.networkInterfaces();
       let localIP = 'localhost';
-      
+
       // Find the first non-internal IPv4 address
       for (const [, interfaces] of Object.entries(networkInterfaces)) {
         if (!interfaces) continue;
@@ -360,7 +360,7 @@ export function registerDialogHandlers(
         }
         if (localIP !== 'localhost') break;
       }
-      
+
       return {
         printerInfo,
         webuiStatus: webUIStatus.isRunning,
@@ -372,7 +372,7 @@ export function registerDialogHandlers(
         cameraStreaming: cameraStatus.isStreaming,
         cameraUrl: cameraStatus.isStreaming ? `http://${localIP}:${cameraStatus.port}/camera` : 'None',
         appUptime: process.uptime(),
-        memoryUsage: process.memoryUsage().heapUsed
+        memoryUsage: process.memoryUsage().heapUsed,
       };
     } catch (error) {
       console.error('Error gathering status stats:', error);
@@ -385,7 +385,7 @@ export function registerDialogHandlers(
           serialNumber: 'Error',
           toolCount: 0,
           ipAddress: 'Error',
-          isConnected: false
+          isConnected: false,
         },
         webuiStatus: false,
         webuiClients: 0,
@@ -396,7 +396,7 @@ export function registerDialogHandlers(
         cameraStreaming: false,
         cameraUrl: 'None',
         appUptime: process.uptime(),
-        memoryUsage: process.memoryUsage().heapUsed
+        memoryUsage: process.memoryUsage().heapUsed,
       };
     }
   });
@@ -404,11 +404,11 @@ export function registerDialogHandlers(
   // Log dialog handlers
   ipcMain.on('open-log-dialog', () => {
     createLogDialog();
-    
+
     // Set up real-time log forwarding when dialog is opened
     const logService = getLogService();
     const logDialog = windowManager.getLogDialog();
-    
+
     if (logDialog) {
       // Forward new log messages to the dialog
       const messageHandler = (message: import('../../services/LogService.js').LogMessage) => {
@@ -416,9 +416,9 @@ export function registerDialogHandlers(
           logDialog.webContents.send('log-dialog-new-message', message);
         }
       };
-      
+
       logService.on('message-added', messageHandler);
-      
+
       // Clean up listener when dialog is closed
       logDialog.on('closed', () => {
         logService.off('message-added', messageHandler);
@@ -513,23 +513,23 @@ export function registerDialogHandlers(
 
       // Execute the G-code command using the backend manager
       const result = await backendManager.executeGCodeCommand(contextId, command);
-      
+
       if (result.success) {
-        return { 
-          success: true, 
-          response: result.response || 'Command executed successfully' 
+        return {
+          success: true,
+          response: result.response || 'Command executed successfully',
         };
       } else {
-        return { 
-          success: false, 
-          error: result.error || 'Command execution failed' 
+        return {
+          success: false,
+          error: result.error || 'Command execution failed',
         };
       }
     } catch (error) {
       console.error('Error sending command:', error);
-      return { 
-        success: false, 
-        error: error instanceof Error ? error.message : 'Unknown error occurred' 
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       };
     }
   });
@@ -593,29 +593,29 @@ export function registerDialogHandlers(
         connected: false,
         slots: [],
         activeSlot: null,
-        errorMessage: 'No active printer context'
+        errorMessage: 'No active printer context',
       };
       event.sender.send('ifs-dialog-update-material-station', emptyData);
       return;
     }
 
     const materialStationData = backendManager.getMaterialStationStatus(contextId);
-    
+
     if (materialStationData) {
       // Transform backend data to dialog format
       const dialogData = {
         connected: materialStationData.connected,
-        slots: materialStationData.slots.map(slot => ({
+        slots: materialStationData.slots.map((slot) => ({
           slotId: slot.slotId,
           materialType: slot.materialType,
           materialColor: slot.materialColor,
           isEmpty: slot.isEmpty,
-          isActive: materialStationData.activeSlot !== null && slot.slotId === (materialStationData.activeSlot - 1)
+          isActive: materialStationData.activeSlot !== null && slot.slotId === materialStationData.activeSlot - 1,
         })),
         activeSlot: materialStationData.activeSlot,
-        errorMessage: materialStationData.errorMessage
+        errorMessage: materialStationData.errorMessage,
       };
-      
+
       event.sender.send('ifs-dialog-update-material-station', dialogData);
     } else {
       // Send empty/disconnected state
@@ -623,9 +623,9 @@ export function registerDialogHandlers(
         connected: false,
         slots: [],
         activeSlot: null,
-        errorMessage: 'Material station not available'
+        errorMessage: 'Material station not available',
       };
-      
+
       event.sender.send('ifs-dialog-update-material-station', emptyData);
     }
   });
@@ -644,11 +644,22 @@ export function registerDialogHandlers(
   });
 
   // Material matching dialog handlers
-  ipcMain.handle('show-material-matching-dialog', async (_, data: { fileName: string; toolDatas: readonly unknown[]; leveling: boolean; context?: 'job-start' | 'file-upload' }) => {
-    console.log('Material matching dialog handler called');
-    const result = await createMaterialMatchingDialog(data);
-    return result; // Returns material mappings or null if cancelled
-  });
+  ipcMain.handle(
+    'show-material-matching-dialog',
+    async (
+      _,
+      data: {
+        fileName: string;
+        toolDatas: readonly unknown[];
+        leveling: boolean;
+        context?: 'job-start' | 'file-upload';
+      }
+    ) => {
+      console.log('Material matching dialog handler called');
+      const result = await createMaterialMatchingDialog(data);
+      return result; // Returns material mappings or null if cancelled
+    }
+  );
 
   ipcMain.on('material-matching:close', () => {
     const materialMatchingWindow = windowManager.getMaterialMatchingDialogWindow();
@@ -658,7 +669,8 @@ export function registerDialogHandlers(
   });
 
   ipcMain.on('material-matching:confirm', (_, mappings: unknown) => {
-    const materialMatchingWindow = windowManager.getMaterialMatchingDialogWindow() as WindowWithResolver<unknown> | null;
+    const materialMatchingWindow =
+      windowManager.getMaterialMatchingDialogWindow() as WindowWithResolver<unknown> | null;
     if (materialMatchingWindow) {
       // Store the result and close the window
       const windowData = materialMatchingWindow.windowData;
@@ -684,7 +696,8 @@ export function registerDialogHandlers(
   });
 
   ipcMain.on('single-color-confirm:confirm', () => {
-    const singleColorConfirmWindow = windowManager.getSingleColorConfirmationDialogWindow() as WindowWithResolver<boolean> | null;
+    const singleColorConfirmWindow =
+      windowManager.getSingleColorConfirmationDialogWindow() as WindowWithResolver<boolean> | null;
     if (singleColorConfirmWindow) {
       // Store the result and close the window
       const windowData = singleColorConfirmWindow.windowData;
@@ -721,4 +734,3 @@ export function registerDialogHandlers(
     }
   });
 }
-

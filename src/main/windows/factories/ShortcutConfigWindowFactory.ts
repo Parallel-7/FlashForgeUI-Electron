@@ -25,23 +25,23 @@
 import { BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getWindowManager } from '../WindowManager.js';
-import {
-  createWindowWidth,
-  createWindowHeight,
-  createWindowMinWidth,
-  createWindowMinHeight,
-} from '../shared/WindowTypes.js';
 import {
   createModalWindow,
+  createResponseChannelName,
+  createUIPreloadPath,
+  generateDialogId,
+  loadWindowHTML,
   setupDevTools,
   setupWindowLifecycle,
   validateParentWindow,
-  generateDialogId,
-  createResponseChannelName,
-  loadWindowHTML,
-  createUIPreloadPath
 } from '../shared/WindowConfig.js';
+import {
+  createWindowHeight,
+  createWindowMinHeight,
+  createWindowMinWidth,
+  createWindowWidth,
+} from '../shared/WindowTypes.js';
+import { getWindowManager } from '../WindowManager.js';
 
 const _dirname = path.dirname(fileURLToPath(import.meta.url));
 

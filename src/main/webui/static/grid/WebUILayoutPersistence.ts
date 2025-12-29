@@ -9,8 +9,8 @@
  * when necessary.
  */
 
-import { DEFAULT_LAYOUT } from './WebUIComponentRegistry.js';
 import type { WebUIGridLayout, WebUIStoredLayout } from './types.js';
+import { DEFAULT_LAYOUT } from './WebUIComponentRegistry.js';
 
 const STORAGE_KEY_PREFIX = 'flashforge-webui-layout-';
 const SETTINGS_KEY_PREFIX = 'flashforge-webui-settings-';
@@ -104,9 +104,7 @@ export class WebUILayoutPersistence {
 
   public loadSettings(serialNumber: string | null | undefined): unknown {
     if (!serialNumber) return null;
-    const raw = window.localStorage.getItem(
-      `${SETTINGS_KEY_PREFIX}${serialNumber}`,
-    );
+    const raw = window.localStorage.getItem(`${SETTINGS_KEY_PREFIX}${serialNumber}`);
     if (!raw) return null;
     try {
       return JSON.parse(raw) as unknown;
@@ -118,10 +116,7 @@ export class WebUILayoutPersistence {
 
   public saveSettings(serialNumber: string, settings: unknown): void {
     if (!serialNumber) return;
-    window.localStorage.setItem(
-      `${SETTINGS_KEY_PREFIX}${serialNumber}`,
-      JSON.stringify(settings),
-    );
+    window.localStorage.setItem(`${SETTINGS_KEY_PREFIX}${serialNumber}`, JSON.stringify(settings));
   }
 
   private performSave(key: string, layout: WebUIGridLayout): void {
@@ -145,12 +140,7 @@ export class WebUILayoutPersistence {
         return false;
       }
       const { x, y, w, h } = config;
-      return (
-        typeof x === 'number' &&
-        typeof y === 'number' &&
-        typeof w === 'number' &&
-        typeof h === 'number'
-      );
+      return typeof x === 'number' && typeof y === 'number' && typeof w === 'number' && typeof h === 'number';
     });
   }
 
@@ -158,4 +148,3 @@ export class WebUILayoutPersistence {
     return JSON.parse(JSON.stringify(layout)) as WebUIGridLayout;
   }
 }
-

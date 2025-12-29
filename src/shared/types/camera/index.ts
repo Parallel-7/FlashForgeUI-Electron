@@ -9,4 +9,3 @@
  */
 
 export * from './camera.types.js';
-

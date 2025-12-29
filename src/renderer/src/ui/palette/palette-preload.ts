@@ -136,7 +136,7 @@ contextBridge.exposeInMainWorld('paletteAPI', {
    */
   getAvailableComponents: async (): Promise<ComponentDefinition[]> => {
     try {
-      const result = await ipcRenderer.invoke('palette:get-components') as unknown;
+      const result = (await ipcRenderer.invoke('palette:get-components')) as unknown;
 
       if (isComponentDefinitionArray(result)) {
         return result.map((component) => ({
@@ -180,7 +180,7 @@ contextBridge.exposeInMainWorld('paletteAPI', {
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
-  }
+  },
 } as PaletteAPI);
 
 // Log preload initialization

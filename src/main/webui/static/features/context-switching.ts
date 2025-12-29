@@ -8,12 +8,12 @@
 
 import type { ApiResponse, ContextsResponse, PrinterContext } from '../app.js';
 import {
-  DEMO_SERIAL,
   contextById,
-  state,
+  DEMO_SERIAL,
   getCurrentContextId as getStoredContextId,
   setCurrentContextId,
   setCurrentPrinterSerial,
+  state,
 } from '../core/AppState.js';
 import { apiRequest, sendCommand } from '../core/Transport.js';
 import { $, hideElement, showElement, showToast } from '../shared/dom.js';
@@ -75,8 +75,7 @@ export async function fetchPrinterContexts(): Promise<void> {
       contextById.set(context.id, context);
     });
 
-    const fallbackContext =
-      result.contexts.find((context) => context.isActive) ?? result.contexts[0] ?? null;
+    const fallbackContext = result.contexts.find((context) => context.isActive) ?? result.contexts[0] ?? null;
 
     const storedContextId = getStoredContextId();
     const selectedContextId =

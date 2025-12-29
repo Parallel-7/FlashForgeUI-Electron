@@ -40,9 +40,7 @@ const getWindowsBuildNumber = (): number => {
 
   const electronProcess = process as NodeJS.Process & { getSystemVersion?: () => string };
   const version =
-    typeof electronProcess.getSystemVersion === 'function'
-      ? electronProcess.getSystemVersion()
-      : os.release();
+    typeof electronProcess.getSystemVersion === 'function' ? electronProcess.getSystemVersion() : os.release();
 
   const buildSegment = version.split('.')[2] ?? version.split('.')[1] ?? '0';
   const buildNumber = Number.parseInt(buildSegment, 10);
@@ -57,7 +55,8 @@ const isMacOS = (): boolean => process.platform === 'darwin';
 /**
  * Determine if the process is running on Windows 11 or later.
  */
-const isWindows11OrLater = (): boolean => process.platform === 'win32' && getWindowsBuildNumber() >= WINDOWS_11_BUILD_NUMBER;
+const isWindows11OrLater = (): boolean =>
+  process.platform === 'win32' && getWindowsBuildNumber() >= WINDOWS_11_BUILD_NUMBER;
 
 /**
  * Returns the reason Rounded UI is unsupported, if any.
@@ -84,5 +83,5 @@ export const isRoundedUISupported = (): boolean => getRoundedUIUnsupportedReason
  */
 export const getRoundedUISupportInfo = (): RoundedUISupportInfo => ({
   supported: isRoundedUISupported(),
-  reason: getRoundedUIUnsupportedReason()
+  reason: getRoundedUIUnsupportedReason(),
 });

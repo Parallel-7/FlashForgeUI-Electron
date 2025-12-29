@@ -14,7 +14,7 @@
  * to ensure proper process cleanup when using a custom title bar.
  */
 
-import { ipcMain, app } from 'electron';
+import { app, ipcMain } from 'electron';
 import { getWindowManager } from '../windows/WindowManager.js';
 
 /**
@@ -57,4 +57,3 @@ export const setupWindowControlHandlers = (): void => {
     app.quit();
   });
 };
-

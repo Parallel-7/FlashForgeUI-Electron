@@ -18,9 +18,9 @@
  * instances, printer details, connection status, and activity timestamps.
  */
 
-import { EventEmitter } from 'events';
 import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
-import { PrinterDetails, PrinterConnectionState } from '@shared/types/printer.js';
+import { PrinterConnectionState, PrinterDetails } from '@shared/types/printer.js';
+import { EventEmitter } from 'events';
 import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
 
 /**
@@ -74,7 +74,7 @@ export class ConnectionStateManager extends EventEmitter {
       details: null,
       isConnected: false,
       connectionStartTime: now,
-      lastActivityTime: now
+      lastActivityTime: now,
     };
 
     this.contextStates.set(contextId, state);
@@ -106,7 +106,7 @@ export class ConnectionStateManager extends EventEmitter {
       details,
       isConnected: true,
       connectionStartTime: existingState?.connectionStartTime || new Date(),
-      lastActivityTime: new Date()
+      lastActivityTime: new Date(),
     };
 
     this.contextStates.set(contextId, state);
@@ -150,7 +150,7 @@ export class ConnectionStateManager extends EventEmitter {
         ipAddress: undefined,
         clientType: undefined,
         isPrinting: false,
-        lastConnected: new Date()
+        lastConnected: new Date(),
       };
     }
 
@@ -162,7 +162,7 @@ export class ConnectionStateManager extends EventEmitter {
       ipAddress: details?.IPAddress,
       clientType: details?.ClientType,
       isPrinting: false, // This should be updated based on actual printer status
-      lastConnected: connectionStartTime || new Date()
+      lastConnected: connectionStartTime || new Date(),
     };
   }
 
@@ -321,7 +321,6 @@ export class ConnectionStateManager extends EventEmitter {
     this.emit('clients-disposed', { contextId });
   }
 
-
   /**
    * Clear state and dispose resources for a specific context
    *
@@ -331,7 +330,6 @@ export class ConnectionStateManager extends EventEmitter {
     await this.disposeClientsForContext(contextId);
     this.setDisconnected(contextId);
   }
-
 
   /**
    * Clear all contexts and dispose all resources
@@ -351,4 +349,3 @@ export class ConnectionStateManager extends EventEmitter {
 export const getConnectionStateManager = (): ConnectionStateManager => {
   return ConnectionStateManager.getInstance();
 };
-

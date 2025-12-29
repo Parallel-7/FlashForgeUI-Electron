@@ -1,22 +1,22 @@
 /* IFS Dialog - Rounded Styling Pattern */
 /* Import shared template for consistent styling */
-@import url('../shared/rounded-dialog-template.css');
+@import url("../shared/rounded-dialog-template.css");
 
 :root {
   /* Use theme variables with fallbacks matching settings.css */
-  --success-color: var(--theme-success, #4CAF50);
+  --success-color: var(--theme-success, #4caf50);
   --error-color: var(--theme-error, #f44336);
   --warning-color: var(--theme-warning, #ff9800);
 }
 
 /* Ensure transparent background for IFS dialog */
 body {
-    background: transparent !important;
+  background: transparent !important;
 }
 
 .dialog-container {
-    background: var(--surface-muted, var(--theme-surface));
-    border: 1px solid var(--border-color);
+  background: var(--surface-muted, var(--theme-surface));
+  border: 1px solid var(--border-color);
 }
 
 /* IFS Dialog Specific Styling */
@@ -194,9 +194,15 @@ body {
 
 /* Animation for material loading */
 @keyframes pulse {
-  0% { opacity: 0.7; }
-  50% { opacity: 1; }
-  100% { opacity: 0.7; }
+  0% {
+    opacity: 0.7;
+  }
+  50% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0.7;
+  }
 }
 
 .slot-item.loading .spool {
@@ -209,43 +215,71 @@ body {
     grid-template-columns: 1fr;
     gap: 12px;
   }
-  
+
   .dialog-content {
     padding: 16px;
   }
-  
+
   .spool-container {
     width: 60px;
     height: 60px;
   }
-  
+
   .spool-center {
     width: 18px;
     height: 18px;
   }
-  
+
   .station-header {
     margin-bottom: 20px;
     padding-bottom: 12px;
   }
-  
+
   .station-header h3 {
     font-size: 16px;
   }
 }
 
 /* Utility classes for dynamic coloring */
-.spool-white { background-color: #ffffff; }
-.spool-black { background-color: #333333; }
-.spool-red { background-color: #f44336; }
-.spool-green { background-color: #4caf50; }
-.spool-blue { background-color: #2196f3; }
-.spool-yellow { background-color: #ffeb3b; }
-.spool-orange { background-color: #ff9800; }
-.spool-purple { background-color: #9c27b0; }
-.spool-pink { background-color: #e91e63; }
-.spool-cyan { background-color: #00bcd4; }
-.spool-lime { background-color: #cddc39; }
-.spool-amber { background-color: #ffc107; }
-.spool-brown { background-color: #795548; }
-.spool-gray { background-color: #9e9e9e; } 
+.spool-white {
+  background-color: #ffffff;
+}
+.spool-black {
+  background-color: #333333;
+}
+.spool-red {
+  background-color: #f44336;
+}
+.spool-green {
+  background-color: #4caf50;
+}
+.spool-blue {
+  background-color: #2196f3;
+}
+.spool-yellow {
+  background-color: #ffeb3b;
+}
+.spool-orange {
+  background-color: #ff9800;
+}
+.spool-purple {
+  background-color: #9c27b0;
+}
+.spool-pink {
+  background-color: #e91e63;
+}
+.spool-cyan {
+  background-color: #00bcd4;
+}
+.spool-lime {
+  background-color: #cddc39;
+}
+.spool-amber {
+  background-color: #ffc107;
+}
+.spool-brown {
+  background-color: #795548;
+}
+.spool-gray {
+  background-color: #9e9e9e;
+}

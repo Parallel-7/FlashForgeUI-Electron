@@ -6,4 +6,3 @@
  */
 
 export { PrinterTabsComponent } from './PrinterTabsComponent.js';
-

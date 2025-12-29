@@ -97,4 +97,3 @@ export interface ContextRemovedEvent {
   /** Whether this was the active context */
   readonly wasActive: boolean;
 }
-

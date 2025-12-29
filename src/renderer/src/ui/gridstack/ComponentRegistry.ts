@@ -29,15 +29,15 @@
  * @module ui/gridstack/ComponentRegistry
  */
 
-import type { ComponentDefinition } from './types.js';
 import { COMPONENT_REGISTRY_DATA } from '@shared/component-definitions.js';
+import type { ComponentDefinition } from './types.js';
 
 /**
  * Registry of all available components with their metadata
  * Maps component ID to component definition
  */
 const COMPONENT_REGISTRY: ReadonlyMap<string, ComponentDefinition> = new Map(
-  COMPONENT_REGISTRY_DATA.map(comp => [comp.id, comp])
+  COMPONENT_REGISTRY_DATA.map((comp) => [comp.id, comp])
 );
 
 /**
@@ -45,9 +45,7 @@ const COMPONENT_REGISTRY: ReadonlyMap<string, ComponentDefinition> = new Map(
  * @param componentId - The component ID to look up
  * @returns Component definition or undefined if not found
  */
-export function getComponentDefinition(
-  componentId: string
-): ComponentDefinition | undefined {
+export function getComponentDefinition(componentId: string): ComponentDefinition | undefined {
   return COMPONENT_REGISTRY.get(componentId);
 }
 
@@ -58,4 +56,3 @@ export function getComponentDefinition(
 export function getAllComponents(): ComponentDefinition[] {
   return Array.from(COMPONENT_REGISTRY.values());
 }
-

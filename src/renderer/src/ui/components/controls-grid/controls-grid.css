@@ -52,7 +52,9 @@
   font-weight: 600;
   letter-spacing: 0.3px;
   transition: all var(--transition-fast);
-  box-shadow: var(--shadow-sm), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 15%, transparent);
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 15%, transparent);
   backdrop-filter: blur(8px);
   white-space: nowrap;
 }
@@ -60,7 +62,9 @@
 .controls-grid-container .btn-row button:hover:not(:disabled) {
   background: var(--button-hover);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-md), inset 0 1px 0 color-mix(in srgb, var(--theme-text) 15%, transparent);
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 15%, transparent);
   border-color: var(--border-color-light);
 }
 

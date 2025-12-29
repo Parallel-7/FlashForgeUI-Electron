@@ -2,15 +2,14 @@
  * @fileoverview Job listing and control routes (local/recent files plus start job).
  */
 
-import type { Router, Response } from 'express';
-import type { AuthenticatedRequest } from '../auth-middleware.js';
-import { JobStartRequestSchema } from '../../schemas/web-api.schemas.js';
-import { createValidationError } from '../../schemas/web-api.schemas.js';
-import { toAppError } from '../../../utils/error.utils.js';
-import { StandardAPIResponse } from '@shared/types/web-api.types.js';
-import { isAD5XJobInfo } from '../../../printer-backends/ad5x/ad5x-utils.js';
 import type { AD5XJobInfo, BasicJobInfo } from '@shared/types/printer-backend/backend-operations.js';
-import { resolveContext, sendErrorResponse, type RouteDependencies } from './route-helpers.js';
+import { StandardAPIResponse } from '@shared/types/web-api.types.js';
+import type { Response, Router } from 'express';
+import { isAD5XJobInfo } from '../../../printer-backends/ad5x/ad5x-utils.js';
+import { toAppError } from '../../../utils/error.utils.js';
+import { createValidationError, JobStartRequestSchema } from '../../schemas/web-api.schemas.js';
+import type { AuthenticatedRequest } from '../auth-middleware.js';
+import { type RouteDependencies, resolveContext, sendErrorResponse } from './route-helpers.js';
 
 type JobSource = 'local' | 'recent';
 
@@ -27,11 +26,7 @@ export function registerJobRoutes(router: Router, deps: RouteDependencies): void
     try {
       const contextResult = resolveContext(req, deps, { requireBackendReady: true });
       if (!contextResult.success) {
-        return sendErrorResponse<StandardAPIResponse>(
-          res,
-          contextResult.statusCode,
-          contextResult.error
-        );
+        return sendErrorResponse<StandardAPIResponse>(res, contextResult.statusCode, contextResult.error);
       }
 
       const validation = JobStartRequestSchema.safeParse(req.body);
@@ -71,16 +66,13 @@ export function registerJobRoutes(router: Router, deps: RouteDependencies): void
         fileName: validation.data.filename,
         startNow: validation.data.startNow,
         leveling: validation.data.leveling,
-        additionalParams:
-          materialMappings && materialMappings.length > 0
-            ? { materialMappings }
-            : undefined
+        additionalParams: materialMappings && materialMappings.length > 0 ? { materialMappings } : undefined,
       });
 
       const response: StandardAPIResponse = {
         success: result.success,
         message: result.success ? `Starting print: ${validation.data.filename}` : undefined,
-        error: result.error
+        error: result.error,
       };
       return res.status(result.success ? 200 : 500).json(response);
     } catch (error) {
@@ -99,11 +91,7 @@ async function handleJobListRequest(
   try {
     const contextResult = resolveContext(req, deps, { requireBackendReady: true });
     if (!contextResult.success) {
-      return sendErrorResponse<StandardAPIResponse>(
-        res,
-        contextResult.statusCode,
-        contextResult.error
-      );
+      return sendErrorResponse<StandardAPIResponse>(res, contextResult.statusCode, contextResult.error);
     }
 
     const result =
@@ -112,17 +100,13 @@ async function handleJobListRequest(
         : await deps.backendManager.getRecentJobs(contextResult.contextId);
 
     if (!result.success) {
-      return sendErrorResponse<StandardAPIResponse>(
-        res,
-        500,
-        result.error || `Failed to get ${source} jobs`
-      );
+      return sendErrorResponse<StandardAPIResponse>(res, 500, result.error || `Failed to get ${source} jobs`);
     }
 
     return res.json({
       success: true,
-      files: result.jobs.map(job => mapJobInfo(job)),
-      totalCount: result.totalCount
+      files: result.jobs.map((job) => mapJobInfo(job)),
+      totalCount: result.totalCount,
     });
   } catch (error) {
     const appError = toAppError(error);
@@ -137,7 +121,7 @@ function mapJobInfo(job: AD5XJobInfo | BasicJobInfo) {
     size: 0,
     lastModified: undefined,
     thumbnail: undefined,
-    printingTime: job.printingTime ?? 0
+    printingTime: job.printingTime ?? 0,
   };
 
   if (isAD5XJobInfo(job)) {
@@ -147,12 +131,12 @@ function mapJobInfo(job: AD5XJobInfo | BasicJobInfo) {
       toolCount: job.toolCount ?? job.toolDatas?.length ?? 0,
       toolDatas: job.toolDatas ?? [],
       totalFilamentWeight: job.totalFilamentWeight,
-      useMatlStation: job.useMatlStation
+      useMatlStation: job.useMatlStation,
     };
   }
 
   return {
     ...base,
-    metadataType: 'basic' as const
+    metadataType: 'basic' as const,
   };
 }

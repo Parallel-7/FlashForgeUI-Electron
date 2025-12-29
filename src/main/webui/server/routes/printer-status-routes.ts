@@ -5,16 +5,16 @@
  * shared context resolution so browser clients can query different printers independently.
  */
 
-import type { Router, Response } from 'express';
-import type { AuthenticatedRequest } from '../auth-middleware.js';
 import {
-  PrinterStatusResponse,
-  PrinterFeatures,
   MaterialStationStatusResponse,
-  StandardAPIResponse
+  PrinterFeatures,
+  PrinterStatusResponse,
+  StandardAPIResponse,
 } from '@shared/types/web-api.types.js';
+import type { Response, Router } from 'express';
 import { toAppError } from '../../../utils/error.utils.js';
-import { resolveContext, sendErrorResponse, type RouteDependencies } from './route-helpers.js';
+import type { AuthenticatedRequest } from '../auth-middleware.js';
+import { type RouteDependencies, resolveContext, sendErrorResponse } from './route-helpers.js';
 
 interface ExtendedPrinterStatus {
   readonly printerState: string;
@@ -51,22 +51,14 @@ export function registerPrinterStatusRoutes(router: Router, deps: RouteDependenc
     try {
       const contextResult = resolveContext(req, deps, { requireBackendReady: true });
       if (!contextResult.success) {
-        return sendErrorResponse<PrinterStatusResponse>(
-          res,
-          contextResult.statusCode,
-          contextResult.error
-        );
+        return sendErrorResponse<PrinterStatusResponse>(res, contextResult.statusCode, contextResult.error);
       }
 
       const { contextId } = contextResult;
       const statusResult = await deps.backendManager.getPrinterStatus(contextId);
 
       if (!statusResult.success || !statusResult.status) {
-        return sendErrorResponse<PrinterStatusResponse>(
-          res,
-          500,
-          statusResult.error || 'Failed to get printer status'
-        );
+        return sendErrorResponse<PrinterStatusResponse>(res, 500, statusResult.error || 'Failed to get printer status');
       }
 
       let bedTargetTemp = 0;
@@ -79,14 +71,9 @@ export function registerPrinterStatusRoutes(router: Router, deps: RouteDependenc
       let cumulativePrintTime: number | undefined;
 
       if (isExtendedPrinterStatus(statusResult.status)) {
-        bedTargetTemp =
-          statusResult.status.bedTargetTemperature ||
-          statusResult.status.machineInfo?.PrintBed?.set ||
-          0;
+        bedTargetTemp = statusResult.status.bedTargetTemperature || statusResult.status.machineInfo?.PrintBed?.set || 0;
         nozzleTargetTemp =
-          statusResult.status.nozzleTargetTemperature ||
-          statusResult.status.machineInfo?.Extruder?.set ||
-          0;
+          statusResult.status.nozzleTargetTemperature || statusResult.status.machineInfo?.Extruder?.set || 0;
 
         filtrationMode = statusResult.status.filtration?.mode || 'none';
         estimatedWeight = statusResult.status.estimatedRightWeight;
@@ -121,8 +108,8 @@ export function registerPrinterStatusRoutes(router: Router, deps: RouteDependenc
           estimatedWeight,
           estimatedLength,
           cumulativeFilament,
-          cumulativePrintTime
-        }
+          cumulativePrintTime,
+        },
       };
 
       return res.json(response);
@@ -136,22 +123,14 @@ export function registerPrinterStatusRoutes(router: Router, deps: RouteDependenc
     try {
       const contextResult = resolveContext(req, deps, { requireBackendReady: true });
       if (!contextResult.success) {
-        return sendErrorResponse<StandardAPIResponse>(
-          res,
-          contextResult.statusCode,
-          contextResult.error
-        );
+        return sendErrorResponse<StandardAPIResponse>(res, contextResult.statusCode, contextResult.error);
       }
 
       const { contextId } = contextResult;
       const features = deps.backendManager.getFeatures(contextId);
 
       if (!features) {
-        return sendErrorResponse<StandardAPIResponse>(
-          res,
-          500,
-          'Failed to get printer features'
-        );
+        return sendErrorResponse<StandardAPIResponse>(res, 500, 'Failed to get printer features');
       }
 
       const featureResponse: PrinterFeatures = {
@@ -162,13 +141,12 @@ export function registerPrinterStatusRoutes(router: Router, deps: RouteDependenc
         canPause: features.jobManagement.pauseResume,
         canResume: features.jobManagement.pauseResume,
         canCancel: features.jobManagement.cancelJobs,
-        ledUsesLegacyAPI:
-          features.ledControl.customControlEnabled || features.ledControl.usesLegacyAPI
+        ledUsesLegacyAPI: features.ledControl.customControlEnabled || features.ledControl.usesLegacyAPI,
       };
 
       return res.json({
         success: true,
-        features: featureResponse
+        features: featureResponse,
       });
     } catch (error) {
       const appError = toAppError(error);
@@ -180,25 +158,21 @@ export function registerPrinterStatusRoutes(router: Router, deps: RouteDependenc
     try {
       const contextResult = resolveContext(req, deps, { requireBackendReady: true });
       if (!contextResult.success) {
-        return sendErrorResponse<MaterialStationStatusResponse>(
-          res,
-          contextResult.statusCode,
-          contextResult.error
-        );
+        return sendErrorResponse<MaterialStationStatusResponse>(res, contextResult.statusCode, contextResult.error);
       }
 
       const { contextId } = contextResult;
       if (!deps.backendManager.isFeatureAvailable(contextId, 'material-station')) {
         return res.status(200).json({
           success: false,
-          error: 'Material station not available on this printer'
+          error: 'Material station not available on this printer',
         } satisfies MaterialStationStatusResponse);
       }
 
       const status = deps.backendManager.getMaterialStationStatus(contextId);
       const response: MaterialStationStatusResponse = {
         success: true,
-        status: status ?? null
+        status: status ?? null,
       };
       return res.json(response);
     } catch (error) {

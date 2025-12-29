@@ -35,12 +35,12 @@
  * @exports SpoolmanUsageTracker - Main tracker class
  */
 
+import type { PrinterStatus } from '@shared/types/polling.js';
 import { EventEmitter } from 'events';
 import { getConfigManager } from '../managers/ConfigManager.js';
+import type { PrintStateMonitor } from './PrintStateMonitor.js';
 import { getSpoolmanIntegrationService } from './SpoolmanIntegrationService.js';
 import { SpoolmanService } from './SpoolmanService.js';
-import type { PrintStateMonitor } from './PrintStateMonitor.js';
-import type { PrinterStatus } from '@shared/types/polling.js';
 
 // ============================================================================
 // SPOOLMAN USAGE TRACKER
@@ -119,7 +119,12 @@ export class SpoolmanUsageTracker extends EventEmitter {
   /**
    * Handle print completed event
    */
-  private async handlePrintCompleted(event: { contextId: string; jobName: string; status: PrinterStatus; completedAt: Date }): Promise<void> {
+  private async handlePrintCompleted(event: {
+    contextId: string;
+    jobName: string;
+    status: PrinterStatus;
+    completedAt: Date;
+  }): Promise<void> {
     console.log(`[SpoolmanTracker] Print completed: ${event.jobName}`);
 
     // Validate context
@@ -214,7 +219,10 @@ export class SpoolmanUsageTracker extends EventEmitter {
       }
 
       const service = new SpoolmanService(config.SpoolmanServerUrl);
-      console.log(`[SpoolmanUsageTracker] Updating spool ${activeSpool.id} for context ${this.contextId}`, updatePayload);
+      console.log(
+        `[SpoolmanUsageTracker] Updating spool ${activeSpool.id} for context ${this.contextId}`,
+        updatePayload
+      );
 
       const updatedSpool = await service.updateUsage(activeSpool.id, updatePayload);
       const updatedActiveSpool = integrationService.convertToActiveSpoolData(updatedSpool);
@@ -226,7 +234,7 @@ export class SpoolmanUsageTracker extends EventEmitter {
       this.emit('usage-updated', {
         contextId: this.contextId,
         spoolId: activeSpool.id,
-        usage: updatePayload
+        usage: updatePayload,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
@@ -235,7 +243,7 @@ export class SpoolmanUsageTracker extends EventEmitter {
       // Emit error event
       this.emit('usage-update-failed', {
         contextId: this.contextId,
-        error: message
+        error: message,
       });
     }
   }

@@ -31,20 +31,25 @@
 
 // src/ui/settings/settings-renderer.ts
 
-import { AppConfig, ThemeColors, ThemeProfile, DEFAULT_THEME } from '@shared/types/config.js';
+import { AppConfig, DEFAULT_THEME, ThemeColors, ThemeProfile } from '@shared/types/config.js';
+import type {
+  IAutoUpdateAPI,
+  IPrinterSettingsAPI,
+  ISettingsAPI,
+  ThemeProfileOperationData,
+} from '@shared/types/external.js';
 import { PER_PRINTER_SETTINGS_DEFAULTS } from '@shared/utils/printerSettingsDefaults.js';
-import type { MutableSettings } from './types.js';
-import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI, ThemeProfileOperationData } from '@shared/types/external.js';
+import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
 import { applyDialogTheme } from '../shared/theme-utils.js';
-import { DesktopThemeSection } from './sections/DesktopThemeSection.js';
-import { TabSection } from './sections/TabSection.js';
-import { InputDependencySection } from './sections/InputDependencySection.js';
 import { AutoUpdateSection } from './sections/AutoUpdateSection.js';
-import { SpoolmanTestSection } from './sections/SpoolmanTestSection.js';
+import { DesktopThemeSection } from './sections/DesktopThemeSection.js';
 import { DiscordWebhookSection } from './sections/DiscordWebhookSection.js';
+import { InputDependencySection } from './sections/InputDependencySection.js';
 import { PrinterContextSection } from './sections/PrinterContextSection.js';
 import { RoundedUISection } from './sections/RoundedUISection.js';
-import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { SpoolmanTestSection } from './sections/SpoolmanTestSection.js';
+import { TabSection } from './sections/TabSection.js';
+import type { MutableSettings } from './types.js';
 
 declare global {
   interface Window {
@@ -102,7 +107,7 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'auto-download-updates': 'AutoDownloadUpdates',
   'spoolman-enabled': 'SpoolmanEnabled',
   'spoolman-server-url': 'SpoolmanServerUrl',
-  'spoolman-update-mode': 'SpoolmanUpdateMode'
+  'spoolman-update-mode': 'SpoolmanUpdateMode',
 };
 
 class SettingsRenderer {
@@ -179,22 +184,23 @@ class SettingsRenderer {
     this.desktopThemeSection = new DesktopThemeSection({
       document,
       defaultTheme: DEFAULT_THEME,
-      onThemeChange: (theme, saveImmediately, context) => this.handleDesktopThemeUpdated(theme, saveImmediately, context),
+      onThemeChange: (theme, saveImmediately, context) =>
+        this.handleDesktopThemeUpdated(theme, saveImmediately, context),
       onProfileOperation: (operation, profileData) => this.handleProfileOperation('desktop', operation, profileData),
-      getThemeProfiles: () => this.settings.global['desktopThemeProfiles'] as readonly ThemeProfile[] || [],
-      settingsAPI: this.settingsAPI
+      getThemeProfiles: () => (this.settings.global['desktopThemeProfiles'] as readonly ThemeProfile[]) || [],
+      settingsAPI: this.settingsAPI,
     });
     this.desktopThemeSection.initialize();
 
     this.tabSection = new TabSection({
       document,
-      storageKey: SettingsRenderer.TAB_STORAGE_KEY
+      storageKey: SettingsRenderer.TAB_STORAGE_KEY,
     });
     this.tabSection.initialize();
 
     this.dependencySection = new InputDependencySection({
       inputs: this.inputs,
-      webUIEnabledToggle: this.webUIEnabledToggle
+      webUIEnabledToggle: this.webUIEnabledToggle,
     });
 
     this.printerContextSection = new PrinterContextSection({
@@ -202,7 +208,7 @@ class SettingsRenderer {
       onPerPrinterToggle: (enabled) => {
         this.perPrinterControlsEnabled = enabled;
         this.updateInputStates();
-      }
+      },
     });
     this.printerContextSection.initialize();
 
@@ -210,7 +216,7 @@ class SettingsRenderer {
       settingsAPI: this.settingsAPI,
       testButton: this.testSpoolmanButton,
       resultElement: this.spoolmanTestResultElement,
-      serverUrlInput: this.inputs.get('spoolman-server-url')
+      serverUrlInput: this.inputs.get('spoolman-server-url'),
     });
     this.spoolmanTestSection.initialize();
 
@@ -218,7 +224,7 @@ class SettingsRenderer {
       settingsAPI: this.settingsAPI,
       testButton: this.testDiscordButton,
       resultElement: this.discordTestResultElement,
-      webhookInput: this.inputs.get('webhook-url')
+      webhookInput: this.inputs.get('webhook-url'),
     });
     this.discordWebhookSection.initialize();
 
@@ -227,14 +233,14 @@ class SettingsRenderer {
       updateCheckButton: this.updateCheckButton,
       updateStatusElement: this.updateStatusElement,
       autoDownloadInput: this.inputs.get('auto-download-updates'),
-      settings: this.settings
+      settings: this.settings,
     });
 
     this.roundedUISection = new RoundedUISection({
       settingsAPI: this.settingsAPI,
       roundedUIInput: this.inputs.get('rounded-ui'),
       document,
-      settings: this.settings
+      settings: this.settings,
     });
   }
 
@@ -286,7 +292,7 @@ class SettingsRenderer {
 
         // Also load per-printer settings if available
         if (this.printerSettingsAPI) {
-          const printerSettings = await this.printerSettingsAPI.get() as Record<string, unknown> | null;
+          const printerSettings = (await this.printerSettingsAPI.get()) as Record<string, unknown> | null;
           this.printerName = await this.printerSettingsAPI.getPrinterName();
           console.log('[Settings] Loaded per-printer settings:', printerSettings);
           console.log('[Settings] Printer name:', this.printerName);
@@ -374,7 +380,7 @@ class SettingsRenderer {
     // Load desktop theme values
     const hideScrollbars = Boolean(this.settings.global['HideScrollbars']);
     this.desktopThemeSection?.applyTheme(this.settings.global['DesktopTheme'] as ThemeColors | undefined);
-    
+
     // Ensure CSS variables and scrollbar settings are applied to the document root
     if (this.settings.global['DesktopTheme']) {
       applyDialogTheme(this.settings.global['DesktopTheme'], hideScrollbars);
@@ -531,9 +537,12 @@ class SettingsRenderer {
         clearTimeout(this.statusTimeout);
       }
 
-      this.statusTimeout = setTimeout(() => {
-        this.saveStatusElement?.classList.remove('visible');
-      }, isError ? 3000 : 2000);
+      this.statusTimeout = setTimeout(
+        () => {
+          this.saveStatusElement?.classList.remove('visible');
+        },
+        isError ? 3000 : 2000
+      );
     }
   }
 
@@ -548,7 +557,7 @@ class SettingsRenderer {
       'ForceLegacyAPI',
       'RtspFrameRate',
       'RtspQuality',
-      'ShowCameraFPS'
+      'ShowCameraFPS',
     ].includes(configKey);
   }
 
@@ -557,13 +566,13 @@ class SettingsRenderer {
    */
   private configKeyToPerPrinterKey(configKey: keyof AppConfig): string {
     const map: Record<string, string> = {
-      'CustomCamera': 'customCameraEnabled',
-      'CustomCameraUrl': 'customCameraUrl',
-      'CustomLeds': 'customLedsEnabled',
-      'ForceLegacyAPI': 'forceLegacyMode',
-      'RtspFrameRate': 'rtspFrameRate',
-      'RtspQuality': 'rtspQuality',
-      'ShowCameraFPS': 'showCameraFps'
+      CustomCamera: 'customCameraEnabled',
+      CustomCameraUrl: 'customCameraUrl',
+      CustomLeds: 'customLedsEnabled',
+      ForceLegacyAPI: 'forceLegacyMode',
+      RtspFrameRate: 'rtspFrameRate',
+      RtspQuality: 'rtspQuality',
+      ShowCameraFPS: 'showCameraFps',
     };
     return map[configKey] || configKey;
   }
@@ -640,7 +649,11 @@ class SettingsRenderer {
     }
   }
 
-  private handleProfileOperation(uiType: 'desktop' | 'web', operation: 'add' | 'update' | 'delete', profileData: ThemeProfileOperationData): void {
+  private handleProfileOperation(
+    uiType: 'desktop' | 'web',
+    operation: 'add' | 'update' | 'delete',
+    profileData: ThemeProfileOperationData
+  ): void {
     this.settingsAPI?.performThemeProfileOperation(uiType, operation, profileData);
   }
 

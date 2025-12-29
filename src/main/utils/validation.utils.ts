@@ -105,7 +105,8 @@ export type ValidationResult<T> = ValidationSuccess<T> | ValidationFailure;
 /**
  * IP address schema (basic regex validation)
  */
-export const IPAddressSchema = z.string()
+export const IPAddressSchema = z
+  .string()
   .regex(
     /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/,
     'Invalid IP address'
@@ -114,4 +115,3 @@ export const IPAddressSchema = z.string()
 // ============================================================================
 // OBJECT VALIDATION UTILITIES
 // ============================================================================
-

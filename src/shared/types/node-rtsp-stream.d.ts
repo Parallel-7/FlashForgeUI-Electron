@@ -62,4 +62,3 @@ declare module 'node-rtsp-stream' {
     emit(event: string, ...args: unknown[]): boolean;
   }
 }
-

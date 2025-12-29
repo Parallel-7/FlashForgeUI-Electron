@@ -86,10 +86,9 @@ export class SpoolmanHealthMonitor extends EventEmitter {
       return { connected: false, error: 'Spoolman integration disabled' };
     }
 
-    this.currentCheck = this.performHealthCheck(options)
-      .finally(() => {
-        this.currentCheck = null;
-      });
+    this.currentCheck = this.performHealthCheck(options).finally(() => {
+      this.currentCheck = null;
+    });
 
     return await this.currentCheck;
   }
@@ -114,9 +113,7 @@ export class SpoolmanHealthMonitor extends EventEmitter {
   private async handleOnline(options: HealthCheckOptions): Promise<void> {
     const now = Date.now();
     const shouldRefresh =
-      options.skipRefreshThrottle ||
-      now - this.lastRefresh >= HEALTH_CHECK_INTERVAL_MS ||
-      this.offline;
+      options.skipRefreshThrottle || now - this.lastRefresh >= HEALTH_CHECK_INTERVAL_MS || this.offline;
 
     if (shouldRefresh) {
       await this.service!.refreshAllActiveSpools();

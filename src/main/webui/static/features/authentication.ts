@@ -8,16 +8,16 @@
  */
 
 import type { ApiResponse, AuthResponse, AuthStatusResponse } from '../app.js';
-import { apiRequest, apiRequestWithMetadata, disconnectWebSocket } from '../core/Transport.js';
 import {
-  DEFAULT_SETTINGS,
   contextById,
+  DEFAULT_SETTINGS,
   gridManager,
   isGridInitialized,
   setCurrentPrinterSerial,
   state,
   updateCurrentSettings,
 } from '../core/AppState.js';
+import { apiRequest, apiRequestWithMetadata, disconnectWebSocket } from '../core/Transport.js';
 import { $, hideElement, setTextContent, showElement } from '../shared/dom.js';
 import { closeSettingsModal } from './layout-theme.js';
 

@@ -38,7 +38,7 @@ class SimpleEventEmitter {
   emit(event: string, ...args: unknown[]): void {
     const handlers = this.events.get(event);
     if (handlers) {
-      handlers.forEach(handler => handler(...args));
+      handlers.forEach((handler) => handler(...args));
     }
   }
 
@@ -98,7 +98,6 @@ export class PrinterTabsComponent extends SimpleEventEmitter {
 
       this.isInitialized = true;
       console.log('PrinterTabsComponent initialized successfully');
-
     } catch (error) {
       console.error('Failed to initialize PrinterTabsComponent:', error);
       throw error;
@@ -358,4 +357,3 @@ export class PrinterTabsComponent extends SimpleEventEmitter {
     console.log('PrinterTabsComponent destroyed');
   }
 }
-

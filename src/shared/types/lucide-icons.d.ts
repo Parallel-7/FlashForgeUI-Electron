@@ -6,10 +6,7 @@ declare module 'lucide/dist/esm/icons/*.js' {
 
 declare module 'lucide/dist/esm/createElement.js' {
   import type { IconNode } from 'lucide';
-  export default function createElement(
-    iconNode: IconNode,
-    attrs?: Record<string, string | number>
-  ): SVGElement;
+  export default function createElement(iconNode: IconNode, attrs?: Record<string, string | number>): SVGElement;
 }
 
 declare module 'lucide/dist/esm/replaceElement.js' {

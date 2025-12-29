@@ -4,8 +4,8 @@
  * different connection options when auto-connect discovery fails.
  */
 
-import type { AutoConnectChoiceOption, AutoConnectChoiceData } from './auto-connect-choice-preload.cts';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import type { AutoConnectChoiceData, AutoConnectChoiceOption } from './auto-connect-choice-preload.cts';
 
 interface AutoConnectChoiceAPI {
   onDialogInit: (callback: (data: AutoConnectChoiceData) => void) => void;
@@ -33,7 +33,7 @@ document.addEventListener('DOMContentLoaded', (): void => {
   console.log('Auto-connect choice dialog renderer loaded');
   initializeLucideIconsFromGlobal(['link-2', 'check', 'globe', 'x']);
   setupEventListeners();
-  
+
   // Listen for initialization data from main process
   getAutoConnectChoiceAPI().onDialogInit((data: AutoConnectChoiceData) => {
     console.log('Received auto-connect choice dialog data:', data);
@@ -121,7 +121,6 @@ function updateDialogUI(data: AutoConnectChoiceData): void {
   updateDialogDescription(data);
 }
 
-
 /**
  * Update dialog description based on available options
  */
@@ -153,7 +152,7 @@ async function handleChoice(action: AutoConnectChoiceOption['action']): Promise<
   try {
     const choice: AutoConnectChoiceOption = {
       action,
-      data: currentData?.lastUsedPrinter || null
+      data: currentData?.lastUsedPrinter || null,
     };
 
     await getAutoConnectChoiceAPI().sendChoice(choice);

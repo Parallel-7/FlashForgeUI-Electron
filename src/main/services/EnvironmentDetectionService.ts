@@ -20,8 +20,8 @@
  */
 
 import { app } from 'electron';
-import * as path from 'path';
 import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * Environment types supported by the application
@@ -95,10 +95,10 @@ class EnvironmentDetectionService {
     // Use packaging state as primary indicator - packaged apps are production
     const mode: Environment = isPackaged ? 'production' : 'development';
     const context: ExecutionContext = isPackaged ? 'packaged' : 'unpackaged';
-    
+
     const appPath = app.getAppPath();
     const resourcesPath = process.resourcesPath || appPath;
-    
+
     const resourcePaths = this.buildResourcePaths(isPackaged, appPath, resourcesPath);
 
     return {
@@ -107,7 +107,7 @@ class EnvironmentDetectionService {
       context,
       resourcePaths,
       appPath,
-      resourcesPath
+      resourcesPath,
     };
   }
 
@@ -125,7 +125,7 @@ class EnvironmentDetectionService {
         assets: path.join(appPath, 'out', 'renderer'),
         static: path.join(appPath, 'out', 'renderer'),
         preload: path.join(appPath, 'out', 'preload', 'index.js'),
-        webUIStatic: path.join(resourcesPath, 'webui', 'static')
+        webUIStatic: path.join(resourcesPath, 'webui', 'static'),
       };
     } else {
       // In development mode, appPath is the project root, so use it directly
@@ -134,7 +134,7 @@ class EnvironmentDetectionService {
         assets: path.join(appPath, 'out', 'renderer'),
         static: path.join(appPath, 'out', 'renderer'),
         preload: path.join(appPath, 'out', 'preload', 'index.js'),
-        webUIStatic: path.join(appPath, 'out', 'webui', 'static')
+        webUIStatic: path.join(appPath, 'out', 'webui', 'static'),
       };
     }
   }
@@ -236,11 +236,11 @@ class EnvironmentDetectionService {
    */
   public resolveAssetPath(relativePath: string): PathResolutionResult {
     const resolvedPath = path.join(this.config.resourcePaths.assets, relativePath);
-    
+
     try {
       const exists = fs.existsSync(resolvedPath);
       let isAccessible = false;
-      
+
       if (exists) {
         try {
           fs.accessSync(resolvedPath, fs.constants.R_OK);
@@ -253,14 +253,14 @@ class EnvironmentDetectionService {
       return {
         resolvedPath,
         exists,
-        isAccessible
+        isAccessible,
       };
     } catch (error) {
       return {
         resolvedPath,
         exists: false,
         isAccessible: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -269,17 +269,14 @@ class EnvironmentDetectionService {
    * Validate that required assets exist and are accessible
    */
   public async validateRequiredAssets(): Promise<{ valid: boolean; missingAssets: string[]; errors: string[] }> {
-    const requiredAssets = [
-      'index.html',
-      'renderer.bundle.js'
-    ];
+    const requiredAssets = ['index.html', 'renderer.bundle.js'];
 
     const missingAssets: string[] = [];
     const errors: string[] = [];
 
     for (const asset of requiredAssets) {
       const result = this.resolveAssetPath(asset);
-      
+
       if (!result.exists) {
         missingAssets.push(asset);
       } else if (!result.isAccessible) {
@@ -296,7 +293,7 @@ class EnvironmentDetectionService {
     return {
       valid: missingAssets.length === 0 && errors.length === 0,
       missingAssets,
-      errors
+      errors,
     };
   }
 
@@ -315,7 +312,7 @@ class EnvironmentDetectionService {
       resourcePaths: this.config.resourcePaths,
       processArgv: process.argv,
       cwd: process.cwd(),
-      execPath: process.execPath
+      execPath: process.execPath,
     };
   }
 
@@ -333,11 +330,11 @@ class EnvironmentDetectionService {
       // This is a reliable way to detect admin privileges
       const systemRoot = process.env.SystemRoot || 'C:\\Windows';
       const testFile = path.join(systemRoot, 'temp', `admin-test-${Date.now()}.tmp`);
-      
+
       // Try to create a file in Windows\temp directory
       fs.writeFileSync(testFile, 'admin test');
       fs.unlinkSync(testFile);
-      
+
       return true;
     } catch {
       // If we can't write to Windows\temp, we don't have admin privileges
@@ -381,5 +378,5 @@ export {
   type ExecutionContext,
   type ResourcePaths,
   type EnvironmentConfig,
-  type PathResolutionResult
+  type PathResolutionResult,
 };

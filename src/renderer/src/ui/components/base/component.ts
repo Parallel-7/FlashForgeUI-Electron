@@ -1,12 +1,12 @@
 /**
  * @fileoverview Base Component Class for UI Components
- * 
+ *
  * This file provides the abstract BaseComponent class that serves as the foundation
  * for all UI components in the FlashForgeUI component system. It handles common
  * functionality including lifecycle management, DOM manipulation, event handling,
  * and error handling patterns. All components extend this base class to ensure
  * consistent behavior and interfaces across the application.
- * 
+ *
  * Key features:
  * - Component lifecycle management (initialize, update, destroy)
  * - DOM manipulation utilities with null safety
@@ -15,7 +15,7 @@
  * - Type-safe helper methods for common operations
  */
 
-import type { ComponentUpdateData, ComponentState, IComponent } from './types.js';
+import type { ComponentState, ComponentUpdateData, IComponent } from './types.js';
 
 /**
  * Abstract base class for all UI components
@@ -24,11 +24,11 @@ import type { ComponentUpdateData, ComponentState, IComponent } from './types.js
 export abstract class BaseComponent implements IComponent {
   /** Container element for this component */
   protected container: HTMLElement | null = null;
-  
+
   /** Component state tracking */
   protected state: ComponentState = {
     isInitialized: false,
-    isDestroyed: false
+    isDestroyed: false,
   };
 
   /** Parent element where the component will be rendered */
@@ -36,7 +36,7 @@ export abstract class BaseComponent implements IComponent {
 
   /** Unique component identifier (must be implemented by subclasses) */
   abstract readonly componentId: string;
-  
+
   /** HTML template for the component (must be implemented by subclasses) */
   abstract readonly templateHTML: string;
 
@@ -56,25 +56,24 @@ export abstract class BaseComponent implements IComponent {
     if (this.state.isInitialized || this.state.isDestroyed) {
       return;
     }
-    
+
     try {
       // Create and setup container
       this.container = this.createContainer();
       this.container.innerHTML = this.templateHTML;
       this.parentElement.appendChild(this.container);
-      
+
       // Setup component-specific event listeners
       await this.setupEventListeners();
-      
+
       // Call component-specific initialization hook
       await this.onInitialized();
-      
+
       // Update state
       this.state.isInitialized = true;
       this.state.lastUpdate = new Date();
-      
+
       console.log(`Component ${this.componentId} initialized successfully`);
-      
     } catch (error) {
       console.error(`Failed to initialize component ${this.componentId}:`, error);
       this.cleanup();
@@ -163,7 +162,7 @@ export abstract class BaseComponent implements IComponent {
    */
   protected setElementText(selector: string | HTMLElement, text: string): void {
     let element: HTMLElement | null;
-    
+
     if (typeof selector === 'string') {
       element = this.findElement(selector);
     } else {
@@ -185,7 +184,7 @@ export abstract class BaseComponent implements IComponent {
    */
   protected setElementHTML(selector: string | HTMLElement, html: string): void {
     let element: HTMLElement | null;
-    
+
     if (typeof selector === 'string') {
       element = this.findElement(selector);
     } else {
@@ -206,9 +205,13 @@ export abstract class BaseComponent implements IComponent {
    * @param attribute - Attribute name
    * @param value - Attribute value
    */
-  protected setElementAttribute(selector: string | HTMLElement, attribute: string, value: string | number | boolean): void {
+  protected setElementAttribute(
+    selector: string | HTMLElement,
+    attribute: string,
+    value: string | number | boolean
+  ): void {
     let element: HTMLElement | null;
-    
+
     if (typeof selector === 'string') {
       element = this.findElement(selector);
     } else {
@@ -218,7 +221,9 @@ export abstract class BaseComponent implements IComponent {
     if (element) {
       element.setAttribute(attribute, value.toString());
     } else if (typeof selector === 'string') {
-      console.warn(`Component ${this.componentId}: Cannot set attribute '${attribute}' for element '${selector}' - element not found`);
+      console.warn(
+        `Component ${this.componentId}: Cannot set attribute '${attribute}' for element '${selector}' - element not found`
+      );
     }
   }
 
@@ -229,7 +234,7 @@ export abstract class BaseComponent implements IComponent {
    */
   protected addElementClass(selector: string | HTMLElement, className: string): void {
     let element: HTMLElement | null;
-    
+
     if (typeof selector === 'string') {
       element = this.findElement(selector);
     } else {
@@ -239,7 +244,9 @@ export abstract class BaseComponent implements IComponent {
     if (element) {
       element.classList.add(className);
     } else if (typeof selector === 'string') {
-      console.warn(`Component ${this.componentId}: Cannot add class '${className}' to element '${selector}' - element not found`);
+      console.warn(
+        `Component ${this.componentId}: Cannot add class '${className}' to element '${selector}' - element not found`
+      );
     }
   }
 
@@ -250,7 +257,7 @@ export abstract class BaseComponent implements IComponent {
    */
   protected removeElementClass(selector: string | HTMLElement, className: string): void {
     let element: HTMLElement | null;
-    
+
     if (typeof selector === 'string') {
       element = this.findElement(selector);
     } else {
@@ -260,7 +267,9 @@ export abstract class BaseComponent implements IComponent {
     if (element) {
       element.classList.remove(className);
     } else if (typeof selector === 'string') {
-      console.warn(`Component ${this.componentId}: Cannot remove class '${className}' from element '${selector}' - element not found`);
+      console.warn(
+        `Component ${this.componentId}: Cannot remove class '${className}' from element '${selector}' - element not found`
+      );
     }
   }
 
@@ -272,7 +281,7 @@ export abstract class BaseComponent implements IComponent {
    */
   protected toggleElementClass(selector: string | HTMLElement, className: string, force?: boolean): void {
     let element: HTMLElement | null;
-    
+
     if (typeof selector === 'string') {
       element = this.findElement(selector);
     } else {
@@ -282,7 +291,9 @@ export abstract class BaseComponent implements IComponent {
     if (element) {
       element.classList.toggle(className, force);
     } else if (typeof selector === 'string') {
-      console.warn(`Component ${this.componentId}: Cannot toggle class '${className}' on element '${selector}' - element not found`);
+      console.warn(
+        `Component ${this.componentId}: Cannot toggle class '${className}' on element '${selector}' - element not found`
+      );
     }
   }
 
@@ -298,7 +309,7 @@ export abstract class BaseComponent implements IComponent {
     handler: (this: HTMLElement, ev: HTMLElementEventMap[K]) => void
   ): void {
     let element: HTMLElement | null;
-    
+
     if (typeof selector === 'string') {
       element = this.findElement(selector);
     } else {
@@ -308,7 +319,9 @@ export abstract class BaseComponent implements IComponent {
     if (element) {
       element.addEventListener(event, handler);
     } else if (typeof selector === 'string') {
-      console.warn(`Component ${this.componentId}: Cannot add event listener to element '${selector}' - element not found`);
+      console.warn(
+        `Component ${this.componentId}: Cannot add event listener to element '${selector}' - element not found`
+      );
     }
   }
 
@@ -320,24 +333,23 @@ export abstract class BaseComponent implements IComponent {
     if (this.state.isDestroyed) {
       return;
     }
-    
+
     try {
       // Call component-specific cleanup
       this.cleanup();
-      
+
       // Remove DOM element
       if (this.container) {
         this.container.remove();
         this.container = null;
       }
-      
+
       // Update state
       this.state.isDestroyed = true;
       this.state.isInitialized = false;
       this.state.lastUpdate = new Date();
-      
+
       console.log(`Component ${this.componentId} destroyed successfully`);
-      
     } catch (error) {
       console.error(`Error during component ${this.componentId} destruction:`, error);
     }

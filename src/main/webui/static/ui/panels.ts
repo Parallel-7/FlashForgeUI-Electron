@@ -12,12 +12,7 @@ import type { PrinterStatus } from '../app.js';
 import { state } from '../core/AppState.js';
 import { isSpoolmanAvailableForCurrentContext } from '../features/layout-theme.js';
 import { $, hideElement, setTextContent, showElement } from '../shared/dom.js';
-import {
-  formatETA,
-  formatLifetimeFilament,
-  formatLifetimePrintTime,
-  formatTime,
-} from '../shared/formatting.js';
+import { formatETA, formatLifetimeFilament, formatLifetimePrintTime, formatTime } from '../shared/formatting.js';
 
 export function updateConnectionStatus(connected: boolean): void {
   const indicator = $('connection-indicator');
@@ -161,9 +156,7 @@ export function updateFiltrationStatus(mode?: 'external' | 'internal' | 'none'):
 }
 
 export function updateModelPreview(thumbnailData?: string | null): void {
-  const previewContainer = document.querySelector<HTMLElement>(
-    '[data-component-id="model-preview"] .panel-content',
-  );
+  const previewContainer = document.querySelector<HTMLElement>('[data-component-id="model-preview"] .panel-content');
   if (!previewContainer) {
     return;
   }
@@ -172,9 +165,7 @@ export function updateModelPreview(thumbnailData?: string | null): void {
     previewContainer.innerHTML = '';
 
     const img = document.createElement('img');
-    const imageUrl = thumbnailData.startsWith('data:image/')
-      ? thumbnailData
-      : `data:image/png;base64,${thumbnailData}`;
+    const imageUrl = thumbnailData.startsWith('data:image/') ? thumbnailData : `data:image/png;base64,${thumbnailData}`;
 
     img.src = imageUrl;
     img.alt = 'Model preview';
@@ -256,9 +247,10 @@ export function updateSpoolmanPanelState(): void {
   }
 
   if (spoolRemaining) {
-    const remaining = state.spoolmanConfig?.updateMode === 'weight'
-      ? `${state.activeSpool.remainingWeight.toFixed(0)}g`
-      : `${(state.activeSpool.remainingLength / 1000).toFixed(1)}m`;
+    const remaining =
+      state.spoolmanConfig?.updateMode === 'weight'
+        ? `${state.activeSpool.remainingWeight.toFixed(0)}g`
+        : `${(state.activeSpool.remainingLength / 1000).toFixed(1)}m`;
     spoolRemaining.textContent = remaining;
   }
 }
@@ -271,8 +263,7 @@ function updateButtonStates(printerState: string): void {
     printerState === 'Heating' ||
     printerState === 'Pausing';
 
-  const isReadyForNewJob =
-    printerState === 'Ready' || printerState === 'Completed' || printerState === 'Cancelled';
+  const isReadyForNewJob = printerState === 'Ready' || printerState === 'Completed' || printerState === 'Cancelled';
 
   const canControlJob =
     printerState === 'Printing' ||
@@ -299,7 +290,6 @@ function updateButtonStates(printerState: string): void {
   if (homeAxesBtn) homeAxesBtn.disabled = isPrintingActive;
   const clearStatusBtn = $('btn-clear-status') as HTMLButtonElement | null;
   if (clearStatusBtn) clearStatusBtn.disabled = isPrintingActive;
-
 
   const bedSetBtn = $('btn-bed-set') as HTMLButtonElement | null;
   const bedOffBtn = $('btn-bed-off') as HTMLButtonElement | null;

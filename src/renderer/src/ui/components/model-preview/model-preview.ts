@@ -1,12 +1,12 @@
 /**
  * @fileoverview Model Preview Component
- * 
+ *
  * This component displays 3D model thumbnails and job preview information.
  * It shows the current job's thumbnail when available, and provides appropriate
  * placeholder messages for different states (no job, job without thumbnail).
  * The component integrates with the polling system to display real-time data
  * and handles thumbnail loading, error states, and visual updates.
- * 
+ *
  * Key features:
  * - Displays job thumbnails from polling data
  * - Shows placeholder messages for different states
@@ -16,9 +16,9 @@
  * - Follows component-scoped CSS patterns
  */
 
+import type { PollingData } from '@shared/types/polling.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
-import type { PollingData } from '@shared/types/polling.js';
 import './model-preview.css';
 
 /**
@@ -29,12 +29,12 @@ enum PreviewState {
   HAS_THUMBNAIL = 'has-thumbnail',
   NO_THUMBNAIL = 'no-thumbnail',
   LOADING = 'loading',
-  ERROR = 'error'
+  ERROR = 'error',
 }
 
 /**
  * Model Preview Component
- * 
+ *
  * Displays 3D model thumbnails and job preview information based on current
  * printer job status and thumbnail data from the polling system.
  */
@@ -73,7 +73,7 @@ export class ModelPreviewComponent extends BaseComponent {
   public update(data: ComponentUpdateData): void {
     try {
       this.assertInitialized();
-      
+
       const pollingData = data.pollingData;
       if (!pollingData) {
         this.clearPreview();
@@ -82,7 +82,6 @@ export class ModelPreviewComponent extends BaseComponent {
 
       this.updatePreview(pollingData);
       this.updateState(data);
-      
     } catch (error) {
       console.error('Model Preview Component update error:', error);
       this.setState(PreviewState.ERROR);
@@ -170,7 +169,7 @@ export class ModelPreviewComponent extends BaseComponent {
    */
   private showNoThumbnailPlaceholder(jobName: string): void {
     this.setState(PreviewState.NO_THUMBNAIL);
-    
+
     const previewContainer = this.findElement('#model-preview');
     if (previewContainer) {
       previewContainer.innerHTML = `
@@ -191,7 +190,7 @@ export class ModelPreviewComponent extends BaseComponent {
   private clearPreview(): void {
     this.setState(PreviewState.NO_JOB);
     this.currentJobName = null;
-    
+
     const previewContainer = this.findElement('#model-preview');
     if (previewContainer) {
       previewContainer.innerHTML = `
@@ -226,12 +225,7 @@ export class ModelPreviewComponent extends BaseComponent {
 
     // Remove all state classes
     if (this.container) {
-      this.container.classList.remove(
-        'has-thumbnail',
-        'no-thumbnail',
-        'loading',
-        'error'
-      );
+      this.container.classList.remove('has-thumbnail', 'no-thumbnail', 'loading', 'error');
 
       // Add new state class
       switch (newState) {
@@ -281,7 +275,7 @@ export class ModelPreviewComponent extends BaseComponent {
   public getPreviewState(): { state: PreviewState; jobName: string | null } {
     return {
       state: this.currentState,
-      jobName: this.currentJobName
+      jobName: this.currentJobName,
     };
   }
 }

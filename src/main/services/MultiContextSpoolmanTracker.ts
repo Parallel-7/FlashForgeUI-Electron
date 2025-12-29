@@ -32,8 +32,8 @@
 
 import { EventEmitter } from 'events';
 import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
-import { SpoolmanUsageTracker } from './SpoolmanUsageTracker.js';
 import type { PrintStateMonitor } from './PrintStateMonitor.js';
+import { SpoolmanUsageTracker } from './SpoolmanUsageTracker.js';
 
 // ============================================================================
 // MULTI-CONTEXT SPOOLMAN TRACKER
@@ -224,4 +224,3 @@ export function getMultiContextSpoolmanTracker(): MultiContextSpoolmanTracker {
   }
   return globalMultiContextSpoolmanTracker;
 }
-

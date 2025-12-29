@@ -1,11 +1,11 @@
 /**
  * @fileoverview Job Info Component
- * 
+ *
  * This component displays current job information including job name, progress,
  * and provides camera preview control functionality. It integrates with the
  * polling system to show real-time job progress and updates the progress bar
  * visual state based on printer status.
- * 
+ *
  * Key features:
  * - Displays current job name (displayName or fileName fallback)
  * - Shows progress percentage and visual progress bar
@@ -13,14 +13,14 @@
  * - Camera preview toggle button functionality
  * - Communication with CameraPreviewComponent via ComponentManager
  * - Proper cleanup and error handling
- * 
+ *
  * The component receives updates through the polling system and manages
  * its own UI state while communicating with other components for camera control.
  */
 
+import type { CurrentJobInfo, PollingData, PrinterState } from '@shared/types/polling.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
-import type { PollingData, PrinterState, CurrentJobInfo } from '@shared/types/polling.js';
 import { componentManager } from '../ComponentManager.js';
 import type { CameraPreviewComponent } from '../camera-preview/camera-preview.js';
 import './job-info.css';
@@ -70,7 +70,7 @@ export class JobInfoComponent extends BaseComponent {
    */
   protected async setupEventListeners(): Promise<void> {
     const previewButton = this.findElementById<HTMLButtonElement>('btn-preview');
-    
+
     if (previewButton) {
       this.addEventListener(previewButton, 'click', this.handleCameraPreviewToggle.bind(this));
     } else {
@@ -154,7 +154,7 @@ export class JobInfoComponent extends BaseComponent {
    */
   private updateProgressBarState(printerState: PrinterState): void {
     const progressBarElement = this.findElementById<HTMLProgressElement>('progress-bar');
-    
+
     if (!progressBarElement) {
       return;
     }
@@ -169,21 +169,21 @@ export class JobInfoComponent extends BaseComponent {
       case 'Calibrating':
         this.addElementClass(progressBarElement, 'printing');
         break;
-        
+
       case 'Paused':
       case 'Pausing':
         this.addElementClass(progressBarElement, 'paused');
         break;
-        
+
       case 'Completed':
         this.addElementClass(progressBarElement, 'completed');
         break;
-        
+
       case 'Error':
       case 'Cancelled':
         this.addElementClass(progressBarElement, 'error');
         break;
-        
+
       default:
         // Ready, Busy, etc. - use default styling (no additional class)
         break;
@@ -206,7 +206,7 @@ export class JobInfoComponent extends BaseComponent {
     try {
       // Get camera preview component from manager
       const cameraComponent = componentManager.getComponent<CameraPreviewComponent>('camera-preview');
-      
+
       if (!cameraComponent) {
         console.error('Job Info: Camera preview component not found in manager');
         button.textContent = 'Camera Error';
@@ -221,11 +221,10 @@ export class JobInfoComponent extends BaseComponent {
 
       // Toggle camera preview through the camera component
       await cameraComponent.togglePreview(button);
-
     } catch (error) {
       console.error('Job Info: Camera preview toggle failed:', error);
       button.textContent = 'Camera Error';
-      
+
       // Reset button after error
       setTimeout(() => {
         button.textContent = 'Preview On';
@@ -262,7 +261,7 @@ export class JobInfoComponent extends BaseComponent {
    */
   protected cleanup(): void {
     console.log('Cleaning up Job Info component');
-    
+
     // Reset component state
     this.currentJobInfo = null;
     this.currentPrinterState = null;

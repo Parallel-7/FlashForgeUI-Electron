@@ -1,165 +1,167 @@
 /* Status Dialog CSS - Uses Shared Template for Conditional Styling */
 /* Import shared template for consistent rounded/square UI switching */
-@import url('../shared/rounded-dialog-template.css');
+@import url("../shared/rounded-dialog-template.css");
 
 /* Template provides: global reset, dialog container, header, content, footer */
 
 .status-dialog-content {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
 }
 
 .status-tabs {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding-bottom: 4px;
 }
 
 .status-tab-button {
-    flex-shrink: 0;
-    padding: 8px 14px;
-    border-radius: 6px 6px 0 0;
-    border: 1px solid var(--border-color);
-    border-bottom: none;
-    background: color-mix(in srgb, var(--theme-text) 4%, transparent);
-    color: color-mix(in srgb, var(--theme-text) 88%, transparent);
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: background 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 6px 6px 0 0;
+  border: 1px solid var(--border-color);
+  border-bottom: none;
+  background: color-mix(in srgb, var(--theme-text) 4%, transparent);
+  color: color-mix(in srgb, var(--theme-text) 88%, transparent);
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
 }
 
 .status-tab-button[aria-selected="true"] {
-    background: var(--theme-surface);
-    color: var(--theme-text);
-    font-weight: 600;
+  background: var(--theme-surface);
+  color: var(--theme-text);
+  font-weight: 600;
 }
 
 .status-tab-button:focus-visible {
-    outline: 2px solid var(--theme-primary);
-    outline-offset: 2px;
+  outline: 2px solid var(--theme-primary);
+  outline-offset: 2px;
 }
 
 .tab-panels {
-    border: 1px solid var(--border-color);
-    border-radius: 0 6px 6px 6px;
-    background: var(--theme-surface);
-    padding: 18px;
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
+  border: 1px solid var(--border-color);
+  border-radius: 0 6px 6px 6px;
+  background: var(--theme-surface);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .tab-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 18px;
-    flex: 1;
-    overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  flex: 1;
+  overflow-y: auto;
 }
 
 .tab-panel[hidden] {
-    display: none;
+  display: none;
 }
 
 .tab-panel-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: var(--theme-text);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--theme-text);
 }
 
 .status-summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
 }
 
 .status-summary-card {
-    background: color-mix(in srgb, var(--theme-text) 4%, transparent);
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+  background: color-mix(in srgb, var(--theme-text) 4%, transparent);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 .summary-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .summary-title {
-    font-size: 0.95rem;
-    font-weight: 600;
-    color: var(--theme-text);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--theme-text);
 }
 
 .summary-value {
-    font-size: 1.2rem;
-    font-weight: 600;
-    color: var(--theme-text);
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--theme-text);
 }
 
 .summary-subtext {
-    font-size: 0.85rem;
-    color: color-mix(in srgb, var(--theme-text) 70%, transparent);
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--theme-text) 70%, transparent);
 }
 
 .status-section {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    background: color-mix(in srgb, var(--theme-text) 4%, transparent);
-    padding: 16px;
-    border-radius: 8px;
-    border: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: color-mix(in srgb, var(--theme-text) 4%, transparent);
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
 }
 
 .status-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
 }
 
 .status-label {
-    font-weight: 600;
-    color: color-mix(in srgb, var(--theme-text) 88%, transparent);
+  font-weight: 600;
+  color: color-mix(in srgb, var(--theme-text) 88%, transparent);
 }
 
 .status-value {
-    max-width: 250px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    word-break: break-all;
-    color: color-mix(in srgb, var(--theme-text) 70%, transparent);
+  max-width: 250px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: break-all;
+  color: color-mix(in srgb, var(--theme-text) 70%, transparent);
 }
 
 .status-indicator,
 .summary-indicator {
-    display: inline-block;
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    margin-right: 6px;
-    flex-shrink: 0;
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 6px;
+  flex-shrink: 0;
 }
 
 .status-active {
-    background-color: var(--success-color);
+  background-color: var(--success-color);
 }
 
 .status-inactive {
-    background-color: var(--error-color);
+  background-color: var(--error-color);
 }
 
 .dialog-footer .dialog-button {
-    min-width: 90px;
+  min-width: 90px;
 }

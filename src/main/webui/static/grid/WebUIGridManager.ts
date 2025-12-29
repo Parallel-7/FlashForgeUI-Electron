@@ -9,25 +9,19 @@
  */
 
 import type { GridItemHTMLElement, GridStack, GridStackNode } from 'gridstack';
-import {
-  createComponentElement,
-  getComponentDefinition,
-} from './WebUIComponentRegistry.js';
-import type {
-  WebUIComponentLayout,
-  WebUIGridChangeCallback,
-  WebUIGridLayout,
-  WebUIGridOptions,
-} from './types.js';
+import type { WebUIComponentLayout, WebUIGridChangeCallback, WebUIGridLayout, WebUIGridOptions } from './types.js';
+import { createComponentElement, getComponentDefinition } from './WebUIComponentRegistry.js';
 
 type GridStackCtor = typeof import('gridstack').GridStack;
 
 const HIDDEN_CLASS = 'grid-item-hidden';
 
 function getGridStackCtor(): GridStackCtor {
-  const ctor = (window as typeof window & {
-    GridStack?: GridStackCtor;
-  }).GridStack;
+  const ctor = (
+    window as typeof window & {
+      GridStack?: GridStackCtor;
+    }
+  ).GridStack;
   if (!ctor) {
     throw new Error('GridStack library not loaded. Ensure gridstack-all.js is included.');
   }
@@ -48,13 +42,9 @@ export class WebUIGridManager {
       return;
     }
 
-    const element = document.querySelector<HTMLElement>(
-      this.containerSelector,
-    );
+    const element = document.querySelector<HTMLElement>(this.containerSelector);
     if (!element) {
-      throw new Error(
-        `Unable to find grid container with selector ${this.containerSelector}`,
-      );
+      throw new Error(`Unable to find grid container with selector ${this.containerSelector}`);
     }
 
     this.container = element;
@@ -89,16 +79,11 @@ export class WebUIGridManager {
     }
   }
 
-  public addComponent(
-    componentId: string,
-    layout: WebUIComponentLayout,
-  ): HTMLElement {
+  public addComponent(componentId: string, layout: WebUIComponentLayout): HTMLElement {
     const grid = this.requireGrid();
     const root = this.requireContainer();
 
-    const existing = root.querySelector<HTMLElement>(
-      `[data-component-id="${componentId}"]`,
-    );
+    const existing = root.querySelector<HTMLElement>(`[data-component-id="${componentId}"]`);
     if (existing) {
       grid.removeWidget(existing);
     }
@@ -145,9 +130,7 @@ export class WebUIGridManager {
     const root = this.container;
     if (!grid || !root) return;
 
-    const target = root.querySelector<HTMLElement>(
-      `[data-component-id="${componentId}"]`,
-    );
+    const target = root.querySelector<HTMLElement>(`[data-component-id="${componentId}"]`);
     if (target) {
       grid.removeWidget(target);
     }
@@ -204,8 +187,7 @@ export class WebUIGridManager {
         // GridStack saves element id as node.id when using DOM element ID.
         // Fallback to DOM dataset when id is missing.
         const element = node.el as GridItemHTMLElement | undefined;
-        const componentId =
-          element?.dataset.componentId ?? element?.id ?? node.id;
+        const componentId = element?.dataset.componentId ?? element?.id ?? node.id;
         if (componentId) {
           components[componentId] = {
             x: node.x ?? 0,
@@ -237,25 +219,25 @@ export class WebUIGridManager {
 
     // Ensure components missing from save() are still accounted for by scanning DOM.
     root.querySelectorAll<HTMLElement>('[data-component-id]').forEach((el) => {
-        const componentId = el.dataset.componentId;
-        if (!componentId) return;
-        if (!components[componentId]) {
-          const rect = (el as GridItemHTMLElement).gridstackNode;
-          if (rect) {
-            components[componentId] = {
-              x: rect.x ?? 0,
-              y: rect.y ?? 0,
-              w: rect.w ?? 1,
-              h: rect.h ?? 1,
-              minW: rect.minW,
-              minH: rect.minH,
-              maxW: rect.maxW,
-              maxH: rect.maxH,
-              locked: rect.locked,
-            };
-          }
+      const componentId = el.dataset.componentId;
+      if (!componentId) return;
+      if (!components[componentId]) {
+        const rect = (el as GridItemHTMLElement).gridstackNode;
+        if (rect) {
+          components[componentId] = {
+            x: rect.x ?? 0,
+            y: rect.y ?? 0,
+            w: rect.w ?? 1,
+            h: rect.h ?? 1,
+            minW: rect.minW,
+            minH: rect.minH,
+            maxW: rect.maxW,
+            maxH: rect.maxH,
+            locked: rect.locked,
+          };
         }
-      });
+      }
+    });
 
     return {
       components,
@@ -299,9 +281,7 @@ export class WebUIGridManager {
 
   private getWidgetElement(componentId: string): HTMLElement | null {
     if (!this.container) return null;
-    return this.container.querySelector<HTMLElement>(
-      `[data-component-id="${componentId}"]`,
-    );
+    return this.container.querySelector<HTMLElement>(`[data-component-id="${componentId}"]`);
   }
 
   private requireGrid(): GridStack {

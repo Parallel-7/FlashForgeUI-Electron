@@ -25,10 +25,10 @@
  * @module services/ThumbnailCacheService
  */
 
-import * as fs from 'fs/promises';
-import * as path from 'path';
 import * as crypto from 'crypto';
 import { app } from 'electron';
+import * as fs from 'fs/promises';
+import * as path from 'path';
 
 /**
  * Metadata for a cached thumbnail
@@ -121,12 +121,11 @@ export class ThumbnailCacheService {
 
       console.log(`[ThumbnailCache] Cache hit for ${fileName} (${printerSerial})`);
       return { success: true, data };
-
     } catch (error) {
       console.error(`Error reading cached thumbnail for ${fileName}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -156,19 +155,18 @@ export class ThumbnailCacheService {
         fileName,
         hash,
         cachedAt: Date.now(),
-        size: buffer.length
+        size: buffer.length,
       };
 
       await this.saveMetadata(printerSerial, metadata);
 
       console.log(`[ThumbnailCache] Cached thumbnail for ${fileName} (${printerSerial})`);
       return { success: true };
-
     } catch (error) {
       console.error(`Error caching thumbnail for ${fileName}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error'
+        error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
   }
@@ -197,7 +195,6 @@ export class ThumbnailCacheService {
         await this.saveMetadata(printerSerial, metadata);
         return false;
       }
-
     } catch (error) {
       console.error(`Error checking cache for ${fileName}:`, error);
       return false;
@@ -245,8 +242,6 @@ export class ThumbnailCacheService {
     }
   }
 
-
-
   /**
    * Get cache statistics
    */
@@ -287,7 +282,7 @@ export class ThumbnailCacheService {
         totalSize,
         printerCount,
         oldestEntry,
-        newestEntry
+        newestEntry,
       };
     } catch (error) {
       console.error('Error getting cache stats:', error);
@@ -296,7 +291,7 @@ export class ThumbnailCacheService {
         totalSize: 0,
         printerCount: 0,
         oldestEntry: null,
-        newestEntry: null
+        newestEntry: null,
       };
     }
   }
@@ -349,12 +344,11 @@ export class ThumbnailCacheService {
 
       this.metadataCache.set(printerSerial, metadata);
       return metadata;
-
     } catch {
       // Return empty metadata if file doesn't exist
       const emptyMetadata: CacheMetadata = {
         version: 1,
-        entries: {}
+        entries: {},
       };
       this.metadataCache.set(printerSerial, emptyMetadata);
       return emptyMetadata;
@@ -387,8 +381,6 @@ export class ThumbnailCacheService {
     delete metadata.entries[hash];
     await this.saveMetadata(printerSerial, metadata);
   }
-
-
 }
 
 /**
@@ -397,4 +389,3 @@ export class ThumbnailCacheService {
 export function getThumbnailCacheService(): ThumbnailCacheService {
   return ThumbnailCacheService.getInstance();
 }
-

@@ -47,10 +47,10 @@
  * @module ui/gridstack/EditModeController
  */
 
+import { getLucideIcons, initializeLucideIcons } from '../../renderer/utils/icons.js';
 import type { GridStackManager } from './GridStackManager.js';
 import type { LayoutPersistence } from './LayoutPersistence.js';
 import type { EditModeState } from './types.js';
-import { getLucideIcons, initializeLucideIcons } from '../../renderer/utils/icons.js';
 
 /**
  * Edit mode controller
@@ -95,10 +95,7 @@ export class EditModeController {
    * @param gridManager - GridStack manager instance
    * @param layoutPersistence - Layout persistence manager instance
    */
-  initialize(
-    gridManager: GridStackManager,
-    layoutPersistence: LayoutPersistence
-  ): void {
+  initialize(gridManager: GridStackManager, layoutPersistence: LayoutPersistence): void {
     if (this.initialized) {
       console.warn('EditModeController: Already initialized');
       return;
@@ -158,10 +155,7 @@ export class EditModeController {
       });
 
       indicator.append(iconWrapper, textElement, resetButton);
-      initializeLucideIcons(
-        indicator,
-        getLucideIcons('pencil', 'rotate-ccw')
-      );
+      initializeLucideIcons(indicator, getLucideIcons('pencil', 'rotate-ccw'));
       document.body.appendChild(indicator);
     }
 
@@ -196,9 +190,7 @@ export class EditModeController {
       if (this.state.enabled) {
         this.state.hasChanges = true;
         this.state.changeCount++;
-        console.log(
-          `EditModeController: Layout changed (${this.state.changeCount} changes)`
-        );
+        console.log(`EditModeController: Layout changed (${this.state.changeCount} changes)`);
       }
     });
   }

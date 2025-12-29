@@ -19,10 +19,10 @@
  */
 
 import type {
+  SpoolmanConnectionTest,
   SpoolResponse,
   SpoolSearchQuery,
   SpoolUsageUpdate,
-  SpoolmanConnectionTest,
 } from '@shared/types/spoolman.js';
 
 /**
@@ -53,8 +53,7 @@ export class SpoolmanService {
     // Build query params
     if (query['filament.name']) params.set('filament.name', query['filament.name']);
     if (query['filament.material']) params.set('filament.material', query['filament.material']);
-    if (query['filament.vendor.name'])
-      params.set('filament.vendor.name', query['filament.vendor.name']);
+    if (query['filament.vendor.name']) params.set('filament.vendor.name', query['filament.vendor.name']);
     if (query.location) params.set('location', query.location);
     if (query.limit) params.set('limit', query.limit.toString());
     if (query.offset) params.set('offset', query.offset.toString());

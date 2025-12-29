@@ -28,16 +28,13 @@ import { z } from 'zod';
  */
 export const WebUILoginRequestSchema = z.object({
   password: z.string().min(1, 'Password is required'),
-  rememberMe: z.boolean().optional().default(false)
+  rememberMe: z.boolean().optional().default(false),
 });
 
 /**
  * Auth token validation (JWT-like format with base64 data and hex signature)
  */
-export const AuthTokenSchema = z.string().regex(
-  /^[A-Za-z0-9\-_=+/]+\.[A-Fa-f0-9]+$/,
-  'Invalid token format'
-);
+export const AuthTokenSchema = z.string().regex(/^[A-Za-z0-9\-_=+/]+\.[A-Fa-f0-9]+$/, 'Invalid token format');
 
 // ============================================================================
 // WEBSOCKET MESSAGE SCHEMAS
@@ -54,14 +51,14 @@ export const WebSocketCommandTypeSchema = z.enum(['REQUEST_STATUS', 'EXECUTE_GCO
 export const WebSocketCommandSchema = z.object({
   command: WebSocketCommandTypeSchema,
   gcode: z.string().optional(),
-  data: z.unknown().optional()
+  data: z.unknown().optional(),
 });
 
 /**
  * Temperature set data validation
  */
 export const TemperatureDataSchema = z.object({
-  temperature: z.number().min(0).max(300)
+  temperature: z.number().min(0).max(300),
 });
 
 /**
@@ -70,7 +67,7 @@ export const TemperatureDataSchema = z.object({
 export const JobStartDataSchema = z.object({
   filename: z.string().min(1),
   leveling: z.boolean().optional().default(false),
-  startNow: z.boolean().optional().default(true)
+  startNow: z.boolean().optional().default(true),
 });
 
 // ============================================================================
@@ -81,38 +78,29 @@ export const JobStartDataSchema = z.object({
  * Temperature set request validation
  */
 export const TemperatureSetRequestSchema = z.object({
-  temperature: z.number()
-    .min(0, 'Temperature must be at least 0°C')
-    .max(300, 'Temperature must not exceed 300°C')
+  temperature: z.number().min(0, 'Temperature must be at least 0°C').max(300, 'Temperature must not exceed 300°C'),
 });
 
 /**
  * Job start request validation
  */
 const MaterialMappingSchema = z.object({
-  toolId: z.number()
-    .int('toolId must be an integer')
-    .min(0, 'toolId must be non-negative'),
-  slotId: z.number()
-    .int('slotId must be an integer')
-    .min(1, 'slotId must be at least 1'),
-  materialName: z.string()
-    .min(1, 'materialName is required'),
-  toolMaterialColor: z.string()
-    .min(1, 'toolMaterialColor is required'),
-  slotMaterialColor: z.string()
-    .min(1, 'slotMaterialColor is required')
+  toolId: z.number().int('toolId must be an integer').min(0, 'toolId must be non-negative'),
+  slotId: z.number().int('slotId must be an integer').min(1, 'slotId must be at least 1'),
+  materialName: z.string().min(1, 'materialName is required'),
+  toolMaterialColor: z.string().min(1, 'toolMaterialColor is required'),
+  slotMaterialColor: z.string().min(1, 'slotMaterialColor is required'),
 });
 
 export const JobStartRequestSchema = z.object({
   filename: z.string().min(1, 'Filename is required'),
   leveling: z.boolean().optional().default(false),
   startNow: z.boolean().optional().default(true),
-  materialMappings: z.array(MaterialMappingSchema)
+  materialMappings: z
+    .array(MaterialMappingSchema)
     .min(1, 'materialMappings must contain at least one mapping')
-    .optional()
+    .optional(),
 });
-
 
 // ============================================================================
 // COMMAND VALIDATION
@@ -127,37 +115,36 @@ export const PrinterCommandSchema = z.enum([
   'clear-status',
   'led-on',
   'led-off',
-  
+
   // Temperature controls
   'set-bed-temp',
   'bed-temp-off',
   'set-extruder-temp',
   'extruder-temp-off',
-  
+
   // Job controls
   'pause-print',
   'resume-print',
   'cancel-print',
-  
+
   // Filtration controls
   'external-filtration',
   'internal-filtration',
   'no-filtration',
-  
+
   // Data requests
   'request-printer-data',
   'get-recent-files',
   'get-local-files',
-  
+
   // Job operations
   'print-file',
-  'request-model-preview'
+  'request-model-preview',
 ]);
 
 // ============================================================================
 // RESPONSE VALIDATION
 // ============================================================================
-
 
 /**
  * Printer features validation
@@ -169,13 +156,12 @@ export const PrinterFeaturesSchema = z.object({
   hasMaterialStation: z.boolean(),
   canPause: z.boolean(),
   canResume: z.boolean(),
-  canCancel: z.boolean()
+  canCancel: z.boolean(),
 });
 
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
-
 
 /**
  * Validate authentication token
@@ -189,14 +175,14 @@ export function validateAuthToken(token: unknown): string | null {
  * Create a validation error response
  */
 export function createValidationError(zodError: z.ZodError): { error: string; details: unknown } {
-  const issues = zodError.issues.map(issue => ({
+  const issues = zodError.issues.map((issue) => ({
     path: issue.path.join('.'),
-    message: issue.message
+    message: issue.message,
   }));
-  
+
   return {
     error: 'Validation failed',
-    details: issues
+    details: issues,
   };
 }
 
@@ -209,14 +195,14 @@ export function createValidationError(zodError: z.ZodError): { error: string; de
  */
 export const SpoolSelectRequestSchema = z.object({
   contextId: z.string().optional(),
-  spoolId: z.number().int().positive('Spool ID must be a positive integer')
+  spoolId: z.number().int().positive('Spool ID must be a positive integer'),
 });
 
 /**
  * Spool clear request validation
  */
 export const SpoolClearRequestSchema = z.object({
-  contextId: z.string().optional()
+  contextId: z.string().optional(),
 });
 
 // ============================================================================
@@ -231,4 +217,3 @@ export type ValidatedPrinterCommand = z.infer<typeof PrinterCommandSchema>;
 export type ValidatedPrinterFeatures = z.infer<typeof PrinterFeaturesSchema>;
 export type ValidatedSpoolSelectRequest = z.infer<typeof SpoolSelectRequestSchema>;
 export type ValidatedSpoolClearRequest = z.infer<typeof SpoolClearRequestSchema>;
-

@@ -60,33 +60,31 @@ const singleColorConfirmDialogAPI = {
       callback(data);
     });
   },
-  
+
   // Close the dialog
   closeDialog: () => {
     ipcRenderer.send('single-color-confirm:close');
   },
-  
+
   // Confirm print with leveling option
   confirmPrint: (leveling: boolean) => {
     ipcRenderer.send('single-color-confirm:confirm', { leveling });
   },
-  
+
   // Get material station status
   getMaterialStationStatus: (): Promise<MaterialStationStatus | null> => {
     return ipcRenderer.invoke('get-material-station-status');
-  }
-,
+  },
   receive: (channel: string, func: (...args: unknown[]) => void): void => {
     const validChannels = ['theme-changed'];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
-  }
+  },
 } as const;
 
 contextBridge.exposeInMainWorld('api', {
   dialog: {
-    singleColor: singleColorConfirmDialogAPI
-  }
+    singleColor: singleColorConfirmDialogAPI,
+  },
 });
-

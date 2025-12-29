@@ -50,36 +50,54 @@ const jobPickerAPI = {
     return await ipcRenderer.invoke('printer:get-features');
   },
   getLocalJobs: async (): Promise<{ success: boolean; jobs: readonly unknown[]; error?: string }> => {
-    return await ipcRenderer.invoke('job-picker:get-local-jobs') as { success: boolean; jobs: readonly unknown[]; error?: string };
+    return (await ipcRenderer.invoke('job-picker:get-local-jobs')) as {
+      success: boolean;
+      jobs: readonly unknown[];
+      error?: string;
+    };
   },
   getRecentJobs: async (): Promise<{ success: boolean; jobs: readonly unknown[]; error?: string }> => {
-    return await ipcRenderer.invoke('job-picker:get-recent-jobs') as { success: boolean; jobs: readonly unknown[]; error?: string };
+    return (await ipcRenderer.invoke('job-picker:get-recent-jobs')) as {
+      success: boolean;
+      jobs: readonly unknown[];
+      error?: string;
+    };
   },
-  startJob: async (fileName: string, options: { leveling: boolean; startNow: boolean; materialMappings?: unknown[] }): Promise<{ success: boolean; error?: string }> => {
-    return await ipcRenderer.invoke('job-picker:start-job', fileName, options) as { success: boolean; error?: string };
+  startJob: async (
+    fileName: string,
+    options: { leveling: boolean; startNow: boolean; materialMappings?: unknown[] }
+  ): Promise<{ success: boolean; error?: string }> => {
+    return (await ipcRenderer.invoke('job-picker:start-job', fileName, options)) as {
+      success: boolean;
+      error?: string;
+    };
   },
   showMaterialInfo: (data: unknown): void => {
     ipcRenderer.send('show-material-info-dialog', data);
   },
-  showMaterialMatching: async (data: { fileName: string; toolDatas: readonly unknown[]; leveling: boolean }): Promise<unknown[] | null> => {
+  showMaterialMatching: async (data: {
+    fileName: string;
+    toolDatas: readonly unknown[];
+    leveling: boolean;
+  }): Promise<unknown[] | null> => {
     const payload = { ...data, context: 'job-start' as const };
-    return await ipcRenderer.invoke('show-material-matching-dialog', payload) as unknown[] | null;
+    return (await ipcRenderer.invoke('show-material-matching-dialog', payload)) as unknown[] | null;
   },
   showSingleColorConfirmation: async (data: { fileName: string; leveling: boolean }): Promise<boolean> => {
-    return await ipcRenderer.invoke('show-single-color-confirmation-dialog', data) as boolean;
+    return (await ipcRenderer.invoke('show-single-color-confirmation-dialog', data)) as boolean;
   },
   receive: (channel: string, func: (...args: unknown[]) => void): void => {
     const validChannels = ['theme-changed'];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
-  }
+  },
 } as const;
 
 contextBridge.exposeInMainWorld('api', {
   dialog: {
-    jobPicker: jobPickerAPI
-  }
+    jobPicker: jobPickerAPI,
+  },
 });
 
 export {};

@@ -21,17 +21,17 @@
  * to adhere to single responsibility principle.
  */
 
+import { logVerbose } from '@shared/logging.js';
+import type {
+  CurrentJobInfo,
+  MaterialStationStatus,
+  PollingConfig,
+  PollingData,
+  PrinterStatus,
+} from '@shared/types/polling.js';
+import { createEmptyPollingData, DEFAULT_POLLING_CONFIG } from '@shared/types/polling.js';
 import { EventEmitter } from '../utils/EventEmitter.js';
 import { printerDataTransformer } from './PrinterDataTransformer.js';
-import type { 
-  PollingData, 
-  PollingConfig, 
-  PrinterStatus, 
-  CurrentJobInfo, 
-  MaterialStationStatus
-} from '@shared/types/polling.js';
-import { DEFAULT_POLLING_CONFIG, createEmptyPollingData } from '@shared/types/polling.js';
-import { logVerbose } from '@shared/logging.js';
 
 const POLLING_LOG_NAMESPACE = 'PrinterPollingService';
 
@@ -81,7 +81,7 @@ export const POLLING_EVENTS = {
   POLLING_STARTED: 'polling-started',
   POLLING_STOPPED: 'polling-stopped',
   POLLING_ERROR: 'polling-error',
-  CONNECTION_CHANGED: 'connection-changed'
+  CONNECTION_CHANGED: 'connection-changed',
 } as const;
 
 /**
@@ -114,7 +114,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
   private lastSuccessfulPoll: Date | null = null;
   private currentData: PollingData;
   private backendManager: BackendManager | null = null;
-  
+
   // Enhanced thumbnail caching
   private lastJobName: string | null = null;
   private currentThumbnail: string | null = null;
@@ -126,12 +126,12 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
 
   constructor(config: Partial<PollingConfig> = {}) {
     super();
-    
+
     this.config = {
       ...DEFAULT_POLLING_CONFIG,
-      ...config
+      ...config,
     };
-    
+
     this.currentData = createEmptyPollingData();
   }
 
@@ -172,14 +172,14 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
     }
 
     console.info(`[PrinterPollingService] Starting polling (interval: ${this.config.intervalMs}ms)`);
-    
+
     this.isPolling = true;
     this.retryCount = 0;
     this.scheduleNextPoll();
-    
+
     this.emit(POLLING_EVENTS.POLLING_STARTED, {
       timestamp: new Date(),
-      intervalMs: this.config.intervalMs
+      intervalMs: this.config.intervalMs,
     });
 
     return true;
@@ -194,17 +194,17 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
     }
 
     console.info('[PrinterPollingService] Stopping polling service');
-    
+
     this.isPolling = false;
     this.retryCount = 0;
-    
+
     if (this.pollingTimer) {
       clearTimeout(this.pollingTimer);
       this.pollingTimer = null;
     }
 
     this.emit(POLLING_EVENTS.POLLING_STOPPED, {
-      timestamp: new Date()
+      timestamp: new Date(),
     });
   }
 
@@ -220,16 +220,16 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
    */
   public updateConfig(newConfig: Partial<PollingConfig>): void {
     const wasPolling = this.isPolling;
-    
+
     if (wasPolling) {
       this.stop();
     }
-    
+
     this.config = {
       ...this.config,
-      ...newConfig
+      ...newConfig,
     };
-    
+
     if (wasPolling) {
       this.start();
     }
@@ -247,9 +247,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
       return;
     }
 
-    const delay = this.retryCount > 0 
-      ? this.calculateRetryDelay() 
-      : this.config.intervalMs;
+    const delay = this.retryCount > 0 ? this.calculateRetryDelay() : this.config.intervalMs;
 
     this.pollingTimer = setTimeout(() => {
       void this.performPoll();
@@ -266,11 +264,11 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
 
     try {
       this.logDebug('Polling printer data...');
-      
+
       // Fetch all data in parallel
       const [printerStatus, materialStation] = await Promise.allSettled([
         this.fetchPrinterStatus(),
-        this.fetchMaterialStation()
+        this.fetchMaterialStation(),
       ]);
 
       // Process results
@@ -278,7 +276,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
       const newData: PollingData = {
         ...this.currentData,
         isInitializing: false,
-        lastPolled: new Date()
+        lastPolled: new Date(),
       };
 
       // Process printer status
@@ -286,12 +284,12 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
         newData.printerStatus = printerStatus.value;
         newData.isConnected = true;
         hasChanges = true;
-        
+
         // Handle job changes and thumbnails
         await this.handleJobChange(printerStatus.value, newData);
-        
+
         this.emit(POLLING_EVENTS.STATUS_UPDATED, printerStatus.value);
-        
+
         if (printerStatus.value.currentJob && printerStatus.value.currentJob.isActive) {
           this.emit(POLLING_EVENTS.JOB_UPDATED, printerStatus.value.currentJob);
         }
@@ -299,11 +297,11 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
         // Connection lost
         newData.isConnected = false;
         newData.thumbnailData = null;
-        
+
         if (this.currentData.isConnected) {
           hasChanges = true;
           this.emit(POLLING_EVENTS.CONNECTION_CHANGED, { connected: false });
-          
+
           // Clear thumbnail on disconnect and clean cache
           this.clearThumbnailState();
         }
@@ -325,7 +323,6 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
       // Reset retry count on success
       this.retryCount = 0;
       this.lastSuccessfulPoll = new Date();
-      
     } catch (error) {
       this.handlePollingError(error);
     } finally {
@@ -343,13 +340,13 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
     }
 
     const response = await this.backendManager.getPrinterStatus();
-    
+
     if (!response?.success || !response.status) {
       return null;
     }
 
     const transformedStatus = printerDataTransformer.transformPrinterStatus(response.status);
-    
+
     return transformedStatus;
   }
 
@@ -362,7 +359,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
     }
 
     const response = await this.backendManager.getMaterialStationStatus();
-    
+
     if (!response) {
       return null;
     }
@@ -375,20 +372,22 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
    */
   private async handleJobChange(status: PrinterStatus, data: PollingData): Promise<void> {
     const currentJob = status.currentJob;
-    
+
     if (currentJob && currentJob.isActive && currentJob.fileName) {
       const fileName = currentJob.fileName;
-      
+
       // Job is active, check if it's a new job
       if (fileName !== this.lastJobName) {
         this.logDebug(`New job detected: ${fileName}`);
         this.lastJobName = fileName;
-        
+
         // Check cache first
         if (this.thumbnailCache.has(fileName)) {
           const cachedThumbnail = this.thumbnailCache.get(fileName);
           this.currentThumbnail = cachedThumbnail ?? null; // Handle undefined case
-          this.logDebug(`Using cached thumbnail for ${fileName}: ${this.currentThumbnail ? 'Available' : 'Failed (cached)'}`);
+          this.logDebug(
+            `Using cached thumbnail for ${fileName}: ${this.currentThumbnail ? 'Available' : 'Failed (cached)'}`
+          );
         } else if (this.thumbnailFailureCache.has(fileName)) {
           // Previous failure, don't retry
           this.currentThumbnail = null;
@@ -399,11 +398,11 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
           try {
             if (this.backendManager?.getJobThumbnail) {
               const thumbnail = await this.backendManager.getJobThumbnail(fileName);
-              
+
               // Cache the result (success or null)
               this.thumbnailCache.set(fileName, thumbnail);
               this.currentThumbnail = thumbnail;
-              
+
               this.logDebug(
                 thumbnail
                   ? `Thumbnail fetched and cached for ${fileName}`
@@ -416,7 +415,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
             }
           } catch (error) {
             console.error(`[ThumbnailCache] Failed to fetch thumbnail for ${fileName}:`, error);
-            
+
             // Cache the failure to avoid retries
             this.currentThumbnail = null;
             this.thumbnailFailureCache.add(fileName);
@@ -435,7 +434,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
         // Note: Keep cache intact for potential job restart
       }
     }
-    
+
     // Include thumbnail in data
     data.thumbnailData = this.currentThumbnail;
   }
@@ -473,7 +472,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
       cacheSize: this.thumbnailCache.size,
       failureCacheSize: this.thumbnailFailureCache.size,
       currentJob: this.lastJobName,
-      hasThumbnail: this.currentThumbnail !== null
+      hasThumbnail: this.currentThumbnail !== null,
     };
   }
 
@@ -482,19 +481,19 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
    */
   private handlePollingError(error: unknown): void {
     this.retryCount++;
-    
+
     const errorMessage = error instanceof Error ? error.message : 'Unknown polling error';
     const willRetry = this.retryCount <= this.config.maxRetries;
-    
+
     console.error(`Polling error (attempt ${this.retryCount}/${this.config.maxRetries}):`, errorMessage);
-    
+
     this.emit(POLLING_EVENTS.POLLING_ERROR, {
       error: errorMessage,
       timestamp: new Date(),
       retryCount: this.retryCount,
-      willRetry
+      willRetry,
     });
-    
+
     if (!willRetry) {
       console.error('Max polling retries reached, stopping polling');
       this.stop();
@@ -508,7 +507,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
     const baseDelay = this.config.retryDelayMs;
     const backoffMultiplier = Math.pow(2, this.retryCount - 1);
     const maxDelay = 30000; // 30 seconds max
-    
+
     return Math.min(baseDelay * backoffMultiplier, maxDelay);
   }
 
@@ -538,7 +537,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
       retryCount: this.retryCount,
       lastSuccessfulPoll: this.lastSuccessfulPoll,
       intervalMs: this.config.intervalMs,
-      isConnected: this.currentData.isConnected
+      isConnected: this.currentData.isConnected,
     };
   }
 
@@ -552,4 +551,3 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
     this.backendManager = null;
   }
 }
-

@@ -18,10 +18,10 @@
 // Material Info Dialog Renderer
 // Handles material information display with spool styling
 
-import type { MaterialInfoDialogData } from './material-info-dialog-preload.cts';
 import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
+import type { MaterialInfoDialogData } from './material-info-dialog-preload.cts';
 
 interface MaterialInfoDialogAPI {
   readonly onInit: (callback: (data: MaterialInfoDialogData) => void) => void;
@@ -37,178 +37,177 @@ const getMaterialInfoDialogAPI = (): MaterialInfoDialogAPI => {
   return api;
 };
 
-
 // Initialize dialog when DOM is loaded
 document.addEventListener('DOMContentLoaded', (): void => {
-    console.log('Material Info Dialog renderer loaded');
-    initializeLucideIconsFromGlobal(['x']);
-    
-    const api = getMaterialInfoDialogAPI();
+  console.log('Material Info Dialog renderer loaded');
+  initializeLucideIconsFromGlobal(['x']);
 
-    // Set up event handlers
-    setupEventHandlers(api);
-    
-    // Set up IPC listeners
-    setupIPCListeners(api);
+  const api = getMaterialInfoDialogAPI();
 
-    registerThemeListener(api);
-    
-    console.log('Material Info Dialog initialized');
+  // Set up event handlers
+  setupEventHandlers(api);
+
+  // Set up IPC listeners
+  setupIPCListeners(api);
+
+  registerThemeListener(api);
+
+  console.log('Material Info Dialog initialized');
 });
 
 /**
  * Set up event handlers for user interactions
  */
 function setupEventHandlers(api: MaterialInfoDialogAPI): void {
-    // Close button
-    const closeButton = document.getElementById('btn-close');
-    closeButton?.addEventListener('click', () => {
-        api.closeDialog();
-    });
+  // Close button
+  const closeButton = document.getElementById('btn-close');
+  closeButton?.addEventListener('click', () => {
+    api.closeDialog();
+  });
 }
 
 /**
  * Set up IPC listeners for communication with main process
  */
 function setupIPCListeners(api: MaterialInfoDialogAPI): void {
-    // Listen for initialization data
-    api.onInit((data: MaterialInfoDialogData) => {
-        console.log('Material Info Dialog: Received init data', data);
-        displayMaterialInfo(data);
-    });
+  // Listen for initialization data
+  api.onInit((data: MaterialInfoDialogData) => {
+    console.log('Material Info Dialog: Received init data', data);
+    displayMaterialInfo(data);
+  });
 }
 
 function registerThemeListener(api: MaterialInfoDialogAPI): void {
-    api.receive?.('theme-changed', (data: unknown) => {
-        applyDialogTheme(data as ThemeColors);
-    });
+  api.receive?.('theme-changed', (data: unknown) => {
+    applyDialogTheme(data as ThemeColors);
+  });
 }
 
 /**
  * Display material information in the dialog
  */
 function displayMaterialInfo(data: MaterialInfoDialogData): void {
-    // Update file name
-    const fileNameElement = document.getElementById('file-name');
-    if (fileNameElement) {
-        fileNameElement.textContent = data.fileName;
-    }
+  // Update file name
+  const fileNameElement = document.getElementById('file-name');
+  if (fileNameElement) {
+    fileNameElement.textContent = data.fileName;
+  }
 
-    // Update file stats
-    updateFileStats(data);
+  // Update file stats
+  updateFileStats(data);
 
-    // Display materials
-    displayMaterials(data.toolDatas);
+  // Display materials
+  displayMaterials(data.toolDatas);
 }
 
 /**
  * Update file statistics display
  */
 function updateFileStats(data: MaterialInfoDialogData): void {
-    const totalWeightElement = document.getElementById('total-weight');
+  const totalWeightElement = document.getElementById('total-weight');
 
-    if (totalWeightElement) {
-        if (data.totalFilamentWeight && data.totalFilamentWeight > 0) {
-            totalWeightElement.textContent = `Total: ${data.totalFilamentWeight.toFixed(2)}g`;
-        } else {
-            totalWeightElement.textContent = 'Total: N/A';
-        }
+  if (totalWeightElement) {
+    if (data.totalFilamentWeight && data.totalFilamentWeight > 0) {
+      totalWeightElement.textContent = `Total: ${data.totalFilamentWeight.toFixed(2)}g`;
+    } else {
+      totalWeightElement.textContent = 'Total: N/A';
     }
+  }
 }
 
 /**
  * Display materials with spool styling
  */
 function displayMaterials(toolDatas: readonly MaterialInfoDialogData['toolDatas'][0][]): void {
-    const materialsContainer = document.getElementById('materials-container');
-    if (!materialsContainer) {
-        console.error('Materials container not found');
-        return;
-    }
+  const materialsContainer = document.getElementById('materials-container');
+  if (!materialsContainer) {
+    console.error('Materials container not found');
+    return;
+  }
 
-    // Clear existing content
-    materialsContainer.innerHTML = '';
+  // Clear existing content
+  materialsContainer.innerHTML = '';
 
-    if (toolDatas.length === 0) {
-        materialsContainer.innerHTML = '<div class="no-materials">No material information available</div>';
-        return;
-    }
+  if (toolDatas.length === 0) {
+    materialsContainer.innerHTML = '<div class="no-materials">No material information available</div>';
+    return;
+  }
 
-    // Create material items
-    toolDatas.forEach(tool => {
-        const materialItem = createMaterialItem(tool);
-        materialsContainer.appendChild(materialItem);
-    });
+  // Create material items
+  toolDatas.forEach((tool) => {
+    const materialItem = createMaterialItem(tool);
+    materialsContainer.appendChild(materialItem);
+  });
 }
 
 /**
  * Create a material item element with spool styling
  */
 function createMaterialItem(tool: MaterialInfoDialogData['toolDatas'][0]): HTMLElement {
-    const materialItem = document.createElement('div');
-    materialItem.className = 'material-item';
+  const materialItem = document.createElement('div');
+  materialItem.className = 'material-item';
 
-    // Create spool container
-    const spoolContainer = document.createElement('div');
-    spoolContainer.className = 'spool-container';
+  // Create spool container
+  const spoolContainer = document.createElement('div');
+  spoolContainer.className = 'spool-container';
 
-    const spool = document.createElement('div');
-    spool.className = 'spool has-material';
-    
-    // Set spool color
-    if (tool.materialColor) {
-        spool.style.backgroundColor = tool.materialColor;
-    }
+  const spool = document.createElement('div');
+  spool.className = 'spool has-material';
 
-    const spoolCenter = document.createElement('div');
-    spoolCenter.className = 'spool-center';
+  // Set spool color
+  if (tool.materialColor) {
+    spool.style.backgroundColor = tool.materialColor;
+  }
 
-    spool.appendChild(spoolCenter);
-    spoolContainer.appendChild(spool);
+  const spoolCenter = document.createElement('div');
+  spoolCenter.className = 'spool-center';
 
-    // Create material info
-    const materialInfo = document.createElement('div');
-    materialInfo.className = 'material-info';
+  spool.appendChild(spoolCenter);
+  spoolContainer.appendChild(spool);
 
-    // Material header with tool and slot info
-    const materialHeader = document.createElement('div');
-    materialHeader.className = 'material-header';
+  // Create material info
+  const materialInfo = document.createElement('div');
+  materialInfo.className = 'material-info';
 
-    const toolLabel = document.createElement('span');
-    toolLabel.className = 'tool-label';
-    toolLabel.textContent = `Tool ${tool.toolId}`;
+  // Material header with tool and slot info
+  const materialHeader = document.createElement('div');
+  materialHeader.className = 'material-header';
 
-    materialHeader.appendChild(toolLabel);
+  const toolLabel = document.createElement('span');
+  toolLabel.className = 'tool-label';
+  toolLabel.textContent = `Tool ${tool.toolId}`;
 
-    // Add slot label if slot ID is valid
-    // slotId = 0 means direct feed (no material station slot)
-    // slotId = 1-4 means material station slot (already 1-based from API)
-    if (tool.slotId > 0) {
-        const slotLabel = document.createElement('span');
-        slotLabel.className = 'slot-label';
-        slotLabel.textContent = `Slot ${tool.slotId}`;
-        materialHeader.appendChild(slotLabel);
-    }
+  materialHeader.appendChild(toolLabel);
 
-    // Material name
-    const materialName = document.createElement('div');
-    materialName.className = 'material-name';
-    materialName.textContent = tool.materialName || 'Unknown Material';
+  // Add slot label if slot ID is valid
+  // slotId = 0 means direct feed (no material station slot)
+  // slotId = 1-4 means material station slot (already 1-based from API)
+  if (tool.slotId > 0) {
+    const slotLabel = document.createElement('span');
+    slotLabel.className = 'slot-label';
+    slotLabel.textContent = `Slot ${tool.slotId}`;
+    materialHeader.appendChild(slotLabel);
+  }
 
-    // Material weight
-    const materialWeight = document.createElement('div');
-    materialWeight.className = 'material-weight';
-    materialWeight.textContent = `${tool.filamentWeight.toFixed(2)}g`;
+  // Material name
+  const materialName = document.createElement('div');
+  materialName.className = 'material-name';
+  materialName.textContent = tool.materialName || 'Unknown Material';
 
-    materialInfo.appendChild(materialHeader);
-    materialInfo.appendChild(materialName);
-    materialInfo.appendChild(materialWeight);
+  // Material weight
+  const materialWeight = document.createElement('div');
+  materialWeight.className = 'material-weight';
+  materialWeight.textContent = `${tool.filamentWeight.toFixed(2)}g`;
 
-    materialItem.appendChild(spoolContainer);
-    materialItem.appendChild(materialInfo);
+  materialInfo.appendChild(materialHeader);
+  materialInfo.appendChild(materialName);
+  materialInfo.appendChild(materialWeight);
 
-    return materialItem;
+  materialItem.appendChild(spoolContainer);
+  materialItem.appendChild(materialInfo);
+
+  return materialItem;
 }
 
 // Export for module
-export {}; 
+export {};

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Component system type definitions
- * 
+ *
  * This file defines the core TypeScript interfaces and types for the component
  * system, including configuration, update data structures, and event handling
  * patterns. These types ensure type safety across the entire component architecture
@@ -61,7 +61,7 @@ export enum ComponentEvents {
   /** Component has been destroyed and cleaned up */
   DESTROYED = 'component:destroyed',
   /** An error occurred in the component */
-  ERROR = 'component:error'
+  ERROR = 'component:error',
 }
 
 /**
@@ -86,7 +86,7 @@ export interface IComponent {
   readonly componentId: string;
   /** HTML template for the component */
   readonly templateHTML: string;
-  
+
   /** Initialize the component */
   initialize(): Promise<void>;
   /** Update component with new data */

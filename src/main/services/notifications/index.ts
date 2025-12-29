@@ -23,33 +23,35 @@
  */
 
 // Core services
-export { NotificationService, getNotificationService, resetNotificationService } from './NotificationService.js';
-export { 
-  PrinterNotificationCoordinator, 
-  getPrinterNotificationCoordinator, 
-  resetPrinterNotificationCoordinator 
+export { getNotificationService, NotificationService, resetNotificationService } from './NotificationService.js';
+export {
+  getPrinterNotificationCoordinator,
+  PrinterNotificationCoordinator,
+  resetPrinterNotificationCoordinator,
 } from './PrinterNotificationCoordinator.js';
 
 // Import services for internal use
 import { getNotificationService, resetNotificationService } from './NotificationService.js';
-import { getPrinterNotificationCoordinator, resetPrinterNotificationCoordinator } from './PrinterNotificationCoordinator.js';
-
-// Type exports for external use
-export type { NotificationTrackingInfo } from './NotificationService.js';
-export type { CoordinatorEventMap } from './PrinterNotificationCoordinator.js';
+import {
+  getPrinterNotificationCoordinator,
+  resetPrinterNotificationCoordinator,
+} from './PrinterNotificationCoordinator.js';
 
 // Re-export important types from notification types
 export type {
   Notification,
+  NotificationEventPayloads,
   NotificationId,
-  NotificationType,
-  NotificationPriority,
   NotificationOptions,
-  NotificationState,
+  NotificationPriority,
   NotificationSettings,
+  NotificationState,
   NotificationStateTransition,
-  NotificationEventPayloads
+  NotificationType,
 } from '@shared/types/notification.js';
+// Type exports for external use
+export type { NotificationTrackingInfo } from './NotificationService.js';
+export type { CoordinatorEventMap } from './PrinterNotificationCoordinator.js';
 
 // Import types for internal use
 
@@ -57,25 +59,22 @@ export type {
 import { isHeadlessMode } from '../../utils/HeadlessDetection.js';
 
 // Re-export factory functions for creating notifications
+// Re-export utility functions
 export {
+  createConnectionErrorNotification,
+  createConnectionLostNotification,
+  createInitialNotificationState,
   createNotificationId,
   createNotificationTemperature,
   createPrintCompleteNotification,
   createPrinterCooledNotification,
   createUploadCompleteNotification,
   createUploadFailedNotification,
-  createConnectionLostNotification,
-  createConnectionErrorNotification
-} from '@shared/types/notification.js';
-
-// Re-export utility functions
-export {
   extractNotificationSettings,
-  shouldSendNotification,
+  isTemperatureCooled,
   shouldCheckForNotifications,
   shouldResetNotificationFlags,
-  isTemperatureCooled,
-  createInitialNotificationState
+  shouldSendNotification,
 } from '@shared/types/notification.js';
 
 // ============================================================================
@@ -117,10 +116,9 @@ export function initializeNotificationSystem(): void {
  */
 export function disposeNotificationSystem(): void {
   console.log('Disposing notification system...');
-  
+
   resetPrinterNotificationCoordinator();
   resetNotificationService();
-  
+
   console.log('Notification system disposed');
 }
-

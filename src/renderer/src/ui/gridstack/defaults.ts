@@ -24,20 +24,20 @@
  * @module ui/gridstack/defaults
  */
 
-import type { LayoutConfig, GridStackWidgetConfig, GridOptions } from './types.js';
 import { getComponentDefinition } from './ComponentRegistry.js';
+import type { GridOptions, GridStackWidgetConfig, LayoutConfig } from './types.js';
 
 /**
  * Default grid options matching current layout behavior
  */
 export const DEFAULT_GRID_OPTIONS: GridOptions = {
-  column: 12,                    // 12-column grid for flexible layouts
-  cellHeight: 80,                // 80px per grid unit
-  margin: 8,                     // 8px margin between widgets
-  float: false,                  // Don't float widgets up (maintain explicit positioning)
-  animate: true,                 // Smooth animations for movements
-  minRow: 10,                    // Minimum 10 rows to fit all components (increased for taller status bar)
-  staticGrid: true,              // Static by default (editable in edit mode)
+  column: 12, // 12-column grid for flexible layouts
+  cellHeight: 80, // 80px per grid unit
+  margin: 8, // 8px margin between widgets
+  float: false, // Don't float widgets up (maintain explicit positioning)
+  animate: true, // Smooth animations for movements
+  minRow: 10, // Minimum 10 rows to fit all components (increased for taller status bar)
+  staticGrid: true, // Static by default (editable in edit mode)
 };
 
 /**
@@ -169,7 +169,7 @@ export function getDefaultLayout(): LayoutConfig {
   return {
     ...DEFAULT_LAYOUT,
     gridOptions: { ...DEFAULT_GRID_OPTIONS },
-    widgets: DEFAULT_WIDGETS.map(w => ({ ...w })),
+    widgets: DEFAULT_WIDGETS.map((w) => ({ ...w })),
     timestamp: new Date().toISOString(),
   };
 }
@@ -207,7 +207,7 @@ export function mergeWithDefaults(userLayout: Partial<LayoutConfig>): LayoutConf
   const baseWidgets = userLayout.widgets ?? defaultLayout.widgets;
 
   // Apply ComponentRegistry minSize values to each widget
-  const widgetsWithUpdatedMinSize = baseWidgets.map(widget => {
+  const widgetsWithUpdatedMinSize = baseWidgets.map((widget) => {
     const componentDef = getComponentDefinition(widget.componentId);
     if (componentDef) {
       return {

@@ -10,7 +10,7 @@
 import { initializeUIAnimations } from '../../renderer/services/ui-updater.js';
 
 const MAIN_MENU_ACTIONS = ['connect', 'settings', 'status', 'ifs', 'pin-config', 'about'] as const;
-type MainMenuAction = typeof MAIN_MENU_ACTIONS[number];
+type MainMenuAction = (typeof MAIN_MENU_ACTIONS)[number];
 
 const MAIN_MENU_ACTION_CHANNELS: Record<MainMenuAction, string> = {
   connect: 'open-printer-selection',
@@ -18,7 +18,7 @@ const MAIN_MENU_ACTION_CHANNELS: Record<MainMenuAction, string> = {
   status: 'open-status-dialog',
   ifs: 'open-ifs-dialog',
   'pin-config': 'shortcut-config:open',
-  about: 'open-about-dialog'
+  about: 'open-about-dialog',
 };
 
 const MAIN_MENU_SHORTCUTS: Partial<Record<MainMenuAction, { key: string; label: string }>> = {
@@ -26,7 +26,7 @@ const MAIN_MENU_SHORTCUTS: Partial<Record<MainMenuAction, { key: string; label: 
   settings: { key: ',', label: ',' },
   status: { key: 'i', label: 'I' },
   ifs: { key: 'm', label: 'M' },
-  'pin-config': { key: 'p', label: 'P' }
+  'pin-config': { key: 'p', label: 'P' },
 };
 
 const TEXT_INPUT_TYPES = new Set(['text', 'email', 'search', 'password', 'url', 'tel', 'number']);
@@ -44,7 +44,7 @@ const defaultLoadingState: LoadingState = {
   state: 'hidden',
   message: '',
   progress: 0,
-  canCancel: false
+  canCancel: false,
 };
 
 class MenuShortcutManager {
@@ -56,7 +56,7 @@ class MenuShortcutManager {
     status: true,
     ifs: false,
     'pin-config': true,
-    about: true
+    about: true,
   };
 
   constructor(private readonly onShortcutTriggered?: () => void) {}
@@ -93,9 +93,7 @@ class MenuShortcutManager {
 
     MAIN_MENU_ACTIONS.forEach((action) => {
       const config = MAIN_MENU_SHORTCUTS[action];
-      const shortcutEl = document.querySelector<HTMLSpanElement>(
-        `.menu-item-shortcut[data-shortcut-id="${action}"]`
-      );
+      const shortcutEl = document.querySelector<HTMLSpanElement>(`.menu-item-shortcut[data-shortcut-id="${action}"]`);
       const button = document.querySelector<HTMLButtonElement>(`.menu-item[data-action="${action}"]`);
 
       if (!config) {
@@ -319,7 +317,7 @@ export class LegacyUiController {
         state: data.state,
         message: data.message || '',
         progress: data.progress || 0,
-        canCancel: data.canCancel || false
+        canCancel: data.canCancel || false,
       };
       this.updateLoadingOverlay();
     });

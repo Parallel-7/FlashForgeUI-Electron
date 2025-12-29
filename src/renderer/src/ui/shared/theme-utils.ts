@@ -5,8 +5,8 @@
  * for hover states. Use these helpers to add live theme update support to any dialog.
  */
 
-import type { ThemeColors } from '@shared/types/config.js';
 import { computeThemePalette } from '@shared/themeColorUtils.js';
+import type { ThemeColors } from '@shared/types/config.js';
 
 /**
  * Applies theme colors to the document root CSS variables
@@ -16,7 +16,7 @@ import { computeThemePalette } from '@shared/themeColorUtils.js';
 export function applyDialogTheme(theme: ThemeColors, hideScrollbars: boolean = false): void {
   const root = document.documentElement;
   const palette = computeThemePalette(theme);
-  
+
   // Apply scrollbar visibility variable
   root.style.setProperty('--scrollbar-display', hideScrollbars ? 'none' : 'initial');
 

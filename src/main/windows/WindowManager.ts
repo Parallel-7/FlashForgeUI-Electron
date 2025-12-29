@@ -98,7 +98,7 @@ export enum WindowType {
   SHORTCUT_CONFIG_DIALOG = 'shortcutConfigDialog',
   COMPONENT_DIALOG = 'componentDialog',
   UPDATE_DIALOG = 'updateDialog',
-  ABOUT_DIALOG = 'aboutDialog'
+  ABOUT_DIALOG = 'aboutDialog',
 }
 
 class WindowManager {
@@ -107,7 +107,7 @@ class WindowManager {
 
   private constructor() {
     // Initialize all window slots as null
-    Object.values(WindowType).forEach(type => {
+    Object.values(WindowType).forEach((type) => {
       this.windows.set(type, null);
     });
   }
@@ -421,13 +421,13 @@ class WindowManager {
    */
   public getActiveWindows(): BrowserWindow[] {
     const activeWindows: BrowserWindow[] = [];
-    
+
     this.windows.forEach((window) => {
       if (window && !window.isDestroyed()) {
         activeWindows.push(window);
       }
     });
-    
+
     return activeWindows;
   }
 
@@ -459,4 +459,3 @@ class WindowManager {
  * @returns The WindowManager singleton instance
  */
 export const getWindowManager = (): WindowManager => WindowManager.getInstance();
-

@@ -28,7 +28,6 @@ import type { PrinterBackendManager } from '../../managers/PrinterBackendManager
 export function registerMaterialHandlers(_backendManager: PrinterBackendManager): void {
   // Note: Material station status is now included in the centralized polling updates
   // from MainProcessPollingCoordinator via the 'polling-update' IPC channel
-
   // TODO: Add material station control handlers here when implemented
   // Examples:
   // - set-active-material-slot
@@ -36,4 +35,3 @@ export function registerMaterialHandlers(_backendManager: PrinterBackendManager)
   // - load-material
   // - get-material-info
 }
-

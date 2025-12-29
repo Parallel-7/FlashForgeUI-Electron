@@ -74,26 +74,26 @@
 import { BrowserWindow, ipcMain } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getWindowManager } from '../WindowManager.js';
-import {
-  InputDialogOptions,
-  MaterialMatchingDialogData,
-  SingleColorConfirmationDialogData,
-  AutoConnectChoiceDialogData,
-  ConnectChoiceDialogData,
-  PrinterConnectedWarningData,
-  WINDOW_SIZES
-} from '../shared/WindowTypes.js';
 import {
   createModalWindow,
+  createResponseChannelName,
+  createUIPreloadPath,
+  generateDialogId,
+  loadWindowHTML,
   setupDevTools,
   setupWindowLifecycle,
   validateParentWindow,
-  generateDialogId,
-  createResponseChannelName,
-  loadWindowHTML,
-  createUIPreloadPath
 } from '../shared/WindowConfig.js';
+import {
+  AutoConnectChoiceDialogData,
+  ConnectChoiceDialogData,
+  InputDialogOptions,
+  MaterialMatchingDialogData,
+  PrinterConnectedWarningData,
+  SingleColorConfirmationDialogData,
+  WINDOW_SIZES,
+} from '../shared/WindowTypes.js';
+import { getWindowManager } from '../WindowManager.js';
 
 const _dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -164,24 +164,21 @@ export const createInputDialog = (options: InputDialogOptions): Promise<string |
       if (inputDialogWindow && !inputDialogWindow.isDestroyed()) {
         inputDialogWindow.webContents.send('dialog-init', {
           ...options,
-          responseChannel
+          responseChannel,
         });
       }
     });
 
     // Setup window lifecycle with cleanup
-    setupWindowLifecycle(
-      inputDialogWindow,
-      () => {
-        windowManager.setInputDialogWindow(null);
-        // If handler is still active, resolve with null (cancelled)
-        if (handlerActive) {
-          handlerActive = false;
-          ipcMain.removeHandler(responseChannel);
-          resolve(null);
-        }
+    setupWindowLifecycle(inputDialogWindow, () => {
+      windowManager.setInputDialogWindow(null);
+      // If handler is still active, resolve with null (cancelled)
+      if (handlerActive) {
+        handlerActive = false;
+        ipcMain.removeHandler(responseChannel);
+        resolve(null);
       }
-    );
+    });
 
     setupDevTools(inputDialogWindow);
     windowManager.setInputDialogWindow(inputDialogWindow);
@@ -198,7 +195,7 @@ export const createMaterialMatchingDialog = (data: MaterialMatchingDialogData): 
     const windowManager = getWindowManager();
     const jobPickerWindow = windowManager.getJobPickerWindow();
     const parentWindow = jobPickerWindow || windowManager.getMainWindow();
-    
+
     if (!validateParentWindow(parentWindow, 'material matching dialog')) {
       resolve(null);
       return;
@@ -228,16 +225,13 @@ export const createMaterialMatchingDialog = (data: MaterialMatchingDialogData): 
     });
 
     // Setup window lifecycle with cleanup
-    setupWindowLifecycle(
-      materialMatchingDialogWindow,
-      () => {
-        windowManager.setMaterialMatchingDialogWindow(null);
-        // If not resolved yet, resolve with null (cancelled)
-        if (windowData.resolve) {
-          windowData.resolve(null);
-        }
+    setupWindowLifecycle(materialMatchingDialogWindow, () => {
+      windowManager.setMaterialMatchingDialogWindow(null);
+      // If not resolved yet, resolve with null (cancelled)
+      if (windowData.resolve) {
+        windowData.resolve(null);
       }
-    );
+    });
 
     setupDevTools(materialMatchingDialogWindow);
     windowManager.setMaterialMatchingDialogWindow(materialMatchingDialogWindow);
@@ -254,7 +248,7 @@ export const createSingleColorConfirmationDialog = (data: SingleColorConfirmatio
     const windowManager = getWindowManager();
     const jobPickerWindow = windowManager.getJobPickerWindow();
     const parentWindow = jobPickerWindow || windowManager.getMainWindow();
-    
+
     if (!validateParentWindow(parentWindow, 'single color confirmation dialog')) {
       resolve(false);
       return;
@@ -284,16 +278,13 @@ export const createSingleColorConfirmationDialog = (data: SingleColorConfirmatio
     });
 
     // Setup window lifecycle with cleanup
-    setupWindowLifecycle(
-      singleColorConfirmationDialogWindow,
-      () => {
-        windowManager.setSingleColorConfirmationDialogWindow(null);
-        // If not resolved yet, resolve with false (cancelled)
-        if (windowData.resolve) {
-          windowData.resolve(false);
-        }
+    setupWindowLifecycle(singleColorConfirmationDialogWindow, () => {
+      windowManager.setSingleColorConfirmationDialogWindow(null);
+      // If not resolved yet, resolve with false (cancelled)
+      if (windowData.resolve) {
+        windowData.resolve(false);
       }
-    );
+    });
 
     setupDevTools(singleColorConfirmationDialogWindow);
     windowManager.setSingleColorConfirmationDialogWindow(singleColorConfirmationDialogWindow);
@@ -304,7 +295,7 @@ export const createSingleColorConfirmationDialog = (data: SingleColorConfirmatio
  */
 export const createMaterialInfoDialog = (materialData: unknown): void => {
   const windowManager = getWindowManager();
-  
+
   // For now, only allow one material info dialog at a time
   if (windowManager.hasMaterialInfoDialogWindow()) {
     windowManager.getMaterialInfoDialogWindow()?.close();
@@ -312,7 +303,7 @@ export const createMaterialInfoDialog = (materialData: unknown): void => {
 
   const jobPickerWindow = windowManager.getJobPickerWindow();
   const parentWindow = jobPickerWindow || windowManager.getMainWindow();
-  
+
   if (!validateParentWindow(parentWindow, 'material info dialog')) {
     return;
   }
@@ -335,12 +326,9 @@ export const createMaterialInfoDialog = (materialData: unknown): void => {
   });
 
   // Setup window lifecycle with cleanup
-  setupWindowLifecycle(
-    materialInfoDialogWindow,
-    () => {
-      windowManager.setMaterialInfoDialogWindow(null);
-    }
-  );
+  setupWindowLifecycle(materialInfoDialogWindow, () => {
+    windowManager.setMaterialInfoDialogWindow(null);
+  });
 
   setupDevTools(materialInfoDialogWindow);
   windowManager.setMaterialInfoDialogWindow(materialInfoDialogWindow);
@@ -351,7 +339,7 @@ export const createMaterialInfoDialog = (materialData: unknown): void => {
  */
 export const createIFSDialog = (): void => {
   const windowManager = getWindowManager();
-  
+
   if (windowManager.hasIFSDialogWindow()) {
     windowManager.getIFSDialogWindow()?.focus();
     return;
@@ -362,12 +350,10 @@ export const createIFSDialog = (): void => {
     return;
   }
 
-  const ifsDialogWindow = createModalWindow(
-    mainWindow,
-    WINDOW_SIZES.IFS_DIALOG,
-    createUIPreloadPath('ifs-dialog'),
-    { resizable: true, frame: false }
-  );
+  const ifsDialogWindow = createModalWindow(mainWindow, WINDOW_SIZES.IFS_DIALOG, createUIPreloadPath('ifs-dialog'), {
+    resizable: true,
+    frame: false,
+  });
 
   // Load HTML and setup lifecycle
   void loadWindowHTML(ifsDialogWindow, 'ifs-dialog');
@@ -380,19 +366,18 @@ export const createIFSDialog = (): void => {
   });
 
   // Setup window lifecycle with cleanup
-  setupWindowLifecycle(
-    ifsDialogWindow,
-    () => {
-      windowManager.setIFSDialogWindow(null);
-    }
-  );
+  setupWindowLifecycle(ifsDialogWindow, () => {
+    windowManager.setIFSDialogWindow(null);
+  });
 
   setupDevTools(ifsDialogWindow);
   windowManager.setIFSDialogWindow(ifsDialogWindow);
 };
 
 // Global handler state for auto-connect choice dialog to prevent duplicate registrations
-let globalResponseChannelHandler: ((_event: unknown) => Promise<AutoConnectChoiceDialogData & { responseChannel: string }>) | null = null;
+let globalResponseChannelHandler:
+  | ((_event: unknown) => Promise<AutoConnectChoiceDialogData & { responseChannel: string }>)
+  | null = null;
 
 /**
  * Create the auto-connect choice dialog window
@@ -403,7 +388,7 @@ export const createAutoConnectChoiceDialog = (data: AutoConnectChoiceDialogData)
   return new Promise((resolve) => {
     const windowManager = getWindowManager();
     const mainWindow = windowManager.getMainWindow();
-    
+
     if (!validateParentWindow(mainWindow, 'auto-connect choice dialog')) {
       resolve(null);
       return;
@@ -425,24 +410,26 @@ export const createAutoConnectChoiceDialog = (data: AutoConnectChoiceDialogData)
     // Set up response handler using handle/invoke pattern
     const handleResponse = async (_event: unknown, result: { action: string } | null): Promise<void> => {
       if (!handlerActive) return;
-      
+
       handlerActive = false;
       ipcMain.removeHandler(responseChannel);
-      
+
       // Close dialog window
       if (autoConnectChoiceDialogWindow && !autoConnectChoiceDialogWindow.isDestroyed()) {
         autoConnectChoiceDialogWindow.close();
       }
-      
+
       // Resolve promise with result
       resolve(result?.action || null);
     };
 
     // Set up response channel provider - only register if not already registered
-    const handleGetResponseChannel = async (_event: unknown): Promise<AutoConnectChoiceDialogData & { responseChannel: string }> => {
+    const handleGetResponseChannel = async (
+      _event: unknown
+    ): Promise<AutoConnectChoiceDialogData & { responseChannel: string }> => {
       return {
         ...data,
-        responseChannel
+        responseChannel,
       };
     };
 
@@ -469,31 +456,28 @@ export const createAutoConnectChoiceDialog = (data: AutoConnectChoiceDialogData)
       if (autoConnectChoiceDialogWindow && !autoConnectChoiceDialogWindow.isDestroyed()) {
         autoConnectChoiceDialogWindow.webContents.send('auto-connect-choice:init', {
           ...data,
-          responseChannel
+          responseChannel,
         });
       }
     });
 
     // Setup window lifecycle with cleanup
-    setupWindowLifecycle(
-      autoConnectChoiceDialogWindow,
-      () => {
-        windowManager.setAutoConnectChoiceDialogWindow(null);
-        // Clean up IPC handlers
-        if (handlerActive) {
-          handlerActive = false;
-          ipcMain.removeHandler(responseChannel);
-          
-          // Only clean up global handler if it's the current one
-          if (globalResponseChannelHandler === handleGetResponseChannel) {
-            ipcMain.removeHandler('auto-connect-choice:get-response-channel');
-            globalResponseChannelHandler = null;
-          }
-          
-          resolve(null);
+    setupWindowLifecycle(autoConnectChoiceDialogWindow, () => {
+      windowManager.setAutoConnectChoiceDialogWindow(null);
+      // Clean up IPC handlers
+      if (handlerActive) {
+        handlerActive = false;
+        ipcMain.removeHandler(responseChannel);
+
+        // Only clean up global handler if it's the current one
+        if (globalResponseChannelHandler === handleGetResponseChannel) {
+          ipcMain.removeHandler('auto-connect-choice:get-response-channel');
+          globalResponseChannelHandler = null;
         }
+
+        resolve(null);
       }
-    );
+    });
 
     setupDevTools(autoConnectChoiceDialogWindow);
     windowManager.setAutoConnectChoiceDialogWindow(autoConnectChoiceDialogWindow);
@@ -501,7 +485,9 @@ export const createAutoConnectChoiceDialog = (data: AutoConnectChoiceDialogData)
 };
 
 // Global handler state for connect choice dialog to prevent duplicate registrations
-let globalConnectChoiceHandler: ((_event: unknown) => Promise<ConnectChoiceDialogData & { responseChannel: string }>) | null = null;
+let globalConnectChoiceHandler:
+  | ((_event: unknown) => Promise<ConnectChoiceDialogData & { responseChannel: string }>)
+  | null = null;
 
 /**
  * Create the connect choice dialog window
@@ -512,7 +498,7 @@ export const createConnectChoiceDialog = (data: ConnectChoiceDialogData): Promis
   return new Promise((resolve) => {
     const windowManager = getWindowManager();
     const mainWindow = windowManager.getMainWindow();
-    
+
     if (!validateParentWindow(mainWindow, 'connect choice dialog')) {
       resolve(null);
       return;
@@ -534,24 +520,26 @@ export const createConnectChoiceDialog = (data: ConnectChoiceDialogData): Promis
     // Set up response handler using handle/invoke pattern
     const handleResponse = async (_event: unknown, result: { action: string } | null): Promise<void> => {
       if (!handlerActive) return;
-      
+
       handlerActive = false;
       ipcMain.removeHandler(responseChannel);
-      
+
       // Close dialog window
       if (connectChoiceDialogWindow && !connectChoiceDialogWindow.isDestroyed()) {
         connectChoiceDialogWindow.close();
       }
-      
+
       // Resolve promise with result
       resolve(result?.action || null);
     };
 
     // Set up response channel provider - only register if not already registered
-    const handleGetResponseChannel = async (_event: unknown): Promise<ConnectChoiceDialogData & { responseChannel: string }> => {
+    const handleGetResponseChannel = async (
+      _event: unknown
+    ): Promise<ConnectChoiceDialogData & { responseChannel: string }> => {
       return {
         ...data,
-        responseChannel
+        responseChannel,
       };
     };
 
@@ -578,31 +566,28 @@ export const createConnectChoiceDialog = (data: ConnectChoiceDialogData): Promis
       if (connectChoiceDialogWindow && !connectChoiceDialogWindow.isDestroyed()) {
         connectChoiceDialogWindow.webContents.send('connect-choice:init', {
           ...data,
-          responseChannel
+          responseChannel,
         });
       }
     });
 
     // Setup window lifecycle with cleanup
-    setupWindowLifecycle(
-      connectChoiceDialogWindow,
-      () => {
-        windowManager.setConnectChoiceDialogWindow(null);
-        // Clean up IPC handlers
-        if (handlerActive) {
-          handlerActive = false;
-          ipcMain.removeHandler(responseChannel);
-          
-          // Only clean up global handler if it's the current one
-          if (globalConnectChoiceHandler === handleGetResponseChannel) {
-            ipcMain.removeHandler('connect-choice:get-response-channel');
-            globalConnectChoiceHandler = null;
-          }
-          
-          resolve(null);
+    setupWindowLifecycle(connectChoiceDialogWindow, () => {
+      windowManager.setConnectChoiceDialogWindow(null);
+      // Clean up IPC handlers
+      if (handlerActive) {
+        handlerActive = false;
+        ipcMain.removeHandler(responseChannel);
+
+        // Only clean up global handler if it's the current one
+        if (globalConnectChoiceHandler === handleGetResponseChannel) {
+          ipcMain.removeHandler('connect-choice:get-response-channel');
+          globalConnectChoiceHandler = null;
         }
+
+        resolve(null);
       }
-    );
+    });
 
     setupDevTools(connectChoiceDialogWindow);
     windowManager.setConnectChoiceDialogWindow(connectChoiceDialogWindow);
@@ -690,18 +675,15 @@ export const createPrinterConnectedWarningDialog = (data: PrinterConnectedWarnin
     });
 
     // Setup window lifecycle with cleanup
-    setupWindowLifecycle(
-      printerWarningWindow,
-      () => {
-        // Clean up if dialog closed without action
-        if (!isHandled) {
-          isHandled = true;
-          ipcMain.removeHandler('printer-connected-warning-continue');
-          ipcMain.removeHandler('printer-connected-warning-cancel');
-          resolve(false);
-        }
+    setupWindowLifecycle(printerWarningWindow, () => {
+      // Clean up if dialog closed without action
+      if (!isHandled) {
+        isHandled = true;
+        ipcMain.removeHandler('printer-connected-warning-continue');
+        ipcMain.removeHandler('printer-connected-warning-cancel');
+        resolve(false);
       }
-    );
+    });
 
     setupDevTools(printerWarningWindow);
   });

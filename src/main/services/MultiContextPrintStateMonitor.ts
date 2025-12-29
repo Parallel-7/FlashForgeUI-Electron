@@ -13,8 +13,8 @@
  * @exports MultiContextPrintStateMonitor - Multi-context state monitor coordinator
  */
 
-import { PrintStateMonitor } from './PrintStateMonitor.js';
 import type { PrinterPollingService } from './PrinterPollingService.js';
+import { PrintStateMonitor } from './PrintStateMonitor.js';
 
 /**
  * Multi-context coordinator for print state monitoring
@@ -26,10 +26,7 @@ export class MultiContextPrintStateMonitor {
   /**
    * Create a print state monitor for a specific context
    */
-  public createMonitorForContext(
-    contextId: string,
-    pollingService: PrinterPollingService
-  ): void {
+  public createMonitorForContext(contextId: string, pollingService: PrinterPollingService): void {
     // Check if monitor already exists
     if (this.monitors.has(contextId)) {
       console.warn(`[MultiContextPrintStateMonitor] Monitor already exists for context ${contextId}`);

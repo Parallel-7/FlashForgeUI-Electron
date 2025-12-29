@@ -30,12 +30,12 @@
  * @exports getMultiContextTemperatureMonitor - Singleton instance accessor
  */
 
+import type { PrinterStatus } from '@shared/types/polling.js';
 import { EventEmitter } from 'events';
 import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
-import { TemperatureMonitoringService } from './TemperatureMonitoringService.js';
-import type { PrintStateMonitor } from './PrintStateMonitor.js';
 import type { PrinterPollingService } from './PrinterPollingService.js';
-import type { PrinterStatus } from '@shared/types/polling.js';
+import type { PrintStateMonitor } from './PrintStateMonitor.js';
+import { TemperatureMonitoringService } from './TemperatureMonitoringService.js';
 
 // ============================================================================
 // TYPES
@@ -256,4 +256,3 @@ export function getMultiContextTemperatureMonitor(): MultiContextTemperatureMoni
   }
   return globalMultiContextTemperatureMonitor;
 }
-

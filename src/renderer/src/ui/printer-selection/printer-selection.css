@@ -1,289 +1,291 @@
 /* Printer Selection Dialog - Rounded Styling Pattern */
 /* Import shared template for consistent styling */
-@import url('../shared/rounded-dialog-template.css');
+@import url("../shared/rounded-dialog-template.css");
 
 /* Universal CSS reset - ensures proper box-sizing and eliminates spacing issues */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 /* Printer Selection Dialog Specific Styling */
 
 /* Override template drag behavior - allow dragging from title text */
 .dialog-title {
-    -webkit-app-region: drag;
+  -webkit-app-region: drag;
 }
 
 /* Ensure dialog container fills full height to eliminate gray spacing */
 .dialog-container {
-    height: 100%;
+  height: 100%;
 }
 
 .table-container {
-    flex: 1;
-    overflow-y: auto;
-    border: 1px solid var(--border-color);
-    border-radius: 8px;
-    margin: 0 0 16px 0;
-    background-color: var(--surface-elevated);
-    /* Hide scrollbars while maintaining scroll functionality */
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+  flex: 1;
+  overflow-y: auto;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  margin: 0 0 16px 0;
+  background-color: var(--surface-elevated);
+  /* Hide scrollbars while maintaining scroll functionality */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
 .table-container::-webkit-scrollbar {
-    display: none;
+  display: none;
 }
 
 table {
-    width: 100%;
-    border-collapse: collapse;
-    table-layout: fixed;
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
 }
 
 /* Column width adjustments for different modes */
 table.discovered-mode {
-    /* Original 3-column layout for discovered printers */
+  /* Original 3-column layout for discovered printers */
 }
 
 table.discovered-mode th:nth-child(1),
 table.discovered-mode td:nth-child(1) {
-    width: 40%; /* Printer Name */
+  width: 40%; /* Printer Name */
 }
 
 table.discovered-mode th:nth-child(2),
 table.discovered-mode td:nth-child(2) {
-    width: 35%; /* IP Address */
+  width: 35%; /* IP Address */
 }
 
 table.discovered-mode th:nth-child(3),
 table.discovered-mode td:nth-child(3) {
-    width: 25%; /* Serial Number */
+  width: 25%; /* Serial Number */
 }
 
 table.saved-mode {
-    /* 5-column layout for saved printers */
+  /* 5-column layout for saved printers */
 }
 
 table.saved-mode th:nth-child(1),
 table.saved-mode td:nth-child(1) {
-    width: 25%; /* Printer Name */
+  width: 25%; /* Printer Name */
 }
 
 table.saved-mode th:nth-child(2),
 table.saved-mode td:nth-child(2) {
-    width: 20%; /* IP Address */
+  width: 20%; /* IP Address */
 }
 
 table.saved-mode th:nth-child(3),
 table.saved-mode td:nth-child(3) {
-    width: 20%; /* Serial Number */
+  width: 20%; /* Serial Number */
 }
 
 table.saved-mode th:nth-child(4),
 table.saved-mode td:nth-child(4) {
-    width: 20%; /* Last Connected */
+  width: 20%; /* Last Connected */
 }
 
 table.saved-mode th:nth-child(5),
 table.saved-mode td:nth-child(5) {
-    width: 15%; /* Status */
+  width: 15%; /* Status */
 }
 
-th, td {
-    padding: 12px;
-    text-align: left;
-    border-bottom: 1px solid var(--border-color);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+th,
+td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 th {
-    background-color: var(--surface-muted);
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    color: var(--theme-text);
-    font-weight: 600;
-    font-size: 14px;
+  background-color: var(--surface-muted);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  color: var(--theme-text);
+  font-weight: 600;
+  font-size: 14px;
 }
 
 tbody tr {
-    cursor: pointer;
-    transition: all 0.2s ease;
-    background-color: var(--surface-elevated);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: var(--surface-elevated);
 }
 
 tbody tr:hover {
-    background-color: var(--surface-elevated);
+  background-color: var(--surface-elevated);
 }
 
 tbody tr.selected {
-    background-color: var(--theme-primary);
-    color: var(--accent-text-color);
+  background-color: var(--theme-primary);
+  color: var(--accent-text-color);
 }
 
 tbody tr.last-used {
-    border-left: 3px solid var(--theme-primary);
+  border-left: 3px solid var(--theme-primary);
 }
 
 tbody tr.loading-row td,
 .message-overlay {
-    text-align: center;
-    color: color-mix(in srgb, var(--theme-text) 60%, transparent);
-    font-style: italic;
-    padding: 24px;
+  text-align: center;
+  color: color-mix(in srgb, var(--theme-text) 60%, transparent);
+  font-style: italic;
+  padding: 24px;
 }
 
 .message-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 16px;
-    background-color: color-mix(in srgb, var(--surface-elevated) 95%, transparent);
-    border-radius: 8px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 2;
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 16px;
+  background-color: color-mix(in srgb, var(--surface-elevated) 95%, transparent);
+  border-radius: 8px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2;
 }
 
 /* Status indicators for saved printer mode */
 .status-indicator {
-    display: inline-block;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 0.75em;
-    font-weight: bold;
-    text-transform: uppercase;
+  display: inline-block;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 0.75em;
+  font-weight: bold;
+  text-transform: uppercase;
 }
 
 .status-online {
-    background-color: var(--success-color);
-    color: white;
+  background-color: var(--success-color);
+  color: white;
 }
 
 .status-offline {
-    background-color: var(--error-color);
-    color: white;
+  background-color: var(--error-color);
+  color: white;
 }
 
 .status-changed {
-    background-color: var(--warning-color);
-    color: white;
+  background-color: var(--warning-color);
+  color: white;
 }
 
 /* IP address change indicator */
 .ip-changed {
-    color: var(--warning-color);
-    font-size: 0.85em;
+  color: var(--warning-color);
+  font-size: 0.85em;
 }
 
 .ip-changed::after {
-    content: " (IP changed)";
-    font-style: italic;
+  content: " (IP changed)";
+  font-style: italic;
 }
 
 /* Date formatting for last connected */
 .date-cell {
-    font-size: 0.9em;
+  font-size: 0.9em;
 }
 
 /* Footer - inherits from template with custom layout */
 .dialog-footer {
-    justify-content: space-between; /* Override default flex-end */
+  justify-content: space-between; /* Override default flex-end */
 }
 
 .instructions {
-    font-size: 0.9rem;
-    color: color-mix(in srgb, var(--theme-text) 75%, transparent);
-    font-style: italic;
+  font-size: 0.9rem;
+  color: color-mix(in srgb, var(--theme-text) 75%, transparent);
+  font-style: italic;
 }
 
 /* Button styling - inherit from template with overrides */
 .dialog-button {
-    background-color: var(--theme-primary);
-    border-color: var(--theme-primary);
+  background-color: var(--theme-primary);
+  border-color: var(--theme-primary);
 }
 
 .dialog-button:hover {
-    background-color: var(--theme-primary-hover);
-    border-color: var(--theme-primary-hover);
+  background-color: var(--theme-primary-hover);
+  border-color: var(--theme-primary-hover);
 }
 
 .dialog-button.cancel {
-    background-color: var(--surface-elevated);
-    border-color: var(--border-color);
+  background-color: var(--surface-elevated);
+  border-color: var(--border-color);
 }
 
 .dialog-button.cancel:hover {
-    background-color: var(--surface-elevated);
-    border-color: var(--border-color);
+  background-color: var(--surface-elevated);
+  border-color: var(--border-color);
 }
 
 .dialog-button:disabled {
-    background-color: var(--surface-muted);
-    border-color: var(--border-color);
-    cursor: not-allowed;
-    opacity: 0.6;
+  background-color: var(--surface-muted);
+  border-color: var(--border-color);
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 /* Scanning animation */
 .scanning-animation {
-    font-size: 1.1em;
-    color: var(--theme-primary);
-    animation: pulse 1.5s infinite;
+  font-size: 1.1em;
+  color: var(--theme-primary);
+  animation: pulse 1.5s infinite;
 }
 
 @keyframes pulse {
-    0% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.6;
-    }
-    100% {
-        opacity: 1;
-    }
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+  100% {
+    opacity: 1;
+  }
 }
 
 /* Discovery error styles */
 #no-printers-message button {
-    background-color: var(--theme-primary);
-    color: var(--accent-text-color);
-    border: 1px solid var(--theme-primary);
-    border-radius: 6px;
-    padding: 8px 20px;
-    font-size: 0.9em;
-    cursor: pointer;
-    transition: all 0.2s ease;
+  background-color: var(--theme-primary);
+  color: var(--accent-text-color);
+  border: 1px solid var(--theme-primary);
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 0.9em;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 #no-printers-message button:hover {
-    background-color: var(--theme-primary-hover);
-    border-color: var(--theme-primary-hover);
+  background-color: var(--theme-primary-hover);
+  border-color: var(--theme-primary-hover);
 }
 
 /* Responsive design */
 @media (max-width: 600px) {
-    th, td {
-        padding: 8px;
-        font-size: 0.9rem;
-    }
-    
-    .dialog-footer {
-        flex-direction: column;
-        gap: 8px;
-        align-items: center;
-    }
-    
-    .instructions {
-        order: 2;
-        font-size: 0.8rem;
-    }
+  th,
+  td {
+    padding: 8px;
+    font-size: 0.9rem;
+  }
+
+  .dialog-footer {
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .instructions {
+    order: 2;
+    font-size: 0.8rem;
+  }
 }

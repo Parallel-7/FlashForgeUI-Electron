@@ -71,8 +71,6 @@ export class WebUIMobileLayoutManager {
 
   private getComponentElement(componentId: string): HTMLElement | null {
     if (!this.container) return null;
-    return this.container.querySelector<HTMLElement>(
-      `[data-component-id="${componentId}"]`
-    );
+    return this.container.querySelector<HTMLElement>(`[data-component-id="${componentId}"]`);
   }
 }

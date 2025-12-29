@@ -1,20 +1,20 @@
 /**
  * @fileoverview Controls Grid Component
- * 
+ *
  * This component provides the main control interface with a 6x2 grid of buttons
  * for printer control operations. It extends the BaseComponent class and implements
  * sophisticated button state management, IPC communication handling, and logging
  * integration that was previously part of the monolithic UI.
- * 
+ *
  * Key features:
  * - 6x2 grid of control buttons with proper ID mapping
- * - Dynamic button state management based on printer state and connection status  
+ * - Dynamic button state management based on printer state and connection status
  * - Mixed IPC communication (invoke for commands, send for dialogs)
  * - Complex state-based enable/disable logic
  * - Integration with existing logging system
  * - Support for legacy printer limitations
  * - Special button styling for different action types
- * 
+ *
  * Button Mapping:
  * Row 1: LED On, Clear Status
  * Row 2: LED Off, Home Axes
@@ -22,7 +22,7 @@
  * Row 4: Resume, Start Recent
  * Row 5: Stop, Start Local
  * Row 6: Swap Filament, Send Cmds
- * 
+ *
  * Usage:
  *   const controlsGrid = new ControlsGridComponent(parentElement);
  *   await controlsGrid.initialize();
@@ -123,7 +123,7 @@ export class ControlsGridComponent extends BaseComponent {
       channel: 'led-on',
       requiresConnection: true,
       disableDuringPrint: false,
-      legacySupported: false
+      legacySupported: false,
     },
     {
       id: 'btn-clear-status',
@@ -131,7 +131,7 @@ export class ControlsGridComponent extends BaseComponent {
       channel: 'clear-status',
       requiresConnection: true,
       disableDuringPrint: true,
-      legacySupported: false // Not supported on legacy printers
+      legacySupported: false, // Not supported on legacy printers
     },
 
     // Row 2: LED off and homing
@@ -141,7 +141,7 @@ export class ControlsGridComponent extends BaseComponent {
       channel: 'led-off',
       requiresConnection: true,
       disableDuringPrint: false,
-      legacySupported: false
+      legacySupported: false,
     },
     {
       id: 'btn-home-axes',
@@ -149,7 +149,7 @@ export class ControlsGridComponent extends BaseComponent {
       channel: 'home-axes',
       requiresConnection: true,
       disableDuringPrint: true, // Dangerous during printing
-      legacySupported: true
+      legacySupported: true,
     },
 
     // Row 3: Print control and job upload
@@ -159,7 +159,7 @@ export class ControlsGridComponent extends BaseComponent {
       channel: 'pause-print',
       requiresConnection: true,
       disableDuringPrint: false, // Only enabled during printing
-      legacySupported: true
+      legacySupported: true,
     },
     {
       id: 'btn-upload-job',
@@ -167,7 +167,7 @@ export class ControlsGridComponent extends BaseComponent {
       channel: 'open-job-uploader',
       requiresConnection: false, // Can upload without connection
       disableDuringPrint: true, // Disabled during active jobs
-      legacySupported: false // Not supported on legacy printers
+      legacySupported: false, // Not supported on legacy printers
     },
 
     // Row 4: Resume and recent files
@@ -177,7 +177,7 @@ export class ControlsGridComponent extends BaseComponent {
       channel: 'resume-print',
       requiresConnection: true,
       disableDuringPrint: false, // Only enabled when paused
-      legacySupported: true
+      legacySupported: true,
     },
     {
       id: 'btn-start-recent',
@@ -185,7 +185,7 @@ export class ControlsGridComponent extends BaseComponent {
       channel: 'show-recent-files',
       requiresConnection: false,
       disableDuringPrint: true, // Disabled during active jobs
-      legacySupported: true
+      legacySupported: true,
     },
 
     // Row 5: Stop and local files
@@ -195,7 +195,7 @@ export class ControlsGridComponent extends BaseComponent {
       channel: 'cancel-print',
       requiresConnection: true,
       disableDuringPrint: false, // Only enabled during active jobs
-      legacySupported: true
+      legacySupported: true,
     },
     {
       id: 'btn-start-local',
@@ -203,7 +203,7 @@ export class ControlsGridComponent extends BaseComponent {
       channel: 'show-local-files',
       requiresConnection: false,
       disableDuringPrint: true, // Disabled during active jobs
-      legacySupported: true // Supported on legacy printers
+      legacySupported: true, // Supported on legacy printers
     },
 
     // Row 6: Filament and commands
@@ -213,7 +213,7 @@ export class ControlsGridComponent extends BaseComponent {
       channel: 'swap-filament',
       requiresConnection: true,
       disableDuringPrint: true, // Dangerous during printing
-      legacySupported: true
+      legacySupported: true,
     },
     {
       id: 'btn-send-cmds',
@@ -221,8 +221,8 @@ export class ControlsGridComponent extends BaseComponent {
       channel: 'open-send-commands',
       requiresConnection: false, // Always available
       disableDuringPrint: false, // Always available
-      legacySupported: true
-    }
+      legacySupported: true,
+    },
   ];
 
   /** Current component state tracking */
@@ -280,7 +280,6 @@ export class ControlsGridComponent extends BaseComponent {
       }
 
       console.log(`Controls Grid Component: Set up event listeners for ${this.buttonMappings.length} buttons`);
-      
     } catch (error) {
       console.error('Controls Grid Component: Failed to setup event listeners:', error);
       throw error;
@@ -299,9 +298,9 @@ export class ControlsGridComponent extends BaseComponent {
       const newState = {
         printerState: data.printerState,
         connectionState: data.connectionState,
-        isLegacyPrinter: data.backendCapabilities?.isLegacy as boolean ?? false,
+        isLegacyPrinter: (data.backendCapabilities?.isLegacy as boolean) ?? false,
         isActiveJob: this.determineActiveJobState(data.printerState),
-        canControlPrint: this.determineControlPrintCapability(data.printerState)
+        canControlPrint: this.determineControlPrintCapability(data.printerState),
       };
 
       // Update internal state
@@ -312,7 +311,6 @@ export class ControlsGridComponent extends BaseComponent {
 
       // Update component state tracking
       this.updateState(data);
-
     } catch (error) {
       console.error('Controls Grid Component: Failed to update component:', error);
     }
@@ -325,7 +323,7 @@ export class ControlsGridComponent extends BaseComponent {
    */
   private async handleButtonClick(event: Event, mapping: ButtonMapping): Promise<void> {
     const button = event.target as HTMLButtonElement;
-    
+
     // Prevent action if button is disabled
     if (button.disabled || button.classList.contains('disabled')) {
       console.log(`Controls Grid Component: Button ${mapping.id} is disabled, ignoring click`);
@@ -335,7 +333,7 @@ export class ControlsGridComponent extends BaseComponent {
     try {
       // Add visual feedback
       button.classList.add('state-changing');
-      
+
       // Log the action
       this.logAction(`Executing ${mapping.action} command: ${mapping.channel}`);
 
@@ -346,7 +344,6 @@ export class ControlsGridComponent extends BaseComponent {
         // Handle send commands (dialog opening)
         this.handleSendCommand(mapping);
       }
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       this.logAction(`Command ${mapping.channel} failed: ${errorMessage}`, 'error');
@@ -370,8 +367,8 @@ export class ControlsGridComponent extends BaseComponent {
         throw new Error('IPC API not available');
       }
 
-      const response = await window.api.invoke(mapping.channel, mapping.data) as IPCResponse;
-      
+      const response = (await window.api.invoke(mapping.channel, mapping.data)) as IPCResponse;
+
       if (response.success) {
         this.logAction(`Command ${mapping.channel} executed successfully`);
       } else {
@@ -400,7 +397,7 @@ export class ControlsGridComponent extends BaseComponent {
       } else {
         window.api.send(mapping.channel);
       }
-      
+
       this.logAction(`Dialog command ${mapping.channel} sent`);
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -485,7 +482,7 @@ export class ControlsGridComponent extends BaseComponent {
    */
   private determineActiveJobState(printerState?: string): boolean {
     if (!printerState) return false;
-    
+
     const activeStates = ['Printing', 'Paused', 'Resuming', 'Starting'];
     return activeStates.includes(printerState);
   }
@@ -497,7 +494,7 @@ export class ControlsGridComponent extends BaseComponent {
    */
   private determineControlPrintCapability(printerState?: string): boolean {
     if (!printerState) return false;
-    
+
     const controllableStates = ['Printing', 'Paused', 'Resuming'];
     return controllableStates.includes(printerState);
   }
@@ -511,8 +508,9 @@ export class ControlsGridComponent extends BaseComponent {
     try {
       // Use the existing global logMessage function from renderer.ts
       // This maintains compatibility with the existing logging system
-      const logMessage = (globalThis as { logMessage?: (msg: string) => void }).logMessage ||
-                        (window as { logMessage?: (msg: string) => void }).logMessage;
+      const logMessage =
+        (globalThis as { logMessage?: (msg: string) => void }).logMessage ||
+        (window as { logMessage?: (msg: string) => void }).logMessage;
 
       if (typeof logMessage === 'function') {
         const prefix = type === 'error' ? '[ERROR] ' : '';
@@ -534,13 +532,13 @@ export class ControlsGridComponent extends BaseComponent {
     this.assertInitialized();
 
     const states: Record<string, { disabled: boolean; reason: string }> = {};
-    
+
     for (const mapping of this.buttonMappings) {
       const button = this.findElementById<HTMLButtonElement>(mapping.id);
       if (button) {
         states[mapping.id] = {
           disabled: button.disabled,
-          reason: button.title || 'No reason'
+          reason: button.title || 'No reason',
         };
       }
     }
@@ -554,7 +552,7 @@ export class ControlsGridComponent extends BaseComponent {
   protected cleanup(): void {
     // Clear current state
     this.currentState = {};
-    
+
     console.log('Controls Grid Component: Cleanup completed');
   }
 }

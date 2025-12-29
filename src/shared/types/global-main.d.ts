@@ -24,10 +24,9 @@ declare global {
       printerBackendManager: PrinterBackendManager | undefined;
     }
   }
-  
+
   // Also augment globalThis for modern TypeScript
   var printerBackendManager: PrinterBackendManager | undefined;
 }
 
 export {};
-

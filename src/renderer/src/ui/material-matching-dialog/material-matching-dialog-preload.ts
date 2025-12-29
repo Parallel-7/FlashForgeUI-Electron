@@ -60,33 +60,31 @@ const materialMatchingDialogAPI = {
       callback(data);
     });
   },
-  
+
   // Close the dialog
   closeDialog: () => {
     ipcRenderer.send('material-matching:close');
   },
-  
+
   // Confirm material mappings
   confirmMappings: (mappings: MaterialMapping[]) => {
     ipcRenderer.send('material-matching:confirm', mappings);
   },
-  
+
   // Get material station status
   getMaterialStationStatus: (): Promise<MaterialStationStatus | null> => {
     return ipcRenderer.invoke('get-material-station-status');
-  }
-,
+  },
   receive: (channel: string, func: (...args: unknown[]) => void): void => {
     const validChannels = ['theme-changed'];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
-  }
+  },
 } as const;
 
 contextBridge.exposeInMainWorld('api', {
   dialog: {
-    materialMatching: materialMatchingDialogAPI
-  }
+    materialMatching: materialMatchingDialogAPI,
+  },
 });
-

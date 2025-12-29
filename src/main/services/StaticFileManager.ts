@@ -53,8 +53,8 @@
  * @exports ValidationSummary - Type for validation summary reports
  */
 
-import * as path from 'path';
 import * as fs from 'fs/promises';
+import * as path from 'path';
 import { getEnvironmentDetectionService, type PathResolutionResult } from './EnvironmentDetectionService.js';
 
 /**
@@ -139,20 +139,13 @@ class StaticFileManager {
    */
   private buildStaticFileConfig(): StaticFileConfig {
     const assetsPath = this.environmentService.getAssetsPath();
-    
+
     return {
       mainHTML: this.environmentService.getWebUIPath(),
       rendererBundle: path.join(assetsPath, 'renderer.bundle.js'),
-      stylesheets: [
-        path.join(assetsPath, 'styles.css'),
-        path.join(assetsPath, 'main.css')
-      ],
-      icons: [
-        path.join(assetsPath, 'icon.png'),
-        path.join(assetsPath, 'icon.ico'),
-        path.join(assetsPath, 'icon.icns')
-      ],
-      preloadScript: this.environmentService.getPreloadPath()
+      stylesheets: [path.join(assetsPath, 'styles.css'), path.join(assetsPath, 'main.css')],
+      icons: [path.join(assetsPath, 'icon.png'), path.join(assetsPath, 'icon.ico'), path.join(assetsPath, 'icon.icns')],
+      preloadScript: this.environmentService.getPreloadPath(),
     };
   }
 
@@ -202,7 +195,7 @@ class StaticFileManager {
 
     // Determine base path based on asset type
     let basePath: string;
-    
+
     switch (assetType) {
       case 'html':
       case 'css':
@@ -226,17 +219,17 @@ class StaticFileManager {
   public async validateAsset(assetPath: string): Promise<AssetValidationResult> {
     try {
       const stats = await fs.stat(assetPath);
-      
+
       // Check if file is accessible for reading
       try {
         await fs.access(assetPath, fs.constants.R_OK);
-        
+
         return {
           path: assetPath,
           exists: true,
           isAccessible: true,
           size: stats.size,
-          lastModified: stats.mtime
+          lastModified: stats.mtime,
         };
       } catch (accessError) {
         return {
@@ -245,7 +238,7 @@ class StaticFileManager {
           isAccessible: false,
           size: stats.size,
           lastModified: stats.mtime,
-          error: `File exists but is not readable: ${accessError instanceof Error ? accessError.message : 'Permission denied'}`
+          error: `File exists but is not readable: ${accessError instanceof Error ? accessError.message : 'Permission denied'}`,
         };
       }
     } catch (statError) {
@@ -253,7 +246,7 @@ class StaticFileManager {
         path: assetPath,
         exists: false,
         isAccessible: false,
-        error: statError instanceof Error ? statError.message : 'Unknown error'
+        error: statError instanceof Error ? statError.message : 'Unknown error',
       };
     }
   }
@@ -262,7 +255,7 @@ class StaticFileManager {
    * Validate multiple assets in parallel
    */
   public async validateAssets(assetPaths: readonly string[]): Promise<readonly AssetValidationResult[]> {
-    const validationPromises = assetPaths.map(assetPath => this.validateAsset(assetPath));
+    const validationPromises = assetPaths.map((assetPath) => this.validateAsset(assetPath));
     return Promise.all(validationPromises);
   }
 
@@ -270,14 +263,10 @@ class StaticFileManager {
    * Validate all critical assets required for the application
    */
   public async validateCriticalAssets(): Promise<ValidationSummary> {
-    const criticalAssets = [
-      this.config.mainHTML,
-      this.config.rendererBundle,
-      this.config.preloadScript
-    ];
+    const criticalAssets = [this.config.mainHTML, this.config.rendererBundle, this.config.preloadScript];
 
     const results = await this.validateAssets(criticalAssets);
-    
+
     return this.createValidationSummary(results);
   }
 
@@ -290,11 +279,11 @@ class StaticFileManager {
       this.config.rendererBundle,
       this.config.preloadScript,
       ...this.config.stylesheets,
-      ...this.config.icons
+      ...this.config.icons,
     ];
 
     const results = await this.validateAssets(allAssets);
-    
+
     return this.createValidationSummary(results);
   }
 
@@ -329,7 +318,7 @@ class StaticFileManager {
       missingAssets,
       inaccessibleAssets,
       errors,
-      isValid: missingAssets.length === 0 && inaccessibleAssets.length === 0
+      isValid: missingAssets.length === 0 && inaccessibleAssets.length === 0,
     };
   }
 
@@ -363,13 +352,13 @@ class StaticFileManager {
   public getAssetManifest(): AssetManifest {
     return {
       html: {
-        main: this.config.mainHTML
+        main: this.config.mainHTML,
       },
       css: [...this.config.stylesheets],
       js: [this.config.rendererBundle],
       icons: [...this.config.icons],
       fonts: [], // Can be extended as needed
-      images: [] // Can be extended as needed
+      images: [], // Can be extended as needed
     };
   }
 
@@ -379,12 +368,12 @@ class StaticFileManager {
   public async resolveAssetPath(relativePath: string, assetType: AssetType = 'other'): Promise<PathResolutionResult> {
     const resolvedPath = this.getAssetPath(relativePath, assetType);
     const validation = await this.validateAsset(resolvedPath);
-    
+
     return {
       resolvedPath,
       exists: validation.exists,
       isAccessible: validation.isAccessible,
-      error: validation.error
+      error: validation.error,
     };
   }
 
@@ -393,7 +382,7 @@ class StaticFileManager {
    */
   public getDiagnosticInfo(): Record<string, unknown> {
     const envInfo = this.environmentService.getDiagnosticInfo();
-    
+
     return {
       environment: envInfo.environment,
       isPackaged: envInfo.isPackaged,
@@ -403,8 +392,8 @@ class StaticFileManager {
         webUI: this.environmentService.getWebUIPath(),
         assets: this.environmentService.getAssetsPath(),
         static: this.environmentService.getStaticPath(),
-        preload: this.environmentService.getPreloadPath()
-      }
+        preload: this.environmentService.getPreloadPath(),
+      },
     };
   }
 
@@ -414,7 +403,7 @@ class StaticFileManager {
   public async logDiagnosticInfo(): Promise<void> {
     const info = this.getDiagnosticInfo();
     const validation = await this.validateCriticalAssets();
-    
+
     console.log('=== Static File Manager ===');
     console.log(`Environment: ${info.environment}`);
     console.log(`Packaged: ${info.isPackaged}`);
@@ -424,17 +413,17 @@ class StaticFileManager {
     console.log(`  Missing: ${validation.missingAssets.length}`);
     console.log(`  Inaccessible: ${validation.inaccessibleAssets.length}`);
     console.log(`  Overall Valid: ${validation.isValid}`);
-    
+
     if (validation.missingAssets.length > 0) {
       console.log('Missing Assets:');
-      validation.missingAssets.forEach(asset => console.log(`  - ${asset}`));
+      validation.missingAssets.forEach((asset) => console.log(`  - ${asset}`));
     }
-    
+
     if (validation.errors.length > 0) {
       console.log('Errors:');
-      validation.errors.forEach(error => console.log(`  - ${error}`));
+      validation.errors.forEach((error) => console.log(`  - ${error}`));
     }
-    
+
     console.log('Static File Paths:');
     console.log(`  Main HTML: ${this.config.mainHTML}`);
     console.log(`  Renderer Bundle: ${this.config.rendererBundle}`);
@@ -456,5 +445,5 @@ export {
   type AssetValidationResult,
   type StaticFileConfig,
   type AssetManifest,
-  type ValidationSummary
+  type ValidationSummary,
 };

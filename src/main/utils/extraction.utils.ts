@@ -57,18 +57,18 @@ export function safeExtractNumber(obj: unknown, key: string, defaultValue = 0): 
   }
 
   const value = obj[key];
-  
+
   if (typeof value === 'number' && !isNaN(value)) {
     return value;
   }
-  
+
   if (typeof value === 'string') {
     const parsed = parseFloat(value);
     if (!isNaN(parsed)) {
       return parsed;
     }
   }
-  
+
   return defaultValue;
 }
 
@@ -84,15 +84,15 @@ export function safeExtractString(obj: unknown, key: string, defaultValue = ''):
   }
 
   const value = obj[key];
-  
+
   if (typeof value === 'string') {
     return value;
   }
-  
+
   if (value !== null && value !== undefined) {
     return String(value);
   }
-  
+
   return defaultValue;
 }
 
@@ -108,19 +108,19 @@ export function safeExtractBoolean(obj: unknown, key: string, defaultValue = fal
   }
 
   const value = obj[key];
-  
+
   if (typeof value === 'boolean') {
     return value;
   }
-  
+
   if (typeof value === 'string') {
     return value.toLowerCase() === 'true';
   }
-  
+
   if (typeof value === 'number') {
     return value !== 0;
   }
-  
+
   return defaultValue;
 }
 
@@ -130,21 +130,17 @@ export function safeExtractBoolean(obj: unknown, key: string, defaultValue = fal
  * @param key - Property key
  * @param defaultValue - Default value if extraction fails
  */
-export function safeExtractArray<T = unknown>(
-  obj: unknown, 
-  key: string, 
-  defaultValue: T[] = []
-): T[] {
+export function safeExtractArray<T = unknown>(obj: unknown, key: string, defaultValue: T[] = []): T[] {
   if (!isValidObject(obj)) {
     return defaultValue;
   }
 
   const value = obj[key];
-  
+
   if (Array.isArray(value)) {
     return value as T[];
   }
-  
+
   return defaultValue;
 }
 
@@ -156,18 +152,18 @@ export function hasValue(value: unknown): boolean {
   if (value === null || value === undefined) {
     return false;
   }
-  
+
   if (typeof value === 'string') {
     return value.trim().length > 0;
   }
-  
+
   if (Array.isArray(value)) {
     return value.length > 0;
   }
-  
+
   if (typeof value === 'object') {
     return Object.keys(value).length > 0;
   }
-  
+
   return true;
 }

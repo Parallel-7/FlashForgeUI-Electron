@@ -34,7 +34,7 @@ const connectChoiceAPI: ConnectChoiceAPI = {
       const data = args[1] as ConnectChoiceData & { responseChannel: string };
       callback(data);
     };
-    
+
     listeners.set('connect-choice:init', handler);
     ipcRenderer.on('connect-choice:init', handler);
   },
@@ -42,8 +42,10 @@ const connectChoiceAPI: ConnectChoiceAPI = {
   sendChoice: async (choice: ConnectChoiceOption): Promise<void> => {
     try {
       // Get the response channel from main process
-      const dialogData = await ipcRenderer.invoke('connect-choice:get-response-channel') as ResponseChannelData | null;
-      
+      const dialogData = (await ipcRenderer.invoke(
+        'connect-choice:get-response-channel'
+      )) as ResponseChannelData | null;
+
       if (dialogData?.responseChannel) {
         // Send choice through the unique response channel
         await ipcRenderer.invoke(dialogData.responseChannel, choice);
@@ -69,11 +71,11 @@ const connectChoiceAPI: ConnectChoiceAPI = {
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
-  }
+  },
 };
 
 contextBridge.exposeInMainWorld('api', {
   dialog: {
-    connectChoice: connectChoiceAPI
-  }
+    connectChoice: connectChoiceAPI,
+  },
 });

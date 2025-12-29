@@ -5,8 +5,8 @@
  * Provides methods for searching spools and selecting spools through the main process.
  */
 
+import type { ActiveSpoolData, SpoolResponse, SpoolSearchQuery } from '@shared/types/spoolman.js';
 import { contextBridge, ipcRenderer } from 'electron';
-import type { SpoolSearchQuery, SpoolResponse, ActiveSpoolData } from '@shared/types/spoolman.js';
 
 const spoolmanDialogAPI = {
   searchSpools: (query: SpoolSearchQuery): Promise<SpoolResponse[]> => {
@@ -22,13 +22,13 @@ const spoolmanDialogAPI = {
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
-  }
+  },
 } as const;
 
 contextBridge.exposeInMainWorld('api', {
   dialog: {
-    spoolman: spoolmanDialogAPI
-  }
+    spoolman: spoolmanDialogAPI,
+  },
 });
 
 export {};

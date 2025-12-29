@@ -18,7 +18,7 @@ export function initializeLucideIconsFromGlobal(
   root: Document | Element | DocumentFragment = document
 ): void {
   const selectedIcons: Record<string, unknown> = {};
-  
+
   iconNames.forEach((name) => {
     // Convert kebab-case to PascalCase (e.g., "arrow-right" -> "ArrowRight")
     const pascalName = name
@@ -28,7 +28,7 @@ export function initializeLucideIconsFromGlobal(
 
     // Lucide icons are exported as PascalCase keys in the `icons` object
     const iconNode = (icons as Record<string, unknown>)[pascalName];
-    
+
     if (iconNode) {
       selectedIcons[pascalName] = iconNode;
     } else {

@@ -7,37 +7,37 @@
  * introducing direct coupling to UI rendering functions.
  */
 
-import { componentRegistry } from '../grid/WebUIComponentRegistry.js';
-import type { WebUIComponentLayout, WebUIGridLayout } from '../grid/types.js';
+import type { ApiResponse, PrinterFeatures, PrinterStatus, WebUISettings } from '../app.js';
 import {
   ALL_COMPONENT_IDS,
   DEFAULT_SETTINGS,
   DEMO_SERIAL,
+  getCurrentPrinterSerial,
+  getCurrentSettings,
+  getGridChangeUnsubscribe,
+  getCurrentContextId as getStoredContextId,
   gridManager,
+  isGridInitialized,
+  isMobile as isMobileLayoutEnabled,
   layoutPersistence,
   mobileLayoutManager,
-  state,
-  getCurrentPrinterSerial,
   setCurrentPrinterSerial,
-  getCurrentSettings,
-  updateCurrentSettings,
-  getGridChangeUnsubscribe,
   setGridChangeUnsubscribe,
-  isGridInitialized,
   setGridInitialized,
-  isMobile as isMobileLayoutEnabled,
   setMobileLayout,
-  getCurrentContextId as getStoredContextId,
+  state,
+  updateCurrentSettings,
 } from '../core/AppState.js';
-import type { ApiResponse, PrinterFeatures, PrinterStatus, WebUISettings } from '../app.js';
 import { apiRequest, apiRequestWithMetadata } from '../core/Transport.js';
+import type { WebUIComponentLayout, WebUIGridLayout } from '../grid/types.js';
+import { componentRegistry } from '../grid/WebUIComponentRegistry.js';
 import { $, showToast } from '../shared/dom.js';
 import { updateEditModeToggle } from '../ui/header.js';
 
 interface ThemeProfile {
-    name: string;
-    colors: ThemeColors;
-    isSystem: boolean;
+  name: string;
+  colors: ThemeColors;
+  isSystem: boolean;
 }
 
 interface ThemeProfileAddData {
@@ -57,10 +57,7 @@ interface ThemeProfileDeleteData {
   name: string;
 }
 
-type ThemeProfileOperationData =
-  | ThemeProfileAddData
-  | ThemeProfileUpdateData
-  | ThemeProfileDeleteData;
+type ThemeProfileOperationData = ThemeProfileAddData | ThemeProfileUpdateData | ThemeProfileDeleteData;
 
 export interface LayoutUiHooks {
   onConnectionStatusUpdate?: (connected: boolean) => void;
@@ -92,18 +89,17 @@ export function setupLayoutEventHandlers(): void {
 
   saveButton?.addEventListener('click', () => {
     const checkboxes = document.querySelectorAll<HTMLInputElement>(
-      '#settings-modal input[type="checkbox"][data-component-id]',
+      '#settings-modal input[type="checkbox"][data-component-id]'
     );
     const visibleComponents = Array.from(checkboxes)
       .filter((checkbox) => checkbox.checked && !checkbox.disabled)
       .map((checkbox) => checkbox.dataset.componentId ?? '')
       .filter((componentId): componentId is string => componentId.length > 0);
 
-    const editMode = (modalEditToggle?.checked ?? false);
+    const editMode = modalEditToggle?.checked ?? false;
 
     const updatedSettings: WebUISettings = {
-      visibleComponents:
-        visibleComponents.length > 0 ? visibleComponents : [...DEFAULT_SETTINGS.visibleComponents],
+      visibleComponents: visibleComponents.length > 0 ? visibleComponents : [...DEFAULT_SETTINGS.visibleComponents],
       editMode,
     };
 
@@ -253,9 +249,7 @@ export function ensureCompleteLayout(baseLayout: WebUIGridLayout | null): WebUIG
     normalizedComponents[componentId] = sanitizeLayoutConfig(componentId, defaultConfig, customConfig);
   }
 
-  const hidden = (incoming.hiddenComponents ?? []).filter((componentId) =>
-    ALL_COMPONENT_IDS.includes(componentId),
-  );
+  const hidden = (incoming.hiddenComponents ?? []).filter((componentId) => ALL_COMPONENT_IDS.includes(componentId));
 
   return {
     version: defaults.version,
@@ -267,7 +261,7 @@ export function ensureCompleteLayout(baseLayout: WebUIGridLayout | null): WebUIG
 export function sanitizeLayoutConfig(
   componentId: string,
   defaults: WebUIComponentLayout | undefined,
-  custom: WebUIComponentLayout | undefined,
+  custom: WebUIComponentLayout | undefined
 ): WebUIComponentLayout {
   const source = custom ?? defaults;
   if (!source) {
@@ -322,8 +316,9 @@ export function loadSettingsForSerial(serialNumber: string | null): WebUISetting
   }
 
   const visibleComponents = Array.isArray(stored.visibleComponents)
-    ? stored.visibleComponents.filter((componentId): componentId is string =>
-        typeof componentId === 'string' && ALL_COMPONENT_IDS.includes(componentId),
+    ? stored.visibleComponents.filter(
+        (componentId): componentId is string =>
+          typeof componentId === 'string' && ALL_COMPONENT_IDS.includes(componentId)
       )
     : [...DEFAULT_SETTINGS.visibleComponents];
 
@@ -349,11 +344,7 @@ export function applySettings(settings: WebUISettings): void {
   const mobile = isMobileViewport();
 
   for (const componentId of ALL_COMPONENT_IDS) {
-    const shouldShow = shouldComponentBeVisible(
-      componentId,
-      settings,
-      state.printerFeatures ?? null,
-    );
+    const shouldShow = shouldComponentBeVisible(componentId, settings, state.printerFeatures ?? null);
 
     if (mobile) {
       if (shouldShow) {
@@ -386,7 +377,7 @@ export function applySettings(settings: WebUISettings): void {
 
 export function refreshSettingsUI(settings: WebUISettings): void {
   const checkboxes = document.querySelectorAll<HTMLInputElement>(
-    '#settings-modal input[type="checkbox"][data-component-id]',
+    '#settings-modal input[type="checkbox"][data-component-id]'
   );
 
   checkboxes.forEach((checkbox) => {
@@ -522,7 +513,7 @@ export function isComponentSupported(componentId: string, features: PrinterFeatu
 export function shouldComponentBeVisible(
   componentId: string,
   settings: WebUISettings,
-  features: PrinterFeatures | null,
+  features: PrinterFeatures | null
 ): boolean {
   if (!settings.visibleComponents.includes(componentId)) {
     return false;
@@ -620,8 +611,8 @@ export function lightenColor(hex: string, percent: number): string {
   }
 
   const r = Math.min(255, Math.floor((num >> 16) + (255 - (num >> 16)) * (percent / 100)));
-  const g = Math.min(255, Math.floor(((num >> 8) & 0x00FF) + (255 - ((num >> 8) & 0x00FF)) * (percent / 100)));
-  const b = Math.min(255, Math.floor((num & 0x0000FF) + (255 - (num & 0x0000FF)) * (percent / 100)));
+  const g = Math.min(255, Math.floor(((num >> 8) & 0x00ff) + (255 - ((num >> 8) & 0x00ff)) * (percent / 100)));
+  const b = Math.min(255, Math.floor((num & 0x0000ff) + (255 - (num & 0x0000ff)) * (percent / 100)));
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
@@ -634,8 +625,8 @@ export function darkenColor(hex: string, percent: number): string {
 
   const clampPercent = Math.max(0, Math.min(100, percent)) / 100;
   const r = Math.max(0, Math.floor((num >> 16) * (1 - clampPercent)));
-  const g = Math.max(0, Math.floor(((num >> 8) & 0x00FF) * (1 - clampPercent)));
-  const b = Math.max(0, Math.floor((num & 0x0000FF) * (1 - clampPercent)));
+  const g = Math.max(0, Math.floor(((num >> 8) & 0x00ff) * (1 - clampPercent)));
+  const b = Math.max(0, Math.floor((num & 0x0000ff) * (1 - clampPercent)));
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
 
@@ -756,31 +747,31 @@ function teardownCameraStreamElements(): void {
 }
 
 async function loadThemeProfiles(): Promise<void> {
-    try {
-        const profiles = await apiRequest<ThemeProfile[]>('/api/webui/theme/profiles');
-        renderThemeProfiles(profiles);
-    } catch (error) {
-        console.error('Error loading theme profiles:', error);
-    }
+  try {
+    const profiles = await apiRequest<ThemeProfile[]>('/api/webui/theme/profiles');
+    renderThemeProfiles(profiles);
+  } catch (error) {
+    console.error('Error loading theme profiles:', error);
+  }
 }
 
 function renderThemeProfiles(profiles: ThemeProfile[]): void {
-    const container = $('webui-theme-profiles-container');
-    if (!container) return;
+  const container = $('webui-theme-profiles-container');
+  if (!container) return;
 
-    container.innerHTML = '';
-    profiles.forEach(profile => {
-        const card = createProfileCard(profile);
-        container.appendChild(card);
-    });
+  container.innerHTML = '';
+  profiles.forEach((profile) => {
+    const card = createProfileCard(profile);
+    container.appendChild(card);
+  });
 }
 
 function createProfileCard(profile: ThemeProfile): HTMLElement {
-    const card = document.createElement('div');
-    card.className = 'theme-profile-card';
-    card.style.setProperty('--theme-primary', profile.colors.primary);
+  const card = document.createElement('div');
+  card.className = 'theme-profile-card';
+  card.style.setProperty('--theme-primary', profile.colors.primary);
 
-    card.innerHTML = `
+  card.innerHTML = `
       <div class="profile-card-header">
         <span class="profile-name">${profile.name}</span>
         <div class="profile-actions">
@@ -793,66 +784,72 @@ function createProfileCard(profile: ThemeProfile): HTMLElement {
       </div>
     `;
 
-    card.addEventListener('click', () => handleProfileSelect(profile));
+  card.addEventListener('click', () => handleProfileSelect(profile));
 
-    if (!profile.isSystem) {
-        const actionsContainer = card.querySelector('.profile-actions') as HTMLElement;
-        const editBtn = createActionButton('edit-2', 'Rename', () => handleRenameProfile(profile));
-        const deleteBtn = createActionButton('trash-2', 'Delete', () => handleDeleteProfile(profile));
-        actionsContainer.append(editBtn, deleteBtn);
-    }
+  if (!profile.isSystem) {
+    const actionsContainer = card.querySelector('.profile-actions') as HTMLElement;
+    const editBtn = createActionButton('edit-2', 'Rename', () => handleRenameProfile(profile));
+    const deleteBtn = createActionButton('trash-2', 'Delete', () => handleDeleteProfile(profile));
+    actionsContainer.append(editBtn, deleteBtn);
+  }
 
-    return card;
+  return card;
 }
 
 function createActionButton(icon: string, title: string, onClick: (e: MouseEvent) => void): HTMLElement {
-    const btn = document.createElement('button');
-    btn.className = 'profile-action-btn';
-    btn.title = title;
-    btn.innerHTML = `<i data-lucide="${icon}"></i>`;
-    btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        onClick(e);
-    });
-    return btn;
+  const btn = document.createElement('button');
+  btn.className = 'profile-action-btn';
+  btn.title = title;
+  btn.innerHTML = `<i data-lucide="${icon}"></i>`;
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    onClick(e);
+  });
+  return btn;
 }
 
 function handleProfileSelect(profile: ThemeProfile): void {
-    setThemeInputValues(profile.colors);
-    void applyWebUITheme(profile.colors);
+  setThemeInputValues(profile.colors);
+  void applyWebUITheme(profile.colors);
 }
 
 async function handleAddProfile(): Promise<void> {
-    const name = prompt('Enter a name for the new profile:');
-    if (name) {
-        const colors = getThemeFromInputs();
-        await performProfileOperation('add', { name, colors });
-    }
+  const name = prompt('Enter a name for the new profile:');
+  if (name) {
+    const colors = getThemeFromInputs();
+    await performProfileOperation('add', { name, colors });
+  }
 }
 
 async function handleRenameProfile(profile: ThemeProfile): Promise<void> {
-    const newName = prompt('Enter a new name:', profile.name);
-    if (newName && newName !== profile.name) {
-        await performProfileOperation('update', { originalName: profile.name, updatedProfile: { name: newName, colors: profile.colors } });
-    }
+  const newName = prompt('Enter a new name:', profile.name);
+  if (newName && newName !== profile.name) {
+    await performProfileOperation('update', {
+      originalName: profile.name,
+      updatedProfile: { name: newName, colors: profile.colors },
+    });
+  }
 }
 
 async function handleDeleteProfile(profile: ThemeProfile): Promise<void> {
-    if (confirm(`Are you sure you want to delete "${profile.name}"?`)) {
-        await performProfileOperation('delete', { name: profile.name });
-    }
+  if (confirm(`Are you sure you want to delete "${profile.name}"?`)) {
+    await performProfileOperation('delete', { name: profile.name });
+  }
 }
 
-async function performProfileOperation(operation: 'add' | 'update' | 'delete', data: ThemeProfileOperationData): Promise<void> {
-    try {
-        await apiRequest('/api/webui/theme/profiles', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ operation, data }),
-        });
-        await loadThemeProfiles();
-    } catch (error) {
-        console.error(`Error performing profile operation: ${operation}`, error);
-        showToast(`Error: ${operation}`, 'error');
-    }
+async function performProfileOperation(
+  operation: 'add' | 'update' | 'delete',
+  data: ThemeProfileOperationData
+): Promise<void> {
+  try {
+    await apiRequest('/api/webui/theme/profiles', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ operation, data }),
+    });
+    await loadThemeProfiles();
+  } catch (error) {
+    console.error(`Error performing profile operation: ${operation}`, error);
+    showToast(`Error: ${operation}`, 'error');
+  }
 }

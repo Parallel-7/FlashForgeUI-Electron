@@ -38,35 +38,32 @@
  * @exports CoordinatorEventMap - Type for coordinator event emissions
  */
 
-import { EventEmitter } from '../../utils/EventEmitter.js';
-import { getNotificationService, NotificationService } from './NotificationService.js';
-import { getConfigManager, ConfigManager } from '../../managers/ConfigManager.js';
-import type { TemperatureMonitoringService } from '../TemperatureMonitoringService.js';
-import type { PrinterCooledEvent } from '../MultiContextTemperatureMonitor.js';
-import type { PrintStateMonitor } from '../PrintStateMonitor.js';
-import type { PrinterPollingService } from '../PrinterPollingService.js';
-import type {
-  PollingData,
-  PrinterStatus
-} from '@shared/types/polling.js';
 import {
-  NotificationState,
-  NotificationSettings,
-  NotificationStateTransition,
-  NotificationEventPayloads,
+  COOLED_TEMPERATURE_THRESHOLD,
+  createConnectionErrorNotification,
+  createConnectionLostNotification,
   createInitialNotificationState,
-  extractNotificationSettings,
-  shouldSendNotification,
+  createNotificationTemperature,
   createPrintCompleteNotification,
   createPrinterCooledNotification,
   createUploadCompleteNotification,
   createUploadFailedNotification,
-  createConnectionLostNotification,
-  createConnectionErrorNotification,
-  createNotificationTemperature,
+  extractNotificationSettings,
+  NotificationEventPayloads,
+  NotificationSettings,
+  NotificationState,
+  NotificationStateTransition,
   NotificationType,
-  COOLED_TEMPERATURE_THRESHOLD
+  shouldSendNotification,
 } from '@shared/types/notification.js';
+import type { PollingData, PrinterStatus } from '@shared/types/polling.js';
+import { ConfigManager, getConfigManager } from '../../managers/ConfigManager.js';
+import { EventEmitter } from '../../utils/EventEmitter.js';
+import type { PrinterCooledEvent } from '../MultiContextTemperatureMonitor.js';
+import type { PrinterPollingService } from '../PrinterPollingService.js';
+import type { PrintStateMonitor } from '../PrintStateMonitor.js';
+import type { TemperatureMonitoringService } from '../TemperatureMonitoringService.js';
+import { getNotificationService, NotificationService } from './NotificationService.js';
 
 // ============================================================================
 // COORDINATOR EVENTS
@@ -101,10 +98,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   private lastPrinterStatus: PrinterStatus | null = null;
   private contextId: string | null = null;
 
-  constructor(
-    notificationService?: NotificationService,
-    configManager?: ConfigManager
-  ) {
+  constructor(notificationService?: NotificationService, configManager?: ConfigManager) {
     super();
 
     // Use provided services or get global instances
@@ -287,7 +281,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
 
         this.emit('settings-updated', {
           previousSettings,
-          currentSettings: newSettings
+          currentSettings: newSettings,
         });
 
         console.log('Notification settings updated:', newSettings);
@@ -347,7 +341,12 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   /**
    * Handle print started event from PrintStateMonitor
    */
-  private async handlePrintStarted(event: { contextId: string; jobName: string; status: PrinterStatus; timestamp: Date }): Promise<void> {
+  private async handlePrintStarted(event: {
+    contextId: string;
+    jobName: string;
+    status: PrinterStatus;
+    timestamp: Date;
+  }): Promise<void> {
     console.log(`[NotificationCoordinator] Print started: ${event.jobName}`);
 
     // Reset notification sent flags for active printing states
@@ -357,24 +356,39 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   /**
    * Handle print completed event from PrintStateMonitor
    */
-  private async handlePrintCompletedEvent(event: { contextId: string; jobName: string; status: PrinterStatus; completedAt: Date }): Promise<void> {
+  private async handlePrintCompletedEvent(event: {
+    contextId: string;
+    jobName: string;
+    status: PrinterStatus;
+    completedAt: Date;
+  }): Promise<void> {
     console.log(`[NotificationCoordinator] Print completed: ${event.jobName}`);
 
     // Check if notification should be sent
-    if (!this.notificationState.hasSentPrintCompleteNotification &&
-        shouldSendNotification(NotificationType.PrintComplete, this.currentSettings)) {
+    if (
+      !this.notificationState.hasSentPrintCompleteNotification &&
+      shouldSendNotification(NotificationType.PrintComplete, this.currentSettings)
+    ) {
       await this.sendPrintCompleteNotification(event.status);
-      this.updateNotificationState({
-        hasSentPrintCompleteNotification: true,
-        lastPrintCompleteTime: new Date()
-      }, NotificationStateTransition.PrintCompleted);
+      this.updateNotificationState(
+        {
+          hasSentPrintCompleteNotification: true,
+          lastPrintCompleteTime: new Date(),
+        },
+        NotificationStateTransition.PrintCompleted
+      );
     }
   }
 
   /**
    * Handle print cancelled event from PrintStateMonitor
    */
-  private async handlePrintCancelled(_event: { contextId: string; jobName: string | null; status: PrinterStatus; timestamp: Date }): Promise<void> {
+  private async handlePrintCancelled(_event: {
+    contextId: string;
+    jobName: string | null;
+    status: PrinterStatus;
+    timestamp: Date;
+  }): Promise<void> {
     console.log('[NotificationCoordinator] Print cancelled');
     this.resetNotificationState(NotificationStateTransition.PrintCancelled);
   }
@@ -382,7 +396,12 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   /**
    * Handle print error event from PrintStateMonitor
    */
-  private async handlePrintError(_event: { contextId: string; jobName: string | null; status: PrinterStatus; timestamp: Date }): Promise<void> {
+  private async handlePrintError(_event: {
+    contextId: string;
+    jobName: string | null;
+    status: PrinterStatus;
+    timestamp: Date;
+  }): Promise<void> {
     console.log('[NotificationCoordinator] Print error');
     this.resetNotificationState(NotificationStateTransition.PrintCancelled);
   }
@@ -402,9 +421,12 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     }
 
     // Update state BEFORE sending to prevent race condition
-    this.updateNotificationState({
-      hasSentPrinterCooledNotification: true
-    }, NotificationStateTransition.PrinterCooled);
+    this.updateNotificationState(
+      {
+        hasSentPrinterCooledNotification: true,
+      },
+      NotificationStateTransition.PrinterCooled
+    );
 
     // Send notification
     await this.sendPrinterCooledNotification(event.status);
@@ -424,7 +446,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     const printInfo = {
       fileName: jobName,
       duration: status.currentJob?.progress.elapsedTime,
-      layerCount: status.currentJob?.progress.totalLayers ?? undefined
+      layerCount: status.currentJob?.progress.totalLayers ?? undefined,
     };
 
     const notification = createPrintCompleteNotification(printInfo);
@@ -450,7 +472,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
       threshold: createNotificationTemperature(COOLED_TEMPERATURE_THRESHOLD),
       timeSincePrintComplete: this.notificationState.lastPrintCompleteTime
         ? Date.now() - this.notificationState.lastPrintCompleteTime.getTime()
-        : undefined
+        : undefined,
     };
 
     const notification = createPrinterCooledNotification(printInfo);
@@ -470,7 +492,11 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   /**
    * Send upload complete notification
    */
-  public async sendUploadCompleteNotification(fileName: string, fileSize?: number, uploadDuration?: number): Promise<void> {
+  public async sendUploadCompleteNotification(
+    fileName: string,
+    fileSize?: number,
+    uploadDuration?: number
+  ): Promise<void> {
     const uploadInfo = { fileName, fileSize, uploadDuration };
     const notification = createUploadCompleteNotification(uploadInfo);
 
@@ -529,7 +555,11 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   /**
    * Send connection error notification
    */
-  public async sendConnectionErrorNotification(errorMessage: string, errorCode?: string, printerName?: string): Promise<void> {
+  public async sendConnectionErrorNotification(
+    errorMessage: string,
+    errorCode?: string,
+    printerName?: string
+  ): Promise<void> {
     const errorInfo = { errorMessage, errorCode, printerName };
     const notification = createConnectionErrorNotification(errorInfo);
 
@@ -556,7 +586,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
     this.emit('state-changed', {
       previousState,
       currentState: this.notificationState,
-      transition
+      transition,
     });
 
     console.log(`Notification state reset: ${transition}`);
@@ -565,21 +595,18 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   /**
    * Update notification state partially
    */
-  private updateNotificationState(
-    updates: Partial<NotificationState>,
-    transition: NotificationStateTransition
-  ): void {
+  private updateNotificationState(updates: Partial<NotificationState>, transition: NotificationStateTransition): void {
     const previousState = { ...this.notificationState };
 
     this.notificationState = {
       ...this.notificationState,
-      ...updates
+      ...updates,
     };
 
     this.emit('state-changed', {
       previousState,
       currentState: this.notificationState,
-      transition
+      transition,
     });
   }
 

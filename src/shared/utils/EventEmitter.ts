@@ -19,10 +19,7 @@ export type EventListener<TEventMap extends Record<string, unknown[]>, TEventNam
 export class EventEmitter<TEventMap extends Record<string, unknown[]> = DefaultEventMap> {
   private readonly events: Map<keyof TEventMap, EventListener<TEventMap, keyof TEventMap>[]> = new Map();
 
-  on<TEventName extends keyof TEventMap>(
-    event: TEventName,
-    listener: EventListener<TEventMap, TEventName>
-  ): this {
+  on<TEventName extends keyof TEventMap>(event: TEventName, listener: EventListener<TEventMap, TEventName>): this {
     if (!this.events.has(event)) {
       this.events.set(event, []);
     }
@@ -30,10 +27,7 @@ export class EventEmitter<TEventMap extends Record<string, unknown[]> = DefaultE
     return this;
   }
 
-  once<TEventName extends keyof TEventMap>(
-    event: TEventName,
-    listener: EventListener<TEventMap, TEventName>
-  ): this {
+  once<TEventName extends keyof TEventMap>(event: TEventName, listener: EventListener<TEventMap, TEventName>): this {
     const onceWrapper = (...args: TEventMap[TEventName]): void => {
       this.off(event, onceWrapper as EventListener<TEventMap, TEventName>);
       listener(...args);
@@ -41,10 +35,7 @@ export class EventEmitter<TEventMap extends Record<string, unknown[]> = DefaultE
     return this.on(event, onceWrapper);
   }
 
-  off<TEventName extends keyof TEventMap>(
-    event: TEventName,
-    listener: EventListener<TEventMap, TEventName>
-  ): this {
+  off<TEventName extends keyof TEventMap>(event: TEventName, listener: EventListener<TEventMap, TEventName>): this {
     const listeners = this.events.get(event);
     if (listeners) {
       const index = listeners.indexOf(listener as EventListener<TEventMap, keyof TEventMap>);
@@ -58,15 +49,12 @@ export class EventEmitter<TEventMap extends Record<string, unknown[]> = DefaultE
     return this;
   }
 
-  emit<TEventName extends keyof TEventMap>(
-    event: TEventName,
-    ...args: TEventMap[TEventName]
-  ): boolean {
+  emit<TEventName extends keyof TEventMap>(event: TEventName, ...args: TEventMap[TEventName]): boolean {
     const listeners = this.events.get(event);
     if (listeners && listeners.length > 0) {
       // Create a copy to avoid issues if listeners modify the array
       const listenersCopy = [...listeners];
-      listenersCopy.forEach(listener => {
+      listenersCopy.forEach((listener) => {
         try {
           listener(...args);
         } catch (error) {

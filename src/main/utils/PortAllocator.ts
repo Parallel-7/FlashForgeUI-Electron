@@ -55,9 +55,7 @@ export class PortAllocator {
     }
 
     if (startPort < 1 || startPort > 65535 || endPort < 1 || endPort > 65535) {
-      throw new Error(
-        `Port numbers must be in range 1-65535. Got startPort=${startPort}, endPort=${endPort}`
-      );
+      throw new Error(`Port numbers must be in range 1-65535. Got startPort=${startPort}, endPort=${endPort}`);
     }
 
     this.currentPort = startPort;
@@ -108,7 +106,7 @@ export class PortAllocator {
     // No ports available in the entire range
     throw new Error(
       `No available ports in range ${this.startPort}-${this.endPort}. ` +
-      `All ${rangeSize} ports are currently allocated.`
+        `All ${rangeSize} ports are currently allocated.`
     );
   }
 
@@ -217,8 +215,7 @@ export class PortAllocator {
       totalPorts,
       allocatedCount: this.allocatedPorts.size,
       availableCount: totalPorts - this.allocatedPorts.size,
-      allocatedPorts: this.getAllocatedPorts()
+      allocatedPorts: this.getAllocatedPorts(),
     };
   }
 }
-

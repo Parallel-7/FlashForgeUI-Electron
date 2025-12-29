@@ -1,6 +1,6 @@
 /**
  * Camera Preview with Integrated Job Info Component Styles
- * 
+ *
  * This CSS creates a seamless visual unit that fills the left side properly,
  * combining camera functionality with real-time job progress information.
  * The camera stream takes most of the space with job info integrated at the bottom.
@@ -271,17 +271,17 @@
   .component-camera-preview .camera-view {
     min-height: 150px;
   }
-  
+
   .component-camera-preview .job-info-overlay {
     padding: var(--ui-padding, 8px);
     gap: 6px;
   }
-  
+
   .component-camera-preview .job-row,
   .component-camera-preview .progress-row {
     font-size: 0.8em;
   }
-  
+
   .component-camera-preview .camera-controls button {
     padding: 4px 8px;
     font-size: 0.8em;
@@ -297,11 +297,11 @@
   .component-camera-preview progress::-moz-progress-bar {
     background: var(--theme-primary);
   }
-  
+
   .component-camera-preview .camera-controls button {
     border: 1px solid var(--text-color);
   }
-  
+
   .component-camera-preview .job-info-overlay {
     border-top: 2px solid var(--text-color);
   }
@@ -312,15 +312,15 @@
   .component-camera-preview progress::-webkit-progress-value {
     transition: none;
   }
-  
+
   .component-camera-preview progress::-moz-progress-bar {
     transition: none;
   }
-  
+
   .component-camera-preview .camera-controls button {
     transition: none;
   }
-  
+
   .component-camera-preview .camera-controls button:hover {
     transform: none;
   }

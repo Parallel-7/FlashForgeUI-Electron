@@ -21,26 +21,9 @@
  */
 
 import { getCurrentSettings, state, updateCurrentSettings } from './core/AppState.js';
-import {
-  connectWebSocket,
-  onConnectionChange,
-  onSpoolmanUpdate,
-  onStatusUpdate,
-} from './core/Transport.js';
-import { $, hideElement, showElement } from './shared/dom.js';
-import { initializeLucideIcons } from './shared/icons.js';
-import {
-  applyDefaultTheme,
-  applySettings,
-  ensureSpoolmanVisibilityIfEnabled,
-  initializeLayout,
-  loadWebUITheme,
-  refreshSettingsUI,
-  persistSettings,
-  setupLayoutEventHandlers,
-  setupViewportListener,
-} from './features/layout-theme.js';
-import { setupAuthEventHandlers, loadAuthStatus, checkAuthStatus } from './features/authentication.js';
+import { connectWebSocket, onConnectionChange, onSpoolmanUpdate, onStatusUpdate } from './core/Transport.js';
+import { checkAuthStatus, loadAuthStatus, setupAuthEventHandlers } from './features/authentication.js';
+import { initializeCamera } from './features/camera.js';
 import {
   fetchPrinterContexts,
   getCurrentContextId,
@@ -55,19 +38,27 @@ import {
   updateFeatureVisibility,
 } from './features/job-control.js';
 import {
+  applyDefaultTheme,
+  applySettings,
+  ensureSpoolmanVisibilityIfEnabled,
+  initializeLayout,
+  loadWebUITheme,
+  persistSettings,
+  refreshSettingsUI,
+  setupLayoutEventHandlers,
+  setupViewportListener,
+} from './features/layout-theme.js';
+import {
   closeMaterialMatchingModal,
   confirmMaterialMatching,
   setupMaterialMatchingHandlers,
 } from './features/material-matching.js';
 import { loadSpoolmanConfig, setupSpoolmanHandlers } from './features/spoolman.js';
-import { initializeCamera } from './features/camera.js';
+import { $, hideElement, showElement } from './shared/dom.js';
+import { initializeLucideIcons } from './shared/icons.js';
 import { DialogHandlers, setupDialogEventHandlers } from './ui/dialogs.js';
-import {
-  updateConnectionStatus,
-  updatePrinterStatus,
-  updateSpoolmanPanelState,
-} from './ui/panels.js';
 import { setupHeaderEventHandlers } from './ui/header.js';
+import { updateConnectionStatus, updatePrinterStatus, updateSpoolmanPanelState } from './ui/panels.js';
 
 // ============================================================================
 // TYPES AND INTERFACES
@@ -170,12 +161,12 @@ export interface PrinterFeaturesResponse extends ApiResponse {
 
 export interface CameraProxyConfigResponse extends ApiResponse {
   streamType?: 'mjpeg' | 'rtsp';
-  port?: number;  // For MJPEG camera proxy
-  wsPort?: number;  // For RTSP WebSocket port
+  port?: number; // For MJPEG camera proxy
+  wsPort?: number; // For RTSP WebSocket port
   url?: string;
   wsPath?: string;
   ffmpegAvailable?: boolean;
-  showCameraFps?: boolean;  // Whether to show FPS overlay
+  showCameraFps?: boolean; // Whether to show FPS overlay
 }
 
 export interface FileListResponse extends ApiResponse {
@@ -291,7 +282,6 @@ export interface SpoolSelectResponse extends ApiResponse {
 // UI UPDATES
 // ============================================================================
 
-
 onConnectionChange((connected) => {
   updateConnectionStatus(connected);
 });
@@ -311,12 +301,9 @@ onSpoolmanUpdate((contextId, spool) => {
 // PRINTER CONTROLS
 // ============================================================================
 
-
 // ============================================================================
 // SPOOLMAN INTEGRATION
 // ============================================================================
-
-
 
 // ============================================================================
 // VIEWPORT AND LAYOUT SWITCHING
@@ -328,7 +315,6 @@ onSpoolmanUpdate((contextId, spool) => {
 // ============================================================================
 // EVENT HANDLERS
 // ============================================================================
-
 
 async function initialize(): Promise<void> {
   console.log('Initializing Web UI...');
@@ -349,8 +335,7 @@ async function initialize(): Promise<void> {
       closeMaterialMatchingModal();
     },
     onMaterialMatchingConfirm: () => confirmMaterialMatching(),
-    onTemperatureSubmit: (type, temperature) =>
-      sendPrinterCommand(`temperature/${type}`, { temperature }),
+    onTemperatureSubmit: (type, temperature) => sendPrinterCommand(`temperature/${type}`, { temperature }),
   };
   setupDialogEventHandlers(dialogHandlers);
   setupJobControlEventHandlers();

@@ -45,9 +45,7 @@ export function buildMaterialBadgeTooltip(job: WebUIJobFile): string {
     return 'Multi-color job';
   }
 
-  const materials = job.toolDatas
-    .map((tool) => `Tool ${tool.toolId + 1}: ${tool.materialName}`)
-    .join('\n');
+  const materials = job.toolDatas.map((tool) => `Tool ${tool.toolId + 1}: ${tool.materialName}`).join('\n');
   return `Requires material station\n${materials}`;
 }
 

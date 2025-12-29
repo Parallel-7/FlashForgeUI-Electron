@@ -19,28 +19,18 @@
  * Used by AD5XBackend and material-related dialogs for consistent material management.
  */
 
-import {
-  AD5XJobInfo,
-  hasValidMaterialStationInfo,
-  MaterialStationStatus,
-  isAD5XMachineInfo,
-} from './ad5x-types.js';
-import { transformMaterialStation, createEmptyMaterialStation } from './ad5x-transforms.js';
+import { createEmptyMaterialStation, transformMaterialStation } from './ad5x-transforms.js';
+import { AD5XJobInfo, hasValidMaterialStationInfo, isAD5XMachineInfo, MaterialStationStatus } from './ad5x-types.js';
 
 /**
  * Type guard to check if a job is an AD5X job with material data
  */
 export function isAD5XJobInfo(value: unknown): value is AD5XJobInfo {
   if (!value || typeof value !== 'object') return false;
-  
-  const obj = value as Record<string, unknown>;
-  return (
-    'fileName' in obj && 
-    typeof obj.fileName === 'string' && 
-    ('toolDatas' in obj || '_type' in obj)
-  );
-}
 
+  const obj = value as Record<string, unknown>;
+  return 'fileName' in obj && typeof obj.fileName === 'string' && ('toolDatas' in obj || '_type' in obj);
+}
 
 /**
  * Extract material station status from AD5X machine info
@@ -50,11 +40,11 @@ export function extractMaterialStationStatus(machineInfo: unknown): MaterialStat
   if (!isAD5XMachineInfo(machineInfo)) {
     return null;
   }
-  
+
   if (!hasValidMaterialStationInfo(machineInfo)) {
     return null;
   }
-  
+
   try {
     return transformMaterialStation(machineInfo.MatlStationInfo);
   } catch (error) {
@@ -62,5 +52,3 @@ export function extractMaterialStationStatus(machineInfo: unknown): MaterialStat
     return createEmptyMaterialStation();
   }
 }
-
-

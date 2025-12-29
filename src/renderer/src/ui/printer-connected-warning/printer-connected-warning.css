@@ -1,190 +1,190 @@
 /* Printer Connected Warning Dialog CSS - Rounded Styling Pattern */
 /* Import shared template for consistent styling */
-@import url('../shared/rounded-dialog-template.css');
+@import url("../shared/rounded-dialog-template.css");
 
 /* Universal CSS reset for consistent spacing */
 * {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
 /* Fix dialog container to fill window height */
 .dialog-container {
-    height: 100%;
+  height: 100%;
 }
 
 /* Warning Dialog Specific Styling - All colors use global theme variables */
 
 /* Warning content container */
 .warning-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 24px;
 }
 
 /* Warning icon styling */
 .warning-icon {
-    color: var(--warning-color);
-    margin-bottom: 16px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    flex-shrink: 0;
+  color: var(--warning-color);
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
 }
 
 .warning-icon i {
-    display: inline-flex;
-    width: 32px;
-    height: 32px;
-    color: currentColor;
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  color: currentColor;
 }
 
 .warning-icon .lucide-icon {
-    width: 100%;
-    height: 100%;
-    filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--theme-background) 10%, black));
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 1px 2px color-mix(in srgb, var(--theme-background) 10%, black));
 }
 
 /* Warning message styling */
 .warning-message {
-    max-width: 320px;
-    margin: 0 auto;
+  max-width: 320px;
+  margin: 0 auto;
 }
 
 .primary-message {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-color);
-    margin: 0 0 12px 0;
-    line-height: 1.4;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 12px 0;
+  line-height: 1.4;
 }
 
 .detail-message {
-    font-size: 14px;
-    color: color-mix(in srgb, var(--theme-text) 65%, transparent);
-    margin: 0;
-    line-height: 1.5;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--theme-text) 65%, transparent);
+  margin: 0;
+  line-height: 1.5;
 }
 
 /* Button container styling */
 .dialog-buttons {
-    display: flex;
-    justify-content: center;
-    gap: 12px;
-    padding-top: 8px;
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  padding-top: 8px;
 }
 
 /* Button styling - inherit most styles from template */
 .dialog-button {
-    min-width: 90px;
-    font-weight: 500;
+  min-width: 90px;
+  font-weight: 500;
 }
 
 .dialog-button.primary {
-    background-color: var(--theme-primary);
-    border-color: var(--theme-primary);
+  background-color: var(--theme-primary);
+  border-color: var(--theme-primary);
 }
 
 .dialog-button.primary:hover {
-    background-color: var(--theme-primary-hover);
-    border-color: var(--theme-primary-hover);
+  background-color: var(--theme-primary-hover);
+  border-color: var(--theme-primary-hover);
 }
 
 .dialog-button.primary:focus {
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 50%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 50%, transparent);
 }
 
 /* Cancel button variant */
 .dialog-button.cancel {
-    background-color: var(--surface-elevated);
-    border-color: var(--border-color);
+  background-color: var(--surface-elevated);
+  border-color: var(--border-color);
 }
 
 .dialog-button.cancel:hover {
-    background-color: var(--surface-muted);
-    border-color: var(--border-color-light);
+  background-color: var(--surface-muted);
+  border-color: var(--border-color-light);
 }
 
 .dialog-button.cancel:focus {
-    box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface-elevated) 50%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--surface-elevated) 50%, transparent);
 }
 
 /* Accessibility improvements */
 .warning-icon,
 .warning-message {
-    transition: transform 0.2s ease;
+  transition: transform 0.2s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .warning-icon,
-    .warning-message {
-        transition: none;
-    }
+  .warning-icon,
+  .warning-message {
+    transition: none;
+  }
 }
 
 /* High contrast mode support */
 @media (prefers-contrast: high) {
-    .warning-icon {
-        background: var(--warning-color);
-        color: #111111;
-        border-color: var(--warning-color);
-    }
+  .warning-icon {
+    background: var(--warning-color);
+    color: #111111;
+    border-color: var(--warning-color);
+  }
 
-    .primary-message {
-        color: var(--theme-text);
-        font-weight: 700;
-    }
+  .primary-message {
+    color: var(--theme-text);
+    font-weight: 700;
+  }
 
-    .detail-message {
-        color: var(--theme-text);
-    }
+  .detail-message {
+    color: var(--theme-text);
+  }
 }
 
 /* Responsive adjustments for smaller screens */
 @media (max-width: 400px) {
-    .dialog-content {
-        padding: 20px;
-    }
+  .dialog-content {
+    padding: 20px;
+  }
 
-    .warning-content {
-        margin-bottom: 20px;
-    }
+  .warning-content {
+    margin-bottom: 20px;
+  }
 
-    .warning-icon {
-        width: 56px;
-        height: 56px;
-    }
+  .warning-icon {
+    width: 56px;
+    height: 56px;
+  }
 
-    .warning-icon i {
-        width: 28px;
-        height: 28px;
-    }
+  .warning-icon i {
+    width: 28px;
+    height: 28px;
+  }
 
-    .warning-message {
-        max-width: 280px;
-    }
+  .warning-message {
+    max-width: 280px;
+  }
 
-    .primary-message {
-        font-size: 15px;
-    }
+  .primary-message {
+    font-size: 15px;
+  }
 
-    .detail-message {
-        font-size: 13px;
-    }
+  .detail-message {
+    font-size: 13px;
+  }
 
-    .dialog-buttons {
-        flex-direction: column-reverse;
-        align-items: center;
-        gap: 10px;
-    }
+  .dialog-buttons {
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 10px;
+  }
 
-    .dialog-button {
-        width: 140px;
-    }
+  .dialog-button {
+    width: 140px;
+  }
 }

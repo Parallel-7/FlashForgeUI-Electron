@@ -63,7 +63,9 @@
   object-fit: contain;
   background-color: transparent;
   border-radius: 8px;
-  transition: transform var(--transition-normal), box-shadow var(--transition-normal);
+  transition:
+    transform var(--transition-normal),
+    box-shadow var(--transition-normal);
   box-shadow: var(--shadow-sm);
   max-width: 100%;
   max-height: 100%;

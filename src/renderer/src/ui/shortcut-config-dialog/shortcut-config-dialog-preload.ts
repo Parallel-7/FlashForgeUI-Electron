@@ -8,13 +8,13 @@
  * @module ui/shortcut-config-dialog/shortcut-config-dialog-preload
  */
 
-import { contextBridge, ipcRenderer } from 'electron';
 import type {
   ShortcutButtonConfig,
   ShortcutComponentInfo,
   ShortcutDialogInitData,
-  ShortcutSaveConfigResult
+  ShortcutSaveConfigResult,
 } from '@shared/types/shortcut-config.js';
+import { contextBridge, ipcRenderer } from 'electron';
 
 /**
  * Validate payload for shortcut button configuration
@@ -47,9 +47,7 @@ function isShortcutButtonConfig(value: unknown): value is ShortcutButtonConfig {
  * @param value - Unknown value received from IPC
  * @returns True when value includes a success flag and optional error message
  */
-function isSaveConfigResult(
-  value: unknown
-): value is { success: boolean; error?: string } {
+function isSaveConfigResult(value: unknown): value is { success: boolean; error?: string } {
   if (typeof value !== 'object' || value === null) {
     return false;
   }
@@ -109,7 +107,7 @@ const shortcutConfigDialogAPI = {
    * Get current shortcut configuration
    */
   getCurrentConfig: async (): Promise<ShortcutButtonConfig | null> => {
-    const result = await ipcRenderer.invoke('shortcut-config:get-current') as unknown;
+    const result = (await ipcRenderer.invoke('shortcut-config:get-current')) as unknown;
 
     if (result === null) {
       return null;
@@ -134,10 +132,8 @@ const shortcutConfigDialogAPI = {
   /**
    * Save shortcut configuration
    */
-  saveConfig: async (
-    config: ShortcutButtonConfig
-  ): Promise<ShortcutSaveConfigResult> => {
-    const response = await ipcRenderer.invoke('shortcut-config:save', config) as unknown;
+  saveConfig: async (config: ShortcutButtonConfig): Promise<ShortcutSaveConfigResult> => {
+    const response = (await ipcRenderer.invoke('shortcut-config:save', config)) as unknown;
 
     if (isSaveConfigResult(response)) {
       return response;
@@ -151,7 +147,7 @@ const shortcutConfigDialogAPI = {
    * Get available components with pinned status
    */
   getAvailableComponents: async (): Promise<ShortcutComponentInfo[]> => {
-    const result = await ipcRenderer.invoke('shortcut-config:get-available-components') as unknown;
+    const result = (await ipcRenderer.invoke('shortcut-config:get-available-components')) as unknown;
 
     if (isComponentInfoArray(result)) {
       return result.map((component) => ({
@@ -182,14 +178,13 @@ const shortcutConfigDialogAPI = {
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
-  }
+  },
 } as const;
 
 contextBridge.exposeInMainWorld('api', {
   dialog: {
-    shortcutConfig: shortcutConfigDialogAPI
-  }
+    shortcutConfig: shortcutConfigDialogAPI,
+  },
 });
 
 export {};
-

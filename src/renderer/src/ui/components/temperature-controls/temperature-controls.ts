@@ -1,10 +1,10 @@
 /**
  * @fileoverview Temperature Controls Component
- * 
+ *
  * Interactive component for controlling and monitoring printer temperatures.
  * Displays bed and extruder temperatures with Set/Off buttons, and shows
  * fan status information. Handles temperature input dialogs via IPC.
- * 
+ *
  * Key features:
  * - Real-time temperature display for bed and extruder
  * - Interactive Set/Off buttons for temperature control
@@ -14,10 +14,10 @@
  * - Visual feedback for heating states
  */
 
+import type { FanStatus, PrinterState, PrinterTemperatures } from '@shared/types/polling.js';
+import { formatTemperature, isActiveState } from '@shared/types/polling.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
-import type { PrinterTemperatures, FanStatus, PrinterState } from '@shared/types/polling.js';
-import { formatTemperature, isActiveState } from '@shared/types/polling.js';
 import './temperature-controls.css';
 
 /**
@@ -104,26 +104,25 @@ export class TemperatureControlsComponent extends BaseComponent {
       if (printerStatus && isConnected) {
         // Update temperature displays
         this.updateTemperatureDisplays(printerStatus.temperatures);
-        
+
         // Update fan status
         this.updateFanStatus(printerStatus.fans);
-        
+
         // Enable/disable buttons based on printer state
         this.updateButtonStates(printerStatus.state, true);
       } else {
         // No printer data - show disconnected state
         this.updateTemperatureDisplays({
           bed: { current: 0, target: 0, isHeating: false },
-          extruder: { current: 0, target: 0, isHeating: false }
+          extruder: { current: 0, target: 0, isHeating: false },
         });
-        
+
         this.updateFanStatus({ coolingFan: 0, chamberFan: 0 });
         this.updateButtonStates('Ready', false);
       }
 
       // Update component state tracking
       this.updateState(data);
-
     } catch (error) {
       console.error(`Error updating ${this.componentId}:`, error);
     }
@@ -138,7 +137,7 @@ export class TemperatureControlsComponent extends BaseComponent {
     const bedDisplay = this.findElementById('bed-temp-display');
     if (bedDisplay) {
       bedDisplay.textContent = formatTemperature(temperatures.bed);
-      
+
       // Apply heating indicator
       if (temperatures.bed.isHeating) {
         bedDisplay.classList.add('temp-heating');
@@ -155,12 +154,15 @@ export class TemperatureControlsComponent extends BaseComponent {
     const extruderDisplay = this.findElementById('extruder-temp-display');
     if (extruderDisplay) {
       extruderDisplay.textContent = formatTemperature(temperatures.extruder);
-      
+
       // Apply heating indicator
       if (temperatures.extruder.isHeating) {
         extruderDisplay.classList.add('temp-heating');
         extruderDisplay.classList.remove('temp-at-target');
-      } else if (Math.abs(temperatures.extruder.current - temperatures.extruder.target) < 2 && temperatures.extruder.target > 0) {
+      } else if (
+        Math.abs(temperatures.extruder.current - temperatures.extruder.target) < 2 &&
+        temperatures.extruder.target > 0
+      ) {
         extruderDisplay.classList.add('temp-at-target');
         extruderDisplay.classList.remove('temp-heating');
       } else {
@@ -193,17 +195,12 @@ export class TemperatureControlsComponent extends BaseComponent {
    * @param isConnected - Whether printer is connected
    */
   private updateButtonStates(printerState: string, isConnected: boolean): void {
-    const buttons = [
-      'btn-bed-set',
-      'btn-bed-off',
-      'btn-extruder-set',
-      'btn-extruder-off'
-    ];
+    const buttons = ['btn-bed-set', 'btn-bed-off', 'btn-extruder-set', 'btn-extruder-off'];
 
     // Disable buttons if not connected or in active state
     const shouldDisable = !isConnected || isActiveState(printerState as PrinterState);
 
-    buttons.forEach(buttonId => {
+    buttons.forEach((buttonId) => {
       const button = this.findElementById<HTMLButtonElement>(buttonId);
       if (button) {
         button.disabled = shouldDisable;
@@ -226,7 +223,7 @@ export class TemperatureControlsComponent extends BaseComponent {
           title,
           message,
           defaultValue: '0',
-          placeholder: 'Temperature in °C'
+          placeholder: 'Temperature in °C',
         });
 
         if (result !== null) {

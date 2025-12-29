@@ -1,4 +1,4 @@
-@import url('../shared/rounded-dialog-template.css');
+@import url("../shared/rounded-dialog-template.css");
 
 body {
   color: var(--theme-text);
@@ -164,7 +164,9 @@ progress::-webkit-progress-value {
   font-size: 0.9rem;
   border-radius: 8px;
   border: 1px solid transparent;
-  transition: transform 0.15s ease, background 0.15s ease;
+  transition:
+    transform 0.15s ease,
+    background 0.15s ease;
 }
 
 .button-row button:active {

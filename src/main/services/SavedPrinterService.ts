@@ -20,14 +20,9 @@
  * @module services/SavedPrinterService
  */
 
+import { DiscoveredPrinter, PrinterDetails, SavedPrinterMatch, StoredPrinterDetails } from '@shared/types/printer.js';
 import { EventEmitter } from 'events';
 import { getPrinterDetailsManager } from '../managers/PrinterDetailsManager.js';
-import {
-  PrinterDetails,
-  StoredPrinterDetails,
-  SavedPrinterMatch,
-  DiscoveredPrinter
-} from '@shared/types/printer.js';
 
 /**
  * Service responsible for managing saved printer configurations
@@ -125,14 +120,14 @@ export class SavedPrinterService extends EventEmitter {
 
     for (const savedPrinter of savedPrinters) {
       const discoveredMatch = discoveredPrinters.find(
-        discovered => discovered.serialNumber === savedPrinter.SerialNumber
+        (discovered) => discovered.serialNumber === savedPrinter.SerialNumber
       );
 
       if (discoveredMatch) {
         matches.push({
           savedDetails: savedPrinter,
           discoveredPrinter: discoveredMatch,
-          ipAddressChanged: savedPrinter.IPAddress !== discoveredMatch.ipAddress
+          ipAddressChanged: savedPrinter.IPAddress !== discoveredMatch.ipAddress,
         });
       }
     }
@@ -154,10 +149,10 @@ export class SavedPrinterService extends EventEmitter {
     currentIpAddress?: string;
   }> {
     const allSavedPrinters = this.getSavedPrinters();
-    
-    return allSavedPrinters.map(savedPrinter => {
-      const match = matches.find(m => m.savedDetails.SerialNumber === savedPrinter.SerialNumber);
-      
+
+    return allSavedPrinters.map((savedPrinter) => {
+      const match = matches.find((m) => m.savedDetails.SerialNumber === savedPrinter.SerialNumber);
+
       return {
         name: savedPrinter.Name,
         ipAddress: savedPrinter.IPAddress,
@@ -165,7 +160,7 @@ export class SavedPrinterService extends EventEmitter {
         lastConnected: savedPrinter.lastConnected,
         isOnline: !!match,
         ipAddressChanged: match?.ipAddressChanged || false,
-        currentIpAddress: match?.discoveredPrinter?.ipAddress
+        currentIpAddress: match?.discoveredPrinter?.ipAddress,
       };
     });
   }
@@ -193,7 +188,7 @@ export class SavedPrinterService extends EventEmitter {
     if (savedPrinter && savedPrinter.IPAddress !== newIP) {
       const updatedPrinter: PrinterDetails = {
         ...savedPrinter,
-        IPAddress: newIP
+        IPAddress: newIP,
       };
       await this.savePrinter(updatedPrinter);
       this.emit('printer-ip-updated', { serialNumber, oldIP: savedPrinter.IPAddress, newIP });
@@ -205,4 +200,3 @@ export class SavedPrinterService extends EventEmitter {
 export const getSavedPrinterService = (): SavedPrinterService => {
   return SavedPrinterService.getInstance();
 };
-

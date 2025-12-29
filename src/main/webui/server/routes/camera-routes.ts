@@ -2,34 +2,27 @@
  * @fileoverview Camera status and proxy configuration routes for the WebUI server.
  */
 
-import type { Router, Response } from 'express';
-import type { AuthenticatedRequest } from '../auth-middleware.js';
 import { CameraStatusResponse, StandardAPIResponse } from '@shared/types/web-api.types.js';
+import type { Response, Router } from 'express';
 import { toAppError } from '../../../utils/error.utils.js';
-import { resolveContext, sendErrorResponse, type RouteDependencies } from './route-helpers.js';
+import type { AuthenticatedRequest } from '../auth-middleware.js';
+import { type RouteDependencies, resolveContext, sendErrorResponse } from './route-helpers.js';
 
 export function registerCameraRoutes(router: Router, deps: RouteDependencies): void {
   router.get('/camera/status', async (req: AuthenticatedRequest, res: Response) => {
     try {
       const contextResult = resolveContext(req, deps, { requireBackendReady: true });
       if (!contextResult.success) {
-        return sendErrorResponse<StandardAPIResponse>(
-          res,
-          contextResult.statusCode,
-          contextResult.error
-        );
+        return sendErrorResponse<StandardAPIResponse>(res, contextResult.statusCode, contextResult.error);
       }
 
-      const isAvailable = deps.backendManager.isFeatureAvailable(
-        contextResult.contextId,
-        'camera'
-      );
+      const isAvailable = deps.backendManager.isFeatureAvailable(contextResult.contextId, 'camera');
 
       const response: CameraStatusResponse = {
         available: isAvailable,
         streaming: false,
         url: isAvailable ? '/api/camera/stream' : undefined,
-        clientCount: 0
+        clientCount: 0,
       };
 
       return res.json(response);
@@ -43,14 +36,10 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
     try {
       const contextResult = resolveContext(req, deps, {
         requireBackendReady: true,
-        requireBackendInstance: true
+        requireBackendInstance: true,
       });
       if (!contextResult.success) {
-        return sendErrorResponse<StandardAPIResponse>(
-          res,
-          contextResult.statusCode,
-          contextResult.error
-        );
+        return sendErrorResponse<StandardAPIResponse>(res, contextResult.statusCode, contextResult.error);
       }
 
       const { contextId, context, backend } = contextResult;
@@ -58,22 +47,16 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
         return sendErrorResponse<StandardAPIResponse>(res, 503, 'Backend not available');
       }
 
-      const { resolveCameraConfig, getCameraUserConfig } = await import(
-        '../../../utils/camera-utils.js'
-      );
+      const { resolveCameraConfig, getCameraUserConfig } = await import('../../../utils/camera-utils.js');
       const backendStatus = backend.getBackendStatus();
       const cameraConfig = resolveCameraConfig({
         printerIpAddress: context.printerDetails.IPAddress,
         printerFeatures: backendStatus.features,
-        userConfig: getCameraUserConfig(contextId)
+        userConfig: getCameraUserConfig(contextId),
       });
 
       if (!cameraConfig.isAvailable || !cameraConfig.streamUrl) {
-        return sendErrorResponse<StandardAPIResponse>(
-          res,
-          503,
-          'Camera not available for this printer'
-        );
+        return sendErrorResponse<StandardAPIResponse>(res, 503, 'Camera not available for this printer');
       }
 
       // Get FPS overlay setting from printer details
@@ -85,12 +68,15 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
         const ffmpegStatus = rtspStreamService.getFfmpegStatus();
 
         if (!ffmpegStatus.available) {
-          return sendErrorResponse<
-            StandardAPIResponse & { streamType: 'rtsp'; ffmpegAvailable: boolean }
-          >(res, 503, 'ffmpeg required to view RTSP cameras in browser', {
-            streamType: 'rtsp',
-            ffmpegAvailable: false
-          });
+          return sendErrorResponse<StandardAPIResponse & { streamType: 'rtsp'; ffmpegAvailable: boolean }>(
+            res,
+            503,
+            'ffmpeg required to view RTSP cameras in browser',
+            {
+              streamType: 'rtsp',
+              ffmpegAvailable: false,
+            }
+          );
         }
 
         let streamStatus = rtspStreamService.getStreamStatus(contextId);
@@ -99,14 +85,11 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
             const { rtspFrameRate, rtspQuality } = context.printerDetails;
             await rtspStreamService.setupStream(contextId, cameraConfig.streamUrl, {
               frameRate: rtspFrameRate,
-              quality: rtspQuality
+              quality: rtspQuality,
             });
             streamStatus = rtspStreamService.getStreamStatus(contextId);
           } catch (streamError) {
-            console.error(
-              `[WebUI] Failed to setup RTSP stream for context ${contextId}:`,
-              streamError
-            );
+            console.error(`[WebUI] Failed to setup RTSP stream for context ${contextId}:`, streamError);
             return sendErrorResponse<StandardAPIResponse>(res, 503, 'RTSP stream not available');
           }
         }
@@ -120,7 +103,7 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
           streamType: 'rtsp' as const,
           wsPort: streamStatus.wsPort,
           ffmpegAvailable: true,
-          showCameraFps
+          showCameraFps,
         };
         return res.json(response);
       }
@@ -134,24 +117,13 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
           await cameraProxyService.setStreamUrl(contextId, cameraConfig.streamUrl);
           status = cameraProxyService.getStatusForContext(contextId);
         } catch (proxyError) {
-          console.error(
-            `[WebUI] Failed to start camera proxy for context ${contextId}:`,
-            proxyError
-          );
-          return sendErrorResponse<StandardAPIResponse>(
-            res,
-            503,
-            'Camera proxy could not be started'
-          );
+          console.error(`[WebUI] Failed to start camera proxy for context ${contextId}:`, proxyError);
+          return sendErrorResponse<StandardAPIResponse>(res, 503, 'Camera proxy could not be started');
         }
       }
 
       if (!status) {
-        return sendErrorResponse<StandardAPIResponse>(
-          res,
-          503,
-          'Camera proxy not available for this printer'
-        );
+        return sendErrorResponse<StandardAPIResponse>(res, 503, 'Camera proxy not available for this printer');
       }
 
       const host = req.hostname || 'localhost';
@@ -160,7 +132,7 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
         streamType: 'mjpeg' as const,
         port: status.port,
         url: `http://${host}:${status.port}/stream`,
-        showCameraFps
+        showCameraFps,
       };
       return res.json(response);
     } catch (error) {

@@ -17,10 +17,10 @@
  * @module services/__tests__/StaticFileManager.test
  */
 
-import { StaticFileManager, getStaticFileManager } from '../StaticFileManager.js';
-import { getEnvironmentDetectionService } from '../EnvironmentDetectionService.js';
 import * as fs from 'fs/promises';
 import * as path from 'path';
+import { getEnvironmentDetectionService } from '../EnvironmentDetectionService.js';
+import { getStaticFileManager, StaticFileManager } from '../StaticFileManager.js';
 
 // Mock the EnvironmentDetectionService
 jest.mock('../EnvironmentDetectionService');
@@ -33,7 +33,7 @@ const mockEnvironmentService = {
   getAssetsPath: jest.fn(),
   getStaticPath: jest.fn(),
   getPreloadPath: jest.fn(),
-  getDiagnosticInfo: jest.fn()
+  getDiagnosticInfo: jest.fn(),
 };
 
 const mockFs = fs as jest.Mocked<typeof fs>;
@@ -41,20 +41,20 @@ const mockFs = fs as jest.Mocked<typeof fs>;
 describe('StaticFileManager', () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    
+
     // Reset singleton instance
     (StaticFileManager as any).instance = null;
-    
+
     // Setup default mock returns
     (getEnvironmentDetectionService as jest.Mock).mockReturnValue(mockEnvironmentService);
-    
+
     mockEnvironmentService.getWebUIPath.mockReturnValue('/app/dist/renderer/index.html');
     mockEnvironmentService.getAssetsPath.mockReturnValue('/app/dist/renderer');
     mockEnvironmentService.getStaticPath.mockReturnValue('/app/dist/static');
     mockEnvironmentService.getPreloadPath.mockReturnValue('/app/lib/preload.cjs');
     mockEnvironmentService.getDiagnosticInfo.mockReturnValue({
       environment: 'development',
-      isPackaged: false
+      isPackaged: false,
     });
   });
 
@@ -63,7 +63,7 @@ describe('StaticFileManager', () => {
       const instance1 = getStaticFileManager();
       const instance2 = getStaticFileManager();
       const instance3 = StaticFileManager.getInstance();
-      
+
       expect(instance1).toBe(instance2);
       expect(instance2).toBe(instance3);
     });
@@ -98,7 +98,7 @@ describe('StaticFileManager', () => {
       const cssPath = manager.getAssetPath('test.css', 'css');
       const jsPath = manager.getAssetPath('test.js', 'js');
       const iconPath = manager.getAssetPath('test.png', 'icon');
-      
+
       expect(htmlPath).toBe(path.join('/app/dist/renderer', 'test.html'));
       expect(cssPath).toBe(path.join('/app/dist/renderer', 'test.css'));
       expect(jsPath).toBe(path.join('/app/dist/renderer', 'test.js'));
@@ -108,7 +108,7 @@ describe('StaticFileManager', () => {
     it('should handle absolute paths correctly', () => {
       const absolutePath = '/absolute/path/to/file.html';
       const result = manager.getAssetPath(absolutePath, 'html');
-      
+
       expect(result).toBe(absolutePath);
     });
   });
@@ -123,72 +123,72 @@ describe('StaticFileManager', () => {
     it('should validate existing and accessible asset', async () => {
       const mockStats = {
         size: 1024,
-        mtime: new Date('2023-01-01')
+        mtime: new Date('2023-01-01'),
       };
-      
+
       mockFs.stat.mockResolvedValue(mockStats as any);
       mockFs.access.mockResolvedValue(undefined);
-      
+
       const result = await manager.validateAsset('/test/path/file.html');
-      
+
       expect(result).toEqual({
         path: '/test/path/file.html',
         exists: true,
         isAccessible: true,
         size: 1024,
-        lastModified: mockStats.mtime
+        lastModified: mockStats.mtime,
       });
     });
 
     it('should handle missing asset', async () => {
       const error = new Error('ENOENT: no such file or directory');
       mockFs.stat.mockRejectedValue(error);
-      
+
       const result = await manager.validateAsset('/test/path/missing.html');
-      
+
       expect(result).toEqual({
         path: '/test/path/missing.html',
         exists: false,
         isAccessible: false,
-        error: 'ENOENT: no such file or directory'
+        error: 'ENOENT: no such file or directory',
       });
     });
 
     it('should handle existing but inaccessible asset', async () => {
       const mockStats = {
         size: 1024,
-        mtime: new Date('2023-01-01')
+        mtime: new Date('2023-01-01'),
       };
       const accessError = new Error('EACCES: permission denied');
-      
+
       mockFs.stat.mockResolvedValue(mockStats as any);
       mockFs.access.mockRejectedValue(accessError);
-      
+
       const result = await manager.validateAsset('/test/path/restricted.html');
-      
+
       expect(result).toEqual({
         path: '/test/path/restricted.html',
         exists: true,
         isAccessible: false,
         size: 1024,
         lastModified: mockStats.mtime,
-        error: 'File exists but is not readable: EACCES: permission denied'
+        error: 'File exists but is not readable: EACCES: permission denied',
       });
     });
 
     it('should validate multiple assets in parallel', async () => {
       const mockStats = { size: 1024, mtime: new Date('2023-01-01') };
-      
+
       mockFs.stat.mockResolvedValue(mockStats as any);
       mockFs.access.mockResolvedValue(undefined);
-      
+
       const paths = ['/path1/file1.html', '/path2/file2.css', '/path3/file3.js'];
       const results = await manager.validateAssets(paths);
-      
+
       expect(results).toHaveLength(3);
       expect(mockFs.stat).toHaveBeenCalledTimes(3);
       expect(mockFs.access).toHaveBeenCalledTimes(3);
-      
+
       results.forEach((result, index) => {
         expect(result.path).toBe(paths[index]);
         expect(result.exists).toBe(true);
@@ -206,12 +206,12 @@ describe('StaticFileManager', () => {
 
     it('should validate critical assets successfully', async () => {
       const mockStats = { size: 1024, mtime: new Date('2023-01-01') };
-      
+
       mockFs.stat.mockResolvedValue(mockStats as any);
       mockFs.access.mockResolvedValue(undefined);
-      
+
       const summary = await manager.validateCriticalAssets();
-      
+
       expect(summary.totalAssets).toBe(3); // HTML, bundle, preload
       expect(summary.validAssets).toBe(3);
       expect(summary.missingAssets).toHaveLength(0);
@@ -223,9 +223,9 @@ describe('StaticFileManager', () => {
     it('should handle missing critical assets', async () => {
       const error = new Error('ENOENT: no such file or directory');
       mockFs.stat.mockRejectedValue(error);
-      
+
       const summary = await manager.validateCriticalAssets();
-      
+
       expect(summary.totalAssets).toBe(3);
       expect(summary.validAssets).toBe(0);
       expect(summary.missingAssets).toHaveLength(3);
@@ -243,36 +243,36 @@ describe('StaticFileManager', () => {
 
     it('should check main HTML availability', async () => {
       const mockStats = { size: 1024, mtime: new Date('2023-01-01') };
-      
+
       mockFs.stat.mockResolvedValue(mockStats as any);
       mockFs.access.mockResolvedValue(undefined);
-      
+
       const isAvailable = await manager.isMainHTMLAvailable();
-      
+
       expect(isAvailable).toBe(true);
       expect(mockFs.stat).toHaveBeenCalledWith('/app/dist/renderer/index.html');
     });
 
     it('should check renderer bundle availability', async () => {
       const mockStats = { size: 1024, mtime: new Date('2023-01-01') };
-      
+
       mockFs.stat.mockResolvedValue(mockStats as any);
       mockFs.access.mockResolvedValue(undefined);
-      
+
       const isAvailable = await manager.isRendererBundleAvailable();
-      
+
       expect(isAvailable).toBe(true);
       expect(mockFs.stat).toHaveBeenCalledWith(path.join('/app/dist/renderer', 'renderer.bundle.js'));
     });
 
     it('should check preload script availability', async () => {
       const mockStats = { size: 1024, mtime: new Date('2023-01-01') };
-      
+
       mockFs.stat.mockResolvedValue(mockStats as any);
       mockFs.access.mockResolvedValue(undefined);
-      
+
       const isAvailable = await manager.isPreloadScriptAvailable();
-      
+
       expect(isAvailable).toBe(true);
       expect(mockFs.stat).toHaveBeenCalledWith('/app/lib/preload.cjs');
     });
@@ -287,23 +287,20 @@ describe('StaticFileManager', () => {
 
     it('should generate correct asset manifest', () => {
       const manifest = manager.getAssetManifest();
-      
+
       expect(manifest).toEqual({
         html: {
-          main: '/app/dist/renderer/index.html'
+          main: '/app/dist/renderer/index.html',
         },
-        css: [
-          path.join('/app/dist/renderer', 'styles.css'),
-          path.join('/app/dist/renderer', 'main.css')
-        ],
+        css: [path.join('/app/dist/renderer', 'styles.css'), path.join('/app/dist/renderer', 'main.css')],
         js: [path.join('/app/dist/renderer', 'renderer.bundle.js')],
         icons: [
           path.join('/app/dist/renderer', 'icon.png'),
           path.join('/app/dist/renderer', 'icon.ico'),
-          path.join('/app/dist/renderer', 'icon.icns')
+          path.join('/app/dist/renderer', 'icon.icns'),
         ],
         fonts: [],
-        images: []
+        images: [],
       });
     });
   });
@@ -317,12 +314,12 @@ describe('StaticFileManager', () => {
 
     it('should resolve asset path with validation', async () => {
       const mockStats = { size: 1024, mtime: new Date('2023-01-01') };
-      
+
       mockFs.stat.mockResolvedValue(mockStats as any);
       mockFs.access.mockResolvedValue(undefined);
-      
+
       const result = await manager.resolveAssetPath('test.html', 'html');
-      
+
       expect(result.resolvedPath).toBe(path.join('/app/dist/renderer', 'test.html'));
       expect(result.exists).toBe(true);
       expect(result.isAccessible).toBe(true);
@@ -339,13 +336,13 @@ describe('StaticFileManager', () => {
 
     it('should provide comprehensive diagnostic information', () => {
       const diagnostics = manager.getDiagnosticInfo();
-      
+
       expect(diagnostics).toHaveProperty('environment');
       expect(diagnostics).toHaveProperty('isPackaged');
       expect(diagnostics).toHaveProperty('staticFileConfig');
       expect(diagnostics).toHaveProperty('assetManifest');
       expect(diagnostics).toHaveProperty('environmentPaths');
-      
+
       expect(mockEnvironmentService.getDiagnosticInfo).toHaveBeenCalled();
     });
   });

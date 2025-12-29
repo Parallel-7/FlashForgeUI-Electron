@@ -1,7 +1,7 @@
 /**
  * About dialog specific styling layered on top of the shared rounded dialog template.
  */
-@import url('../shared/rounded-dialog-template.css');
+@import url("../shared/rounded-dialog-template.css");
 
 .about-content {
   display: flex;
@@ -101,7 +101,10 @@
   background: color-mix(in srgb, var(--theme-text) 3%, transparent);
   cursor: pointer;
   text-align: left;
-  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    background 0.2s ease;
 }
 
 .link-card:hover {

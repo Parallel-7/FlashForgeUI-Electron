@@ -67,7 +67,7 @@ export class LoadingManager extends EventEmitter {
    */
   public show(options: LoadingOptions): void {
     this.clearAutoHideTimeout();
-    
+
     this.currentState = 'loading';
     this.currentMessage = options.message;
     this.currentProgress = 0;
@@ -77,7 +77,7 @@ export class LoadingManager extends EventEmitter {
       state: this.currentState,
       message: this.currentMessage,
       progress: this.currentProgress,
-      canCancel: this.canCancel
+      canCancel: this.canCancel,
     };
 
     this.emit('loading-state-changed', eventData);
@@ -89,14 +89,14 @@ export class LoadingManager extends EventEmitter {
    */
   public hide(): void {
     this.clearAutoHideTimeout();
-    
+
     this.currentState = 'hidden';
     this.currentMessage = '';
     this.currentProgress = 0;
     this.canCancel = false;
 
     const eventData: LoadingEventData = {
-      state: this.currentState
+      state: this.currentState,
     };
 
     this.emit('loading-state-changed', eventData);
@@ -108,7 +108,7 @@ export class LoadingManager extends EventEmitter {
    */
   public showSuccess(message: string, autoHideAfter: number = 4000): void {
     this.clearAutoHideTimeout();
-    
+
     this.currentState = 'success';
     this.currentMessage = message; // Keep the success message visible
     this.canCancel = false;
@@ -117,7 +117,7 @@ export class LoadingManager extends EventEmitter {
       state: this.currentState,
       message: this.currentMessage,
       canCancel: this.canCancel,
-      autoHideAfter
+      autoHideAfter,
     };
 
     this.emit('loading-state-changed', eventData);
@@ -136,7 +136,7 @@ export class LoadingManager extends EventEmitter {
    */
   public showError(message: string, autoHideAfter: number = 5000): void {
     this.clearAutoHideTimeout();
-    
+
     this.currentState = 'error';
     this.currentMessage = message;
     this.canCancel = false;
@@ -145,7 +145,7 @@ export class LoadingManager extends EventEmitter {
       state: this.currentState,
       message: this.currentMessage,
       canCancel: this.canCancel,
-      autoHideAfter
+      autoHideAfter,
     };
 
     this.emit('loading-state-changed', eventData);
@@ -173,7 +173,7 @@ export class LoadingManager extends EventEmitter {
       state: this.currentState,
       message: this.currentMessage,
       progress: this.currentProgress,
-      canCancel: this.canCancel
+      canCancel: this.canCancel,
     };
 
     this.emit('loading-state-changed', eventData);
@@ -194,7 +194,7 @@ export class LoadingManager extends EventEmitter {
       state: this.currentState,
       message: this.currentMessage,
       progress: this.currentProgress,
-      canCancel: this.canCancel
+      canCancel: this.canCancel,
     };
 
     this.emit('loading-state-changed', eventData);
@@ -277,4 +277,3 @@ export const getLoadingManager = (): LoadingManager => {
   }
   return loadingManager;
 };
-

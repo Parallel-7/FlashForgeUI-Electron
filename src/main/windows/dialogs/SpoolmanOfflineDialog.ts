@@ -5,11 +5,23 @@
 import { BrowserWindow } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { getWindowManager } from '../WindowManager.js';
-import { createModalWindow, loadWindowHTML, setupDevTools, setupWindowLifecycle, validateParentWindow } from '../shared/WindowConfig.js';
-import { createPreloadPath, createWindowHeight, createWindowMinHeight, createWindowMinWidth, createWindowWidth } from '../shared/WindowTypes.js';
-import type { WindowDimensions } from '../shared/WindowTypes.js';
 import { isHeadlessMode } from '../../utils/HeadlessDetection.js';
+import {
+  createModalWindow,
+  loadWindowHTML,
+  setupDevTools,
+  setupWindowLifecycle,
+  validateParentWindow,
+} from '../shared/WindowConfig.js';
+import type { WindowDimensions } from '../shared/WindowTypes.js';
+import {
+  createPreloadPath,
+  createWindowHeight,
+  createWindowMinHeight,
+  createWindowMinWidth,
+  createWindowWidth,
+} from '../shared/WindowTypes.js';
+import { getWindowManager } from '../WindowManager.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -19,7 +31,7 @@ const DIALOG_SIZE: WindowDimensions = {
   width: createWindowWidth(420),
   height: createWindowHeight(420),
   minWidth: createWindowMinWidth(360),
-  minHeight: createWindowMinHeight(340)
+  minHeight: createWindowMinHeight(340),
 };
 
 export const showSpoolmanOfflineDialog = (message?: string | null): void => {
@@ -52,12 +64,9 @@ export const showSpoolmanOfflineDialog = (message?: string | null): void => {
 
   void loadWindowHTML(offlineDialogWindow, 'spoolman-offline-dialog');
 
-  setupWindowLifecycle(
-    offlineDialogWindow,
-    () => {
-      offlineDialogWindow = null;
-    }
-  );
+  setupWindowLifecycle(offlineDialogWindow, () => {
+    offlineDialogWindow = null;
+  });
 
   setupDevTools(offlineDialogWindow);
 
@@ -74,4 +83,3 @@ export const hideSpoolmanOfflineDialog = (): void => {
     offlineDialogWindow = null;
   }
 };
-

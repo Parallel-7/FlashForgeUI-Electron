@@ -20,29 +20,32 @@
 // Component system imports
 import './component-dialog.css' with { type: 'css' };
 import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
+import type { PollingData } from '@shared/types/polling.js';
+import type { ComponentUpdateData } from '../components/base/types.js';
 import { ComponentManager } from '../components/ComponentManager.js';
-import { getComponentDefinition } from '../gridstack/ComponentRegistry.js';
-import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
 import {
+  AdditionalInfoComponent,
   BaseComponent,
   CameraPreviewComponent,
-  TemperatureControlsComponent,
-  JobStatsComponent,
-  PrinterStatusComponent,
-  ModelPreviewComponent,
-  AdditionalInfoComponent,
-  LogPanelComponent,
   ControlsGridComponent,
   FiltrationControlsComponent,
+  JobStatsComponent,
+  LogPanelComponent,
+  ModelPreviewComponent,
+  PrinterStatusComponent,
   SpoolmanComponent,
+  TemperatureControlsComponent,
 } from '../components/index.js';
+import { getComponentDefinition } from '../gridstack/ComponentRegistry.js';
 import { parseLogEntry } from '../shared/log-panel/index.js';
-import type { ComponentUpdateData } from '../components/base/types.js';
-import type { PollingData } from '@shared/types/polling.js';
+import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 interface ComponentDialogBridge {
-  receive: (channel: 'component-dialog:init' | 'polling-update' | 'theme-changed', func: (data: unknown) => void) => (() => void) | undefined;
+  receive: (
+    channel: 'component-dialog:init' | 'polling-update' | 'theme-changed',
+    func: (data: unknown) => void
+  ) => (() => void) | undefined;
   send: (channel: 'component-dialog:close', ...data: unknown[]) => void;
   invoke: (channel: 'component-dialog:get-info', ...data: unknown[]) => Promise<unknown>;
 }
@@ -140,7 +143,7 @@ async function initializeDialog(componentId: string): Promise<void> {
     // Build update data with config and optional polling data
     const updateData: ComponentUpdateData = {
       config: config,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
     };
 
     // Add polling data if available
@@ -336,10 +339,7 @@ window.addEventListener('beforeunload', () => {
  * @param componentId - Component identifier
  * @param component - Initialized component instance
  */
-async function initializeComponentIntegrations(
-  componentId: string,
-  component: BaseComponent
-): Promise<void> {
+async function initializeComponentIntegrations(componentId: string, component: BaseComponent): Promise<void> {
   if (componentId === 'log-panel' && component instanceof LogPanelComponent) {
     await setupLogPanelIntegration(component);
   }
@@ -355,15 +355,14 @@ async function setupLogPanelIntegration(logPanel: LogPanelComponent): Promise<vo
   try {
     const result = await window.api.invoke('log-dialog-request-logs');
     if (Array.isArray(result)) {
-      const entries = result
-        .filter((entry): entry is { timestamp: string; message: string } => {
-          return (
-            typeof entry === 'object' &&
-            entry !== null &&
-            typeof (entry as { timestamp?: unknown }).timestamp === 'string' &&
-            typeof (entry as { message?: unknown }).message === 'string'
-          );
-        });
+      const entries = result.filter((entry): entry is { timestamp: string; message: string } => {
+        return (
+          typeof entry === 'object' &&
+          entry !== null &&
+          typeof (entry as { timestamp?: unknown }).timestamp === 'string' &&
+          typeof (entry as { message?: unknown }).message === 'string'
+        );
+      });
 
       if (entries.length > 0) {
         logPanel.loadInitialEntries(entries);

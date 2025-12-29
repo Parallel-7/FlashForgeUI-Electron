@@ -44,17 +44,17 @@
  * - PrinterContextManager: Context lifecycle management
  */
 
+import {
+  CameraProxyClient,
+  CameraProxyConfig,
+  CameraProxyEventType,
+  CameraProxyStatus,
+} from '@shared/types/camera/index.js';
+import { EventEmitter } from 'events';
 import express from 'express';
 import * as http from 'http';
-import { EventEmitter } from 'events';
-import {
-  CameraProxyConfig,
-  CameraProxyStatus,
-  CameraProxyClient,
-  CameraProxyEventType
-} from '@shared/types/camera/index.js';
-import { PortAllocator } from '../utils/PortAllocator.js';
 import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
+import { PortAllocator } from '../utils/PortAllocator.js';
 
 // ============================================================================
 // TYPES
@@ -144,8 +144,8 @@ export class CameraProxyService extends EventEmitter {
         enabled: true,
         maxRetries: 5,
         retryDelay: 2000,
-        exponentialBackoff: true
-      }
+        exponentialBackoff: true,
+      },
     };
 
     console.log('[CameraProxyService] Multi-context camera proxy service initialized');
@@ -160,7 +160,7 @@ export class CameraProxyService extends EventEmitter {
     }
     return CameraProxyService.instance;
   }
-  
+
   // ============================================================================
   // MULTI-CONTEXT STREAM MANAGEMENT
   // ============================================================================
@@ -203,7 +203,7 @@ export class CameraProxyService extends EventEmitter {
         isStreaming: streamInfo?.isStreaming || false,
         sourceUrl: streamInfo?.streamUrl || null,
         clientCount: streamInfo?.activeClients.size || 0,
-        lastError: streamInfo?.lastError || null
+        lastError: streamInfo?.lastError || null,
       });
     });
 
@@ -227,8 +227,8 @@ export class CameraProxyService extends EventEmitter {
         bytesSent: 0,
         successfulConnections: 0,
         failedConnections: 0,
-        framesReceived: 0
-      }
+        framesReceived: 0,
+      },
     };
 
     // Start the server
@@ -329,7 +329,7 @@ export class CameraProxyService extends EventEmitter {
     // Remove from map
     this.contextStreams.delete(contextId);
   }
-  
+
   // ============================================================================
   // CAMERA REQUEST HANDLING
   // ============================================================================
@@ -355,7 +355,7 @@ export class CameraProxyService extends EventEmitter {
       id: clientId,
       connectedAt: new Date(),
       remoteAddress: req.socket.remoteAddress || 'unknown',
-      isConnected: true
+      isConnected: true,
     };
 
     console.log(`[CameraProxyService] New camera client connected for context ${contextId}: ${client.remoteAddress}`);
@@ -429,15 +429,15 @@ export class CameraProxyService extends EventEmitter {
         port: url.port || 80,
         path: url.pathname + url.search,
         headers: {
-          'Accept': '*/*',
-          'Connection': 'keep-alive',
-          'User-Agent': 'FlashForge-Camera-Proxy'
-        }
+          Accept: '*/*',
+          Connection: 'keep-alive',
+          'User-Agent': 'FlashForge-Camera-Proxy',
+        },
       };
 
       streamInfo.currentRequest = http.get(options, (response) => {
         streamInfo.currentResponse = response;
-        
+
         if (response.statusCode !== 200) {
           const error = `Camera returned status code: ${response.statusCode}`;
           console.error(`[CameraProxyService] Error for context ${contextId}:`, error);
@@ -466,7 +466,7 @@ export class CameraProxyService extends EventEmitter {
           streamInfo.stats.bytesReceived += chunk.length;
           // Count JPEG frames by detecting start markers (0xFFD8)
           for (let i = 0; i < chunk.length - 1; i++) {
-            if (chunk[i] === 0xFF && chunk[i + 1] === 0xD8) {
+            if (chunk[i] === 0xff && chunk[i + 1] === 0xd8) {
               streamInfo.stats.framesReceived++;
             }
           }
@@ -494,7 +494,6 @@ export class CameraProxyService extends EventEmitter {
         this.emitContextEvent(contextId, 'stream-error', null, err.message);
         this.handleStreamErrorForContext(contextId, streamInfo);
       });
-
     } catch (err) {
       const error = err instanceof Error ? err.message : String(err);
       console.error(`[CameraProxyService] Error starting camera stream for context ${contextId}:`, error);
@@ -505,7 +504,7 @@ export class CameraProxyService extends EventEmitter {
       this.handleStreamErrorForContext(contextId, streamInfo);
     }
   }
-  
+
   // ============================================================================
   // HELPER METHODS
   // ============================================================================
@@ -520,7 +519,7 @@ export class CameraProxyService extends EventEmitter {
     if (!streamInfo.currentResponse || res.headersSent) return;
 
     const headers = streamInfo.currentResponse.headers;
-    Object.keys(headers).forEach(key => {
+    Object.keys(headers).forEach((key) => {
       if (key.toLowerCase() !== 'connection') {
         res.setHeader(key, headers[key]!);
       }
@@ -561,7 +560,7 @@ export class CameraProxyService extends EventEmitter {
     });
 
     // Clean up failed clients
-    failedClients.forEach(clientId => {
+    failedClients.forEach((clientId) => {
       streamInfo.activeClients.delete(clientId);
     });
   }
@@ -578,9 +577,7 @@ export class CameraProxyService extends EventEmitter {
       streamInfo.idleTimeout = null;
 
       if (streamInfo.activeClients.size === 0) {
-        console.log(
-          `[CameraProxyService] Idle timeout reached for context ${contextId}, stopping upstream stream`
-        );
+        console.log(`[CameraProxyService] Idle timeout reached for context ${contextId}, stopping upstream stream`);
         this.stopStreamingForContext(contextId, streamInfo);
       }
     }, this.noClientGracePeriodMs);
@@ -605,18 +602,24 @@ export class CameraProxyService extends EventEmitter {
   private handleStreamErrorForContext(contextId: string, streamInfo: ContextStreamInfo): void {
     this.stopStreamingForContext(contextId, streamInfo);
 
-    if (this.config.reconnection.enabled &&
-        streamInfo.activeClients.size > 0 &&
-        streamInfo.retryCount < this.config.reconnection.maxRetries) {
-
+    if (
+      this.config.reconnection.enabled &&
+      streamInfo.activeClients.size > 0 &&
+      streamInfo.retryCount < this.config.reconnection.maxRetries
+    ) {
       const delay = this.config.reconnection.exponentialBackoff
         ? this.config.reconnection.retryDelay * Math.pow(2, streamInfo.retryCount)
         : this.config.reconnection.retryDelay;
 
       streamInfo.retryCount++;
 
-      console.log(`[CameraProxyService] Retrying camera connection for context ${contextId} in ${delay}ms (attempt ${streamInfo.retryCount}/${this.config.reconnection.maxRetries})`);
-      this.emitContextEvent(contextId, 'retry-attempt', { attempt: streamInfo.retryCount, maxRetries: this.config.reconnection.maxRetries });
+      console.log(
+        `[CameraProxyService] Retrying camera connection for context ${contextId} in ${delay}ms (attempt ${streamInfo.retryCount}/${this.config.reconnection.maxRetries})`
+      );
+      this.emitContextEvent(contextId, 'retry-attempt', {
+        attempt: streamInfo.retryCount,
+        maxRetries: this.config.reconnection.maxRetries,
+      });
 
       streamInfo.retryTimer = setTimeout(() => {
         if (streamInfo.activeClients.size > 0) {
@@ -655,7 +658,7 @@ export class CameraProxyService extends EventEmitter {
 
     streamInfo.currentResponse = null;
   }
-  
+
   // ============================================================================
   // PUBLIC API
   // ============================================================================
@@ -687,8 +690,8 @@ export class CameraProxyService extends EventEmitter {
             successfulConnections: streamInfo.stats.successfulConnections,
             failedConnections: streamInfo.stats.failedConnections,
             currentRetryCount: streamInfo.retryCount,
-            framesReceived: streamInfo.stats.framesReceived
-          }
+            framesReceived: streamInfo.stats.framesReceived,
+          },
         };
       }
     }
@@ -709,8 +712,8 @@ export class CameraProxyService extends EventEmitter {
         successfulConnections: 0,
         failedConnections: 0,
         currentRetryCount: 0,
-        framesReceived: 0
-      }
+        framesReceived: 0,
+      },
     };
   }
 
@@ -737,8 +740,8 @@ export class CameraProxyService extends EventEmitter {
       lastError: streamInfo.lastError,
       stats: {
         ...streamInfo.stats,
-        currentRetryCount: streamInfo.retryCount
-      }
+        currentRetryCount: streamInfo.retryCount,
+      },
     };
   }
 
@@ -806,7 +809,7 @@ export class CameraProxyService extends EventEmitter {
       type,
       timestamp: new Date(),
       data,
-      error
+      error,
     });
   }
 }

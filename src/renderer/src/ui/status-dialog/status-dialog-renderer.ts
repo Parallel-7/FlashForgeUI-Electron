@@ -36,8 +36,8 @@
 // src/ui/status-dialog/status-dialog-renderer.ts
 
 import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 interface StatusDialogAPI {
   readonly requestStats: () => Promise<StatusStats | null>;
@@ -117,7 +117,7 @@ class StatusDialogRenderer {
   private setupCloseButtons(): void {
     const closeButtons: (HTMLElement | null)[] = [
       document.getElementById('btn-close'),
-      document.getElementById('btn-close-footer')
+      document.getElementById('btn-close-footer'),
     ];
 
     closeButtons.forEach((button) => {
@@ -363,7 +363,7 @@ class StatusDialogRenderer {
         serialNumber: 'Unknown',
         toolCount: 0,
         ipAddress: 'Not Connected',
-        isConnected: false
+        isConnected: false,
       },
       webuiStatus: false,
       webuiClients: 0,
@@ -374,7 +374,7 @@ class StatusDialogRenderer {
       cameraStreaming: false,
       cameraUrl: 'None',
       appUptime: 0,
-      memoryUsage: 0
+      memoryUsage: 0,
     };
   }
 

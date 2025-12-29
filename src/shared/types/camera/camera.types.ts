@@ -151,7 +151,7 @@ export interface CameraProxyStatus {
 /**
  * Camera proxy events
  */
-export type CameraProxyEventType = 
+export type CameraProxyEventType =
   | 'proxy-started'
   | 'proxy-stopped'
   | 'stream-connected'
@@ -182,19 +182,19 @@ export interface CameraProxyEvent {
 export interface ICameraProxyService {
   /** Initialize the camera proxy service */
   initialize(config: CameraProxyConfig): Promise<void>;
-  
+
   /** Set the camera stream URL */
   setStreamUrl(url: string | null): void;
-  
+
   /** Get current proxy status */
   getStatus(): CameraProxyStatus;
-  
+
   /** Start the proxy server */
   start(): Promise<void>;
-  
+
   /** Stop the proxy server */
   stop(): Promise<void>;
-  
+
   /** Shutdown the service and cleanup */
   shutdown(): Promise<void>;
 }
@@ -205,13 +205,13 @@ export interface ICameraProxyService {
 export interface CameraIPCMethods {
   /** Get the camera proxy port */
   getCameraProxyPort(): Promise<number>;
-  
+
   /** Get camera proxy status */
   getCameraStatus(): Promise<CameraProxyStatus>;
-  
+
   /** Enable or disable camera preview */
   setCameraEnabled(enabled: boolean): Promise<void>;
-  
+
   /** Get resolved camera configuration */
   getCameraConfig(): Promise<ResolvedCameraConfig>;
 }
@@ -240,4 +240,3 @@ export interface CameraUrlValidationResult {
   /** Parsed URL object if valid */
   readonly parsedUrl?: URL;
 }
-

@@ -21,45 +21,40 @@
  * or malformed data gracefully.
  */
 
+import type { CurrentJobInfo, MaterialSlot, MaterialStationStatus, PrinterStatus } from '@shared/types/polling.js';
+import { secondsToMinutes } from '@shared/utils/time.utils.js';
 import {
+  hasValue,
+  isValidObject,
+  safeExtractArray,
+  safeExtractBoolean,
   safeExtractNumber,
   safeExtractString,
-  safeExtractBoolean,
-  safeExtractArray,
-  isValidObject,
-  hasValue
 } from '../utils/extraction.utils.js';
-import { secondsToMinutes } from '@shared/utils/time.utils.js';
-import type {
-  PrinterStatus,
-  CurrentJobInfo,
-  MaterialStationStatus,
-  MaterialSlot
-} from '@shared/types/polling.js';
 
 /**
  * Maps printer states from backend to UI-friendly states
  */
 const PRINTER_STATE_MAP: Record<string, PrinterStatus['state']> = {
-  'idle': 'Ready',
-  'ready': 'Ready',
-  'printing': 'Printing',
-  'print': 'Printing',
-  'paused': 'Paused',
-  'pause': 'Paused',
-  'pausing': 'Pausing',
-  'finished': 'Completed',
-  'complete': 'Completed',
-  'completed': 'Completed',
-  'cancelled': 'Cancelled',
-  'canceled': 'Cancelled',
-  'error': 'Error',
-  'unknown': 'Busy',
-  'busy': 'Busy',
-  'calibrating': 'Calibrating',
-  'heating': 'Heating',
-  'offline': 'Busy',
-  'disconnected': 'Busy'
+  idle: 'Ready',
+  ready: 'Ready',
+  printing: 'Printing',
+  print: 'Printing',
+  paused: 'Paused',
+  pause: 'Paused',
+  pausing: 'Pausing',
+  finished: 'Completed',
+  complete: 'Completed',
+  completed: 'Completed',
+  cancelled: 'Cancelled',
+  canceled: 'Cancelled',
+  error: 'Error',
+  unknown: 'Busy',
+  busy: 'Busy',
+  calibrating: 'Calibrating',
+  heating: 'Heating',
+  offline: 'Busy',
+  disconnected: 'Busy',
 };
 
 /**
@@ -112,36 +107,36 @@ export class PrinterDataTransformer {
         bed: {
           current: bedTemp,
           target: bedTarget,
-          isHeating: bedTarget > 0 && Math.abs(bedTemp - bedTarget) > 2
+          isHeating: bedTarget > 0 && Math.abs(bedTemp - bedTarget) > 2,
         },
         extruder: {
           current: nozzleTemp,
           target: nozzleTarget,
-          isHeating: nozzleTarget > 0 && Math.abs(nozzleTemp - nozzleTarget) > 2
-        }
+          isHeating: nozzleTarget > 0 && Math.abs(nozzleTemp - nozzleTarget) > 2,
+        },
       },
       fans: {
         coolingFan: coolingFanSpeed,
-        chamberFan: chamberFanSpeed
+        chamberFan: chamberFanSpeed,
       },
       filtration: {
         mode: filtrationInfo.filtrationMode || 'none',
         tvocLevel: tvoc,
-        available: filtrationInfo.hasFiltration || false
+        available: filtrationInfo.hasFiltration || false,
       },
       settings: {
         nozzleSize: parseFloat(nozzleSize) || 0.4,
         filamentType: filamentType || 'PLA',
         speedOffset: printSpeedAdjust,
-        zAxisOffset: zAxisCompensation
+        zAxisOffset: zAxisCompensation,
       },
       currentJob: currentJob.fileName ? currentJob : null,
       connectionStatus: 'connected' as const,
       lastUpdate: new Date(),
       cumulativeStats: {
         totalPrintTime: cumulativePrintTime,
-        totalFilamentUsed: cumulativeFilament
-      }
+        totalFilamentUsed: cumulativeFilament,
+      },
     };
 
     return finalStatus;
@@ -169,18 +164,14 @@ export class PrinterDataTransformer {
       slots: transformedSlots,
       activeSlot: activeSlot >= 0 ? activeSlot : null,
       errorMessage: errorMessage || null,
-      lastUpdate: new Date()
+      lastUpdate: new Date(),
     };
   }
 
   /**
    * Transform a single material slot
    */
-  private transformMaterialSlot(
-    slotData: Record<string, unknown>,
-    index: number,
-    activeSlot: number
-  ): MaterialSlot {
+  private transformMaterialSlot(slotData: Record<string, unknown>, index: number, activeSlot: number): MaterialSlot {
     const slotId = safeExtractNumber(slotData, 'slotId', index) + 1; // Convert 0-based to 1-based
     const isEmpty = safeExtractBoolean(slotData, 'isEmpty', true);
     const materialType = safeExtractString(slotData, 'materialType', '');
@@ -191,7 +182,7 @@ export class PrinterDataTransformer {
       isEmpty,
       materialType: !isEmpty && materialType ? materialType : null,
       materialColor: !isEmpty && materialColor ? materialColor : null,
-      isActive: slotId === activeSlot
+      isActive: slotId === activeSlot,
     };
   }
 
@@ -220,9 +211,9 @@ export class PrinterDataTransformer {
           elapsedTime: 0,
           elapsedTimeSeconds: 0,
           weightUsed: 0,
-          lengthUsed: 0
+          lengthUsed: 0,
         },
-        isActive: false
+        isActive: false,
       };
     }
 
@@ -232,7 +223,7 @@ export class PrinterDataTransformer {
     const remainingTime = safeExtractNumber(backendData, 'remainingTime', 0);
     const rawCurrentLayer = safeExtractNumber(backendData, 'currentLayer', 0);
     const rawTotalLayers = safeExtractNumber(backendData, 'totalLayers', 0);
-    
+
     // Smart progress percentage conversion - handle both formats
     // Legacy GenericLegacyBackend: provides 0-100 integer from PrintStatus.getPrintPercent()
     // Modern backends: may provide 0.0-1.0 decimal format
@@ -262,7 +253,7 @@ export class PrinterDataTransformer {
     // Enhanced layer data processing
     const currentLayer = rawCurrentLayer > 0 ? rawCurrentLayer : null;
     const totalLayers = rawTotalLayers > 0 ? rawTotalLayers : null;
-    
+
     // Log layer information for debugging
     if (currentLayer !== null || totalLayers !== null) {
       console.log(`[DataTransformer] Layer progress: ${currentLayer}/${totalLayers}`);
@@ -278,15 +269,17 @@ export class PrinterDataTransformer {
       elapsedTimeSeconds: printDuration, // Store raw seconds for precise display
       weightUsed: filamentWeight,
       lengthUsed: filamentUsed,
-      formattedEta: printEta || undefined
+      formattedEta: printEta || undefined,
     };
-    
+
     // Validate progress data for type safety
-    if (!this.validateJobProgress({
-      percentage: progressData.percentage,
-      currentLayer: progressData.currentLayer,
-      totalLayers: progressData.totalLayers
-    })) {
+    if (
+      !this.validateJobProgress({
+        percentage: progressData.percentage,
+        currentLayer: progressData.currentLayer,
+        totalLayers: progressData.totalLayers,
+      })
+    ) {
       console.warn(`[DataTransformer] Invalid progress data for job: ${fileName}`);
       // Use safe defaults for invalid data
       progressData.percentage = 0;
@@ -299,7 +292,7 @@ export class PrinterDataTransformer {
       displayName: fileName,
       startTime,
       progress: progressData,
-      isActive
+      isActive,
     };
   }
 
@@ -316,7 +309,7 @@ export class PrinterDataTransformer {
 
     if ('externalFanOn' in backendData || 'internalFanOn' in backendData) {
       let mode: 'external' | 'internal' | 'none' = 'none';
-      
+
       // Determine filtration mode based on which fans are active
       if (externalFanOn && internalFanOn) {
         // Both fans on - this shouldn't happen normally, but prioritize external
@@ -326,10 +319,10 @@ export class PrinterDataTransformer {
       } else if (internalFanOn) {
         mode = 'internal';
       }
-      
+
       return {
         hasFiltration: true,
-        filtrationMode: mode
+        filtrationMode: mode,
       };
     }
 
@@ -357,11 +350,13 @@ export class PrinterDataTransformer {
       console.warn(`[DataTransformer] Invalid progress percentage: ${progressData.percentage}% (expected 0-100)`);
       return false;
     }
-    
+
     // Validate layer data consistency
     if (progressData.currentLayer !== null && progressData.totalLayers !== null) {
       if (progressData.currentLayer > progressData.totalLayers) {
-        console.warn(`[DataTransformer] Invalid layer data: current (${progressData.currentLayer}) > total (${progressData.totalLayers})`);
+        console.warn(
+          `[DataTransformer] Invalid layer data: current (${progressData.currentLayer}) > total (${progressData.totalLayers})`
+        );
         return false;
       }
       if (progressData.currentLayer < 0 || progressData.totalLayers < 0) {
@@ -369,7 +364,7 @@ export class PrinterDataTransformer {
         return false;
       }
     }
-    
+
     return true;
   }
 
@@ -388,14 +383,17 @@ export class PrinterDataTransformer {
 
     // Validate temperature ranges
     const { bed, extruder } = status.temperatures;
-    if (bed.current < 0 || bed.current > 150 ||
-        extruder.current < 0 || extruder.current > 350) {
+    if (bed.current < 0 || bed.current > 150 || extruder.current < 0 || extruder.current > 350) {
       return false;
     }
 
     // Validate fan speeds
-    if (status.fans.coolingFan < 0 || status.fans.coolingFan > 100 ||
-        status.fans.chamberFan < 0 || status.fans.chamberFan > 100) {
+    if (
+      status.fans.coolingFan < 0 ||
+      status.fans.coolingFan > 100 ||
+      status.fans.chamberFan < 0 ||
+      status.fans.chamberFan > 100
+    ) {
       return false;
     }
 
@@ -410,26 +408,26 @@ export class PrinterDataTransformer {
       state: 'Busy',
       temperatures: {
         bed: { current: 0, target: 0, isHeating: false },
-        extruder: { current: 0, target: 0, isHeating: false }
+        extruder: { current: 0, target: 0, isHeating: false },
       },
       fans: {
         coolingFan: 0,
-        chamberFan: 0
+        chamberFan: 0,
       },
       filtration: {
         mode: 'none',
         tvocLevel: 0,
-        available: false
+        available: false,
       },
       settings: {
         nozzleSize: 0.4,
         filamentType: 'PLA',
         speedOffset: 100,
-        zAxisOffset: 0
+        zAxisOffset: 0,
       },
       currentJob: null,
       connectionStatus: 'disconnected',
-      lastUpdate: new Date()
+      lastUpdate: new Date(),
     };
   }
 
@@ -442,11 +440,10 @@ export class PrinterDataTransformer {
       slots: [],
       activeSlot: null,
       errorMessage: null,
-      lastUpdate: new Date()
+      lastUpdate: new Date(),
     };
   }
 }
 
 // Export singleton instance
 export const printerDataTransformer = new PrinterDataTransformer();
-

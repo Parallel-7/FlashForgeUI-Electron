@@ -32,7 +32,7 @@
  * server status, and resource usage. Primarily used for technical support and debugging.
  */
 
-import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron';
+import { contextBridge, type IpcRendererEvent, ipcRenderer } from 'electron';
 
 // Ensure this file is treated as a module
 export {};
@@ -76,7 +76,7 @@ let statusPushListener: ((event: IpcRendererEvent, stats: StatusStats) => void) 
 const statusDialogAPI = {
   requestStats: async (): Promise<StatusStats | null> => {
     try {
-      const stats = await ipcRenderer.invoke('status-request-stats') as StatusStats;
+      const stats = (await ipcRenderer.invoke('status-request-stats')) as StatusStats;
       const callback = (window as StatusWindow)._statusStatsCallback;
       if (callback) {
         callback(stats);
@@ -116,18 +116,18 @@ const statusDialogAPI = {
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
-  }
+  },
 } as const;
 
 contextBridge.exposeInMainWorld('api', {
   dialog: {
-    status: statusDialogAPI
-  }
+    status: statusDialogAPI,
+  },
 });
 
 // Generic window controls for sub-windows
 contextBridge.exposeInMainWorld('windowControls', {
   minimize: (): void => ipcRenderer.send('dialog-window-minimize'),
   close: (): void => ipcRenderer.send('dialog-window-close'),
-  closeGeneric: (): void => ipcRenderer.send('close-current-window')
+  closeGeneric: (): void => ipcRenderer.send('close-current-window'),
 });

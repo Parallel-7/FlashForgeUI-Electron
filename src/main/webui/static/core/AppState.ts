@@ -7,10 +7,6 @@
  * into module-level variables directly.
  */
 
-import { WebUIGridManager } from '../grid/WebUIGridManager.js';
-import { WebUIMobileLayoutManager } from '../grid/WebUIMobileLayoutManager.js';
-import { WebUILayoutPersistence } from '../grid/WebUILayoutPersistence.js';
-import { componentRegistry } from '../grid/WebUIComponentRegistry.js';
 import type {
   ActiveSpoolData,
   MaterialMapping,
@@ -19,11 +15,15 @@ import type {
   PrinterContext,
   PrinterFeatures,
   PrinterStatus,
-  SpoolSummary,
   SpoolmanConfigResponse,
+  SpoolSummary,
   WebUIJobFile,
   WebUISettings,
 } from '../app.js';
+import { componentRegistry } from '../grid/WebUIComponentRegistry.js';
+import { WebUIGridManager } from '../grid/WebUIGridManager.js';
+import { WebUILayoutPersistence } from '../grid/WebUILayoutPersistence.js';
+import { WebUIMobileLayoutManager } from '../grid/WebUIMobileLayoutManager.js';
 
 export class AppState {
   public isAuthenticated: boolean = false;
@@ -130,8 +130,6 @@ export function getMaterialMatchingState(): MaterialMatchingState | null {
   return materialMatchingState;
 }
 
-export function setMaterialMatchingState(
-  matchingState: MaterialMatchingState | null,
-): void {
+export function setMaterialMatchingState(matchingState: MaterialMatchingState | null): void {
   materialMatchingState = matchingState;
 }

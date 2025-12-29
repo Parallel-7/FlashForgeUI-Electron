@@ -1,19 +1,19 @@
 /**
  * @fileoverview Component Manager for UI Component System
- * 
+ *
  * The ComponentManager class serves as the central coordinator for all UI components
  * in the FlashForgeUI application. It handles component registration, lifecycle
  * management, and centralized data updates. This manager ensures that all components
  * are properly initialized, updated with fresh data from polling cycles, and cleaned
  * up when necessary.
- * 
+ *
  * Key responsibilities:
  * - Component registration and lifecycle management
  * - Centralized data updates to all components
  * - Error handling and graceful degradation
  * - Component lookup and inter-component communication
  * - Proper cleanup and resource management
- * 
+ *
  * Usage:
  * ```typescript
  * const manager = new ComponentManager();
@@ -23,9 +23,9 @@
  * ```
  */
 
-import { BaseComponent } from './base/component.js';
-import type { ComponentUpdateData, IComponentManager, IComponent } from './base/types.js';
 import { logVerbose } from '@shared/logging.js';
+import { BaseComponent } from './base/component.js';
+import type { ComponentUpdateData, IComponent, IComponentManager } from './base/types.js';
 
 const COMPONENT_MANAGER_LOG_NAMESPACE = 'ComponentManager';
 
@@ -36,10 +36,10 @@ const COMPONENT_MANAGER_LOG_NAMESPACE = 'ComponentManager';
 export class ComponentManager implements IComponentManager {
   /** Map of component ID to component instance */
   private readonly components = new Map<string, BaseComponent>();
-  
+
   /** Whether all components have been initialized */
   private initialized = false;
-  
+
   /** Last update data sent to components */
   private lastUpdateData: ComponentUpdateData | null = null;
   private pendingUpdateData: ComponentUpdateData | null = null;
@@ -57,7 +57,7 @@ export class ComponentManager implements IComponentManager {
     if (this.components.has(component.componentId)) {
       throw new Error(`Component ${component.componentId} is already registered`);
     }
-    
+
     this.components.set(component.componentId, component);
     this.logDebug(`Registered component: ${component.componentId}`);
   }
@@ -145,7 +145,7 @@ export class ComponentManager implements IComponentManager {
    */
   updateComponent(componentId: string, data: ComponentUpdateData): boolean {
     const component = this.components.get(componentId);
-    
+
     if (!component) {
       console.warn(`ComponentManager: Component ${componentId} not found for update`);
       return false;
@@ -237,7 +237,7 @@ export class ComponentManager implements IComponentManager {
    */
   async reinitializeComponent(componentId: string): Promise<boolean> {
     const component = this.components.get(componentId);
-    
+
     if (!component) {
       console.warn(`ComponentManager: Component ${componentId} not found for reinitialization`);
       return false;
@@ -251,7 +251,7 @@ export class ComponentManager implements IComponentManager {
 
       // Reinitialize
       await component.initialize();
-      
+
       // Send last update data if available
       if (this.lastUpdateData && component.isInitialized()) {
         component.update(this.lastUpdateData);
@@ -272,7 +272,7 @@ export class ComponentManager implements IComponentManager {
    */
   removeComponent(componentId: string): boolean {
     const component = this.components.get(componentId);
-    
+
     if (!component) {
       console.warn(`ComponentManager: Component ${componentId} not found for removal`);
       return false;
@@ -318,7 +318,7 @@ export class ComponentManager implements IComponentManager {
 
     // Clear the component registry
     this.components.clear();
-    
+
     // Reset manager state
     this.initialized = false;
     this.lastUpdateData = null;
@@ -361,7 +361,7 @@ export class ComponentManager implements IComponentManager {
       healthyComponents,
       uninitializedComponents,
       destroyedComponents,
-      lastUpdateTime: this.lastUpdateData ? new Date() : null
+      lastUpdateTime: this.lastUpdateData ? new Date() : null,
     };
   }
 }

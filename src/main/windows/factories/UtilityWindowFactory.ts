@@ -63,20 +63,20 @@
  * @exports createSendCommandsWindow - Create send commands window for direct printer control
  */
 
-import { getWindowManager } from '../WindowManager.js';
-import {
-  getWindowDimensions,
-  createUIPreloadPath,
-  loadWindowHTML,
-  setupWindowLifecycle,
-  setupDevTools,
-  createModalWindow,
-  focusExistingWindow,
-  validateParentWindow
-} from '../shared/WindowConfig.js';
-import { JobPickerInitData } from '../shared/WindowTypes.js';
 import { getMainProcessPollingCoordinator } from '../../services/MainProcessPollingCoordinator.js';
 import { getThumbnailRequestQueue } from '../../services/ThumbnailRequestQueue.js';
+import {
+  createModalWindow,
+  createUIPreloadPath,
+  focusExistingWindow,
+  getWindowDimensions,
+  loadWindowHTML,
+  setupDevTools,
+  setupWindowLifecycle,
+  validateParentWindow,
+} from '../shared/WindowConfig.js';
+import { JobPickerInitData } from '../shared/WindowTypes.js';
+import { getWindowManager } from '../WindowManager.js';
 
 /**
  * Create the job uploader window with modal behavior and WindowManager integration
@@ -84,7 +84,7 @@ import { getThumbnailRequestQueue } from '../../services/ThumbnailRequestQueue.j
  */
 export const createJobUploaderWindow = (): void => {
   const windowManager = getWindowManager();
-  
+
   // Check for existing window and focus if present
   if (windowManager.hasJobUploaderWindow()) {
     const existingWindow = windowManager.getJobUploaderWindow();
@@ -101,22 +101,14 @@ export const createJobUploaderWindow = (): void => {
   // Create window with standardized configuration
   const dimensions = getWindowDimensions('JOB_UPLOADER');
   const preloadPath = createUIPreloadPath('job-uploader');
-  
-  const jobUploaderWindow = createModalWindow(
-    mainWindow,
-    dimensions,
-    preloadPath,
-    { resizable: false, frame: false }
-  );
+
+  const jobUploaderWindow = createModalWindow(mainWindow, dimensions, preloadPath, { resizable: false, frame: false });
 
   // Load HTML content
   void loadWindowHTML(jobUploaderWindow, 'job-uploader');
 
   // Setup lifecycle handlers
-  setupWindowLifecycle(
-    jobUploaderWindow,
-    () => windowManager.setJobUploaderWindow(null)
-  );
+  setupWindowLifecycle(jobUploaderWindow, () => windowManager.setJobUploaderWindow(null));
 
   // Setup development tools
   setupDevTools(jobUploaderWindow);
@@ -133,7 +125,7 @@ export const createJobUploaderWindow = (): void => {
 export const createJobPickerWindow = (isRecentFiles: boolean = false): void => {
   const windowManager = getWindowManager();
   const pollingCoordinator = getMainProcessPollingCoordinator();
-  
+
   // Check for existing window and focus if present
   if (windowManager.hasJobPickerWindow()) {
     const existingWindow = windowManager.getJobPickerWindow();
@@ -153,13 +145,8 @@ export const createJobPickerWindow = (isRecentFiles: boolean = false): void => {
   // Create window with standardized configuration
   const dimensions = getWindowDimensions('JOB_PICKER');
   const preloadPath = createUIPreloadPath('job-picker');
-  
-  const jobPickerWindow = createModalWindow(
-    mainWindow,
-    dimensions,
-    preloadPath,
-    { resizable: true, frame: false }
-  );
+
+  const jobPickerWindow = createModalWindow(mainWindow, dimensions, preloadPath, { resizable: true, frame: false });
 
   // Load HTML content
   void loadWindowHTML(jobPickerWindow, 'job-picker');
@@ -173,19 +160,16 @@ export const createJobPickerWindow = (isRecentFiles: boolean = false): void => {
   });
 
   // Setup lifecycle handlers with special cleanup tasks
-  setupWindowLifecycle(
-    jobPickerWindow,
-    () => {
-      // Cancel pending thumbnail requests
-      const thumbnailQueue = getThumbnailRequestQueue();
-      thumbnailQueue.cancelAll();
-      console.log('[JobPicker] Cancelled pending thumbnail requests on window close');
-      
-      // Resume polling when job picker closes
-      pollingCoordinator.resumePolling();
-      windowManager.setJobPickerWindow(null);
-    }
-  );
+  setupWindowLifecycle(jobPickerWindow, () => {
+    // Cancel pending thumbnail requests
+    const thumbnailQueue = getThumbnailRequestQueue();
+    thumbnailQueue.cancelAll();
+    console.log('[JobPicker] Cancelled pending thumbnail requests on window close');
+
+    // Resume polling when job picker closes
+    pollingCoordinator.resumePolling();
+    windowManager.setJobPickerWindow(null);
+  });
 
   // Setup development tools
   setupDevTools(jobPickerWindow);
@@ -201,7 +185,7 @@ export const createJobPickerWindow = (isRecentFiles: boolean = false): void => {
  */
 export const createPrinterSelectionWindow = (): void => {
   const windowManager = getWindowManager();
-  
+
   // Check for existing window and focus if present
   if (windowManager.hasPrinterSelectionWindow()) {
     const existingWindow = windowManager.getPrinterSelectionWindow();
@@ -218,22 +202,17 @@ export const createPrinterSelectionWindow = (): void => {
   // Create window with standardized configuration
   const dimensions = getWindowDimensions('PRINTER_SELECTION');
   const preloadPath = createUIPreloadPath('printer-selection');
-  
-  const printerSelectionWindow = createModalWindow(
-    mainWindow,
-    dimensions,
-    preloadPath,
-    { resizable: true, frame: false }
-  );
+
+  const printerSelectionWindow = createModalWindow(mainWindow, dimensions, preloadPath, {
+    resizable: true,
+    frame: false,
+  });
 
   // Load HTML content
   void loadWindowHTML(printerSelectionWindow, 'printer-selection');
 
   // Setup lifecycle handlers
-  setupWindowLifecycle(
-    printerSelectionWindow,
-    () => windowManager.setPrinterSelectionWindow(null)
-  );
+  setupWindowLifecycle(printerSelectionWindow, () => windowManager.setPrinterSelectionWindow(null));
 
   // Setup development tools
   setupDevTools(printerSelectionWindow);
@@ -248,7 +227,7 @@ export const createPrinterSelectionWindow = (): void => {
  */
 export const createSendCommandsWindow = (): void => {
   const windowManager = getWindowManager();
-  
+
   // Check for existing window and focus if present
   if (windowManager.hasSendCommandsWindow()) {
     const existingWindow = windowManager.getSendCommandsWindow();
@@ -265,22 +244,14 @@ export const createSendCommandsWindow = (): void => {
   // Create window with standardized configuration
   const dimensions = getWindowDimensions('SEND_COMMANDS');
   const preloadPath = createUIPreloadPath('send-cmds');
-  
-  const sendCommandsWindow = createModalWindow(
-    mainWindow,
-    dimensions,
-    preloadPath,
-    { resizable: true, frame: false }
-  );
+
+  const sendCommandsWindow = createModalWindow(mainWindow, dimensions, preloadPath, { resizable: true, frame: false });
 
   // Load HTML content
   void loadWindowHTML(sendCommandsWindow, 'send-cmds');
 
   // Setup lifecycle handlers
-  setupWindowLifecycle(
-    sendCommandsWindow,
-    () => windowManager.setSendCommandsWindow(null)
-  );
+  setupWindowLifecycle(sendCommandsWindow, () => windowManager.setSendCommandsWindow(null));
 
   // Setup development tools
   setupDevTools(sendCommandsWindow);

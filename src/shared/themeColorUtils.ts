@@ -33,14 +33,10 @@ function mixColor(hex: string, percent: number, target: number): string {
 
   const limitedPercent = Math.min(Math.max(percent, 0), 100) / 100;
   const r = clampColorValue(
-    Math.floor(((numeric >> 16) & 0xff) + ((target - ((numeric >> 16) & 0xff)) * limitedPercent))
+    Math.floor(((numeric >> 16) & 0xff) + (target - ((numeric >> 16) & 0xff)) * limitedPercent)
   );
-  const g = clampColorValue(
-    Math.floor(((numeric >> 8) & 0xff) + ((target - ((numeric >> 8) & 0xff)) * limitedPercent))
-  );
-  const b = clampColorValue(
-    Math.floor((numeric & 0xff) + ((target - (numeric & 0xff)) * limitedPercent))
-  );
+  const g = clampColorValue(Math.floor(((numeric >> 8) & 0xff) + (target - ((numeric >> 8) & 0xff)) * limitedPercent));
+  const b = clampColorValue(Math.floor((numeric & 0xff) + (target - (numeric & 0xff)) * limitedPercent));
 
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 }
@@ -77,9 +73,7 @@ export function getLuminance(hex: string): number {
 
   const srgb = [r, g, b].map((channel) => {
     const normalized = channel / 255;
-    return normalized <= 0.03928
-      ? normalized / 12.92
-      : Math.pow((normalized + 0.055) / 1.055, 2.4);
+    return normalized <= 0.03928 ? normalized / 12.92 : Math.pow((normalized + 0.055) / 1.055, 2.4);
   });
 
   return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
@@ -137,13 +131,13 @@ export function computeThemePalette(theme: ThemeColors): ComputedThemePalette {
     borderColorFocus: hexToRgba(borderFocusColor, 0.5),
     buttonTextColor: getContrastingTextColor(secondary),
     accentTextColor: getContrastingTextColor(primary),
-     dialogHeaderTextColor: getContrastingTextColor(surfaceMuted),
+    dialogHeaderTextColor: getContrastingTextColor(surfaceMuted),
     containerTextColor: getContrastingTextColor(surface),
     scrollbarTrackColor,
     scrollbarThumbColor,
     scrollbarThumbHoverColor,
     scrollbarThumbActiveColor,
     uiBorderColor,
-    roundedBoxShadow: surfaceIsLight ? '0 8px 32px rgba(0, 0, 0, 0.25)' : '0 8px 32px rgba(0, 0, 0, 0.55)'
+    roundedBoxShadow: surfaceIsLight ? '0 8px 32px rgba(0, 0, 0, 0.25)' : '0 8px 32px rgba(0, 0, 0, 0.55)',
   };
 }

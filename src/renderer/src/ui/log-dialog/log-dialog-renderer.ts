@@ -1,6 +1,6 @@
 /**
  * @fileoverview Log Dialog Renderer
- * 
+ *
  * This renderer handles the log dialog window functionality including:
  * - Loading and displaying current log messages
  * - Real-time updates of new log messages
@@ -8,15 +8,15 @@
  * - Auto-scrolling to show latest messages
  * - Message count display
  * - Window controls and event handling
- * 
+ *
  * The renderer integrates with the log panel component functionality
  * while providing a dedicated dialog interface for viewing logs.
  */
 
-import { createLogPanel, type LogEntry, type LogPanelController } from '../shared/log-panel/index.js';
 import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
+import { createLogPanel, type LogEntry, type LogPanelController } from '../shared/log-panel/index.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 // Define interfaces for type safety
 interface LogMessage {
@@ -78,7 +78,7 @@ class LogDialogRenderer {
       onCountChanged: (count) => {
         this.messageCount = count;
         this.updateMessageCount();
-      }
+      },
     });
 
     console.log('Log Dialog: Elements initialized successfully');
@@ -115,7 +115,7 @@ class LogDialogRenderer {
   private async loadInitialLogs(): Promise<void> {
     try {
       const logs = await getLogDialogAPI().requestLogs();
-      
+
       if (logs && logs.length > 0) {
         this.logPanel?.load(logs, { scrollToLatest: true });
         this.messageCount = this.logPanel?.getEntryCount() ?? logs.length;
@@ -148,7 +148,7 @@ class LogDialogRenderer {
   private async handleClearLogs(): Promise<void> {
     try {
       const success = await getLogDialogAPI().clearLogs();
-      
+
       if (success) {
         this.logPanel?.clear();
         this.messageCount = 0;

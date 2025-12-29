@@ -48,13 +48,13 @@
  * @module ipc/handlers/palette-handlers
  */
 
+import { COMPONENT_REGISTRY_DATA } from '@shared/component-definitions.js';
 import { ipcMain } from 'electron';
 import {
+  closeComponentPaletteWindow,
   createComponentPaletteWindow,
-  closeComponentPaletteWindow
 } from '../../windows/factories/ComponentPaletteWindowFactory.js';
 import { getWindowManager } from '../../windows/WindowManager.js';
-import { COMPONENT_REGISTRY_DATA } from '@shared/component-definitions.js';
 
 /**
  * Component definition interface (matches palette-preload.ts and ComponentRegistry)
@@ -96,11 +96,11 @@ export function registerPaletteHandlers(): void {
 
     try {
       // Map to the format expected by palette
-      const components: ComponentDefinition[] = COMPONENT_REGISTRY_DATA.map(comp => ({
+      const components: ComponentDefinition[] = COMPONENT_REGISTRY_DATA.map((comp) => ({
         id: comp.id,
         name: comp.name,
         icon: comp.icon,
-        category: comp.category
+        category: comp.category,
       }));
 
       console.log(`[Palette Handlers] Returning ${components.length} components from registry`);
@@ -143,21 +143,30 @@ export function registerPaletteHandlers(): void {
   });
 
   // Broadcast component status update to palette window
-  ipcMain.on('palette:update-status', (_event, statusData: string[] | { componentsInUse: string[]; pinnedComponents: string[] }) => {
-    const windowManager = getWindowManager();
-    const paletteWindow = windowManager.getPaletteWindow();
+  ipcMain.on(
+    'palette:update-status',
+    (_event, statusData: string[] | { componentsInUse: string[]; pinnedComponents: string[] }) => {
+      const windowManager = getWindowManager();
+      const paletteWindow = windowManager.getPaletteWindow();
 
-    if (paletteWindow && !paletteWindow.isDestroyed()) {
-      // Support both old format (array) and new format (object)
-      if (Array.isArray(statusData)) {
-        console.log(`[Palette Handlers] Broadcasting status update: ${statusData.length} components in use`);
-        paletteWindow.webContents.send('palette:update-status', statusData);
-      } else {
-        console.log(`[Palette Handlers] Broadcasting status update: ${statusData.componentsInUse.length} in use, ${statusData.pinnedComponents.length} pinned`);
-        paletteWindow.webContents.send('palette:update-status', statusData.componentsInUse, statusData.pinnedComponents);
+      if (paletteWindow && !paletteWindow.isDestroyed()) {
+        // Support both old format (array) and new format (object)
+        if (Array.isArray(statusData)) {
+          console.log(`[Palette Handlers] Broadcasting status update: ${statusData.length} components in use`);
+          paletteWindow.webContents.send('palette:update-status', statusData);
+        } else {
+          console.log(
+            `[Palette Handlers] Broadcasting status update: ${statusData.componentsInUse.length} in use, ${statusData.pinnedComponents.length} pinned`
+          );
+          paletteWindow.webContents.send(
+            'palette:update-status',
+            statusData.componentsInUse,
+            statusData.pinnedComponents
+          );
+        }
       }
     }
-  });
+  );
 
   // Notify main window when palette opens
   ipcMain.on('palette:opened', () => {
@@ -188,4 +197,3 @@ export function registerPaletteHandlers(): void {
 
   console.log('[Palette Handlers] Palette IPC handlers registered successfully');
 }
-

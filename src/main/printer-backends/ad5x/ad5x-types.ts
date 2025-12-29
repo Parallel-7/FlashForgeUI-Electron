@@ -18,28 +18,19 @@
  */
 
 // Re-export types from ff-api
-export { 
-  MatlStationInfo,
-  SlotInfo
-} from '@ghosttypes/ff-api';
-
 // Direct re-exports from ff-api index
-export { 
-  FFGcodeToolData,
-  FFGcodeFileEntry,
-  AD5XMaterialMapping,
+export {
   AD5XLocalJobParams,
-  AD5XSingleColorJobParams
+  AD5XMaterialMapping,
+  AD5XSingleColorJobParams,
+  FFGcodeFileEntry,
+  FFGcodeToolData,
+  MatlStationInfo,
+  SlotInfo,
 } from '@ghosttypes/ff-api';
-
 // Keep our UI-specific types that transform the data structure
-export { 
-  MaterialStationStatus, 
-  MaterialSlotInfo 
-} from '@shared/types/printer-backend/index.js';
-
 // AD5X job info extends the base job info with material station data
-export { AD5XJobInfo } from '@shared/types/printer-backend/index.js';
+export { AD5XJobInfo, MaterialSlotInfo, MaterialStationStatus } from '@shared/types/printer-backend/index.js';
 
 // Import MatlStationInfo for type definitions
 import type { MatlStationInfo as MatlStationInfoType } from '@ghosttypes/ff-api';
@@ -68,4 +59,3 @@ export function hasValidMaterialStationInfo(
     Array.isArray(data.MatlStationInfo.slotInfos)
   );
 }
-

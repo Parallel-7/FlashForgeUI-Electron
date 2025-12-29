@@ -75,8 +75,8 @@ declare global {
 export {};
 
 import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 class UpdateDialogController {
   private state: UpdateStatusResponse | null = null;
@@ -128,12 +128,12 @@ class UpdateDialogController {
           this.state = {
             currentVersion: '',
             supportsDownload: true,
-            ...payload
+            ...payload,
           };
         } else {
           this.state = {
             ...this.state,
-            ...payload
+            ...payload,
           };
         }
         this.render();
@@ -328,7 +328,8 @@ class UpdateDialogController {
   private renderPlatformNotice(): void {
     const notices: Record<NodeJS.Platform, string> = {
       win32: '',
-      darwin: 'After downloading, the ZIP file will be shown in Finder. Extract it and drag FlashForgeUI to the Applications folder.',
+      darwin:
+        'After downloading, the ZIP file will be shown in Finder. Extract it and drag FlashForgeUI to the Applications folder.',
       linux: 'Updates on Linux require manual installation from GitHub Releases.',
       aix: '',
       android: '',
@@ -337,7 +338,7 @@ class UpdateDialogController {
       openbsd: '',
       sunos: '',
       netbsd: '',
-      cygwin: ''
+      cygwin: '',
     };
 
     const notice = notices[this.platform] || '';
@@ -397,7 +398,7 @@ class UpdateDialogController {
     }
 
     return releaseNotes
-      .map(entry => entry.note ?? entry.notes ?? '')
+      .map((entry) => entry.note ?? entry.notes ?? '')
       .filter(Boolean)
       .map(toHtml)
       .join('');
@@ -432,7 +433,7 @@ class UpdateDialogController {
       'PRE',
       'SPAN',
       'STRONG',
-      'UL'
+      'UL',
     ]);
 
     const sanitizeNode = (node: Node): void => {

@@ -31,11 +31,20 @@
  * @module services/discord/DiscordNotificationService
  */
 
+import type {
+  DiscordEmbed,
+  DiscordEmbedField,
+  DiscordServiceConfig,
+  DiscordWebhookPayload,
+} from '@shared/types/discord.js';
+import type { PrinterState, PrinterStatus } from '@shared/types/polling.js';
 import { EventEmitter } from 'events';
-import type { PrinterStatus, PrinterState } from '@shared/types/polling.js';
-import type { DiscordEmbed, DiscordEmbedField, DiscordWebhookPayload, DiscordServiceConfig } from '@shared/types/discord.js';
-import { getConfigManager, type ConfigManager } from '../../managers/ConfigManager.js';
-import { getPrinterContextManager, type PrinterContextManager, type PrinterContext } from '../../managers/PrinterContextManager.js';
+import { type ConfigManager, getConfigManager } from '../../managers/ConfigManager.js';
+import {
+  getPrinterContextManager,
+  type PrinterContext,
+  type PrinterContextManager,
+} from '../../managers/PrinterContextManager.js';
 
 /**
  * Printer state for Discord notifications
@@ -62,10 +71,7 @@ export class DiscordNotificationService extends EventEmitter {
   private isInitialized = false;
   private currentConfig: DiscordServiceConfig;
 
-  constructor(
-    configManager?: ConfigManager,
-    contextManager?: PrinterContextManager
-  ) {
+  constructor(configManager?: ConfigManager, contextManager?: PrinterContextManager) {
     super();
 
     this.configManager = configManager ?? getConfigManager();
@@ -166,7 +172,7 @@ export class DiscordNotificationService extends EventEmitter {
     return {
       enabled: config.DiscordSync,
       webhookUrl: config.WebhookUrl,
-      updateIntervalMinutes: config.DiscordUpdateIntervalMinutes
+      updateIntervalMinutes: config.DiscordUpdateIntervalMinutes,
     };
   }
 
@@ -178,11 +184,10 @@ export class DiscordNotificationService extends EventEmitter {
     const newConfig = this.extractDiscordConfig();
 
     // Check if Discord-specific settings changed
-    const configChanged = (
+    const configChanged =
       this.currentConfig.enabled !== newConfig.enabled ||
       this.currentConfig.webhookUrl !== newConfig.webhookUrl ||
-      this.currentConfig.updateIntervalMinutes !== newConfig.updateIntervalMinutes
-    );
+      this.currentConfig.updateIntervalMinutes !== newConfig.updateIntervalMinutes;
 
     if (!configChanged) {
       return;
@@ -222,7 +227,9 @@ export class DiscordNotificationService extends EventEmitter {
 
     this.updateTimers.set(contextId, timer);
 
-    console.log(`[DiscordNotificationService] Started timer for context ${contextId} (${this.currentConfig.updateIntervalMinutes} min interval)`);
+    console.log(
+      `[DiscordNotificationService] Started timer for context ${contextId} (${this.currentConfig.updateIntervalMinutes} min interval)`
+    );
   }
 
   /**
@@ -259,7 +266,9 @@ export class DiscordNotificationService extends EventEmitter {
 
       this.updateTimers.set('__global__', timer);
 
-      console.log(`[DiscordNotificationService] Started global timer (${this.currentConfig.updateIntervalMinutes} min interval)`);
+      console.log(
+        `[DiscordNotificationService] Started global timer (${this.currentConfig.updateIntervalMinutes} min interval)`
+      );
     }
   }
 
@@ -333,8 +342,8 @@ export class DiscordNotificationService extends EventEmitter {
     }
 
     const contexts = this.contextManager.getAllContexts();
-    const connectedContexts = contexts.filter(ctx =>
-      ctx.connectionState === 'connected' && this.cachedStatuses.has(ctx.id)
+    const connectedContexts = contexts.filter(
+      (ctx) => ctx.connectionState === 'connected' && this.cachedStatuses.has(ctx.id)
     );
 
     console.log(`[DiscordNotificationService] Sending updates for ${connectedContexts.length} contexts`);
@@ -357,7 +366,7 @@ export class DiscordNotificationService extends EventEmitter {
 
         // Add delay between messages (except after last)
         if (i < connectedContexts.length - 1) {
-          await new Promise(resolve => setTimeout(resolve, this.RATE_LIMIT_DELAY_MS));
+          await new Promise((resolve) => setTimeout(resolve, this.RATE_LIMIT_DELAY_MS));
         }
       }
     }
@@ -366,11 +375,7 @@ export class DiscordNotificationService extends EventEmitter {
   /**
    * Send status update for a single context
    */
-  private async sendStatusUpdate(
-    contextId: string,
-    status: PrinterStatus,
-    context?: PrinterContext
-  ): Promise<void> {
+  private async sendStatusUpdate(contextId: string, status: PrinterStatus, context?: PrinterContext): Promise<void> {
     try {
       // Get context if not provided
       if (!context) {
@@ -383,14 +388,13 @@ export class DiscordNotificationService extends EventEmitter {
 
       const embed = this.createStatusEmbed(status, context);
       const payload: DiscordWebhookPayload = {
-        embeds: [embed]
+        embeds: [embed],
       };
 
       await this.sendWebhook(payload);
 
       console.log(`[DiscordNotificationService] Sent status update for ${contextId}`);
       this.emit('notification-sent', { contextId, type: 'status' });
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`[DiscordNotificationService] Failed to send status update: ${errorMessage}`);
@@ -410,14 +414,13 @@ export class DiscordNotificationService extends EventEmitter {
 
       const embed = this.createStatusEmbed(status, context);
       const payload: DiscordWebhookPayload = {
-        embeds: [embed]
+        embeds: [embed],
       };
 
       await this.sendWebhook(payload);
 
       console.log(`[DiscordNotificationService] Sent idle transition notification for ${contextId}`);
       this.emit('notification-sent', { contextId, type: 'idle-transition' });
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`[DiscordNotificationService] Failed to send idle notification: ${errorMessage}`);
@@ -446,25 +449,24 @@ export class DiscordNotificationService extends EventEmitter {
           {
             name: 'File',
             value: fileName,
-            inline: false
+            inline: false,
           },
           {
             name: 'Total Time',
             value: durationSeconds ? this.formatDuration(durationSeconds) : 'Unknown',
-            inline: true
-          }
-        ]
+            inline: true,
+          },
+        ],
       };
 
       const payload: DiscordWebhookPayload = {
-        embeds: [embed]
+        embeds: [embed],
       };
 
       await this.sendWebhook(payload);
 
       console.log(`[DiscordNotificationService] Sent print complete notification for ${contextId}`);
       this.emit('notification-sent', { contextId, type: 'print-complete' });
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`[DiscordNotificationService] Failed to send print complete notification: ${errorMessage}`);
@@ -489,20 +491,19 @@ export class DiscordNotificationService extends EventEmitter {
           {
             name: 'Status',
             value: 'The printer has cooled down and is ready for the next print.',
-            inline: false
-          }
-        ]
+            inline: false,
+          },
+        ],
       };
 
       const payload: DiscordWebhookPayload = {
-        embeds: [embed]
+        embeds: [embed],
       };
 
       await this.sendWebhook(payload);
 
       console.log(`[DiscordNotificationService] Sent printer cooled notification for ${contextId}`);
       this.emit('notification-sent', { contextId, type: 'printer-cooled' });
-
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       console.error(`[DiscordNotificationService] Failed to send printer cooled notification: ${errorMessage}`);
@@ -522,7 +523,7 @@ export class DiscordNotificationService extends EventEmitter {
       title: `🖨️ ${context.name || 'FlashForge Printer'}`,
       color: this.getStatusColor(status.state),
       timestamp: new Date().toISOString(),
-      fields: []
+      fields: [],
     };
 
     const fields: DiscordEmbedField[] = [];
@@ -531,7 +532,7 @@ export class DiscordNotificationService extends EventEmitter {
     fields.push({
       name: 'Status',
       value: this.formatMachineStatus(status.state),
-      inline: true
+      inline: true,
     });
 
     // Add extruder temperature
@@ -539,7 +540,7 @@ export class DiscordNotificationService extends EventEmitter {
       fields.push({
         name: 'Extruder Temp',
         value: `${this.roundTemperature(status.temperatures.extruder.current)}°C / ${this.roundTemperature(status.temperatures.extruder.target)}°C`,
-        inline: true
+        inline: true,
       });
     }
 
@@ -548,7 +549,7 @@ export class DiscordNotificationService extends EventEmitter {
       fields.push({
         name: 'Bed Temp',
         value: `${this.roundTemperature(status.temperatures.bed.current)}°C / ${this.roundTemperature(status.temperatures.bed.target)}°C`,
-        inline: true
+        inline: true,
       });
     }
 
@@ -560,7 +561,7 @@ export class DiscordNotificationService extends EventEmitter {
       fields.push({
         name: 'Progress',
         value: `${progressBar} ${Math.round(progress * 100)}%`,
-        inline: false
+        inline: false,
       });
 
       // Print time (elapsed)
@@ -568,7 +569,7 @@ export class DiscordNotificationService extends EventEmitter {
         fields.push({
           name: 'Print Time',
           value: this.formatDuration(status.currentJob.progress.elapsedTime),
-          inline: true
+          inline: true,
         });
       }
 
@@ -579,16 +580,19 @@ export class DiscordNotificationService extends EventEmitter {
         fields.push({
           name: 'ETA',
           value: formattedETA,
-          inline: true
+          inline: true,
         });
       }
 
       // Layer info
-      if (status.currentJob.progress.currentLayer !== undefined && status.currentJob.progress.totalLayers !== undefined) {
+      if (
+        status.currentJob.progress.currentLayer !== undefined &&
+        status.currentJob.progress.totalLayers !== undefined
+      ) {
         fields.push({
           name: 'Layer',
           value: `${status.currentJob.progress.currentLayer} / ${status.currentJob.progress.totalLayers}`,
-          inline: true
+          inline: true,
         });
       }
 
@@ -597,14 +601,14 @@ export class DiscordNotificationService extends EventEmitter {
         fields.push({
           name: 'File',
           value: status.currentJob.fileName,
-          inline: false
+          inline: false,
         });
       }
     }
 
     return {
       ...embed,
-      fields
+      fields,
     };
   }
 
@@ -631,16 +635,16 @@ export class DiscordNotificationService extends EventEmitter {
    */
   private formatMachineStatus(state: PrinterState): string {
     const statusMap: Record<string, string> = {
-      'Ready': '✅ Ready',
-      'Printing': '🖨️ Printing',
-      'Paused': '⏸️ Paused',
-      'Completed': '✅ Completed',
-      'Error': '❌ Error',
-      'Busy': '⏳ Busy',
-      'Calibrating': '🔧 Calibrating',
-      'Heating': '🔥 Heating',
-      'Pausing': '⏸️ Pausing',
-      'Cancelled': '🚫 Cancelled'
+      Ready: '✅ Ready',
+      Printing: '🖨️ Printing',
+      Paused: '⏸️ Paused',
+      Completed: '✅ Completed',
+      Error: '❌ Error',
+      Busy: '⏳ Busy',
+      Calibrating: '🔧 Calibrating',
+      Heating: '🔥 Heating',
+      Pausing: '⏸️ Pausing',
+      Cancelled: '🚫 Cancelled',
     };
 
     return statusMap[state] || state;
@@ -697,10 +701,10 @@ export class DiscordNotificationService extends EventEmitter {
       const response = await fetch(this.currentConfig.webhookUrl, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(payload),
-        signal: controller.signal
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -708,7 +712,6 @@ export class DiscordNotificationService extends EventEmitter {
       }
 
       console.log('[DiscordNotificationService] Webhook sent successfully');
-
     } finally {
       clearTimeout(timeoutId);
     }

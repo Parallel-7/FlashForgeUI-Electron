@@ -18,9 +18,9 @@ import { getCurrentSettings, state } from '../core/AppState.js';
 import { apiRequest, sendCommand } from '../core/Transport.js';
 import { $, hideElement, showToast } from '../shared/dom.js';
 import { isAD5XJobFile } from '../shared/formatting.js';
+import { loadFileList, showTemperatureDialog } from '../ui/dialogs.js';
 import { applySettings, refreshSettingsUI } from './layout-theme.js';
 import { openMaterialMatchingModal } from './material-matching.js';
-import { loadFileList, showTemperatureDialog } from '../ui/dialogs.js';
 
 const KEEP_ALIVE_INTERVAL_MS = 30000;
 let keepAliveTimer: number | null = null;
@@ -81,8 +81,7 @@ export function updateFeatureVisibility(): void {
 
   const ledOn = $('btn-led-on') as HTMLButtonElement | null;
   const ledOff = $('btn-led-off') as HTMLButtonElement | null;
-  const ledEnabled =
-    state.printerFeatures.hasLED || state.printerFeatures.ledUsesLegacyAPI || false;
+  const ledEnabled = state.printerFeatures.hasLED || state.printerFeatures.ledUsesLegacyAPI || false;
 
   if (ledOn) {
     ledOn.disabled = !ledEnabled;

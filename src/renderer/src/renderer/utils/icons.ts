@@ -8,26 +8,26 @@
 
 import type { IconNode } from 'lucide';
 import lucideCreateElement from 'lucide/dist/esm/createElement.js';
-import lucideReplaceElement from 'lucide/dist/esm/replaceElement.js';
-import Menu from 'lucide/dist/esm/icons/menu.js';
-import Printer from 'lucide/dist/esm/icons/printer.js';
-import SettingsIcon from 'lucide/dist/esm/icons/settings.js';
 import BarChart3 from 'lucide/dist/esm/icons/chart-column.js';
-import Grid3x3 from 'lucide/dist/esm/icons/grid-3x3.js';
-import Pin from 'lucide/dist/esm/icons/pin.js';
-import Minus from 'lucide/dist/esm/icons/minus.js';
-import Square from 'lucide/dist/esm/icons/square.js';
-import CloseIcon from 'lucide/dist/esm/icons/x.js';
+import Circle from 'lucide/dist/esm/icons/circle.js';
 import CheckCircle from 'lucide/dist/esm/icons/circle-check-big.js';
 import XCircle from 'lucide/dist/esm/icons/circle-x.js';
-import Pencil from 'lucide/dist/esm/icons/pencil.js';
-import RotateCcw from 'lucide/dist/esm/icons/rotate-ccw.js';
-import Plug from 'lucide/dist/esm/icons/plug.js';
-import Package from 'lucide/dist/esm/icons/package.js';
-import Search from 'lucide/dist/esm/icons/search.js';
-import AlertTriangle from 'lucide/dist/esm/icons/triangle-alert.js';
-import Circle from 'lucide/dist/esm/icons/circle.js';
+import Grid3x3 from 'lucide/dist/esm/icons/grid-3x3.js';
 import Info from 'lucide/dist/esm/icons/info.js';
+import Menu from 'lucide/dist/esm/icons/menu.js';
+import Minus from 'lucide/dist/esm/icons/minus.js';
+import Package from 'lucide/dist/esm/icons/package.js';
+import Pencil from 'lucide/dist/esm/icons/pencil.js';
+import Pin from 'lucide/dist/esm/icons/pin.js';
+import Plug from 'lucide/dist/esm/icons/plug.js';
+import Printer from 'lucide/dist/esm/icons/printer.js';
+import RotateCcw from 'lucide/dist/esm/icons/rotate-ccw.js';
+import Search from 'lucide/dist/esm/icons/search.js';
+import SettingsIcon from 'lucide/dist/esm/icons/settings.js';
+import Square from 'lucide/dist/esm/icons/square.js';
+import AlertTriangle from 'lucide/dist/esm/icons/triangle-alert.js';
+import CloseIcon from 'lucide/dist/esm/icons/x.js';
+import lucideReplaceElement from 'lucide/dist/esm/replaceElement.js';
 
 type ReplaceElementFn = (
   element: Element,
@@ -59,11 +59,11 @@ function createIconsRuntime({
   nameAttr = 'data-lucide',
   attrs = {},
   root = typeof document !== 'undefined' ? document : undefined,
-  inTemplates
+  inTemplates,
 }: CreateIconsOptions = {}): void {
   if (!Object.keys(icons).length) {
     throw new Error(
-      'Please provide an icons object.\nIf you want to use all the icons you can import it like:\n `import { createIcons, icons } from \'lucide\';\nlucide.createIcons({icons});`'
+      "Please provide an icons object.\nIf you want to use all the icons you can import it like:\n `import { createIcons, icons } from 'lucide';\nlucide.createIcons({icons});`"
     );
   }
 
@@ -84,7 +84,7 @@ function createIconsRuntime({
         nameAttr,
         attrs,
         root: (template as HTMLTemplateElement).content,
-        inTemplates
+        inTemplates,
       });
     });
   }
@@ -104,7 +104,7 @@ function createIconsRuntime({
 
 const moduleRuntime: LucideRuntime = {
   createIcons: createIconsRuntime,
-  createElement: lucideCreateElement
+  createElement: lucideCreateElement,
 };
 
 const ICON_REGISTRY: Map<string, IconNode> = new Map();
@@ -125,7 +125,7 @@ function resolveLucideRuntime(): LucideRuntime {
   if (globalCandidate?.createIcons && globalCandidate?.createElement) {
     cachedRuntime = {
       createIcons: globalCandidate.createIcons,
-      createElement: globalCandidate.createElement
+      createElement: globalCandidate.createElement,
     };
     return cachedRuntime;
   }
@@ -202,7 +202,7 @@ function resolveIconNode(name: string): IconNode | undefined {
   const candidates = new Set<string>([
     trimmed,
     trimmed.charAt(0).toUpperCase() + trimmed.slice(1),
-    toPascalCase(trimmed)
+    toPascalCase(trimmed),
   ]);
 
   for (const candidate of candidates) {
@@ -232,7 +232,6 @@ export function getLucideIcons(...names: string[]): Record<string, IconNode> {
     return acc;
   }, {});
 }
-
 
 export function initializeLucideIcons(
   root: Document | Element | DocumentFragment,
@@ -294,4 +293,3 @@ export function initializeUniversalLucideIcons(
 
   initializeLucideIcons(root, icons);
 }
-

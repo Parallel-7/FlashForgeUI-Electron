@@ -35,12 +35,12 @@
  */
 
 import {
+  CameraStreamType,
   CameraUrlResolutionParams,
-  ResolvedCameraConfig,
   CameraUrlValidationResult,
   CameraUserConfig,
-  CameraStreamType,
-  DEFAULT_CAMERA_PATTERNS
+  DEFAULT_CAMERA_PATTERNS,
+  ResolvedCameraConfig,
 } from '@shared/types/camera/index.js';
 import { getConfigManager } from '../managers/ConfigManager.js';
 import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
@@ -68,37 +68,37 @@ export function validateCameraUrl(url: string | null | undefined): CameraUrlVali
   if (!url || url.trim() === '') {
     return {
       isValid: false,
-      error: 'URL is empty or not provided'
+      error: 'URL is empty or not provided',
     };
   }
-  
+
   try {
     const parsedUrl = new URL(url);
-    
+
     // Check for supported protocols
     if (!['http:', 'https:', 'rtsp:'].includes(parsedUrl.protocol)) {
       return {
         isValid: false,
-        error: `Unsupported protocol: ${parsedUrl.protocol}. Use http://, https://, or rtsp://`
+        error: `Unsupported protocol: ${parsedUrl.protocol}. Use http://, https://, or rtsp://`,
       };
     }
-    
+
     // Check for valid hostname
     if (!parsedUrl.hostname || parsedUrl.hostname === '') {
       return {
         isValid: false,
-        error: 'Invalid hostname in URL'
+        error: 'Invalid hostname in URL',
       };
     }
-    
+
     return {
       isValid: true,
-      parsedUrl
+      parsedUrl,
     };
   } catch {
     return {
       isValid: false,
-      error: 'Invalid URL format'
+      error: 'Invalid URL format',
     };
   }
 }
@@ -108,7 +108,7 @@ export function validateCameraUrl(url: string | null | undefined): CameraUrlVali
  */
 export function resolveCameraConfig(params: CameraUrlResolutionParams): ResolvedCameraConfig {
   const { printerIpAddress, printerFeatures, userConfig } = params;
-  
+
   // Priority 1: Check custom camera
   if (userConfig.customCameraEnabled) {
     // If custom camera is enabled but no URL provided, use automatic URL
@@ -118,24 +118,23 @@ export function resolveCameraConfig(params: CameraUrlResolutionParams): Resolved
       // don't have them by default.
       const autoUrl = `http://${printerIpAddress}:8080/?action=stream`;
 
-
       return {
         sourceType: 'custom',
         streamType: 'mjpeg', // Auto URL is always MJPEG
         streamUrl: autoUrl,
-        isAvailable: true
+        isAvailable: true,
       };
     }
-    
+
     // Custom camera enabled with a user-provided URL
     const validation = validateCameraUrl(userConfig.customCameraUrl);
-    
+
     if (validation.isValid) {
       return {
         sourceType: 'custom',
         streamType: detectStreamType(userConfig.customCameraUrl),
         streamUrl: userConfig.customCameraUrl,
-        isAvailable: true
+        isAvailable: true,
       };
     } else {
       // Custom camera enabled but URL is invalid
@@ -143,31 +142,30 @@ export function resolveCameraConfig(params: CameraUrlResolutionParams): Resolved
         sourceType: 'custom',
         streamUrl: null,
         isAvailable: false,
-        unavailableReason: `Custom camera URL is invalid: ${validation.error}`
+        unavailableReason: `Custom camera URL is invalid: ${validation.error}`,
       };
     }
   }
-  
+
   // Priority 2: Check built-in camera
   if (printerFeatures.camera.builtin) {
     // Use default FlashForge MJPEG pattern
     const streamUrl = DEFAULT_CAMERA_PATTERNS.FLASHFORGE_MJPEG(printerIpAddress);
 
-
     return {
       sourceType: 'builtin',
       streamType: 'mjpeg', // Built-in cameras are always MJPEG
       streamUrl,
-      isAvailable: true
+      isAvailable: true,
     };
   }
-  
+
   // Priority 3: No camera available
   return {
     sourceType: 'none',
     streamUrl: null,
     isAvailable: false,
-    unavailableReason: 'Printer does not have built-in camera and custom camera is not configured'
+    unavailableReason: 'Printer does not have built-in camera and custom camera is not configured',
   };
 }
 
@@ -194,7 +192,7 @@ export function getCameraUserConfig(contextId?: string): CameraUserConfig {
       if (customCameraEnabled !== undefined) {
         return {
           customCameraEnabled,
-          customCameraUrl: customCameraUrl || null
+          customCameraUrl: customCameraUrl || null,
         };
       }
     }
@@ -203,7 +201,7 @@ export function getCameraUserConfig(contextId?: string): CameraUserConfig {
   // Fall back to global config
   return {
     customCameraEnabled: configManager.get('CustomCamera') || false,
-    customCameraUrl: configManager.get('CustomCameraUrl') || null
+    customCameraUrl: configManager.get('CustomCameraUrl') || null,
   };
 }
 
@@ -213,4 +211,3 @@ export function getCameraUserConfig(contextId?: string): CameraUserConfig {
 export function formatCameraProxyUrl(port: number): string {
   return `http://localhost:${port}/stream`;
 }
-

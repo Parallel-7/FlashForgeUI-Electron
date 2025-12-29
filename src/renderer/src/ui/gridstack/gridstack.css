@@ -6,7 +6,7 @@
  */
 
 /* Import GridStack base styles */
-@import 'gridstack/dist/gridstack.min.css';
+@import "gridstack/dist/gridstack.min.css";
 
 /* ============================================================================
    GRID CONTAINER STYLING
@@ -40,7 +40,10 @@
   position: absolute;
   display: block;
   box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--transition-normal), border-color var(--transition-normal), transform var(--transition-fast);
+  transition:
+    box-shadow var(--transition-normal),
+    border-color var(--transition-normal),
+    transform var(--transition-fast);
   backdrop-filter: blur(10px);
 }
 
@@ -66,7 +69,10 @@
   justify-content: center;
   cursor: pointer;
   z-index: 5;
-  transition: background 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease,
+    opacity 0.2s ease;
 }
 
 .grid-stack-item-remove:hover {
@@ -96,7 +102,9 @@
   background-color: var(--accent-color);
   color: var(--button-text-color, #ffffff);
   border-radius: 8px;
-  box-shadow: var(--shadow-lg), 0 0 20px color-mix(in srgb, var(--accent-color) 40%, transparent);
+  box-shadow:
+    var(--shadow-lg),
+    0 0 20px color-mix(in srgb, var(--accent-color) 40%, transparent);
   font-weight: 600;
   font-size: 14px;
   letter-spacing: 0.3px;
@@ -168,11 +176,15 @@ body.edit-mode .grid-stack-item:active {
 
 body.edit-mode .grid-stack-item-content {
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 25%, transparent), var(--shadow-md);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent-color) 25%, transparent),
+    var(--shadow-md);
 }
 
 body.edit-mode .grid-stack-item-content:hover {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 50%, transparent), var(--shadow-lg);
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--accent-color) 50%, transparent),
+    var(--shadow-lg);
   border-color: var(--button-hover);
 }
 
@@ -206,7 +218,9 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
   border: 2px solid var(--border-color-focus, rgba(0, 0, 0, 0.3));
   border-radius: 6px;
   box-shadow: var(--shadow-sm);
-  transition: transform var(--transition-fast), box-shadow var(--transition-fast);
+  transition:
+    transform var(--transition-fast),
+    box-shadow var(--transition-fast);
 }
 
 .grid-stack-item > .ui-resizable-se:hover,
@@ -227,7 +241,7 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
 
 .grid-stack-item > .ui-resizable-se::after,
 .grid-stack-item > .ui-resizable-sw::after {
-  content: '';
+  content: "";
   position: absolute;
   width: 8px;
   height: 8px;
@@ -259,7 +273,11 @@ body.edit-mode .grid-stack-item > .ui-resizable-handle {
    ============================================================================ */
 
 .grid-stack.grid-stack-animate .grid-stack-item {
-  transition: left 0.3s ease, top 0.3s ease, width 0.3s ease, height 0.3s ease;
+  transition:
+    left 0.3s ease,
+    top 0.3s ease,
+    width 0.3s ease,
+    height 0.3s ease;
 }
 
 /* Disable animations during drag */

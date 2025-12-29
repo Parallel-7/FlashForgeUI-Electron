@@ -40,13 +40,13 @@ interface MaterialStationData {
 interface IFSDialogAPI {
   // Receive data from main process
   receive: (channel: string, func: (...args: unknown[]) => void) => void;
-  
+
   // Send data to main process
   send: (channel: string, ...args: unknown[]) => void;
-  
+
   // Request material station data
   requestMaterialStation: () => void;
-  
+
   // Close the dialog
   closeDialog: () => void;
 }
@@ -75,20 +75,20 @@ const ifsDialogAPI: IFSDialogAPI = {
   // Close the dialog
   closeDialog: (): void => {
     ipcRenderer.send('ifs-close-window');
-  }
+  },
 };
 
 contextBridge.exposeInMainWorld('api', {
   dialog: {
-    ifs: ifsDialogAPI
-  }
+    ifs: ifsDialogAPI,
+  },
 });
 
 // Generic window controls for sub-windows
 contextBridge.exposeInMainWorld('windowControls', {
   minimize: () => ipcRenderer.send('dialog-window-minimize'),
   close: () => ipcRenderer.send('dialog-window-close'),
-  closeGeneric: () => ipcRenderer.send('close-current-window')
+  closeGeneric: () => ipcRenderer.send('close-current-window'),
 });
 
-export type { MaterialSlotData, MaterialStationData, IFSDialogAPI }; 
+export type { MaterialSlotData, MaterialStationData, IFSDialogAPI };

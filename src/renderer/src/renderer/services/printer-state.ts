@@ -13,8 +13,8 @@
  * regarding state definitions and event names.
  */
 
-import { EventEmitter } from '@shared/utils/EventEmitter.js';
 import type { PrinterState } from '@shared/types/polling.js';
+import { EventEmitter } from '@shared/utils/EventEmitter.js';
 
 // ============================================================================
 // SIMPLE STATE EVENTS
@@ -28,7 +28,7 @@ export const STATE_EVENTS = {
   CONNECTED: 'connected',
   DISCONNECTED: 'disconnected',
   PRINTING_STARTED: 'printing-started',
-  PRINTING_STOPPED: 'printing-stopped'
+  PRINTING_STOPPED: 'printing-stopped',
 } as const;
 
 /**
@@ -46,8 +46,8 @@ export interface StateChangeEvent {
  */
 interface StateTrackerEventMap extends Record<string, unknown[]> {
   'state-changed': [StateChangeEvent];
-  'connected': [];
-  'disconnected': [];
+  connected: [];
+  disconnected: [];
   'printing-started': [];
   'printing-stopped': [];
 }
@@ -141,7 +141,7 @@ export class PrinterStateTracker extends EventEmitter<StateTrackerEventMap> {
       previousState,
       currentState: newState,
       timestamp: this.lastStateChange,
-      reason
+      reason,
     };
 
     // Emit events
@@ -174,13 +174,19 @@ export class PrinterStateTracker extends EventEmitter<StateTrackerEventMap> {
    */
   private emitSpecificStateEvents(previousState: PrinterState, currentState: PrinterState): void {
     // Connection events
-    if ((previousState === 'Busy' || previousState === 'Error') && 
-        (currentState !== 'Busy' && currentState !== 'Error')) {
+    if (
+      (previousState === 'Busy' || previousState === 'Error') &&
+      currentState !== 'Busy' &&
+      currentState !== 'Error'
+    ) {
       this.emit(STATE_EVENTS.CONNECTED);
     }
-    
-    if ((previousState !== 'Busy' && previousState !== 'Error') && 
-        (currentState === 'Busy' || currentState === 'Error')) {
+
+    if (
+      previousState !== 'Busy' &&
+      previousState !== 'Error' &&
+      (currentState === 'Busy' || currentState === 'Error')
+    ) {
       this.emit(STATE_EVENTS.DISCONNECTED);
     }
 

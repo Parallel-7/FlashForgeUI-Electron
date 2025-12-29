@@ -1,11 +1,11 @@
 /**
  * @fileoverview Camera Preview with Integrated Job Info Component
- * 
+ *
  * This component handles the display and management of camera preview streams
  * from FlashForge 3D printers while integrating job information display at the bottom.
  * It provides a seamless visual unit that fills the left side properly, combining
  * camera functionality with real-time job progress information.
- * 
+ *
  * Key features:
  * - MJPEG camera stream display with proper cleanup
  * - Integrated job information panel at the bottom
@@ -16,21 +16,22 @@
  * - State management for disabled/loading/streaming/error states
  * - Proper image element lifecycle management
  * - Integration with camera proxy service
- * 
+ *
  * The component creates one cohesive visual unit that matches the original
  * seamless design where camera and job info were integrated together.
  */
 
+import { logVerbose } from '@shared/logging.js';
+import type { CameraProxyStatus, ResolvedCameraConfig } from '@shared/types/camera/camera.types.js';
+import type { JSMpegPlayerInstance } from '@shared/types/jsmpeg.d.ts';
+import type { PrinterContextInfo } from '@shared/types/PrinterContext.js';
+import type { CurrentJobInfo, PollingData, PrinterState } from '@shared/types/polling.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
-import type { CameraProxyStatus, ResolvedCameraConfig } from '@shared/types/camera/camera.types.js';
-import type { PrinterContextInfo } from '@shared/types/PrinterContext.js';
-import type { PollingData, PrinterState, CurrentJobInfo } from '@shared/types/polling.js';
-import type { JSMpegPlayerInstance } from '@shared/types/jsmpeg.d.ts';
-import { logVerbose } from '@shared/logging.js';
 import './camera-preview.css';
 
 import JSMpeg from '@cycjimmy/jsmpeg-player';
+
 const CAMERA_PREVIEW_LOG_NAMESPACE = 'CameraPreviewComponent';
 
 /**
@@ -134,7 +135,7 @@ export class CameraPreviewComponent extends BaseComponent {
    */
   private async loadFpsOverlaySetting(): Promise<void> {
     try {
-      const settings = await window.api.invoke('printer-settings:get') as { showCameraFps?: boolean } | null;
+      const settings = (await window.api.invoke('printer-settings:get')) as { showCameraFps?: boolean } | null;
       this.showFpsOverlay = settings?.showCameraFps ?? false;
       this.updateFpsOverlayVisibility();
     } catch (error) {
@@ -296,10 +297,8 @@ export class CameraPreviewComponent extends BaseComponent {
    */
   private async initializeActiveContext(): Promise<void> {
     try {
-      const activeContext = await window.api.printerContexts.getActive() as PrinterContextInfo | null;
-      this.activeContextId = activeContext && typeof activeContext.id === 'string'
-        ? activeContext.id
-        : null;
+      const activeContext = (await window.api.printerContexts.getActive()) as PrinterContextInfo | null;
+      this.activeContextId = activeContext && typeof activeContext.id === 'string' ? activeContext.id : null;
     } catch (error) {
       console.warn('[CameraPreview] Failed to determine active context:', error);
       this.activeContextId = null;
@@ -411,9 +410,9 @@ export class CameraPreviewComponent extends BaseComponent {
    */
   async togglePreview(button: HTMLElement): Promise<void> {
     this.assertInitialized();
-    
+
     const cameraView = this.findElement('.camera-view');
-    
+
     if (!cameraView || !window.api?.camera) {
       console.error('Camera view or API not available');
       return;
@@ -429,7 +428,6 @@ export class CameraPreviewComponent extends BaseComponent {
       } else {
         await this.disableCameraPreview(button, cameraView);
       }
-
     } catch (error) {
       console.error('Camera toggle failed:', error);
       this.handleCameraError(button, cameraView, 'Camera error');
@@ -465,7 +463,7 @@ export class CameraPreviewComponent extends BaseComponent {
     if (!cameraConfig.isAvailable) {
       const reason = cameraConfig.unavailableReason || 'Camera not available';
       this.handleCameraError(button, cameraView, reason);
-      
+
       // Show helpful message based on reason
       if (reason.includes('does not have a built-in camera')) {
         this.logDebug('Enable custom camera in settings to use an external camera');
@@ -483,7 +481,7 @@ export class CameraPreviewComponent extends BaseComponent {
       this.logDebug('[CameraPreview] Setting up RTSP stream (node-rtsp-stream + JSMpeg)');
 
       // Get the RTSP stream WebSocket URL from backend
-      const rtspStreamInfo = await window.api.invoke('camera:get-rtsp-relay-info') as { wsUrl: string } | null;
+      const rtspStreamInfo = (await window.api.invoke('camera:get-rtsp-relay-info')) as { wsUrl: string } | null;
 
       if (!rtspStreamInfo || !rtspStreamInfo.wsUrl) {
         this.handleCameraError(button, cameraView, 'RTSP stream not available');
@@ -777,7 +775,12 @@ export class CameraPreviewComponent extends BaseComponent {
    * Poll backend statistics to determine if the MJPEG stream is stale
    */
   private async pollBackendHeartbeat(reason: string = 'backend-heartbeat-timeout'): Promise<void> {
-    if (this.isHeartbeatPolling || !this.previewEnabled || this.isRestartingStream || this.backendHeartbeatIntervalId === null) {
+    if (
+      this.isHeartbeatPolling ||
+      !this.previewEnabled ||
+      this.isRestartingStream ||
+      this.backendHeartbeatIntervalId === null
+    ) {
       return;
     }
 
@@ -795,9 +798,7 @@ export class CameraPreviewComponent extends BaseComponent {
         return;
       }
 
-      const bytesReceived = typeof status.stats.bytesReceived === 'number'
-        ? status.stats.bytesReceived
-        : null;
+      const bytesReceived = typeof status.stats.bytesReceived === 'number' ? status.stats.bytesReceived : null;
 
       if (bytesReceived === null) {
         return;
@@ -884,7 +885,7 @@ export class CameraPreviewComponent extends BaseComponent {
    */
   private updateProgressBarState(printerState: PrinterState): void {
     const progressBarElement = this.findElementById<HTMLProgressElement>('progress-bar');
-    
+
     if (!progressBarElement) {
       return;
     }
@@ -899,21 +900,21 @@ export class CameraPreviewComponent extends BaseComponent {
       case 'Calibrating':
         this.addElementClass(progressBarElement, 'printing');
         break;
-        
+
       case 'Paused':
       case 'Pausing':
         this.addElementClass(progressBarElement, 'paused');
         break;
-        
+
       case 'Completed':
         this.addElementClass(progressBarElement, 'completed');
         break;
-        
+
       case 'Error':
       case 'Cancelled':
         this.addElementClass(progressBarElement, 'error');
         break;
-        
+
       default:
         // Ready, Busy, etc. - use default styling (no additional class)
         break;
@@ -963,7 +964,7 @@ export class CameraPreviewComponent extends BaseComponent {
    */
   protected cleanup(): void {
     this.logDebug('Cleaning up camera preview component');
-    
+
     this.stopBackendHeartbeat();
     document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
     this.isRestartingStream = false;
@@ -971,11 +972,11 @@ export class CameraPreviewComponent extends BaseComponent {
 
     // Clean up camera stream
     this.cleanupCameraStream();
-    
+
     // Reset camera state
     this.previewEnabled = false;
     this.currentState = 'disabled';
-    
+
     // Reset job info state
     this.currentJobInfo = null;
     this.currentPrinterState = null;

@@ -18,18 +18,14 @@
  * of built-in camera and filtration control features.
  */
 
+import { MaterialStationStatus, PrinterFeatureSet } from '@shared/types/printer-backend/index.js';
 import { DualAPIBackend } from './DualAPIBackend.js';
-import {
-  PrinterFeatureSet,
-  MaterialStationStatus
-} from '@shared/types/printer-backend/index.js';
 
 /**
  * Backend implementation for Adventurer 5M standard
  * Uses dual API with enhanced features
  */
 export class Adventurer5MBackend extends DualAPIBackend {
-  
   /**
    * Get child-specific base features for Adventurer 5M standard
    * LED and filtration will be auto-detected from product endpoint
@@ -39,28 +35,28 @@ export class Adventurer5MBackend extends DualAPIBackend {
       camera: {
         builtin: false,
         customUrl: null,
-        customEnabled: false
+        customEnabled: false,
       },
       ledControl: {
         builtin: false,
         customControlEnabled: false, // Will be overridden by settings
-        usesLegacyAPI: true
+        usesLegacyAPI: true,
       },
       filtration: {
         available: false,
         controllable: false,
-        reason: 'Hardware does not support filtration control'
+        reason: 'Hardware does not support filtration control',
       },
       gcodeCommands: {
         available: true,
         usesLegacyAPI: true,
-        supportedCommands: this.getSupportedGCodeCommands()
+        supportedCommands: this.getSupportedGCodeCommands(),
       },
       statusMonitoring: {
         available: true,
         usesNewAPI: true,
         usesLegacyAPI: true,
-        realTimeUpdates: true
+        realTimeUpdates: true,
       },
       jobManagement: {
         localJobs: true,
@@ -69,32 +65,31 @@ export class Adventurer5MBackend extends DualAPIBackend {
         startJobs: true,
         pauseResume: true,
         cancelJobs: true,
-        usesNewAPI: true
+        usesNewAPI: true,
       },
       materialStation: {
         available: false,
         slotCount: 0,
         perSlotInfo: false,
-        materialDetection: false
-      }
+        materialDetection: false,
+      },
     };
   }
-  
+
   /**
    * Get material station status - not supported on 5M
    */
   public getMaterialStationStatus(): MaterialStationStatus | null {
     return null; // 5M doesn't have material station
   }
-  
+
   // Feature detection methods specific to 5M
-  
+
   protected supportsMaterialStation(): boolean {
     return false; // 5M doesn't have material station
   }
-  
+
   protected getMaterialStationSlotCount(): number {
     return 0; // 5M doesn't have material station
   }
 }
-

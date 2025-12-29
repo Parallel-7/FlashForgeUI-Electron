@@ -16,7 +16,7 @@
 // src/ui/settings/sections/DesktopThemeSection.ts
 
 import type { ThemeColors, ThemeProfile } from '@shared/types/config.js';
-import type { ThemeProfileOperationData, ISettingsAPI } from '@shared/types/external.js';
+import type { ISettingsAPI, ThemeProfileOperationData } from '@shared/types/external.js';
 
 interface DesktopThemeSectionOptions {
   readonly document: Document;
@@ -34,7 +34,7 @@ const THEME_INPUT_CONFIG: Array<[ThemeColorKey, string]> = [
   ['secondary', 'desktop-theme-secondary'],
   ['background', 'desktop-theme-background'],
   ['surface', 'desktop-theme-surface'],
-  ['text', 'desktop-theme-text']
+  ['text', 'desktop-theme-text'],
 ];
 
 /**
@@ -46,7 +46,10 @@ export class DesktopThemeSection {
   private readonly defaultTheme: ThemeColors;
   private readonly settingsAPI?: ISettingsAPI;
   private readonly notifyThemeChange: (theme: ThemeColors, saveImmediately: boolean, context?: string) => void;
-  private readonly notifyProfileOperation: (operation: 'add' | 'update' | 'delete', profileData: ThemeProfileOperationData) => void;
+  private readonly notifyProfileOperation: (
+    operation: 'add' | 'update' | 'delete',
+    profileData: ThemeProfileOperationData
+  ) => void;
   private readonly getThemeProfiles: () => readonly ThemeProfile[];
 
   private readonly nativeColorInputs: Map<ThemeColorKey, HTMLInputElement> = new Map();
@@ -202,7 +205,7 @@ export class DesktopThemeSection {
     }
 
     if (this.addThemeProfileButton) {
-        this.addThemeProfileButton.addEventListener('click', () => this.handleAddNewProfile());
+      this.addThemeProfileButton.addEventListener('click', () => this.handleAddNewProfile());
     }
 
     if (this.colorPickerClose) {
@@ -598,23 +601,35 @@ export class DesktopThemeSection {
 
     switch (i % 6) {
       case 0:
-        r = brightness; g = t; bl = p;
+        r = brightness;
+        g = t;
+        bl = p;
         break;
       case 1:
-        r = q; g = brightness; bl = p;
+        r = q;
+        g = brightness;
+        bl = p;
         break;
       case 2:
-        r = p; g = brightness; bl = t;
+        r = p;
+        g = brightness;
+        bl = t;
         break;
       case 3:
-        r = p; g = q; bl = brightness;
+        r = p;
+        g = q;
+        bl = brightness;
         break;
       case 4:
-        r = t; g = p; bl = brightness;
+        r = t;
+        g = p;
+        bl = brightness;
         break;
       case 5:
       default:
-        r = brightness; g = p; bl = q;
+        r = brightness;
+        g = p;
+        bl = q;
         break;
     }
 
@@ -634,7 +649,7 @@ export class DesktopThemeSection {
     const profiles = this.getThemeProfiles();
     this.themeProfilesContainer.innerHTML = '';
 
-    profiles.forEach(profile => {
+    profiles.forEach((profile) => {
       const card = this.createProfileCard(profile);
       this.themeProfilesContainer?.appendChild(card);
     });
@@ -710,7 +725,10 @@ export class DesktopThemeSection {
   private handleRenameProfile(profile: ThemeProfile): void {
     const newName = prompt('Enter a new name for the profile:', profile.name);
     if (newName && newName !== profile.name) {
-      this.notifyProfileOperation('update', { originalName: profile.name, updatedProfile: { name: newName, colors: profile.colors } });
+      this.notifyProfileOperation('update', {
+        originalName: profile.name,
+        updatedProfile: { name: newName, colors: profile.colors },
+      });
     }
   }
 

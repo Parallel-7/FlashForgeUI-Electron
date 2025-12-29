@@ -34,8 +34,8 @@ import { EventEmitter } from 'events';
 import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
 import { getNotificationService, NotificationService } from './notifications/NotificationService.js';
 import { PrinterNotificationCoordinator } from './notifications/PrinterNotificationCoordinator.js';
-import type { PrintStateMonitor } from './PrintStateMonitor.js';
 import type { PrinterPollingService } from './PrinterPollingService.js';
+import type { PrintStateMonitor } from './PrintStateMonitor.js';
 
 /**
  * Manages notification coordinators for all printer contexts
@@ -215,4 +215,3 @@ export function getMultiContextNotificationCoordinator(): MultiContextNotificati
   }
   return globalMultiContextNotificationCoordinator;
 }
-

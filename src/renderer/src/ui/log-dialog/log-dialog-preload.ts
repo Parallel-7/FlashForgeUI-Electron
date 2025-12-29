@@ -24,19 +24,19 @@ const logDialogAPI = {
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => func(...args));
     }
-  }
+  },
 } as const;
 
 contextBridge.exposeInMainWorld('api', {
   dialog: {
-    log: logDialogAPI
-  }
+    log: logDialogAPI,
+  },
 });
 
 contextBridge.exposeInMainWorld('windowControls', {
   minimize: (): void => ipcRenderer.send('dialog-window-minimize'),
   close: (): void => ipcRenderer.send('dialog-window-close'),
-  closeGeneric: (): void => ipcRenderer.send('close-current-window')
+  closeGeneric: (): void => ipcRenderer.send('close-current-window'),
 });
 
 export {};

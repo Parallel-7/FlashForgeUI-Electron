@@ -23,14 +23,14 @@ export function formatDuration(seconds: number): string {
   if (seconds < 60) {
     return `${Math.round(seconds)}s`;
   }
-  
+
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
-  
+
   if (hours > 0) {
     return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
   }
-  
+
   return `${minutes}m`;
 }
 
@@ -64,7 +64,7 @@ export function formatTime(date: Date): string {
     hour12: false,
     hour: '2-digit',
     minute: '2-digit',
-    second: '2-digit'
+    second: '2-digit',
   });
 }
 
@@ -77,7 +77,7 @@ export function formatDate(date: Date): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
-  
+
   return `${year}-${month}-${day}`;
 }
 
@@ -98,19 +98,19 @@ export function formatDateTime(date: Date): string {
 export function formatETA(etaSeconds: number): string {
   const eta = new Date(Date.now() + etaSeconds * 1000);
   const now = new Date();
-  
+
   // If ETA is today, show time only
   if (eta.toDateString() === now.toDateString()) {
     return formatTime(eta);
   }
-  
+
   // If ETA is tomorrow, show "Tomorrow HH:MM"
   const tomorrow = new Date(now);
   tomorrow.setDate(tomorrow.getDate() + 1);
   if (eta.toDateString() === tomorrow.toDateString()) {
     return `Tomorrow ${formatTime(eta)}`;
   }
-  
+
   // Otherwise show full date and time
   return formatDateTime(eta);
 }

@@ -2,12 +2,12 @@
  * @fileoverview Filtration (AD5M Pro) control routes for the WebUI server.
  */
 
-import type { Router, Response } from 'express';
-import type { AuthenticatedRequest } from '../auth-middleware.js';
 import { FiveMClient } from '@ghosttypes/ff-api';
-import { toAppError } from '../../../utils/error.utils.js';
 import { StandardAPIResponse } from '@shared/types/web-api.types.js';
-import { resolveContext, sendErrorResponse, type RouteDependencies } from './route-helpers.js';
+import type { Response, Router } from 'express';
+import { toAppError } from '../../../utils/error.utils.js';
+import type { AuthenticatedRequest } from '../auth-middleware.js';
+import { type RouteDependencies, resolveContext, sendErrorResponse } from './route-helpers.js';
 
 type FiltrationAction = 'setExternalFiltrationOn' | 'setInternalFiltrationOn' | 'setFiltrationOff';
 
@@ -22,33 +22,29 @@ export function registerFiltrationRoutes(router: Router, deps: RouteDependencies
     {
       path: '/printer/filtration/external',
       action: 'setExternalFiltrationOn',
-      successMessage: 'External filtration enabled'
+      successMessage: 'External filtration enabled',
     },
     {
       path: '/printer/filtration/internal',
       action: 'setInternalFiltrationOn',
-      successMessage: 'Internal filtration enabled'
+      successMessage: 'Internal filtration enabled',
     },
     {
       path: '/printer/filtration/off',
       action: 'setFiltrationOff',
-      successMessage: 'Filtration turned off'
-    }
+      successMessage: 'Filtration turned off',
+    },
   ];
 
-  routes.forEach(route => {
+  routes.forEach((route) => {
     router.post(route.path, async (req: AuthenticatedRequest, res: Response) => {
       try {
         const contextResult = resolveContext(req, deps, {
           requireBackendReady: true,
-          requireBackendInstance: true
+          requireBackendInstance: true,
         });
         if (!contextResult.success) {
-          return sendErrorResponse<StandardAPIResponse>(
-            res,
-            contextResult.statusCode,
-            contextResult.error
-          );
+          return sendErrorResponse<StandardAPIResponse>(res, contextResult.statusCode, contextResult.error);
         }
 
         const { contextId, backend } = contextResult;
@@ -57,27 +53,19 @@ export function registerFiltrationRoutes(router: Router, deps: RouteDependencies
         }
 
         if (!deps.backendManager.isFeatureAvailable(contextId, 'filtration')) {
-          return sendErrorResponse<StandardAPIResponse>(
-            res,
-            400,
-            'Filtration control not available on this printer'
-          );
+          return sendErrorResponse<StandardAPIResponse>(res, 400, 'Filtration control not available on this printer');
         }
 
         const primaryClient = backend.getPrimaryClient();
         if (!(primaryClient instanceof FiveMClient)) {
-          return sendErrorResponse<StandardAPIResponse>(
-            res,
-            400,
-            'Filtration control requires new API client'
-          );
+          return sendErrorResponse<StandardAPIResponse>(res, 400, 'Filtration control requires new API client');
         }
 
         const result = await primaryClient.control[route.action]();
         const response: StandardAPIResponse = {
           success: result,
           message: result ? route.successMessage : undefined,
-          error: result ? undefined : 'Failed to update filtration state'
+          error: result ? undefined : 'Failed to update filtration state',
         };
         return res.status(result ? 200 : 500).json(response);
       } catch (error) {

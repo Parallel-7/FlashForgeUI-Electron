@@ -19,19 +19,19 @@
  * @module services/SpoolmanIntegrationService
  */
 
-import { EventEmitter } from 'events';
-import type { ConfigManager } from '../managers/ConfigManager.js';
-import type { PrinterContextManager } from '../managers/PrinterContextManager.js';
-import type { PrinterBackendManager } from '../managers/PrinterBackendManager.js';
-import { getConfigManager } from '../managers/ConfigManager.js';
-import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
-import { getPrinterBackendManager } from '../managers/PrinterBackendManager.js';
-import { getPrinterDetailsManager } from '../managers/PrinterDetailsManager.js';
-import { SpoolmanService } from './SpoolmanService.js';
-import type { ActiveSpoolData, SpoolResponse, SpoolSearchQuery } from '@shared/types/spoolman.js';
-import { toAppError } from '../utils/error.utils.js';
 import type { ConfigUpdateEvent } from '@shared/types/config.js';
 import type { PrinterDetails } from '@shared/types/printer.js';
+import type { ActiveSpoolData, SpoolResponse, SpoolSearchQuery } from '@shared/types/spoolman.js';
+import { EventEmitter } from 'events';
+import type { ConfigManager } from '../managers/ConfigManager.js';
+import { getConfigManager } from '../managers/ConfigManager.js';
+import type { PrinterBackendManager } from '../managers/PrinterBackendManager.js';
+import { getPrinterBackendManager } from '../managers/PrinterBackendManager.js';
+import type { PrinterContextManager } from '../managers/PrinterContextManager.js';
+import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
+import { getPrinterDetailsManager } from '../managers/PrinterDetailsManager.js';
+import { toAppError } from '../utils/error.utils.js';
+import { SpoolmanService } from './SpoolmanService.js';
 
 /**
  * Event payload for spool selection changes
@@ -62,7 +62,7 @@ export class SpoolmanIntegrationService extends EventEmitter {
     this.backendManager = backendManager;
 
     this.handleConfigUpdatedBound = (event: ConfigUpdateEvent) => {
-      this.handleConfigUpdated(event).catch(error => {
+      this.handleConfigUpdated(event).catch((error) => {
         console.error('[SpoolmanIntegrationService] Failed to handle config update:', error);
       });
     };
@@ -189,7 +189,7 @@ export class SpoolmanIntegrationService extends EventEmitter {
     // Update printer details with new spool data
     const updatedSpoolData = {
       ...spoolData,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
     };
 
     await this.persistSpoolData(targetContextId, updatedSpoolData);
@@ -279,7 +279,7 @@ export class SpoolmanIntegrationService extends EventEmitter {
       colorHex: spool.filament.color_hex || '#808080', // Default gray
       remainingWeight: spool.remaining_weight || 0,
       remainingLength: spool.remaining_length || 0,
-      lastUpdated: new Date().toISOString()
+      lastUpdated: new Date().toISOString(),
     };
   }
 
@@ -351,7 +351,10 @@ export class SpoolmanIntegrationService extends EventEmitter {
       try {
         await this.refreshActiveSpoolFromServer(context.id);
       } catch (error) {
-        console.error(`[SpoolmanIntegrationService] Failed to refresh spool for ${context.id}:`, toAppError(error).message);
+        console.error(
+          `[SpoolmanIntegrationService] Failed to refresh spool for ${context.id}:`,
+          toAppError(error).message
+        );
       }
     }
   }
@@ -389,7 +392,7 @@ export class SpoolmanIntegrationService extends EventEmitter {
     const printerDetailsManager = getPrinterDetailsManager();
     const updatedDetails = {
       ...context.printerDetails,
-      activeSpoolData: spoolData
+      activeSpoolData: spoolData,
     };
 
     await printerDetailsManager.savePrinter(updatedDetails, targetContextId, options);
@@ -397,7 +400,7 @@ export class SpoolmanIntegrationService extends EventEmitter {
 
     this.emit('spoolman-changed', {
       contextId: targetContextId,
-      spool: spoolData
+      spool: spoolData,
     } as SpoolmanChangedEvent);
   }
 
@@ -420,7 +423,7 @@ export class SpoolmanIntegrationService extends EventEmitter {
       void _lastConnected;
       const updatedDetails: PrinterDetails = {
         ...printerDetails,
-        activeSpoolData: null
+        activeSpoolData: null,
       };
 
       await printerDetailsManager.savePrinter(updatedDetails, undefined, { updateLastUsed: false });

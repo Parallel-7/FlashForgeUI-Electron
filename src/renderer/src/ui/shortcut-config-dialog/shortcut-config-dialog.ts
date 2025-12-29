@@ -18,15 +18,15 @@
 
 /// <reference types="../../types/global.d.ts" />
 
+import type { ThemeColors } from '@shared/types/config.js';
 import type {
   ShortcutButtonConfig,
   ShortcutComponentInfo,
   ShortcutDialogInitData,
-  ShortcutSaveConfigResult
+  ShortcutSaveConfigResult,
 } from '@shared/types/shortcut-config.js';
-import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 export {};
 
@@ -156,9 +156,7 @@ function updateComponentsList(): void {
   const listContainer = document.getElementById('components-list');
   if (!listContainer || !currentConfig) return;
 
-  const pinnedIds = Object.values(currentConfig.slots).filter(
-    (id): id is string => id !== null
-  );
+  const pinnedIds = Object.values(currentConfig.slots).filter((id): id is string => id !== null);
 
   listContainer.innerHTML = '';
 
@@ -232,10 +230,7 @@ function handleSlotChange(slot: number, componentId: string): void {
   if (componentId) {
     const existingSlot = findAssignedSlot(componentId);
     if (existingSlot !== null && existingSlot !== slot) {
-      showStatus(
-        `Component is already assigned to Slot ${existingSlot}`,
-        'error'
-      );
+      showStatus(`Component is already assigned to Slot ${existingSlot}`, 'error');
       // Reset select to previous value
       const select = document.getElementById(`slot${slot}-select`) as HTMLSelectElement;
       if (select) {

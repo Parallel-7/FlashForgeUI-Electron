@@ -211,4 +211,3 @@ export function validateHeadlessConfig(config: HeadlessConfig): ValidationResult
     errors,
   };
 }
-

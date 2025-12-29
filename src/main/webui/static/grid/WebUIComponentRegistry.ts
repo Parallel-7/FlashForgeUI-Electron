@@ -306,9 +306,7 @@ export const DEFAULT_LAYOUT: WebUIGridLayout = {
   components: DEFAULT_LAYOUT_COMPONENTS,
 };
 
-function cloneLayout(
-  layout: WebUIComponentLayout | undefined,
-): WebUIComponentLayout | undefined {
+function cloneLayout(layout: WebUIComponentLayout | undefined): WebUIComponentLayout | undefined {
   if (!layout) {
     return undefined;
   }
@@ -316,31 +314,26 @@ function cloneLayout(
 }
 
 function cloneGridLayout(layout: WebUIGridLayout): WebUIGridLayout {
-  const clonedEntries = Object.entries(layout.components ?? {}).reduce<
-    WebUIComponentLayoutMap
-  >((acc, [componentId, config]) => {
-    acc[componentId] = cloneLayout(config);
-    return acc;
-  }, {});
+  const clonedEntries = Object.entries(layout.components ?? {}).reduce<WebUIComponentLayoutMap>(
+    (acc, [componentId, config]) => {
+      acc[componentId] = cloneLayout(config);
+      return acc;
+    },
+    {}
+  );
 
   return {
     version: layout.version,
     components: clonedEntries,
-    hiddenComponents: layout.hiddenComponents
-      ? [...layout.hiddenComponents]
-      : undefined,
+    hiddenComponents: layout.hiddenComponents ? [...layout.hiddenComponents] : undefined,
   };
 }
 
-export function getComponentDefinition(
-  componentId: string,
-): WebUIComponentDefinition | undefined {
+export function getComponentDefinition(componentId: string): WebUIComponentDefinition | undefined {
   return COMPONENT_DEFINITIONS[componentId];
 }
 
-export function getDefaultLayoutConfig(
-  componentId: string,
-): WebUIComponentLayout | undefined {
+export function getDefaultLayoutConfig(componentId: string): WebUIComponentLayout | undefined {
   return cloneLayout(DEFAULT_LAYOUT_COMPONENTS[componentId]);
 }
 
@@ -348,9 +341,7 @@ export function getAllComponentIds(): string[] {
   return [...COMPONENT_IDS];
 }
 
-export function getComponentTemplate(
-  componentId: string,
-): WebUIComponentTemplate | undefined {
+export function getComponentTemplate(componentId: string): WebUIComponentTemplate | undefined {
   return COMPONENT_TEMPLATES[componentId];
 }
 

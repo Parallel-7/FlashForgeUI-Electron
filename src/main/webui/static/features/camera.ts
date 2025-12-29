@@ -7,8 +7,8 @@
  * orchestrator.
  */
 
-import type { CameraProxyConfigResponse } from '../app.js';
 import type { JSMpegPlayerInstance, JSMpegStatic } from '../../../../shared/types/jsmpeg.d.ts';
+import type { CameraProxyConfigResponse } from '../app.js';
 import { state } from '../core/AppState.js';
 import { apiRequest } from '../core/Transport.js';
 import { $, hideElement, showElement } from '../shared/dom.js';

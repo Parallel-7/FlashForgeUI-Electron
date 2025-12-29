@@ -47,11 +47,11 @@ export interface PrinterDetails {
   webUIEnabled?: boolean;
 
   // RTSP streaming settings (per-printer)
-  rtspFrameRate?: number;    // 1-60 fps, default: 30
-  rtspQuality?: number;       // 1-5 (1=best, 5=worst), default: 3
+  rtspFrameRate?: number; // 1-60 fps, default: 30
+  rtspQuality?: number; // 1-5 (1=best, 5=worst), default: 3
 
   // Camera overlay settings (per-printer)
-  showCameraFps?: boolean;    // Display FPS overlay on camera preview
+  showCameraFps?: boolean; // Display FPS overlay on camera preview
 
   // Spoolman integration (per-printer)
   activeSpoolData?: import('./spoolman.js').ActiveSpoolData | null;
@@ -159,7 +159,7 @@ export type PrinterFamilyDetector = (typeName: string) => PrinterFamilyInfo;
 /**
  * Branded type for printer validation
  */
-export type ValidatedPrinterDetails = PrinterDetails & { 
+export type ValidatedPrinterDetails = PrinterDetails & {
   readonly __validated: true;
 };
 
@@ -210,4 +210,3 @@ export interface AutoConnectDecision {
   readonly selectedMatch?: SavedPrinterMatch;
   readonly matches?: SavedPrinterMatch[];
 }
-

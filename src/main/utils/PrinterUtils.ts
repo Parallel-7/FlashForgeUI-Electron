@@ -24,18 +24,18 @@
  * - AD5X: Material station support, no built-in camera/LED/filtration
  * - Generic Legacy: No built-in peripherals, no material station
  *
-* Key Functions:
-* - detectPrinterModelType(typeName): Returns PrinterModelType enum
-* - detectPrinterFamily(typeName): Returns family classification with check code requirement
-* - determineClientType(is5MFamily): Returns 'new' or 'legacy' client type
-* - supportsDualAPI(modelType): Checks if printer can use both APIs
-*
-* Validation Functions:
-* - shouldPromptForCheckCode(): Determines if check code prompt is needed
-*
-* Utilities:
-* - formatPrinterName: Display-safe naming
-* - getConnectionErrorMessage(error): User-friendly error messages
+ * Key Functions:
+ * - detectPrinterModelType(typeName): Returns PrinterModelType enum
+ * - detectPrinterFamily(typeName): Returns family classification with check code requirement
+ * - determineClientType(is5MFamily): Returns 'new' or 'legacy' client type
+ * - supportsDualAPI(modelType): Checks if printer can use both APIs
+ *
+ * Validation Functions:
+ * - shouldPromptForCheckCode(): Determines if check code prompt is needed
+ *
+ * Utilities:
+ * - formatPrinterName: Display-safe naming
+ * - getConnectionErrorMessage(error): User-friendly error messages
  *
  * Context:
  * Central to printer backend selection, connection workflow, and feature availability
@@ -46,7 +46,7 @@
 // src/utils/PrinterUtils.ts
 // Utility functions for printer connection and family detection
 
-import { PrinterFamilyInfo, PrinterClientType } from '@shared/types/printer.js';
+import { PrinterClientType, PrinterFamilyInfo } from '@shared/types/printer.js';
 import { PrinterModelType } from '@shared/types/printer-backend/index.js';
 
 /**
@@ -59,7 +59,7 @@ export const detectPrinterModelType = (typeName: string): PrinterModelType => {
   }
 
   const typeNameLower = typeName.toLowerCase();
-  
+
   // Check for specific models in order of specificity
   if (typeNameLower.includes('5m pro')) {
     return 'adventurer-5m-pro';
@@ -68,7 +68,7 @@ export const detectPrinterModelType = (typeName: string): PrinterModelType => {
   } else if (typeNameLower.includes('ad5x')) {
     return 'ad5x';
   }
-  
+
   // Default to generic legacy for all other printers
   return 'generic-legacy';
 };
@@ -146,18 +146,18 @@ export const detectPrinterFamily = (typeName: string): PrinterFamilyInfo => {
     return {
       is5MFamily: false,
       requiresCheckCode: false,
-      familyName: 'Unknown'
+      familyName: 'Unknown',
     };
   }
 
   const typeNameLower = typeName.toLowerCase();
-  
+
   // Check for 5M family indicators
   const is5MFamily = typeNameLower.includes('5m') || typeNameLower.includes('ad5x');
-  
+
   if (is5MFamily) {
     let familyName = 'Adventurer 5M Family';
-    
+
     if (typeNameLower.includes('5m pro')) {
       familyName = 'Adventurer 5M Pro';
     } else if (typeNameLower.includes('5m')) {
@@ -165,19 +165,19 @@ export const detectPrinterFamily = (typeName: string): PrinterFamilyInfo => {
     } else if (typeNameLower.includes('ad5x')) {
       familyName = 'AD5X';
     }
-    
+
     return {
       is5MFamily: true,
       requiresCheckCode: true,
-      familyName
+      familyName,
     };
   }
-  
+
   // Legacy/older printers - direct connection
   return {
     is5MFamily: false,
     requiresCheckCode: false,
-    familyName: typeName
+    familyName: typeName,
   };
 };
 
@@ -197,7 +197,7 @@ export const formatPrinterName = (name: string, serialNumber?: string): string =
   if (!name || name.trim().length === 0) {
     return serialNumber ? `Printer (${serialNumber})` : 'Unknown Printer';
   }
-  
+
   return name.trim();
 };
 
@@ -216,55 +216,53 @@ export const getConnectionErrorMessage = (error: unknown): string => {
   if (!error) {
     return 'Unknown connection error';
   }
-  
+
   if (typeof error === 'string') {
     return error;
   }
-  
+
   // Type guard for error objects
   if (error && typeof error === 'object') {
     const errorObj = error as Record<string, unknown>;
-    
+
     if (typeof errorObj.message === 'string') {
       return errorObj.message;
     }
-    
+
     // Handle specific error types
     if (errorObj.code === 'ECONNREFUSED') {
       return 'Connection refused - printer may be offline or unreachable';
     }
-    
+
     if (errorObj.code === 'ETIMEDOUT') {
       return 'Connection timed out - check network connection';
     }
-    
+
     if (errorObj.code === 'ENOTFOUND') {
       return 'Printer not found - check IP address';
     }
   }
-  
+
   return 'Connection failed - please check printer and network settings';
 };
-
 
 /**
  * Check if a check code prompt is needed
  * Based on printer family and configuration
  */
 export const shouldPromptForCheckCode = (
-  is5MFamily: boolean, 
+  is5MFamily: boolean,
   savedCheckCode?: string,
   ForceLegacyAPI: boolean = false
 ): boolean => {
   if (ForceLegacyAPI) {
     return false; // Legacy API mode doesn't need check codes
   }
-  
+
   if (!is5MFamily) {
     return false; // Non-5M printers don't need check codes
   }
-  
+
   // 5M printers need check code if not already saved or saved code is default/empty
   return !savedCheckCode || savedCheckCode === getDefaultCheckCode() || savedCheckCode.trim().length === 0;
 };
-

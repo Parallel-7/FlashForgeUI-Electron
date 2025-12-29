@@ -71,17 +71,12 @@
  * @exports focusExistingWindow - Focus existing window if it exists
  */
 
-import { BrowserWindow, WebPreferences, app } from 'electron';
+import { is } from '@electron-toolkit/utils';
+import { app, BrowserWindow, WebPreferences } from 'electron';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { is } from '@electron-toolkit/utils';
-import { 
-  WindowDimensions, 
-  PreloadPath, 
-  createPreloadPath,
-  WINDOW_SIZES 
-} from './WindowTypes.js';
 import { getUIWindowOptions, injectUIStyleVariables } from '../../utils/CSSVariables.js';
+import { createPreloadPath, PreloadPath, WINDOW_SIZES, WindowDimensions } from './WindowTypes.js';
 
 const _dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -107,7 +102,7 @@ export const getWindowDimensions = (windowType: keyof typeof WINDOW_SIZES): Wind
     width: sizes.width,
     height: sizes.height,
     minWidth: sizes.minWidth,
-    minHeight: sizes.minHeight
+    minHeight: sizes.minHeight,
   };
 };
 
@@ -139,11 +134,11 @@ export const createModalWindow = (
   } = {}
 ): BrowserWindow => {
   const { resizable = true, frame, transparent, useUIConfig = true } = options;
-  
+
   const uiOptions = useUIConfig ? getUIWindowOptions() : { frame: true, transparent: false };
   const finalFrame = frame !== undefined ? frame : uiOptions.frame;
   const finalTransparent = transparent !== undefined ? transparent : uiOptions.transparent;
-  
+
   const window = new BrowserWindow({
     width: dimensions.width,
     height: dimensions.height,
@@ -157,7 +152,7 @@ export const createModalWindow = (
     transparent: finalTransparent,
     webPreferences: createSecureWebPreferences(preloadPath),
   });
-  
+
   return window;
 };
 
@@ -168,9 +163,7 @@ export const createModalWindow = (
 export const createUIPreloadPath = (componentName: string): PreloadPath => {
   // In production, preloads are bundled to out/preload/name-preload.js
   // In development, we also reference the build output because electron-vite handles it
-  return createPreloadPath(
-    path.join(app.getAppPath(), 'out', 'preload', `${componentName}-preload.js`)
-  );
+  return createPreloadPath(path.join(app.getAppPath(), 'out', 'preload', `${componentName}-preload.js`));
 };
 
 /**
@@ -178,7 +171,7 @@ export const createUIPreloadPath = (componentName: string): PreloadPath => {
  * Provides consistent file loading with proper error handling
  */
 export const loadWindowHTML = async (
-  window: BrowserWindow, 
+  window: BrowserWindow,
   componentName: string,
   injectUIConfig: boolean = true
 ): Promise<void> => {
@@ -186,7 +179,7 @@ export const loadWindowHTML = async (
   if (injectUIConfig) {
     injectUIStyleVariables(window);
   }
-  
+
   try {
     if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
       // In development, load from dev server
@@ -196,7 +189,15 @@ export const loadWindowHTML = async (
     } else {
       // In production, HTML files are in out/renderer/src/ui/component/component.html
       // due to how we configured rollup input options
-      const htmlPath = path.join(app.getAppPath(), 'out', 'renderer', 'src', 'ui', componentName, `${componentName}.html`);
+      const htmlPath = path.join(
+        app.getAppPath(),
+        'out',
+        'renderer',
+        'src',
+        'ui',
+        componentName,
+        `${componentName}.html`
+      );
       await window.loadFile(htmlPath);
     }
   } catch (error) {
@@ -208,11 +209,7 @@ export const loadWindowHTML = async (
  * Setup standard window lifecycle handlers
  * Provides consistent window event handling patterns
  */
-export const setupWindowLifecycle = (
-  window: BrowserWindow,
-  onClosed: () => void,
-  onReady?: () => void
-): void => {
+export const setupWindowLifecycle = (window: BrowserWindow, onClosed: () => void, onReady?: () => void): void => {
   window.once('ready-to-show', () => {
     window.show();
     if (onReady) {

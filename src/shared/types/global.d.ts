@@ -26,11 +26,7 @@
  */
 
 import type { CameraProxyStatus } from './camera/camera.types.js';
-import type {
-  ISettingsAPI,
-  IPrinterSettingsAPI,
-  IAutoUpdateAPI
-} from '../ui/settings/types/external.js';
+import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI } from '../ui/settings/types/external.js';
 import type { PrinterSelectionAPI as PrinterSelectionDialogAPI } from '../ui/printer-selection/printer-selection-preload.js';
 import type { IFSDialogAPI } from '../ui/ifs-dialog/ifs-dialog-preload.js';
 import type { DialogAPI as InputDialogAPI } from '../ui/input-dialog/input-dialog-preload.js';
@@ -40,7 +36,7 @@ import type {
   ShortcutButtonConfig,
   ShortcutComponentInfo,
   ShortcutDialogInitData,
-  ShortcutSaveConfigResult
+  ShortcutSaveConfigResult,
 } from './shortcut-config.js';
 
 // IPC event listener function type
@@ -113,7 +109,9 @@ interface SpoolmanAPI {
   openSpoolSelection(): Promise<void>;
   getActiveSpool(contextId?: string): Promise<unknown>;
   setActiveSpool(spool: unknown, contextId?: string): Promise<void>;
-  getStatus(contextId?: string): Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
+  getStatus(
+    contextId?: string
+  ): Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
   onSpoolSelected(callback: (spool: unknown) => void): void;
   onSpoolUpdated(callback: (spool: unknown) => void): void;
 }
@@ -258,4 +256,3 @@ declare global {
 
 // Export an empty object to make this a module
 export {};
-

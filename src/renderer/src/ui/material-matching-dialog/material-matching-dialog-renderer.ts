@@ -21,8 +21,8 @@
 // Handles material mapping between print requirements and IFS slots
 
 import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
 
 // Type definitions (inlined to avoid require errors)
 interface MaterialStationStatus {
@@ -64,10 +64,14 @@ function createColorDifferenceWarning(toolId: number, toolColor: string, slotId:
   return `Color difference detected: Tool ${toolId + 1} expects ${toolColor} but Slot ${slotId + 1} has ${slotColor}. This is allowed but may affect print appearance.`;
 }
 
-function createMaterialMismatchError(toolId: number, toolMaterial: string, slotId: number, slotMaterial: string | null): string {
+function createMaterialMismatchError(
+  toolId: number,
+  toolMaterial: string,
+  slotId: number,
+  slotMaterial: string | null
+): string {
   return `Material type mismatch: Tool ${toolId + 1} requires ${toolMaterial}, but Slot ${slotId + 1} contains ${slotMaterial || 'no material'}`;
 }
-
 
 function hasColorDifference(toolColor: string, slotColor: string | null): boolean {
   if (!slotColor) return false;
@@ -131,8 +135,14 @@ function initializeDialog(): void {
   warningMessageElement = document.getElementById('warning-message');
   confirmButton = document.getElementById('btn-confirm') as HTMLButtonElement;
 
-  if (!printRequirementsElement || !ifsSlotsElement || !materialMappingsElement || 
-      !errorMessageElement || !warningMessageElement || !confirmButton) {
+  if (
+    !printRequirementsElement ||
+    !ifsSlotsElement ||
+    !materialMappingsElement ||
+    !errorMessageElement ||
+    !warningMessageElement ||
+    !confirmButton
+  ) {
     console.error('Material matching: Failed to find required DOM elements');
     return;
   }
@@ -166,7 +176,7 @@ function setupIpcListeners(api: MaterialMatchingDialogAPI): void {
   api.onInit(async (data: MaterialMatchingInitData) => {
     console.log('Material matching: Received init data', data);
     initData = data;
-    
+
     // Set button text based on context
     if (confirmButton) {
       if (data.context === 'file-upload') {
@@ -175,7 +185,7 @@ function setupIpcListeners(api: MaterialMatchingDialogAPI): void {
         confirmButton.textContent = 'Start Print'; // Default for job-start context
       }
     }
-    
+
     await loadMaterialStation(api);
     displayPrintRequirements();
     displayIFSSlots();
@@ -281,7 +291,7 @@ function createSlotItem(slot: MaterialSlotInfo, slotNumber: number): HTMLElement
   }
 
   // Check if already assigned
-  const isAssigned = Array.from(currentMappings.values()).some(m => m.slotId === slotNumber);
+  const isAssigned = Array.from(currentMappings.values()).some((m) => m.slotId === slotNumber);
   if (isAssigned) {
     item.classList.add('assigned');
   }
@@ -333,7 +343,7 @@ function handleToolSelection(toolId: number): void {
   selectedSlot = null;
 
   // Update UI
-  document.querySelectorAll('.requirement-item').forEach(item => {
+  document.querySelectorAll('.requirement-item').forEach((item) => {
     const element = item as HTMLElement;
     if (element.dataset.toolId === String(toolId)) {
       element.classList.add('selected');
@@ -343,7 +353,7 @@ function handleToolSelection(toolId: number): void {
   });
 
   // Clear slot selections
-  document.querySelectorAll('.slot-item').forEach(item => {
+  document.querySelectorAll('.slot-item').forEach((item) => {
     item.classList.remove('selected');
   });
 }
@@ -360,7 +370,7 @@ function handleSlotSelection(slotId: number): void {
   selectedSlot = slotId;
 
   // Update UI
-  document.querySelectorAll('.slot-item').forEach(item => {
+  document.querySelectorAll('.slot-item').forEach((item) => {
     const element = item as HTMLElement;
     if (element.dataset.slotId === String(slotId)) {
       element.classList.add('selected');
@@ -379,7 +389,7 @@ function handleSlotSelection(slotId: number): void {
 function createMapping(): void {
   if (selectedTool === null || selectedSlot === null || !initData || !materialStation) return;
 
-  const tool = initData.toolDatas.find(t => t.toolId === selectedTool);
+  const tool = initData.toolDatas.find((t) => t.toolId === selectedTool);
   const slot = materialStation.slots[selectedSlot - 1]; // Convert to 0-based
 
   if (!tool || !slot || slot.isEmpty) return;
@@ -390,30 +400,20 @@ function createMapping(): void {
     materialName: tool.materialName,
     toolMaterialColor: tool.materialColor,
     // Note: Backend expects actual color value, not CSS var, so using neutral gray
-    slotMaterialColor: slot.materialColor || '#808080'
+    slotMaterialColor: slot.materialColor || '#808080',
   };
 
   // Validate material compatibility
   const isCompatible = validateMaterialCompatibility(tool, slot);
-  
+
   if (!isCompatible) {
-    showError(createMaterialMismatchError(
-      tool.toolId,
-      tool.materialName,
-      selectedSlot,
-      slot.materialType
-    ));
+    showError(createMaterialMismatchError(tool.toolId, tool.materialName, selectedSlot, slot.materialType));
     return;
   }
 
   // Check for color differences
   if (hasColorDifference(tool.materialColor, slot.materialColor)) {
-    showWarning(createColorDifferenceWarning(
-      tool.toolId,
-      tool.materialColor,
-      selectedSlot,
-      slot.materialColor || ''
-    ));
+    showWarning(createColorDifferenceWarning(tool.toolId, tool.materialColor, selectedSlot, slot.materialColor || ''));
   }
 
   // Add mapping
@@ -446,7 +446,8 @@ function updateMappingsDisplay(): void {
   materialMappingsElement.innerHTML = '';
 
   if (currentMappings.size === 0) {
-    materialMappingsElement.innerHTML = '<div class="empty-mappings">Select a tool and then a slot to create mappings</div>';
+    materialMappingsElement.innerHTML =
+      '<div class="empty-mappings">Select a tool and then a slot to create mappings</div>';
     return;
   }
 
@@ -536,7 +537,7 @@ function updateConfirmButton(): void {
   if (!confirmButton || !initData) return;
 
   // Enable only if all tools are mapped
-  const allMapped = initData.toolDatas.every(tool => currentMappings.has(tool.toolId));
+  const allMapped = initData.toolDatas.every((tool) => currentMappings.has(tool.toolId));
   confirmButton.disabled = !allMapped;
 }
 
@@ -583,7 +584,7 @@ function handleConfirm(): void {
 
   // Convert mappings to array
   const mappings = Array.from(currentMappings.values());
-  
+
   // Ensure all tools are mapped
   if (mappings.length !== initData.toolDatas.length) {
     showError('Please map all tools before starting the print');
@@ -606,13 +607,13 @@ function cleanup(): void {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    initializeDialog();
+  initializeDialog();
 });
 
 function registerThemeListener(api: MaterialMatchingDialogAPI): void {
-    api.receive?.('theme-changed', (data: unknown) => {
-        applyDialogTheme(data as ThemeColors);
-    });
+  api.receive?.('theme-changed', (data: unknown) => {
+    applyDialogTheme(data as ThemeColors);
+  });
 }
 
 // Cleanup when window is unloaded
@@ -620,4 +621,3 @@ window.addEventListener('unload', cleanup);
 
 // Export for module
 export {};
-

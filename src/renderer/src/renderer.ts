@@ -1,11 +1,11 @@
 /**
  * @fileoverview Main Renderer Process - Component System Integration
- * 
+ *
  * This file serves as the main entry point for the renderer process and integrates
  * the new component system with existing functionality. It replaces the monolithic
  * UI approach with a clean component-based architecture while preserving all
  * existing features and behaviors.
- * 
+ *
  * Key responsibilities:
  * - Component system initialization and lifecycle management
  * - IPC event handling and data flow
@@ -13,7 +13,7 @@
  * - Platform detection and styling
  * - Loading state management
  * - State tracking integration
- * 
+ *
  * Integration approach:
  * - Uses ComponentManager for centralized component updates
  * - Preserves all existing event handlers and IPC communication
@@ -24,42 +24,33 @@
 // Core styles and dependencies
 import './index.css';
 
-import { initializeLucideIcons, getLucideIcons } from './renderer/utils/icons.js';
 import { logVerbose } from '@shared/logging.js';
-
-// Component system imports
-import {
-  componentManager,
-  PrinterTabsComponent,
-  type ComponentUpdateData
-} from './ui/components/index.js';
+import { computeThemePalette } from '@shared/themeColorUtils.js';
+import type { ThemeColors } from '@shared/types/config.js';
+import { DEFAULT_THEME } from '@shared/types/config.js';
+import type { PollingData } from '@shared/types/polling.js';
+import { RendererGridController } from './renderer/gridController.js';
 import { logMessage, setLogPanelComponent } from './renderer/logging.js';
-import { LegacyUiController } from './ui/legacy/LegacyUiController.js';
-
+import {
+  loadLayoutForSerial,
+  loadShortcutsForSerial,
+  saveLayoutForSerial,
+  saveShortcutsForSerial,
+} from './renderer/perPrinterStorage.js';
+// Existing service imports
+import { getGlobalStateTracker, STATE_EVENTS } from './renderer/services/printer-state.js';
+import { handleUIError, resetUI } from './renderer/services/ui-updater.js';
+import { ShortcutButtonController } from './renderer/shortcutButtons.js';
+import { getLucideIcons, initializeLucideIcons } from './renderer/utils/icons.js';
+// Component system imports
+import { type ComponentUpdateData, componentManager, PrinterTabsComponent } from './ui/components/index.js';
+import { editModeController } from './ui/gridstack/EditModeController.js';
 // GridStack system imports
 import { gridStackManager } from './ui/gridstack/GridStackManager.js';
 import { layoutPersistence } from './ui/gridstack/LayoutPersistence.js';
-import { editModeController } from './ui/gridstack/EditModeController.js';
-
+import { LegacyUiController } from './ui/legacy/LegacyUiController.js';
 // Shortcut system imports
 import { DEFAULT_SHORTCUT_CONFIG } from './ui/shortcuts/types.js';
-import {
-  loadLayoutForSerial,
-  saveLayoutForSerial,
-  loadShortcutsForSerial,
-  saveShortcutsForSerial
-} from './renderer/perPrinterStorage.js';
-
-// Existing service imports
-import { getGlobalStateTracker, STATE_EVENTS } from './renderer/services/printer-state.js';
-import { resetUI, handleUIError } from './renderer/services/ui-updater.js';
-import type { PollingData } from '@shared/types/polling.js';
-import type { ThemeColors } from '@shared/types/config.js';
-import { DEFAULT_THEME } from '@shared/types/config.js';
-import { computeThemePalette } from '@shared/themeColorUtils.js';
-import { RendererGridController } from './renderer/gridController.js';
-import { ShortcutButtonController } from './renderer/shortcutButtons.js';
-
 
 // ============================================================================
 // COMPONENT SYSTEM STATE
@@ -77,11 +68,11 @@ let lastPollingData: PollingData | null = null;
 const gridController = new RendererGridController({
   getActiveSerial: () => activeContextSerial,
   getLastPollingData: () => lastPollingData,
-  updateShortcutButtons: (config) => shortcutButtonController.updateButtons(config)
+  updateShortcutButtons: (config) => shortcutButtonController.updateButtons(config),
 });
 const shortcutButtonController = new ShortcutButtonController({
   getActiveSerial: () => activeContextSerial,
-  gridController
+  gridController,
 });
 
 const legacyUiController = new LegacyUiController(logMessage);
@@ -224,7 +215,10 @@ async function initializePrinterTabs(): Promise<void> {
       if (printerTabsComponent && event?.contextInfo) {
         printerTabsComponent.addTab(event.contextInfo);
       } else {
-        console.error('Cannot add tab: event or contextInfo is missing', { event, hasComponent: !!printerTabsComponent });
+        console.error('Cannot add tab: event or contextInfo is missing', {
+          event,
+          hasComponent: !!printerTabsComponent,
+        });
       }
     });
 
@@ -290,7 +284,10 @@ async function initializePrinterTabs(): Promise<void> {
     });
 
     window.api.receive('printer-context-updated', (...args: unknown[]) => {
-      const event = args[0] as { contextId: string; updates: Partial<import('./types/PrinterContext.js').PrinterContextInfo> };
+      const event = args[0] as {
+        contextId: string;
+        updates: Partial<import('./types/PrinterContext.js').PrinterContextInfo>;
+      };
       logDebug('Renderer received context-updated event:', event);
       if (printerTabsComponent) {
         printerTabsComponent.updateTab(event.contextId, event.updates);
@@ -299,21 +296,18 @@ async function initializePrinterTabs(): Promise<void> {
 
     logDebug('Printer tabs component initialized successfully');
     logMessage('Multi-printer tabs UI initialized');
-
   } catch (error) {
     console.error('Failed to initialize printer tabs component:', error);
     logMessage(`ERROR: Printer tabs initialization failed: ${error}`);
   }
 }
 
-
 /**
  * Detect if a printer backend type indicates a legacy printer
  */
 function isLegacyBackendType(backendType: string): boolean {
   // Legacy printers use GenericLegacyBackend
-  return backendType.toLowerCase().includes('legacy') || 
-         backendType.toLowerCase().includes('generic');
+  return backendType.toLowerCase().includes('legacy') || backendType.toLowerCase().includes('generic');
 }
 
 // ============================================================================
@@ -333,7 +327,7 @@ function initializePollingListeners(): void {
     console.error('API not available for polling listeners');
     return;
   }
-  
+
   // Listen for polling updates from main process
   window.api.receive('polling-update', (data: unknown) => {
     const pollingData = data as PollingData;
@@ -343,10 +337,9 @@ function initializePollingListeners(): void {
 
     try {
       // Update IFS menu item visibility for AD5X printers with material station
-      const shouldShowIFS =
-        Boolean(pollingData.materialStation?.connected) && Boolean(pollingData.isConnected);
+      const shouldShowIFS = Boolean(pollingData.materialStation?.connected) && Boolean(pollingData.isConnected);
       legacyUiController.setIfsMenuItemVisible(shouldShowIFS);
-      
+
       // COMPONENT SYSTEM INTEGRATION: Replace updateAllPanels with componentManager.updateAll
       if (gridController.areComponentsInitialized() && componentManager.isInitialized()) {
         try {
@@ -356,22 +349,22 @@ function initializePollingListeners(): void {
             timestamp: new Date().toISOString(),
             // Add any other update data fields as needed by components
             printerState: pollingData.printerStatus?.state,
-            connectionState: pollingData.isConnected
+            connectionState: pollingData.isConnected,
           };
-          
+
           // Update all components with centralized manager
           componentManager.updateAll(updateData);
         } catch (error) {
           console.error('Component system update failed:', error);
           logMessage(`ERROR: Component update failed: ${error}`);
-          
+
           // Fallback to legacy update system if components fail
           console.warn('Falling back to legacy UI update system');
           // Note: updateAllPanels is removed, so we'll handle this gracefully
           handleUIError(error, 'component system failure');
         }
       }
-      
+
       // Update state tracker based on printer status (preserve existing logic)
       const stateTracker = getGlobalStateTracker();
       if (pollingData.printerStatus && pollingData.isConnected) {
@@ -379,7 +372,6 @@ function initializePollingListeners(): void {
       } else if (!pollingData.isConnected && !pollingData.isInitializing) {
         stateTracker.onDisconnected();
       }
-      
     } catch (error) {
       handleUIError(error, 'polling update');
     }
@@ -393,12 +385,11 @@ function initializePollingListeners(): void {
  */
 function initializeStateAndEventListeners(): void {
   const stateTracker = getGlobalStateTracker();
-  
+
   stateTracker.on(STATE_EVENTS.CONNECTED, () => {
     logDebug('Printer connected');
-
   });
-  
+
   stateTracker.on(STATE_EVENTS.DISCONNECTED, () => {
     logDebug('Printer disconnected');
     logMessage('Printer disconnected');
@@ -406,47 +397,52 @@ function initializeStateAndEventListeners(): void {
     legacyUiController.setIfsMenuItemVisible(false);
     logDebug('[LegacyUI] Reset legacy printer flag on state disconnect');
   });
-  
+
   // Listen for backend events
   if (window.api) {
     window.api.receive('backend-initialized', (...args: unknown[]) => {
-      const data = args[0] as { success: boolean; printerName: string; modelType: string; backendType?: string; timestamp: string };
+      const data = args[0] as {
+        success: boolean;
+        printerName: string;
+        modelType: string;
+        backendType?: string;
+        timestamp: string;
+      };
       logDebug('Backend initialized:', data);
       logMessage(`Backend ready for ${data.printerName} (${data.modelType})`);
-      
+
       const backendType = data.backendType || data.modelType || '';
       if (isLegacyBackendType(backendType)) {
         logDebug('[LegacyUI] Legacy printer detected:', backendType);
         logMessage('Legacy printer detected - some features may be unavailable');
       }
     });
-    
+
     window.api.receive('backend-initialization-failed', (...args: unknown[]) => {
       const data = args[0] as { success: boolean; error: string; printerName: string; timestamp: string };
       console.error('Backend initialization failed:', data);
       logMessage(`Backend initialization failed for ${data.printerName}: ${data.error}`);
     });
-    
+
     window.api.receive('backend-disposed', (...args: unknown[]) => {
       const data = args[0] as { timestamp: string };
       logDebug('Backend disposed:', data);
       logMessage('Backend disconnected');
-      
+
       resetUI();
     });
-    
+
     // Handle log messages from main process
     window.api.receive('log-message', (...args: unknown[]) => {
       const message = args[0] as string;
       logMessage(message);
     });
-    
+
     window.api.receive('printer-connected', (...args: unknown[]) => {
       const data = args[0] as { name: string; ipAddress: string; serialNumber: string; clientType: string };
       logDebug('Printer connected event:', data);
       stateTracker.onConnected();
     });
-
   }
 
   logDebug('State tracking and event listeners initialized');

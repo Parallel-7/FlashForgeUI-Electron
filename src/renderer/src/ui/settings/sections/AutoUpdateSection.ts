@@ -8,8 +8,8 @@
 
 // src/ui/settings/sections/AutoUpdateSection.ts
 
-import type { MutableSettings } from '../types.js';
 import type { IAutoUpdateAPI } from '@shared/types/external.js';
+import type { MutableSettings } from '../types.js';
 import type { SettingsSection } from './SettingsSection.js';
 
 interface AutoUpdateSectionOptions {

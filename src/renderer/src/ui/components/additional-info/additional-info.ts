@@ -1,10 +1,10 @@
 /**
  * @fileoverview Additional Info Component
- * 
+ *
  * Display-only component showing printer configuration and settings information.
  * Displays nozzle size, filament type, speed settings, and Z-axis offsets with
  * visual indicators for different value ranges and states.
- * 
+ *
  * Key features:
  * - Nozzle size display with size-specific indicators
  * - Filament type information
@@ -14,9 +14,9 @@
  * - No user interactions (display-only component)
  */
 
+import type { PrinterSettings } from '@shared/types/polling.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
-import type { PrinterSettings } from '@shared/types/polling.js';
 import './additional-info.css';
 
 /**
@@ -79,14 +79,13 @@ export class AdditionalInfoComponent extends BaseComponent {
           nozzleSize: 0.4,
           filamentType: 'PLA',
           speedOffset: 100,
-          zAxisOffset: 0.0
+          zAxisOffset: 0.0,
         });
         this.showAsUnavailable();
       }
 
       // Update component state tracking
       this.updateState(data);
-
     } catch (error) {
       console.error(`Error updating ${this.componentId}:`, error);
     }
@@ -99,13 +98,13 @@ export class AdditionalInfoComponent extends BaseComponent {
   private updatePrinterSettings(settings: PrinterSettings): void {
     // Update nozzle size
     this.updateNozzleSize(settings.nozzleSize);
-    
+
     // Update filament type
     this.updateFilamentType(settings.filamentType);
-    
+
     // Update speed offset
     this.updateSpeedOffset(settings.speedOffset);
-    
+
     // Update Z-axis offset
     this.updateZAxisOffset(settings.zAxisOffset);
   }
@@ -119,11 +118,11 @@ export class AdditionalInfoComponent extends BaseComponent {
     if (nozzleDisplay) {
       if (nozzleSize !== undefined) {
         nozzleDisplay.textContent = `${nozzleSize.toFixed(1)}mm`;
-        
+
         // Apply size-specific styling
         if (this.container) {
           this.container.classList.remove('nozzle-size-0-4', 'nozzle-size-0-6', 'nozzle-size-other');
-          
+
           if (nozzleSize === 0.4) {
             this.container.classList.add('nozzle-size-0-4');
           } else if (nozzleSize === 0.6) {
@@ -161,11 +160,11 @@ export class AdditionalInfoComponent extends BaseComponent {
     if (speedDisplay) {
       if (speedOffset !== undefined) {
         speedDisplay.textContent = `${speedOffset}%`;
-        
+
         // Apply speed range styling
         if (this.container) {
           this.container.classList.remove('speed-offset-normal', 'speed-offset-fast', 'speed-offset-slow');
-          
+
           if (speedOffset >= 80 && speedOffset <= 120) {
             this.container.classList.add('speed-offset-normal');
           } else if (speedOffset > 120) {
@@ -192,11 +191,11 @@ export class AdditionalInfoComponent extends BaseComponent {
     if (zOffsetDisplay) {
       if (zAxisOffset !== undefined) {
         zOffsetDisplay.textContent = zAxisOffset.toFixed(3);
-        
+
         // Apply offset range styling
         if (this.container) {
           this.container.classList.remove('z-offset-zero', 'z-offset-positive', 'z-offset-negative');
-          
+
           if (Math.abs(zAxisOffset) < 0.001) {
             this.container.classList.add('z-offset-zero');
           } else if (zAxisOffset > 0) {

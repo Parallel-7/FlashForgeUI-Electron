@@ -177,12 +177,7 @@ export class LogPanelController {
  * Create and mount a shared log panel to the provided container.
  */
 export function createLogPanel(options: LogPanelOptions): LogPanelController {
-  const {
-    mountPoint,
-    title = 'Application Logs',
-    showHeader = true,
-    placeholder = 'No log messages yet'
-  } = options;
+  const { mountPoint, title = 'Application Logs', showHeader = true, placeholder = 'No log messages yet' } = options;
 
   const root = document.createElement('div');
   root.className = 'ff-log-panel';
@@ -244,7 +239,7 @@ export function createLogPanel(options: LogPanelOptions): LogPanelController {
 export function parseLogEntry(value: unknown): LogEntry | null {
   if (typeof value === 'string') {
     return { timestamp: new Date().toLocaleTimeString(), message: value };
-    }
+  }
 
   if (
     typeof value === 'object' &&

@@ -5,10 +5,10 @@
  * Settings are stored per-printer in printer_details.json.
  */
 
-import { ipcMain } from 'electron';
-import { getPrinterDetailsManager } from '../../managers/PrinterDetailsManager.js';
-import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 import { PER_PRINTER_SETTINGS_DEFAULTS } from '@shared/utils/printerSettingsDefaults.js';
+import { ipcMain } from 'electron';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
+import { getPrinterDetailsManager } from '../../managers/PrinterDetailsManager.js';
 
 /**
  * Per-printer settings interface
@@ -60,7 +60,7 @@ export function initializePrinterSettingsHandlers(): void {
         webUIEnabled: details.webUIEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.webUIEnabled,
         rtspFrameRate: details.rtspFrameRate ?? PER_PRINTER_SETTINGS_DEFAULTS.rtspFrameRate,
         rtspQuality: details.rtspQuality ?? PER_PRINTER_SETTINGS_DEFAULTS.rtspQuality,
-        showCameraFps: details.showCameraFps ?? PER_PRINTER_SETTINGS_DEFAULTS.showCameraFps
+        showCameraFps: details.showCameraFps ?? PER_PRINTER_SETTINGS_DEFAULTS.showCameraFps,
       };
 
       console.log('[printer-settings:get] Returning settings:', settings);
@@ -97,7 +97,7 @@ export function initializePrinterSettingsHandlers(): void {
         webUIEnabled: settings.webUIEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.webUIEnabled,
         rtspFrameRate: settings.rtspFrameRate ?? PER_PRINTER_SETTINGS_DEFAULTS.rtspFrameRate,
         rtspQuality: settings.rtspQuality ?? PER_PRINTER_SETTINGS_DEFAULTS.rtspQuality,
-        showCameraFps: settings.showCameraFps ?? PER_PRINTER_SETTINGS_DEFAULTS.showCameraFps
+        showCameraFps: settings.showCameraFps ?? PER_PRINTER_SETTINGS_DEFAULTS.showCameraFps,
       };
 
       // Remove explicit undefined values so validation sees either a boolean or the existing value
@@ -109,7 +109,7 @@ export function initializePrinterSettingsHandlers(): void {
 
       const updatedDetails = {
         ...currentDetails,
-        ...settingsWithDefaults
+        ...settingsWithDefaults,
       };
 
       // Save updated details
@@ -145,4 +145,3 @@ export function initializePrinterSettingsHandlers(): void {
 
   console.log('Per-printer settings IPC handlers initialized');
 }
-

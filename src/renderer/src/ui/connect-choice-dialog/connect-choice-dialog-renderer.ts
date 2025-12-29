@@ -4,10 +4,10 @@
  * manual IP entry and network scanning for printer connections.
  */
 
-import type { ConnectChoiceOption, ConnectChoiceData, ConnectChoiceAPI } from './connect-choice-dialog-preload.cts';
 import type { ThemeColors } from '@shared/types/config.js';
-import { applyDialogTheme } from '../shared/theme-utils.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { applyDialogTheme } from '../shared/theme-utils.js';
+import type { ConnectChoiceAPI, ConnectChoiceData, ConnectChoiceOption } from './connect-choice-dialog-preload.cts';
 
 const getConnectChoiceAPI = (): ConnectChoiceAPI => {
   const api = window.api?.dialog?.connectChoice as ConnectChoiceAPI | undefined;
@@ -88,14 +88,14 @@ function setupEventListeners(): void {
  */
 function handleArrowNavigation(event: KeyboardEvent): void {
   event.preventDefault();
-  
+
   const buttons = [
     document.getElementById('btn-enter-ip'),
     document.getElementById('btn-scan-network'),
-    document.getElementById('btn-cancel')
-  ].filter(btn => btn !== null) as HTMLElement[];
+    document.getElementById('btn-cancel'),
+  ].filter((btn) => btn !== null) as HTMLElement[];
 
-  const currentIndex = buttons.findIndex(btn => btn === document.activeElement);
+  const currentIndex = buttons.findIndex((btn) => btn === document.activeElement);
   let newIndex: number;
 
   if (event.key === 'ArrowDown') {
@@ -114,7 +114,7 @@ function updateDialogUI(data: ConnectChoiceData): void {
   // For now, the dialog is static
   // This function can be expanded to show dynamic content based on data
   console.log('Dialog initialized with data:', data);
-  
+
   // Add subtle animation to buttons
   const buttons = document.querySelectorAll('.choice-button');
   buttons.forEach((button, index) => {
@@ -172,17 +172,17 @@ async function handleChoice(action: ConnectChoiceOption['action']): Promise<void
     const choice: ConnectChoiceOption = { action };
     await getConnectChoiceAPI().sendChoice(choice);
     console.log('Choice sent successfully');
-    
+
     // Disable all buttons to prevent multiple selections
     const allButtons = document.querySelectorAll('button');
-    allButtons.forEach(btn => {
+    allButtons.forEach((btn) => {
       btn.disabled = true;
       btn.style.opacity = '0.6';
     });
   } catch (error) {
     console.error('Error sending choice:', error);
     isHandlingChoice = false; // Reset flag on error
-    
+
     // Show error feedback
     showErrorFeedback('Failed to send choice. Please try again.');
   }
@@ -233,7 +233,7 @@ function showErrorFeedback(message: string): void {
   const dialogActions = document.querySelector('.dialog-actions');
   if (dialogActions) {
     dialogActions.insertBefore(errorDiv, dialogActions.firstChild);
-    
+
     // Auto-remove error after 5 seconds
     setTimeout(() => {
       if (errorDiv.parentNode) {
@@ -242,7 +242,6 @@ function showErrorFeedback(message: string): void {
     }, 5000);
   }
 }
-
 
 /**
  * Export for potential testing purposes

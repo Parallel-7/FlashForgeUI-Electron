@@ -23,99 +23,109 @@
  * detection to ensure operations are only available on supported printer models.
  */
 
-import { ipcMain, dialog } from 'electron';
 import { parseSlicerFile } from '@parallel-7/slicer-meta';
+import type { AD5XUploadParams, SlicerMetadata, UploadJobPayload } from '@shared/types/ipc.js';
+import { dialog, ipcMain } from 'electron';
 import type { PrinterBackendManager } from '../../managers/PrinterBackendManager.js';
-import type { getWindowManager } from '../../windows/WindowManager.js';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 import { getThumbnailCacheService } from '../../services/ThumbnailCacheService.js';
 import { getThumbnailRequestQueue } from '../../services/ThumbnailRequestQueue.js';
-import type { AD5XUploadParams, UploadJobPayload, SlicerMetadata } from '@shared/types/ipc.js';
-import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
+import type { getWindowManager } from '../../windows/WindowManager.js';
 
 type WindowManager = ReturnType<typeof getWindowManager>;
 
 /**
  * Register all job-related IPC handlers
  */
-export function registerJobHandlers(
-  backendManager: PrinterBackendManager,
-  windowManager: WindowManager
-): void {
+export function registerJobHandlers(backendManager: PrinterBackendManager, windowManager: WindowManager): void {
   // Get local jobs handler
-  ipcMain.handle('job-picker:get-local-jobs', async (): Promise<{ success: boolean; jobs: readonly unknown[]; error?: string }> => {
-    try {
-      const contextManager = getPrinterContextManager();
-      const contextId = contextManager.getActiveContextId();
+  ipcMain.handle(
+    'job-picker:get-local-jobs',
+    async (): Promise<{ success: boolean; jobs: readonly unknown[]; error?: string }> => {
+      try {
+        const contextManager = getPrinterContextManager();
+        const contextId = contextManager.getActiveContextId();
 
-      if (!contextId) {
-        return { success: false, jobs: [], error: 'No active printer context' };
+        if (!contextId) {
+          return { success: false, jobs: [], error: 'No active printer context' };
+        }
+
+        const features = backendManager.getFeatures(contextId);
+
+        if (!features || !features.jobManagement.localJobs) {
+          return { success: false, jobs: [], error: 'Local job management not supported on this printer' };
+        }
+
+        const result = await backendManager.getLocalJobs(contextId);
+        return { success: result.success, jobs: result.jobs, error: result.error };
+      } catch (error) {
+        return { success: false, jobs: [], error: error instanceof Error ? error.message : 'Unknown error' };
       }
-
-      const features = backendManager.getFeatures(contextId);
-
-      if (!features || !features.jobManagement.localJobs) {
-        return { success: false, jobs: [], error: 'Local job management not supported on this printer' };
-      }
-
-      const result = await backendManager.getLocalJobs(contextId);
-      return { success: result.success, jobs: result.jobs, error: result.error };
-    } catch (error) {
-      return { success: false, jobs: [], error: error instanceof Error ? error.message : 'Unknown error' };
     }
-  });
+  );
 
   // Get recent jobs handler
-  ipcMain.handle('job-picker:get-recent-jobs', async (): Promise<{ success: boolean; jobs: readonly unknown[]; error?: string }> => {
-    try {
-      const contextManager = getPrinterContextManager();
-      const contextId = contextManager.getActiveContextId();
+  ipcMain.handle(
+    'job-picker:get-recent-jobs',
+    async (): Promise<{ success: boolean; jobs: readonly unknown[]; error?: string }> => {
+      try {
+        const contextManager = getPrinterContextManager();
+        const contextId = contextManager.getActiveContextId();
 
-      if (!contextId) {
-        return { success: false, jobs: [], error: 'No active printer context' };
+        if (!contextId) {
+          return { success: false, jobs: [], error: 'No active printer context' };
+        }
+
+        const features = backendManager.getFeatures(contextId);
+
+        if (!features || !features.jobManagement.recentJobs) {
+          return { success: false, jobs: [], error: 'Recent job management not supported on this printer' };
+        }
+
+        const result = await backendManager.getRecentJobs(contextId);
+        return { success: result.success, jobs: result.jobs, error: result.error };
+      } catch (error) {
+        return { success: false, jobs: [], error: error instanceof Error ? error.message : 'Unknown error' };
       }
-
-      const features = backendManager.getFeatures(contextId);
-
-      if (!features || !features.jobManagement.recentJobs) {
-        return { success: false, jobs: [], error: 'Recent job management not supported on this printer' };
-      }
-
-      const result = await backendManager.getRecentJobs(contextId);
-      return { success: result.success, jobs: result.jobs, error: result.error };
-    } catch (error) {
-      return { success: false, jobs: [], error: error instanceof Error ? error.message : 'Unknown error' };
     }
-  });
+  );
 
   // Start job handler
-  ipcMain.handle('job-picker:start-job', async (_event, fileName: string, options: { leveling: boolean; startNow: boolean; materialMappings?: unknown[] }): Promise<{ success: boolean; error?: string }> => {
-    try {
-      const contextManager = getPrinterContextManager();
-      const contextId = contextManager.getActiveContextId();
+  ipcMain.handle(
+    'job-picker:start-job',
+    async (
+      _event,
+      fileName: string,
+      options: { leveling: boolean; startNow: boolean; materialMappings?: unknown[] }
+    ): Promise<{ success: boolean; error?: string }> => {
+      try {
+        const contextManager = getPrinterContextManager();
+        const contextId = contextManager.getActiveContextId();
 
-      if (!contextId) {
-        return { success: false, error: 'No active printer context' };
+        if (!contextId) {
+          return { success: false, error: 'No active printer context' };
+        }
+
+        const features = backendManager.getFeatures(contextId);
+
+        if (!features || !features.jobManagement.startJobs) {
+          return { success: false, error: 'Job starting not supported on this printer' };
+        }
+
+        const result = await backendManager.startJob(contextId, {
+          operation: 'start',
+          fileName,
+          leveling: options.leveling,
+          startNow: options.startNow,
+          additionalParams: options.materialMappings ? { materialMappings: options.materialMappings } : undefined,
+        });
+
+        return { success: result.success, error: result.error };
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
       }
-
-      const features = backendManager.getFeatures(contextId);
-
-      if (!features || !features.jobManagement.startJobs) {
-        return { success: false, error: 'Job starting not supported on this printer' };
-      }
-
-      const result = await backendManager.startJob(contextId, {
-        operation: 'start',
-        fileName,
-        leveling: options.leveling,
-        startNow: options.startNow,
-        additionalParams: options.materialMappings ? { materialMappings: options.materialMappings } : undefined
-      });
-
-      return { success: result.success, error: result.error };
-    } catch (error) {
-      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
-  });
+  );
 
   // Job uploader browse file handler
   ipcMain.on('uploader:browse-file', async (event) => {
@@ -129,9 +139,9 @@ export function registerJobHandlers(
         title: 'Select Job File',
         filters: [
           { name: 'Job Files', extensions: ['gcode', 'gx', '3mf'] },
-          { name: 'All Files', extensions: ['*'] }
+          { name: 'All Files', extensions: ['*'] },
         ],
-        properties: ['openFile']
+        properties: ['openFile'],
       });
 
       const filePath = result.canceled ? null : result.filePaths[0] || null;
@@ -139,7 +149,7 @@ export function registerJobHandlers(
 
       if (filePath) {
         try {
-          const metadata = await parseSlicerFile(filePath) as SlicerMetadata;
+          const metadata = (await parseSlicerFile(filePath)) as SlicerMetadata;
           event.sender.send('uploader:metadata-result', metadata);
         } catch (error) {
           console.error('Metadata parsing error:', error);
@@ -195,16 +205,18 @@ export function registerJobHandlers(
       if (!features || !features.materialStation?.available) {
         throw new Error('Current printer does not support AD5X upload functionality');
       }
-      
-      console.log(`AD5X upload request: ${filePath}, start: ${startPrint}, level: ${levelingBeforePrint}, mappings: ${materialMappings?.length ?? 0}`);
-      
+
+      console.log(
+        `AD5X upload request: ${filePath}, start: ${startPrint}, level: ${levelingBeforePrint}, mappings: ${materialMappings?.length ?? 0}`
+      );
+
       // Send initial progress update
       event.sender.send('uploader:upload-progress', {
         percentage: 0,
         status: 'Preparing AD5X upload...',
-        stage: 'preparing'
+        stage: 'preparing',
       });
-      
+
       // Simulate progress updates during upload
       // Since ff-api doesn't provide granular progress, we'll simulate it
       const progressUpdates = [
@@ -212,15 +224,15 @@ export function registerJobHandlers(
         { percentage: 30, status: 'Connecting to material station...', stage: 'uploading' },
         { percentage: 50, status: 'Uploading file to printer...', stage: 'uploading' },
         { percentage: 70, status: 'Processing 3MF data...', stage: 'uploading' },
-        { percentage: 90, status: 'Finalizing upload...', stage: 'completing' }
+        { percentage: 90, status: 'Finalizing upload...', stage: 'completing' },
       ];
-      
+
       // Send progress updates with small delays
       for (const update of progressUpdates) {
         event.sender.send('uploader:upload-progress', update);
-        await new Promise(resolve => setTimeout(resolve, 300));
+        await new Promise((resolve) => setTimeout(resolve, 300));
       }
-      
+
       // Call the PrinterBackendManager method which delegates to the AD5X backend
       const result = await backendManager.uploadFileAD5X(
         contextId,
@@ -229,53 +241,52 @@ export function registerJobHandlers(
         levelingBeforePrint,
         materialMappings
       );
-      
+
       if (result.success) {
         // Send completion progress
         event.sender.send('uploader:upload-progress', {
           percentage: 100,
           status: 'Upload complete',
-          stage: 'completed'
+          stage: 'completed',
         });
-        
+
         // Send completion event
         event.sender.send('uploader:upload-complete', {
           success: true,
-          fileName: result.fileName
+          fileName: result.fileName,
         });
       } else {
         // Send error completion event
         event.sender.send('uploader:upload-complete', {
           success: false,
           fileName: result.fileName,
-          error: result.error || 'AD5X upload failed'
+          error: result.error || 'AD5X upload failed',
         });
       }
-      
+
       return {
         success: result.success,
         fileName: result.fileName,
         started: result.started,
         error: result.error,
-        timestamp: result.timestamp
+        timestamp: result.timestamp,
       };
-      
     } catch (error) {
       console.error('AD5X upload error:', error);
-      
+
       // Send error completion event
       event.sender.send('uploader:upload-complete', {
         success: false,
         fileName: '',
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       });
-      
+
       return {
         success: false,
         error: error instanceof Error ? error.message : String(error),
         fileName: '',
         started: false,
-        timestamp: new Date()
+        timestamp: new Date(),
       };
     }
   });
@@ -298,7 +309,7 @@ export function registerJobHandlers(
         event.sender.send('uploader:upload-complete', {
           success: false,
           fileName: '',
-          error: 'No active printer context'
+          error: 'No active printer context',
         });
         return;
       }
@@ -308,18 +319,18 @@ export function registerJobHandlers(
         event.sender.send('uploader:upload-complete', {
           success: false,
           fileName: '',
-          error: 'Printer not connected'
+          error: 'Printer not connected',
         });
         return;
       }
-      
+
       // Start upload with progress reporting
       event.sender.send('uploader:upload-progress', {
         percentage: 0,
         status: 'Preparing upload...',
-        stage: 'preparing'
+        stage: 'preparing',
       });
-      
+
       // Use startJob with filePath for regular printers
       const fileName = filePath.split(/[\\/]/).pop() ?? filePath;
       const result = await backendManager.startJob(contextId, {
@@ -327,9 +338,9 @@ export function registerJobHandlers(
         filePath,
         fileName,
         leveling: autoLevel,
-        startNow
+        startNow,
       });
-      
+
       if (result.success) {
         // Simulate upload progress for user feedback
         // Since we don't have granular progress from the backend, simulate it
@@ -337,27 +348,27 @@ export function registerJobHandlers(
           event.sender.send('uploader:upload-progress', {
             percentage: i,
             status: 'Uploading file...',
-            stage: 'uploading'
+            stage: 'uploading',
           });
           // Small delay to show progress
-          await new Promise(resolve => setTimeout(resolve, 200));
+          await new Promise((resolve) => setTimeout(resolve, 200));
         }
-        
+
         event.sender.send('uploader:upload-progress', {
           percentage: 100,
           status: 'Upload complete',
-          stage: 'completed'
+          stage: 'completed',
         });
-        
+
         event.sender.send('uploader:upload-complete', {
           success: true,
-          fileName: result.fileName
+          fileName: result.fileName,
         });
       } else {
         event.sender.send('uploader:upload-complete', {
           success: false,
           fileName: result.fileName,
-          error: result.error || 'Upload failed'
+          error: result.error || 'Upload failed',
         });
       }
     } catch (error) {
@@ -365,7 +376,7 @@ export function registerJobHandlers(
       event.sender.send('uploader:upload-complete', {
         success: false,
         fileName: '',
-        error: error instanceof Error ? error.message : 'Unknown error occurred'
+        error: error instanceof Error ? error.message : 'Unknown error occurred',
       });
     }
   });
@@ -389,7 +400,7 @@ export function registerJobHandlers(
       if (jobPickerWindow && !jobPickerWindow.isDestroyed()) {
         jobPickerWindow.webContents.send('thumbnail-result', {
           filename,
-          thumbnail: thumbnail ? thumbnail.replace('data:image/png;base64,', '') : null
+          thumbnail: thumbnail ? thumbnail.replace('data:image/png;base64,', '') : null,
         });
       }
     };
@@ -418,7 +429,7 @@ export function registerJobHandlers(
         sendResult(null);
         return;
       }
-      
+
       // 1. Check cache first
       const cachedResult = await thumbnailCache.get(printerDetails.SerialNumber, filename);
       if (cachedResult.success && cachedResult.data) {
@@ -426,25 +437,20 @@ export function registerJobHandlers(
         sendResult(cachedResult.data);
         return;
       }
-      
+
       // 2. If cache miss, enqueue request
       console.log(`[ThumbnailHandler] Cache miss for ${filename}, queueing request`);
       const queueResult = await thumbnailQueue.enqueue(filename);
-      
+
       // 3. Handle queue result
       if (queueResult.success && queueResult.thumbnail) {
         // Store in cache
-        await thumbnailCache.set(
-          printerDetails.SerialNumber, 
-          filename, 
-          queueResult.thumbnail
-        );
+        await thumbnailCache.set(printerDetails.SerialNumber, filename, queueResult.thumbnail);
         sendResult(queueResult.thumbnail);
       } else {
         console.error(`[ThumbnailHandler] Failed to get thumbnail for ${filename}:`, queueResult.error);
         sendResult(null);
       }
-      
     } catch (error) {
       console.error(`[ThumbnailHandler] Error processing thumbnail request for ${filename}:`, error);
       sendResult(null);
@@ -470,4 +476,3 @@ export function registerJobHandlers(
     }
   });
 }
-

@@ -1,10 +1,10 @@
 /**
  * @fileoverview Printer Status Component
- * 
+ *
  * Display-only component showing current printer state, runtime information,
  * and cumulative filament usage statistics. Updates with polling data and
  * provides visual feedback for different printer states through CSS classes.
- * 
+ *
  * Key features:
  * - Current printer state display (Ready, Printing, Paused, etc.)
  * - Runtime tracking with formatted display
@@ -13,10 +13,10 @@
  * - No user interactions (display-only component)
  */
 
+import type { CumulativeStats, PrinterState } from '@shared/types/polling.js';
+import { formatLength } from '@shared/types/polling.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
-import type { PrinterState, CumulativeStats } from '@shared/types/polling.js';
-import { formatLength } from '@shared/types/polling.js';
 import './printer-status.css';
 
 /**
@@ -67,7 +67,7 @@ export class PrinterStatusComponent extends BaseComponent {
       if (printerStatus) {
         // Update printer state
         this.updatePrinterState(printerStatus.state);
-        
+
         // Update cumulative statistics
         this.updateCumulativeStats(printerStatus.cumulativeStats);
       } else {
@@ -78,7 +78,6 @@ export class PrinterStatusComponent extends BaseComponent {
 
       // Update component state tracking
       this.updateState(data);
-
     } catch (error) {
       console.error(`Error updating ${this.componentId}:`, error);
     }
@@ -92,17 +91,17 @@ export class PrinterStatusComponent extends BaseComponent {
     const statusElement = this.findElementById('printer-status-text');
     if (statusElement) {
       statusElement.textContent = state;
-      
+
       // Remove all state classes
       if (this.container) {
         this.container.classList.remove(
           'printer-state-ready',
-          'printer-state-printing', 
+          'printer-state-printing',
           'printer-state-paused',
           'printer-state-error',
           'printer-state-completed'
         );
-        
+
         // Add current state class
         const stateClass = `printer-state-${state.toLowerCase()}`;
         this.container.classList.add(stateClass);

@@ -25,43 +25,36 @@
  * enabling multi-printer connections while maintaining proper state isolation.
  */
 
-import { EventEmitter } from 'events';
 import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
-
+import {
+  ConnectionOptions,
+  ConnectionResult,
+  DiscoveredPrinter,
+  PrinterConnectionState,
+  PrinterDetails,
+} from '@shared/types/printer.js';
+import { applyPerPrinterDefaults, hasMissingDefaults } from '@shared/utils/printerSettingsDefaults.js';
+import { EventEmitter } from 'events';
+import { getAutoConnectService } from '../services/AutoConnectService.js';
+import { getConnectionEstablishmentService } from '../services/ConnectionEstablishmentService.js';
+import { getConnectionStateManager } from '../services/ConnectionStateManager.js';
+import { getDialogIntegrationService } from '../services/DialogIntegrationService.js';
+import { getPrinterDiscoveryService } from '../services/PrinterDiscoveryService.js';
+import { getSavedPrinterService } from '../services/SavedPrinterService.js';
+import { getThumbnailRequestQueue } from '../services/ThumbnailRequestQueue.js';
+import {
+  detectPrinterFamily,
+  detectPrinterModelType,
+  determineClientType,
+  formatPrinterName,
+  getConnectionErrorMessage,
+  getDefaultCheckCode,
+  shouldPromptForCheckCode,
+} from '../utils/PrinterUtils.js';
 import { getConfigManager } from './ConfigManager.js';
 import { getLoadingManager } from './LoadingManager.js';
 import { getPrinterBackendManager } from './PrinterBackendManager.js';
 import { getPrinterContextManager } from './PrinterContextManager.js';
-import { getPrinterDiscoveryService } from '../services/PrinterDiscoveryService.js';
-import { getThumbnailRequestQueue } from '../services/ThumbnailRequestQueue.js';
-import { getSavedPrinterService } from '../services/SavedPrinterService.js';
-import { getAutoConnectService } from '../services/AutoConnectService.js';
-import { getConnectionStateManager } from '../services/ConnectionStateManager.js';
-import { getDialogIntegrationService } from '../services/DialogIntegrationService.js';
-import { getConnectionEstablishmentService } from '../services/ConnectionEstablishmentService.js';
-
-import {
-  PrinterDetails,
-  DiscoveredPrinter,
-  ConnectionResult,
-  PrinterConnectionState,
-  ConnectionOptions
-} from '@shared/types/printer.js';
-
-import {
-  detectPrinterFamily,
-  determineClientType,
-  formatPrinterName,
-  getConnectionErrorMessage,
-  shouldPromptForCheckCode,
-  getDefaultCheckCode,
-  detectPrinterModelType
-} from '../utils/PrinterUtils.js';
-
-import {
-  applyPerPrinterDefaults,
-  hasMissingDefaults
-} from '@shared/utils/printerSettingsDefaults.js';
 
 // Input dialog options interface (matching preload.ts)
 interface InputDialogOptions {
@@ -116,7 +109,7 @@ export class ConnectionFlowManager extends EventEmitter {
     this.configManager.on('config:ForceLegacyAPI', (newValue: boolean) => {
       this.emit('force-legacy-changed', newValue);
     });
-    
+
     // Forward backend manager events
     this.forwardEvents(this.backendManager, [
       'backend-initialized',
@@ -124,16 +117,16 @@ export class ConnectionFlowManager extends EventEmitter {
       'backend-disposed',
       'backend-error',
       'feature-updated',
-      'loading-state-changed'
+      'loading-state-changed',
     ]);
-    
+
     // Initialize thumbnail queue when backend is ready
     this.backendManager.on('backend-initialized', () => {
       const thumbnailQueue = getThumbnailRequestQueue();
       thumbnailQueue.initialize(this.backendManager);
       console.log('ThumbnailRequestQueue initialized with backend manager');
     });
-    
+
     // Reset thumbnail queue when backend is disposed
     this.backendManager.on('backend-disposed', () => {
       const thumbnailQueue = getThumbnailRequestQueue();
@@ -142,11 +135,7 @@ export class ConnectionFlowManager extends EventEmitter {
     });
 
     // Forward discovery service events
-    this.forwardEvents(this.discoveryService, [
-      'discovery-started',
-      'discovery-completed',
-      'discovery-failed'
-    ]);
+    this.forwardEvents(this.discoveryService, ['discovery-started', 'discovery-completed', 'discovery-failed']);
 
     // Forward connection state events
     this.connectionStateManager.on('state-changed', (data) => {
@@ -156,7 +145,7 @@ export class ConnectionFlowManager extends EventEmitter {
 
   /** Helper to forward events from a service */
   private forwardEvents(service: EventEmitter, events: string[]): void {
-    events.forEach(event => {
+    events.forEach((event) => {
       service.on(event, (...args) => {
         this.emit(event, ...args);
       });
@@ -180,7 +169,7 @@ export class ConnectionFlowManager extends EventEmitter {
     const flowState: ConnectionFlowState = {
       flowId,
       contextId,
-      startTime: new Date()
+      startTime: new Date(),
     };
     this.activeFlows.set(flowId, flowState);
     return flowId;
@@ -218,7 +207,7 @@ export class ConnectionFlowManager extends EventEmitter {
         ipAddress: undefined,
         clientType: undefined,
         isPrinting: false,
-        lastConnected: new Date()
+        lastConnected: new Date(),
       };
     }
     return this.connectionStateManager.getState(activeContextId);
@@ -230,14 +219,12 @@ export class ConnectionFlowManager extends EventEmitter {
       // Check if already connected and warn user
       if (this.isConnected() && options.checkForActiveConnection !== false) {
         const activeContextId = this.contextManager.getActiveContextId();
-        const currentDetails = activeContextId
-          ? this.connectionStateManager.getCurrentDetails(activeContextId)
-          : null;
+        const currentDetails = activeContextId ? this.connectionStateManager.getCurrentDetails(activeContextId) : null;
         const shouldContinue = await this.dialogService.confirmDisconnectForScan(currentDetails?.Name);
         if (!shouldContinue) {
           return { success: false, error: 'User cancelled - connection in progress' };
         }
-        
+
         this.loadingManager.show({ message: 'Disconnecting current printer...', canCancel: false });
         await this.disconnect();
       }
@@ -252,23 +239,20 @@ export class ConnectionFlowManager extends EventEmitter {
       if (discoveredPrinters.length === 0) {
         // Check if we have saved printers for enhanced fallback
         const savedPrinterCount = this.savedPrinterService.getSavedPrinterCount();
-        
+
         if (savedPrinterCount > 0) {
           // Hide discovery loading and show enhanced choice dialog
           this.loadingManager.hide();
           console.log('No printers discovered - showing enhanced fallback options');
-          
+
           // Use the same enhanced fallback as auto-connect
           const lastUsedPrinter = this.savedPrinterService.getLastUsedPrinter();
-          const userChoice = await this.dialogService.showAutoConnectChoiceDialog(
-            lastUsedPrinter,
-            savedPrinterCount
-          );
-          
+          const userChoice = await this.dialogService.showAutoConnectChoiceDialog(lastUsedPrinter, savedPrinterCount);
+
           if (!userChoice) {
             return { success: false, error: 'Connection cancelled by user' };
           }
-          
+
           // Handle user choice
           switch (userChoice) {
             case 'connect-last-used':
@@ -276,13 +260,13 @@ export class ConnectionFlowManager extends EventEmitter {
                 return await this.connectToOfflineSavedPrinter(lastUsedPrinter.SerialNumber);
               }
               return { success: false, error: 'No last used printer available' };
-              
+
             case 'show-saved-printers':
               return await this.showSavedPrintersForSelection();
-              
+
             case 'manual-ip':
               return await this.offerManualIPEntry();
-              
+
             default:
               return { success: false, error: 'Unknown choice' };
           }
@@ -305,7 +289,6 @@ export class ConnectionFlowManager extends EventEmitter {
 
       // Connect to selected printer
       return await this.connectToPrinter(selectedPrinter);
-
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
       this.loadingManager.showError(`Connection failed: ${errorMessage}`, 5000);
@@ -329,7 +312,7 @@ export class ConnectionFlowManager extends EventEmitter {
     }
 
     const savedPrinterCount = this.savedPrinterService.getSavedPrinterCount();
-    
+
     // No saved printers - skip auto-connect
     if (savedPrinterCount === 0) {
       console.log('No saved printers found - skipping auto-connect');
@@ -342,33 +325,33 @@ export class ConnectionFlowManager extends EventEmitter {
     try {
       // Run discovery to find all printers
       const discoveredPrinters = await this.discoveryService.scanNetwork();
-      
+
       // Find matches using saved printer service
       const matches = this.savedPrinterService.findMatchingPrinters(discoveredPrinters);
-      
+
       // If no matches found but we have saved printers, show auto-connect choice dialog
       if (matches.length === 0) {
         console.log('No saved printers found on network - showing auto-connect choice dialog');
         const lastUsedPrinter = this.savedPrinterService.getLastUsedPrinter();
         const savedPrinterCount = this.savedPrinterService.getSavedPrinterCount();
-        
+
         this.loadingManager.hide();
-        
+
         // Show auto-connect choice dialog
-        const userChoice = await this.dialogService.showAutoConnectChoiceDialog(
-          lastUsedPrinter,
-          savedPrinterCount
-        );
-        
+        const userChoice = await this.dialogService.showAutoConnectChoiceDialog(lastUsedPrinter, savedPrinterCount);
+
         if (!userChoice) {
           return { success: false, error: 'Auto-connect cancelled by user' };
         }
-        
+
         // Handle user choice
         switch (userChoice) {
           case 'connect-last-used':
             if (lastUsedPrinter) {
-              this.loadingManager.show({ message: `Attempting direct connection to ${lastUsedPrinter.Name}...`, canCancel: false });
+              this.loadingManager.show({
+                message: `Attempting direct connection to ${lastUsedPrinter.Name}...`,
+                canCancel: false,
+              });
               try {
                 const result = await this.connectWithSavedDetails(lastUsedPrinter);
                 if (result.success) {
@@ -376,7 +359,10 @@ export class ConnectionFlowManager extends EventEmitter {
                   return result;
                 }
                 console.log(`Direct connection to ${lastUsedPrinter.Name} failed: ${result.error}`);
-                this.loadingManager.showError(`Direct connection to ${lastUsedPrinter.Name} failed: ${result.error}`, 4000);
+                this.loadingManager.showError(
+                  `Direct connection to ${lastUsedPrinter.Name} failed: ${result.error}`,
+                  4000
+                );
                 return result;
               } catch (error) {
                 const errorMessage = `Direct connection to ${lastUsedPrinter.Name} failed: ${error}`;
@@ -386,56 +372,55 @@ export class ConnectionFlowManager extends EventEmitter {
               }
             }
             return { success: false, error: 'No last used printer available' };
-            
+
           case 'show-saved-printers': {
             // Create mock matches for all saved printers (they're offline)
             const allSavedPrinters = this.savedPrinterService.getSavedPrinters();
-            const savedMatches = allSavedPrinters.map((savedPrinter: import('../types/printer.js').StoredPrinterDetails) => ({
-              savedDetails: savedPrinter,
-              discoveredPrinter: null, // Not discovered online
-              ipAddressChanged: false
-            }));
-            
-            return await this.dialogService.showSavedPrinterSelectionDialog(
-              savedMatches,
-              (serialNumber) => this.connectToOfflineSavedPrinter(serialNumber)
+            const savedMatches = allSavedPrinters.map(
+              (savedPrinter: import('../types/printer.js').StoredPrinterDetails) => ({
+                savedDetails: savedPrinter,
+                discoveredPrinter: null, // Not discovered online
+                ipAddressChanged: false,
+              })
+            );
+
+            return await this.dialogService.showSavedPrinterSelectionDialog(savedMatches, (serialNumber) =>
+              this.connectToOfflineSavedPrinter(serialNumber)
             );
           }
-            
+
           case 'manual-ip':
             return await this.offerManualIPEntry();
-            
+
           case 'cancel':
           default:
             return { success: false, error: 'Auto-connect cancelled by user' };
         }
       }
-      
+
       // Determine auto-connect action for matched printers
       const choice = this.autoConnectService.determineAutoConnectChoice(matches);
-      
+
       switch (choice.action) {
         case 'none':
           this.loadingManager.showError(choice.reason || 'No saved printers found on network', 4000);
           return { success: false, error: choice.reason };
-          
+
         case 'connect':
           if (choice.selectedMatch) {
             return await this.autoConnectToMatch(choice.selectedMatch);
           }
           return { success: false, error: 'No match selected' };
-          
+
         case 'select':
           this.loadingManager.hide();
-          return await this.dialogService.showSavedPrinterSelectionDialog(
-            choice.matches || [],
-            (serialNumber) => this.connectToSelectedSavedPrinter(serialNumber)
+          return await this.dialogService.showSavedPrinterSelectionDialog(choice.matches || [], (serialNumber) =>
+            this.connectToSelectedSavedPrinter(serialNumber)
           );
-          
+
         default:
           return { success: false, error: 'Unknown auto-connect action' };
       }
-
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
       this.loadingManager.showError(`Auto-connect failed: ${errorMessage}`, 4000);
@@ -470,7 +455,7 @@ export class ConnectionFlowManager extends EventEmitter {
 
       // Stop polling first
       this.emit('pre-disconnect', contextId);
-      await new Promise(resolve => setTimeout(resolve, 100));
+      await new Promise((resolve) => setTimeout(resolve, 100));
 
       // Get clients for disposal from connection state
       const primaryClient = this.connectionStateManager.getPrimaryClient(contextId);
@@ -480,11 +465,7 @@ export class ConnectionFlowManager extends EventEmitter {
       await this.backendManager.disposeContext(contextId);
 
       // Dispose clients through connection service (handles logout)
-      await this.connectionService.disposeClients(
-        primaryClient,
-        secondaryClient,
-        currentDetails?.ClientType
-      );
+      await this.connectionService.disposeClients(primaryClient, secondaryClient, currentDetails?.ClientType);
 
       // Update connection state
       this.connectionStateManager.setDisconnected(contextId);
@@ -494,7 +475,6 @@ export class ConnectionFlowManager extends EventEmitter {
 
       // Emit disconnected event
       this.emit('disconnected', currentDetails?.Name);
-
     } catch (error) {
       console.error(`Error during disconnect for context ${contextId}:`, error);
     }
@@ -503,31 +483,32 @@ export class ConnectionFlowManager extends EventEmitter {
   /** Auto-connect to a matched saved printer */
   private async autoConnectToMatch(match: import('../types/printer.js').SavedPrinterMatch): Promise<ConnectionResult> {
     const { savedDetails, discoveredPrinter, ipAddressChanged } = match;
-    
+
     // If discoveredPrinter is null, this printer is offline
     if (!discoveredPrinter) {
       return { success: false, error: `${savedDetails.Name} is not available on the network` };
     }
-    
+
     this.loadingManager.updateMessage(`Found ${savedDetails.Name}, connecting...`);
     this.emit('auto-connect-matched', savedDetails.Name);
 
     try {
       if (ipAddressChanged) {
-        console.log(`IP address changed for ${savedDetails.Name}: ${savedDetails.IPAddress} -> ${discoveredPrinter.ipAddress}`);
+        console.log(
+          `IP address changed for ${savedDetails.Name}: ${savedDetails.IPAddress} -> ${discoveredPrinter.ipAddress}`
+        );
       }
 
       const result = await this.connectToPrinter(discoveredPrinter);
-      
+
       if (result.success) {
         await this.savedPrinterService.updateLastConnected(savedDetails.SerialNumber);
         this.emit('auto-connect-succeeded', savedDetails.Name);
       } else {
         this.emit('auto-connect-failed', result.error || 'Unknown error');
       }
-      
-      return result;
 
+      return result;
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
       this.loadingManager.showError(`Auto-connect failed: ${errorMessage}`, 4000);
@@ -561,72 +542,73 @@ export class ConnectionFlowManager extends EventEmitter {
       this.emit('printer-type-detected', {
         typeName: tempResult.typeName,
         familyInfo,
-        clientType
+        clientType,
       });
 
       // Extract printer name early for better user experience in dialogs
-      const realPrinterName = tempResult.printerInfo?.Name && typeof tempResult.printerInfo.Name === 'string' 
-        ? tempResult.printerInfo.Name 
-        : discoveredPrinter.name;
+      const realPrinterName =
+        tempResult.printerInfo?.Name && typeof tempResult.printerInfo.Name === 'string'
+          ? tempResult.printerInfo.Name
+          : discoveredPrinter.name;
 
       // Step 3: Handle check code requirements
       let checkCode = getDefaultCheckCode();
-      
+
       // Check if this printer has a saved check code
       const savedCheckCode = this.savedPrinterService.getSavedCheckCode(discoveredPrinter.serialNumber);
-      
+
       if (savedCheckCode) {
         console.log('Using saved check code for known printer:', realPrinterName);
         checkCode = savedCheckCode;
       } else if (shouldPromptForCheckCode(familyInfo.is5MFamily, undefined, ForceLegacyAPI)) {
         this.loadingManager.hide();
-        
+
         const promptedCheckCode = await this.promptForCheckCode(realPrinterName);
         if (!promptedCheckCode) {
           this.loadingManager.showError('Printer pairing cancelled', 2000);
           return { success: false, error: 'Connection cancelled by user' };
         }
         checkCode = promptedCheckCode;
-        
+
         this.loadingManager.show({ message: 'Establishing connection with pairing code...', canCancel: false });
       }
 
       // Step 4: Extract and validate printer information
       this.loadingManager.updateMessage('Processing printer details...');
       const modelType = detectPrinterModelType(tempResult.typeName);
-      
+
       // Extract serial number from temporary connection if not already present
       let serialNumber = discoveredPrinter.serialNumber;
       if (!serialNumber && tempResult.printerInfo?.SerialNumber) {
         serialNumber = tempResult.printerInfo.SerialNumber as string;
         console.log('Extracted serial number from temporary connection:', serialNumber);
       }
-      
+
       // Use the real printer name we extracted earlier
       const printerName = realPrinterName;
       if (printerName !== discoveredPrinter.name) {
         console.log('Using real printer name from temporary connection:', printerName);
       }
-      
+
       // Fallback for serial number if still missing
       if (!serialNumber || serialNumber.trim() === '') {
         console.warn('No serial number available, generating fallback');
         serialNumber = `Unknown-${Date.now()}`;
       }
-      
+
       // Update the discoveredPrinter object with the correct information for connection establishment
       const updatedDiscoveredPrinter: DiscoveredPrinter = {
         ...discoveredPrinter,
         name: printerName,
-        serialNumber: serialNumber
+        serialNumber: serialNumber,
       };
-      
+
       console.log('Final printer details for connection:', {
         originalName: discoveredPrinter.name,
         finalName: printerName,
         originalSerial: discoveredPrinter.serialNumber,
         finalSerial: serialNumber,
-        ipAddress: discoveredPrinter.ipAddress
+        ipAddress: discoveredPrinter.ipAddress,
       });
 
       // Step 5: Establish final connection using updated printer information
@@ -649,7 +631,12 @@ export class ConnectionFlowManager extends EventEmitter {
 
       // Check if printer already exists to preserve per-printer settings
       const existingPrinter = this.savedPrinterService.getSavedPrinter(serialNumber);
-      console.log('[ConnectionFlow] Existing printer check for', serialNumber, ':', existingPrinter ? 'found' : 'not found');
+      console.log(
+        '[ConnectionFlow] Existing printer check for',
+        serialNumber,
+        ':',
+        existingPrinter ? 'found' : 'not found'
+      );
 
       // Spread existing settings first, then override with current connection details
       // This preserves all per-printer settings (camera, RTSP, LEDs, FPS overlay, etc.)
@@ -664,7 +651,7 @@ export class ConnectionFlowManager extends EventEmitter {
         CheckCode: checkCode,
         ClientType: ForceLegacyAPI ? 'legacy' : clientType,
         printerModel: tempResult.typeName,
-        modelType
+        modelType,
       });
 
       console.log('[ConnectionFlow] Final printer details to save:', printerDetails);
@@ -692,7 +679,7 @@ export class ConnectionFlowManager extends EventEmitter {
       await this.backendManager.initializeBackend(contextId, {
         printerDetails,
         primaryClient: connectionResult.primaryClient,
-        secondaryClient: connectionResult.secondaryClient
+        secondaryClient: connectionResult.secondaryClient,
       });
 
       // Step 10: Switch to the new context
@@ -708,9 +695,8 @@ export class ConnectionFlowManager extends EventEmitter {
       return {
         success: true,
         printerDetails,
-        clientInstance: connectionResult.primaryClient
+        clientInstance: connectionResult.primaryClient,
       };
-
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
       this.loadingManager.showError(`Connection failed: ${errorMessage}`, 5000);
@@ -728,11 +714,9 @@ export class ConnectionFlowManager extends EventEmitter {
     try {
       this.loadingManager.show({ message: 'Locating printer on network...', canCancel: false });
       const discoveredPrinters = await this.discoveryService.scanNetwork();
-      
-      const discoveredPrinter = discoveredPrinters.find(
-        p => p.serialNumber === selectedSerial
-      );
-      
+
+      const discoveredPrinter = discoveredPrinters.find((p) => p.serialNumber === selectedSerial);
+
       if (!discoveredPrinter) {
         const savedPrinter = this.savedPrinterService.getSavedPrinter(selectedSerial);
         if (savedPrinter) {
@@ -740,9 +724,8 @@ export class ConnectionFlowManager extends EventEmitter {
         }
         return { success: false, error: 'Selected printer not found on network' };
       }
-      
+
       return await this.connectToPrinter(discoveredPrinter);
-      
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
       this.loadingManager.showError(`Connection failed: ${errorMessage}`, 4000);
@@ -758,17 +741,19 @@ export class ConnectionFlowManager extends EventEmitter {
         return { success: false, error: 'Saved printer not found' };
       }
 
-      this.loadingManager.show({ message: `Connecting to ${savedPrinter.Name} at ${savedPrinter.IPAddress}...`, canCancel: false });
-      
+      this.loadingManager.show({
+        message: `Connecting to ${savedPrinter.Name} at ${savedPrinter.IPAddress}...`,
+        canCancel: false,
+      });
+
       // Try to connect using saved details
       const result = await this.connectWithSavedDetails(savedPrinter);
-      
+
       if (result.success) {
         await this.savedPrinterService.updateLastConnected(selectedSerial);
       }
-      
+
       return result;
-      
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
       this.loadingManager.showError(`Connection failed: ${errorMessage}`, 4000);
@@ -788,7 +773,7 @@ export class ConnectionFlowManager extends EventEmitter {
         message: 'No printers found on network. Enter printer IP address manually:',
         defaultValue: '',
         inputType: 'text',
-        placeholder: 'e.g., 192.168.1.100'
+        placeholder: 'e.g., 192.168.1.100',
       });
 
       if (!ipAddress) {
@@ -804,7 +789,6 @@ export class ConnectionFlowManager extends EventEmitter {
       }
 
       return await this.connectDirectlyToIP(validation.data);
-      
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
       this.loadingManager.showError(`Manual connection failed: ${errorMessage}`, 4000);
@@ -816,24 +800,23 @@ export class ConnectionFlowManager extends EventEmitter {
   public async connectDirectlyToIP(ipAddress: string): Promise<ConnectionResult> {
     try {
       this.loadingManager.show({ message: `Connecting to printer at ${ipAddress}...`, canCancel: false });
-      
+
       // Create a mock discovered printer for the connection process
       // The actual name and serial will be determined during temporary connection
       const mockDiscoveredPrinter: DiscoveredPrinter = {
         name: `Printer at ${ipAddress}`, // Temporary name, will be updated
         ipAddress: ipAddress,
         serialNumber: '', // Will be determined during connection
-        model: undefined // Will be determined during connection
+        model: undefined, // Will be determined during connection
       };
 
       console.log('Starting direct IP connection to:', ipAddress);
-      
+
       // Use the standard connection flow which will:
       // 1. Create temporary connection to get printer info
       // 2. Extract proper name and serial number
       // 3. Establish final connection with correct details
       return await this.connectToPrinter(mockDiscoveredPrinter);
-      
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
       console.error('Direct IP connection failed:', error);
@@ -850,12 +833,11 @@ export class ConnectionFlowManager extends EventEmitter {
       const savedMatches = allSavedPrinters.map((savedPrinter: import('../types/printer.js').StoredPrinterDetails) => ({
         savedDetails: savedPrinter,
         discoveredPrinter: null, // Not discovered online
-        ipAddressChanged: false
+        ipAddressChanged: false,
       }));
-      
-      return await this.dialogService.showSavedPrinterSelectionDialog(
-        savedMatches,
-        (serialNumber) => this.connectToOfflineSavedPrinter(serialNumber)
+
+      return await this.dialogService.showSavedPrinterSelectionDialog(savedMatches, (serialNumber) =>
+        this.connectToOfflineSavedPrinter(serialNumber)
       );
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
@@ -887,7 +869,7 @@ export class ConnectionFlowManager extends EventEmitter {
         name: detailsWithDefaults.Name,
         ipAddress: detailsWithDefaults.IPAddress,
         serialNumber: detailsWithDefaults.SerialNumber,
-        model: detailsWithDefaults.printerModel
+        model: detailsWithDefaults.printerModel,
       };
 
       // Establish connection
@@ -920,7 +902,7 @@ export class ConnectionFlowManager extends EventEmitter {
       await this.backendManager.initializeBackend(contextId, {
         printerDetails: detailsWithDefaults,
         primaryClient: connectionResult.primaryClient,
-        secondaryClient: connectionResult.secondaryClient
+        secondaryClient: connectionResult.secondaryClient,
       });
 
       // Switch to the new context
@@ -935,9 +917,8 @@ export class ConnectionFlowManager extends EventEmitter {
       return {
         success: true,
         printerDetails: detailsWithDefaults,
-        clientInstance: connectionResult.primaryClient
+        clientInstance: connectionResult.primaryClient,
       };
-
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
       this.emit('auto-connect-failed', errorMessage);
@@ -962,7 +943,7 @@ export class ConnectionFlowManager extends EventEmitter {
         message: `Please enter the pairing code (check code) for ${printerName}:`,
         defaultValue: '',
         inputType: 'text',
-        placeholder: 'Enter check code...'
+        placeholder: 'Enter check code...',
       });
 
       return checkCode;
@@ -1003,12 +984,12 @@ export class ConnectionFlowManager extends EventEmitter {
     }
     return this.connectionStateManager.getCurrentDetails(activeContextId);
   }
-  
+
   /** Get backend manager instance */
   public getBackendManager() {
     return this.backendManager;
   }
-  
+
   /** Check if backend is ready */
   public isBackendReady(): boolean {
     const activeContextId = this.contextManager.getActiveContextId();
@@ -1059,9 +1040,7 @@ export class ConnectionFlowManager extends EventEmitter {
           console.log(`[Headless] Attempting to connect to ${savedPrinter.Name} (${savedPrinter.SerialNumber})`);
 
           // Find matching discovered printer by serial number
-          const discoveredMatch = discoveredPrinters.find(
-            (dp) => dp.serialNumber === savedPrinter.SerialNumber
-          );
+          const discoveredMatch = discoveredPrinters.find((dp) => dp.serialNumber === savedPrinter.SerialNumber);
 
           let updatedPrinterDetails = savedPrinter;
 
@@ -1072,7 +1051,7 @@ export class ConnectionFlowManager extends EventEmitter {
             );
             updatedPrinterDetails = {
               ...savedPrinter,
-              IPAddress: discoveredMatch.ipAddress
+              IPAddress: discoveredMatch.ipAddress,
             };
             // Save updated IP
             await this.savedPrinterService.savePrinter(updatedPrinterDetails);
@@ -1090,7 +1069,7 @@ export class ConnectionFlowManager extends EventEmitter {
             if (contextId) {
               connectedContexts.push({
                 contextId,
-                printer: result.printerDetails
+                printer: result.printerDetails,
               });
               console.log(`[Headless] Successfully connected to ${result.printerDetails.Name}`);
             } else {
@@ -1135,7 +1114,7 @@ export class ConnectionFlowManager extends EventEmitter {
           name: `Printer at ${spec.ip}`,
           ipAddress: spec.ip,
           serialNumber: '', // Will be determined during connection
-          model: undefined
+          model: undefined,
         };
 
         // Determine if this is a 5M family printer
@@ -1173,7 +1152,7 @@ export class ConnectionFlowManager extends EventEmitter {
           name: printerName,
           ipAddress: spec.ip,
           serialNumber: serialNumber,
-          model: tempResult.typeName
+          model: tempResult.typeName,
         };
 
         // Establish final connection
@@ -1204,7 +1183,7 @@ export class ConnectionFlowManager extends EventEmitter {
           CheckCode: checkCode,
           ClientType: spec.type,
           printerModel: tempResult.typeName,
-          modelType
+          modelType,
         });
 
         await this.savedPrinterService.savePrinter(printerDetails);
@@ -1226,7 +1205,7 @@ export class ConnectionFlowManager extends EventEmitter {
         await this.backendManager.initializeBackend(contextId, {
           printerDetails,
           primaryClient: connectionResult.primaryClient,
-          secondaryClient: connectionResult.secondaryClient
+          secondaryClient: connectionResult.secondaryClient,
         });
 
         // Ensure this context becomes active so WebUI routes operate correctly
@@ -1253,8 +1232,6 @@ export class ConnectionFlowManager extends EventEmitter {
   }
 }
 
-
-
 // Export singleton instance
 let connectionFlowManager: ConnectionFlowManager | null = null;
 
@@ -1266,4 +1243,3 @@ export const getConnectionFlowManager = (): ConnectionFlowManager => {
 };
 
 export const getPrinterConnectionManager = getConnectionFlowManager;
-

@@ -149,4 +149,3 @@ export class HeadlessLogger {
     this.logInfo('Headless mode ready!');
   }
 }
-

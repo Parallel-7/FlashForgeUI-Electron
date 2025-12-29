@@ -18,11 +18,11 @@
  * All operations are context-aware and operate on the active printer context.
  */
 
-import { ipcMain } from 'electron';
 import { FiveMClient, FlashForgeClient } from '@ghosttypes/ff-api';
+import { ipcMain } from 'electron';
 import type { PrinterBackendManager } from '../../managers/PrinterBackendManager.js';
-import type { BasePrinterBackend } from '../../printer-backends/BasePrinterBackend.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
+import type { BasePrinterBackend } from '../../printer-backends/BasePrinterBackend.js';
 
 /**
  * Helper to get the legacy client (for G-code operations)
@@ -500,4 +500,3 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
     }
   });
 }
-

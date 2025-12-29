@@ -2,14 +2,14 @@
  * @fileoverview IPC handlers for theme-related operations.
  */
 
-import { ipcMain, BrowserWindow } from 'electron';
-import { getConfigManager } from '../../managers/ConfigManager.js';
 import type {
-  ThemeProfileAddData,
-  ThemeProfileUpdateData,
-  ThemeProfileDeleteData,
   ThemeColors,
+  ThemeProfileAddData,
+  ThemeProfileDeleteData,
+  ThemeProfileUpdateData,
 } from '@shared/types/config.js';
+import { BrowserWindow, ipcMain } from 'electron';
+import { getConfigManager } from '../../managers/ConfigManager.js';
 
 interface ThemeProfileOperationEvent {
   uiType: 'desktop' | 'web';
@@ -43,7 +43,7 @@ export function registerThemeHandlers(): void {
 
   // Broadcast theme changes to all open windows (main window + dialogs)
   ipcMain.on('theme-updated', (_event, theme: ThemeColors) => {
-    BrowserWindow.getAllWindows().forEach(window => {
+    BrowserWindow.getAllWindows().forEach((window) => {
       if (!window.isDestroyed()) {
         window.webContents.send('theme-changed', theme);
       }

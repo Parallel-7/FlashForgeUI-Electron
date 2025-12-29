@@ -33,8 +33,8 @@
  * @module types/notification
  */
 
-import type { PrinterState } from './polling.js';
 import type { AppConfig } from './config.js';
+import type { PrinterState } from './polling.js';
 
 // ============================================================================
 // BRANDED TYPES FOR TYPE SAFETY
@@ -77,7 +77,7 @@ export enum NotificationType {
   UploadComplete = 'UploadComplete',
   UploadFailed = 'UploadFailed',
   ConnectionLost = 'ConnectionLost',
-  ConnectionError = 'ConnectionError'
+  ConnectionError = 'ConnectionError',
 }
 
 /**
@@ -87,7 +87,7 @@ export enum NotificationPriority {
   Low = 'low',
   Normal = 'normal',
   High = 'high',
-  Critical = 'critical'
+  Critical = 'critical',
 }
 
 /**
@@ -194,7 +194,7 @@ export interface ConnectionErrorNotification extends BaseNotification {
 /**
  * Discriminated union of all notification types
  */
-export type Notification = 
+export type Notification =
   | PrintCompleteNotification
   | PrinterCooledNotification
   | UploadCompleteNotification
@@ -224,7 +224,7 @@ export function createInitialNotificationState(): NotificationState {
     hasSentPrintCompleteNotification: false,
     hasSentPrinterCooledNotification: false,
     lastPrintCompleteTime: null,
-    lastNotificationReset: new Date()
+    lastNotificationReset: new Date(),
   };
 }
 
@@ -236,7 +236,7 @@ export enum NotificationStateTransition {
   PrintCompleted = 'PrintCompleted',
   PrinterCooled = 'PrinterCooled',
   PrintCancelled = 'PrintCancelled',
-  ConnectionReset = 'ConnectionReset'
+  ConnectionReset = 'ConnectionReset',
 }
 
 // ============================================================================
@@ -261,17 +261,14 @@ export function extractNotificationSettings(config: AppConfig): NotificationSett
     AlertWhenComplete: config.AlertWhenComplete,
     AlertWhenCooled: config.AlertWhenCooled,
     AudioAlerts: config.AudioAlerts,
-    VisualAlerts: config.VisualAlerts
+    VisualAlerts: config.VisualAlerts,
   };
 }
 
 /**
  * Check if a notification type should be sent based on settings
  */
-export function shouldSendNotification(
-  type: NotificationType,
-  settings: NotificationSettings
-): boolean {
+export function shouldSendNotification(type: NotificationType, settings: NotificationSettings): boolean {
   switch (type) {
     case NotificationType.PrintComplete:
       return settings.AlertWhenComplete;
@@ -371,7 +368,7 @@ export function createPrintCompleteNotification(
     priority: NotificationPriority.Normal,
     timestamp: new Date(),
     id: createNotificationId(`print-complete-${Date.now()}`),
-    printInfo
+    printInfo,
   };
 }
 
@@ -388,7 +385,7 @@ export function createPrinterCooledNotification(
     priority: NotificationPriority.Low,
     timestamp: new Date(),
     id: createNotificationId(`printer-cooled-${Date.now()}`),
-    printInfo
+    printInfo,
   };
 }
 
@@ -405,7 +402,7 @@ export function createUploadCompleteNotification(
     priority: NotificationPriority.Normal,
     timestamp: new Date(),
     id: createNotificationId(`upload-complete-${Date.now()}`),
-    uploadInfo
+    uploadInfo,
   };
 }
 
@@ -422,7 +419,7 @@ export function createUploadFailedNotification(
     priority: NotificationPriority.High,
     timestamp: new Date(),
     id: createNotificationId(`upload-failed-${Date.now()}`),
-    errorInfo
+    errorInfo,
   };
 }
 
@@ -439,7 +436,7 @@ export function createConnectionLostNotification(
     priority: NotificationPriority.High,
     timestamp: new Date(),
     id: createNotificationId(`connection-lost-${Date.now()}`),
-    connectionInfo
+    connectionInfo,
   };
 }
 
@@ -456,7 +453,6 @@ export function createConnectionErrorNotification(
     priority: NotificationPriority.High,
     timestamp: new Date(),
     id: createNotificationId(`connection-error-${Date.now()}`),
-    errorInfo
+    errorInfo,
   };
 }
-

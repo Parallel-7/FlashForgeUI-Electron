@@ -17,11 +17,11 @@
  * @module ui/components/spoolman
  */
 
+import type { AppConfig } from '@shared/types/config.js';
+import { initializeUniversalLucideIcons } from '../../../renderer/utils/icons.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
 import type { ActiveSpoolData } from './types.js';
-import type { AppConfig } from '@shared/types/config.js';
-import { initializeUniversalLucideIcons } from '../../../renderer/utils/icons.js';
 import './spoolman.css';
 
 /**
@@ -111,7 +111,10 @@ export class SpoolmanComponent extends BaseComponent {
     this.setupIPCListeners();
 
     // Initialize Lucide icons for this component and the dialog
-    initializeUniversalLucideIcons(['package', 'settings', 'x', 'search', 'alert-triangle'], this.container ?? document);
+    initializeUniversalLucideIcons(
+      ['package', 'settings', 'x', 'search', 'alert-triangle'],
+      this.container ?? document
+    );
 
     // Load initial state from localStorage
     await this.refreshAvailability();

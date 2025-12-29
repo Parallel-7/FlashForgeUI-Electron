@@ -4,8 +4,8 @@
 
 // src/ui/settings/sections/SpoolmanTestSection.ts
 
-import type { SettingsSection } from './SettingsSection.js';
 import type { ISettingsAPI } from '@shared/types/external.js';
+import type { SettingsSection } from './SettingsSection.js';
 
 interface SpoolmanTestSectionOptions {
   readonly settingsAPI?: ISettingsAPI;
@@ -91,8 +91,10 @@ export class SpoolmanTestSection implements SettingsSection {
 
     this.resultElement.textContent = message;
     this.resultElement.style.color =
-      type === 'success' ? 'var(--success-color, #4ade80)' :
-      type === 'error' ? 'var(--error-color, #f87171)' :
-      'var(--info-color, #60a5fa)';
+      type === 'success'
+        ? 'var(--success-color, #4ade80)'
+        : type === 'error'
+          ? 'var(--error-color, #f87171)'
+          : 'var(--info-color, #60a5fa)';
   }
 }
