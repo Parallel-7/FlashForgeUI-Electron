@@ -3,11 +3,10 @@
  */
 
 import { BrowserWindow } from 'electron';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { isHeadlessMode } from '../../utils/HeadlessDetection.js';
 import {
   createModalWindow,
+  createUIPreloadPath,
   loadWindowHTML,
   setupDevTools,
   setupWindowLifecycle,
@@ -15,15 +14,12 @@ import {
 } from '../shared/WindowConfig.js';
 import type { WindowDimensions } from '../shared/WindowTypes.js';
 import {
-  createPreloadPath,
   createWindowHeight,
   createWindowMinHeight,
   createWindowMinWidth,
   createWindowWidth,
 } from '../shared/WindowTypes.js';
 import { getWindowManager } from '../WindowManager.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let offlineDialogWindow: BrowserWindow | null = null;
 
@@ -58,7 +54,7 @@ export const showSpoolmanOfflineDialog = (message?: string | null): void => {
   offlineDialogWindow = createModalWindow(
     parentWindow,
     DIALOG_SIZE,
-    createPreloadPath(path.join(__dirname, '../../ui/spoolman-offline-dialog/spoolman-offline-dialog-preload.cjs')),
+    createUIPreloadPath('spoolman-offline-dialog'),
     { resizable: false, frame: false }
   );
 

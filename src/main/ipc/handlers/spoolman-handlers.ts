@@ -21,8 +21,6 @@
 
 import type { ActiveSpoolData, SpoolSearchQuery } from '@shared/types/spoolman.js';
 import { BrowserWindow, ipcMain } from 'electron';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { getConfigManager } from '../../managers/ConfigManager.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 import { getSpoolmanHealthMonitor } from '../../services/SpoolmanHealthMonitor.js';
@@ -30,6 +28,7 @@ import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegratio
 import { SpoolmanService } from '../../services/SpoolmanService.js';
 import {
   createModalWindow,
+  createUIPreloadPath,
   loadWindowHTML,
   setupDevTools,
   setupWindowLifecycle,
@@ -37,14 +36,11 @@ import {
 } from '../../windows/shared/WindowConfig.js';
 import type { WindowDimensions } from '../../windows/shared/WindowTypes.js';
 import {
-  createPreloadPath,
   createWindowHeight,
   createWindowMinHeight,
   createWindowMinWidth,
   createWindowWidth,
 } from '../../windows/shared/WindowTypes.js';
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 let spoolmanDialogWindow: BrowserWindow | null = null;
 
@@ -78,7 +74,7 @@ export function registerSpoolmanHandlers(): void {
     spoolmanDialogWindow = createModalWindow(
       parentWindow,
       SPOOLMAN_DIALOG_SIZE,
-      createPreloadPath(path.join(__dirname, '../../ui/spoolman-dialog/spoolman-dialog-preload.cjs')),
+      createUIPreloadPath('spoolman-dialog'),
       { resizable: false, frame: false }
     );
 
