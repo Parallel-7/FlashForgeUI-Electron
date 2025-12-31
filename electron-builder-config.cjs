@@ -1,3 +1,40 @@
+/**
+ * Electron Builder Configuration
+ * 
+ * Auto-Update Channel Detection:
+ * Extracts the prerelease channel from package.json version to generate
+ * the correct update manifest files (e.g., alpha.yml for alpha releases,
+ * latest.yml for stable releases). This ensures electron-updater properly
+ * separates update channels and prevents alpha users from seeing stable updates.
+ */
+
+const packageJson = require('./package.json');
+
+/**
+ * Parse prerelease channel from version string.
+ * Examples:
+ *   "1.0.3"         → null (stable, uses "latest")
+ *   "1.0.3-alpha.2" → "alpha"
+ *   "1.0.3-beta.1"  → "beta"
+ *   "1.0.3-rc.1"    → "rc"
+ */
+function getUpdateChannel(version) {
+    // Match prerelease pattern: major.minor.patch-channel.number
+    const prereleaseMatch = version.match(/-([a-zA-Z]+)/);
+    if (prereleaseMatch) {
+        return prereleaseMatch[1].toLowerCase();
+    }
+    return null; // Stable release uses default "latest" channel
+}
+
+const version = packageJson.version;
+const channel = getUpdateChannel(version);
+const isPrerelease = channel !== null;
+
+// Log for build debugging
+console.log(`[electron-builder] Version: ${version}`);
+console.log(`[electron-builder] Channel: ${channel || 'latest'} (prerelease: ${isPrerelease})`);
+
 module.exports = {
     appId: "com.ghosttypes.flashforgeui",
     productName: "FlashForgeUI",
@@ -59,11 +96,18 @@ module.exports = {
         "!**/*.spec.*"
     ],
 
+    // Publish configuration with dynamic channel
+    // - Stable releases (1.0.3): generates latest.yml, latest-mac.yml, latest-linux.yml
+    // - Alpha releases (1.0.3-alpha.2): generates alpha.yml, alpha-mac.yml, alpha-linux.yml
+    // This allows electron-updater to correctly separate update channels
     publish: [
         {
             provider: "github",
             owner: "Parallel-7",
             repo: "FlashForgeUI-Electron",
+            // Channel determines the yml filename (alpha.yml vs latest.yml)
+            // null/undefined uses default "latest" channel
+            ...(channel && { channel: channel }),
         }
     ],
 
