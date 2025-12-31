@@ -332,7 +332,7 @@ class AutoUpdateService extends EventEmitter {
       autoUpdater.allowDowngrade = true;
       log.info('[AutoUpdate] Channel set to alpha (pre-releases enabled).');
     } else {
-      autoUpdater.channel = null;
+      autoUpdater.channel = 'latest';
       autoUpdater.allowPrerelease = false;
       autoUpdater.allowDowngrade = false;
       log.info('[AutoUpdate] Channel set to stable (pre-releases disabled).');

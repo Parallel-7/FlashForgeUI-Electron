@@ -82,6 +82,14 @@ For detailed architectural information, see the comprehensive reference document
 
 8. **Per-printer settings access**: `PrinterDetailsManager` does NOT have a `getSettings()` method. Per-printer settings (like `showCameraFps`, `customCameraUrl`, `rtspFrameRate`, etc.) are stored directly on `PrinterDetails`. Access them via `context.printerDetails.showCameraFps` rather than inventing manager methods. See `src/shared/types/printer.ts` for the full `PrinterDetails` interface.
 
+9. **Release versioning**: Semver treats stable versions as newer than prereleases with the same base (`1.0.3 > 1.0.3-alpha.X`). After releasing a stable version, the next alpha MUST bump the version number. Correct flow:
+   ```
+   1.0.3-alpha.1 → 1.0.3-alpha.2 → 1.0.3 (stable)
+                                      ↓
+   1.0.4-alpha.1 → 1.0.4-alpha.2 → 1.0.4 (stable)
+   ```
+   Never continue `X.Y.Z-alpha.N` after releasing `X.Y.Z` stable—electron-updater will look for `alpha.yml` in the stable release (which doesn't have it) and 404.
+
 ---
 
 ## Key File Locations
