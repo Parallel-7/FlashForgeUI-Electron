@@ -21,6 +21,8 @@
 import { ipcMain } from 'electron';
 import { getPrinterConnectionManager } from '../managers/ConnectionFlowManager.js';
 import { getLoadingManager } from '../managers/LoadingManager.js';
+import { createPrinterConnectedWarningDialog } from '../windows/factories/DialogWindowFactory.js';
+import { createConnectChoiceDialog, createInputDialog } from '../windows/WindowFactory.js';
 import { getWindowManager } from '../windows/WindowManager.js';
 
 /**
@@ -32,7 +34,6 @@ export const setupDialogHandlers = (): void => {
 
   // Set up connection manager with input dialog handler
   connectionManager.setInputDialogHandler(async (options) => {
-    const { createInputDialog } = await import('../windows/WindowFactory.js');
     return createInputDialog(options);
   });
 
@@ -48,7 +49,6 @@ export const setupDialogHandlers = (): void => {
 
         try {
           // Use custom themed dialog instead of built-in dialog
-          const { createPrinterConnectedWarningDialog } = await import('../windows/factories/DialogWindowFactory.js');
           const userWantsToContinue = await createPrinterConnectedWarningDialog({ printerName });
 
           if (!userWantsToContinue) {
@@ -63,7 +63,6 @@ export const setupDialogHandlers = (): void => {
       // Show connect choice dialog instead of directly starting connection flow
       try {
         console.log('Connect button pressed - showing connection choice dialog');
-        const { createConnectChoiceDialog } = await import('../windows/WindowFactory.js');
 
         // Show the connect choice dialog
         const userChoice = await createConnectChoiceDialog({});
@@ -71,7 +70,6 @@ export const setupDialogHandlers = (): void => {
         if (userChoice === 'enter-ip') {
           console.log('User chose to enter IP manually');
           // Show input dialog for IP entry
-          const { createInputDialog } = await import('../windows/WindowFactory.js');
           const ipAddress = await createInputDialog({
             title: 'Enter Printer IP',
             message: 'Enter the IP address of your FlashForge printer:',

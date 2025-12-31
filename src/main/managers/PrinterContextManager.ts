@@ -476,7 +476,6 @@ export class PrinterContextManager extends EventEmitter {
    */
   public async setActiveSpool(contextId: string | undefined, spoolData: ActiveSpoolData | null): Promise<void> {
     try {
-      const { getSpoolmanIntegrationService } = await import('../services/SpoolmanIntegrationService.js');
       const service = getSpoolmanIntegrationService();
 
       if (spoolData) {

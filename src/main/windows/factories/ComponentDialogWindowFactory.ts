@@ -23,8 +23,6 @@
  */
 
 import { BrowserWindow } from 'electron';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import { getLogService, type LogMessage } from '../../services/LogService.js';
 import {
   createModalWindow,
@@ -41,8 +39,6 @@ import {
   createWindowWidth,
 } from '../shared/WindowTypes.js';
 import { getWindowManager } from '../WindowManager.js';
-
-const _dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Component dialog size configuration

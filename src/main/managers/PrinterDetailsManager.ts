@@ -34,7 +34,6 @@ import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
 import { detectPrinterModelType } from '../utils/PrinterUtils.js';
-import { getPrinterContextManager } from './PrinterContextManager.js';
 
 /**
  * Manager for multi-printer details persistence
@@ -44,7 +43,6 @@ import { getPrinterContextManager } from './PrinterContextManager.js';
 export class PrinterDetailsManager {
   private readonly filePath: string;
   private currentConfig: MultiPrinterConfig;
-  private readonly contextManager = getPrinterContextManager();
 
   // Per-context last-used tracking (not persisted, runtime only)
   private readonly contextLastUsed = new Map<string, string>(); // contextId -> serialNumber

@@ -236,7 +236,7 @@ export function updateSpoolmanPanelState(): void {
   }
 
   if (spoolMeta) {
-    const parts = [];
+    const parts: string[] = [];
     if (state.activeSpool.vendor) {
       parts.push(state.activeSpool.vendor);
     }

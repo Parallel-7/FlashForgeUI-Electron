@@ -45,7 +45,7 @@ function getLegacyClient(backend: BasePrinterBackend): FlashForgeClient | null {
  */
 export function registerControlHandlers(backendManager: PrinterBackendManager): void {
   // Temperature control handlers - always use legacy client for G-code
-  ipcMain.handle('set-bed-temp', async (event, temperature: number) => {
+  ipcMain.handle('set-bed-temp', async (_event, temperature: number) => {
     try {
       const contextManager = getPrinterContextManager();
       const contextId = contextManager.getActiveContextId();
@@ -77,7 +77,7 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
     }
   });
 
-  ipcMain.handle('set-extruder-temp', async (event, temperature: number) => {
+  ipcMain.handle('set-extruder-temp', async (_event, temperature: number) => {
     try {
       const contextManager = getPrinterContextManager();
       const contextId = contextManager.getActiveContextId();

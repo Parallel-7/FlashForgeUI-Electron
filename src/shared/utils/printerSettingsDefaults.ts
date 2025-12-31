@@ -51,9 +51,19 @@ export const PER_PRINTER_SETTINGS_DEFAULTS = {
 } as const;
 
 /**
- * Type representing all per-printer settings with their default types
+ * Non-const version of per-printer settings for function return types.
+ * Uses standard types instead of literal types from `as const`.
  */
-export type PerPrinterSettingsWithDefaults = typeof PER_PRINTER_SETTINGS_DEFAULTS;
+export interface PerPrinterSettings {
+  customCameraEnabled: boolean;
+  customCameraUrl: string;
+  customLedsEnabled: boolean;
+  forceLegacyMode: boolean;
+  webUIEnabled: boolean;
+  rtspFrameRate: number;
+  rtspQuality: number;
+  showCameraFps: boolean;
+}
 
 /**
  * Apply default values to any missing per-printer settings.
@@ -69,9 +79,7 @@ export type PerPrinterSettingsWithDefaults = typeof PER_PRINTER_SETTINGS_DEFAULT
  * // complete.webUIEnabled === true (default applied)
  * ```
  */
-export function applyPerPrinterDefaults<T extends Partial<PrinterDetails>>(
-  details: T
-): T & PerPrinterSettingsWithDefaults {
+export function applyPerPrinterDefaults<T extends Partial<PrinterDetails>>(details: T): T & PerPrinterSettings {
   return {
     ...details,
     customCameraEnabled: details.customCameraEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.customCameraEnabled,
@@ -82,7 +90,7 @@ export function applyPerPrinterDefaults<T extends Partial<PrinterDetails>>(
     rtspFrameRate: details.rtspFrameRate ?? PER_PRINTER_SETTINGS_DEFAULTS.rtspFrameRate,
     rtspQuality: details.rtspQuality ?? PER_PRINTER_SETTINGS_DEFAULTS.rtspQuality,
     showCameraFps: details.showCameraFps ?? PER_PRINTER_SETTINGS_DEFAULTS.showCameraFps,
-  };
+  } as T & PerPrinterSettings;
 }
 
 /**

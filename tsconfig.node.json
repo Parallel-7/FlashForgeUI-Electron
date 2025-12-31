@@ -7,11 +7,20 @@
     "src/shared/**/*",
     "src/renderer/src/ui/settings/types/**/*"
   ],
+  "exclude": [
+    "**/__tests__/**",
+    "**/*.test.ts",
+    "**/*.spec.ts"
+  ],
   "compilerOptions": {
     "composite": true,
     "paths": {
-      "@shared/*": ["./src/shared/*"],
-      "@renderer/*": ["./src/renderer/src/*"]
+      "@shared/*": [
+        "./src/shared/*"
+      ],
+      "@renderer/*": [
+        "./src/renderer/src/*"
+      ]
     }
   }
 }

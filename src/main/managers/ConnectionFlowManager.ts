@@ -30,8 +30,11 @@ import {
   ConnectionOptions,
   ConnectionResult,
   DiscoveredPrinter,
+  PrinterClientType,
   PrinterConnectionState,
   PrinterDetails,
+  SavedPrinterMatch,
+  StoredPrinterDetails,
 } from '@shared/types/printer.js';
 import { applyPerPrinterDefaults, hasMissingDefaults } from '@shared/utils/printerSettingsDefaults.js';
 import { EventEmitter } from 'events';
@@ -376,13 +379,11 @@ export class ConnectionFlowManager extends EventEmitter {
           case 'show-saved-printers': {
             // Create mock matches for all saved printers (they're offline)
             const allSavedPrinters = this.savedPrinterService.getSavedPrinters();
-            const savedMatches = allSavedPrinters.map(
-              (savedPrinter: import('../types/printer.js').StoredPrinterDetails) => ({
-                savedDetails: savedPrinter,
-                discoveredPrinter: null, // Not discovered online
-                ipAddressChanged: false,
-              })
-            );
+            const savedMatches = allSavedPrinters.map((savedPrinter: StoredPrinterDetails) => ({
+              savedDetails: savedPrinter,
+              discoveredPrinter: null, // Not discovered online
+              ipAddressChanged: false,
+            }));
 
             return await this.dialogService.showSavedPrinterSelectionDialog(savedMatches, (serialNumber) =>
               this.connectToOfflineSavedPrinter(serialNumber)
@@ -481,7 +482,7 @@ export class ConnectionFlowManager extends EventEmitter {
   }
 
   /** Auto-connect to a matched saved printer */
-  private async autoConnectToMatch(match: import('../types/printer.js').SavedPrinterMatch): Promise<ConnectionResult> {
+  private async autoConnectToMatch(match: SavedPrinterMatch): Promise<ConnectionResult> {
     const { savedDetails, discoveredPrinter, ipAddressChanged } = match;
 
     // If discoveredPrinter is null, this printer is offline
@@ -830,7 +831,7 @@ export class ConnectionFlowManager extends EventEmitter {
     try {
       // Find all saved printers and create mock matches (they're not online)
       const allSavedPrinters = this.savedPrinterService.getSavedPrinters();
-      const savedMatches = allSavedPrinters.map((savedPrinter: import('../types/printer.js').StoredPrinterDetails) => ({
+      const savedMatches = allSavedPrinters.map((savedPrinter: StoredPrinterDetails) => ({
         savedDetails: savedPrinter,
         discoveredPrinter: null, // Not discovered online
         ipAddressChanged: false,
@@ -1099,7 +1100,7 @@ export class ConnectionFlowManager extends EventEmitter {
    * @returns Array of successfully connected contexts with their IDs
    */
   public async connectHeadlessDirect(
-    printerSpecs: Array<{ ip: string; type: import('../types/printer.js').PrinterClientType; checkCode?: string }>
+    printerSpecs: Array<{ ip: string; type: PrinterClientType; checkCode?: string }>
   ): Promise<{ contextId: string; ip: string }[]> {
     const connectedContexts: { contextId: string; ip: string }[] = [];
 

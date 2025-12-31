@@ -280,7 +280,7 @@ export class NotificationService extends EventEmitter<NotificationServiceEventMa
     });
 
     // Handle notification failed
-    electronNotification.on('failed', (event, error) => {
+    electronNotification.on('failed', (_event, error) => {
       console.error(`Notification failed: ${notification.id}`, error);
       this.emitNotificationFailed(notification, error);
     });

@@ -28,9 +28,9 @@ import * as http from 'http';
 import * as os from 'os';
 import { getConfigManager } from '../../managers/ConfigManager.js';
 import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager.js';
-import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.js';
+
 import { getEnvironmentDetectionService } from '../../services/EnvironmentDetectionService.js';
-import { getRtspStreamService } from '../../services/RtspStreamService.js';
+
 import { AppError, ErrorCode } from '../../utils/error.utils.js';
 import { isHeadlessMode } from '../../utils/HeadlessDetection.js';
 import { WebUILoginRequestSchema } from '../schemas/web-api.schemas.js';
@@ -82,7 +82,7 @@ export class WebUIManager extends EventEmitter {
   // Manager dependencies
   private readonly configManager = getConfigManager();
   private readonly connectionManager = getPrinterConnectionManager();
-  private readonly backendManager = getPrinterBackendManager();
+
   private readonly authManager = getAuthManager();
   private readonly environmentService = getEnvironmentDetectionService();
 
@@ -105,7 +105,6 @@ export class WebUIManager extends EventEmitter {
   private readonly webSocketManager = getWebSocketManager();
 
   // RTSP stream service for RTSP camera streaming
-  private readonly rtspStreamService = getRtspStreamService();
 
   private constructor() {
     super();
@@ -242,7 +241,7 @@ export class WebUIManager extends EventEmitter {
     });
 
     // Auth status endpoint (no auth required)
-    this.expressApp.get('/api/auth/status', (req, res) => {
+    this.expressApp.get('/api/auth/status', (_req, res) => {
       res.json(this.authManager.getAuthStatus());
     });
 
@@ -672,7 +671,7 @@ export class WebUIManager extends EventEmitter {
    */
   private async handleStartupError(error: unknown): Promise<void> {
     const { app, dialog } = await import('electron');
-    const { AppError, ErrorCode } = await import('../../utils/error.utils.js');
+    // Using static import for error utils to avoid circular dependency warning
 
     // Convert to AppError for consistent handling
     const appError =

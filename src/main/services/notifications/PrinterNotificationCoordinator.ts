@@ -95,7 +95,6 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   // State management
   private notificationState: NotificationState;
   private currentSettings: NotificationSettings;
-  private lastPrinterStatus: PrinterStatus | null = null;
   private contextId: string | null = null;
 
   constructor(notificationService?: NotificationService, configManager?: ConfigManager) {
@@ -330,10 +329,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
    * Note: This method only tracks the current status for reference.
    * State change detection and notification logic is now handled by PrintStateMonitor.
    */
-  private async handlePrinterStatusUpdate(status: PrinterStatus): Promise<void> {
-    // Only track status reference - used by notification templates and other consumers
-    this.lastPrinterStatus = status;
-
+  private async handlePrinterStatusUpdate(_status: PrinterStatus): Promise<void> {
     // PrintStateMonitor now handles all state transition detection and notification triggering
     // This eliminates duplicate state detection logic and race conditions
   }
@@ -650,7 +646,6 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
 
     // Clear references
     this.pollingService = null;
-    this.lastPrinterStatus = null;
     this.contextId = null;
 
     console.log('PrinterNotificationCoordinator disposed');

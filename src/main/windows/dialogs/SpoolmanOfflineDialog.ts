@@ -51,12 +51,10 @@ export const showSpoolmanOfflineDialog = (message?: string | null): void => {
     return;
   }
 
-  offlineDialogWindow = createModalWindow(
-    parentWindow,
-    DIALOG_SIZE,
-    createUIPreloadPath('spoolman-offline-dialog'),
-    { resizable: false, frame: false }
-  );
+  offlineDialogWindow = createModalWindow(parentWindow, DIALOG_SIZE, createUIPreloadPath('spoolman-offline-dialog'), {
+    resizable: false,
+    frame: false,
+  });
 
   void loadWindowHTML(offlineDialogWindow, 'spoolman-offline-dialog');
 

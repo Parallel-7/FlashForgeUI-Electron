@@ -460,23 +460,6 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
   }
 
   /**
-   * Get cache statistics for debugging
-   */
-  private getThumbnailCacheStats(): {
-    cacheSize: number;
-    failureCacheSize: number;
-    currentJob: string | null;
-    hasThumbnail: boolean;
-  } {
-    return {
-      cacheSize: this.thumbnailCache.size,
-      failureCacheSize: this.thumbnailFailureCache.size,
-      currentJob: this.lastJobName,
-      hasThumbnail: this.currentThumbnail !== null,
-    };
-  }
-
-  /**
    * Handle polling errors
    */
   private handlePollingError(error: unknown): void {

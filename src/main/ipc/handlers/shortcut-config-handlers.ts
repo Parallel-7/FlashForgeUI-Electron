@@ -15,8 +15,8 @@
  * @module ipc/handlers/shortcut-config-handlers
  */
 
+import type { ShortcutButtonConfig } from '@shared/types/shortcut-config.js';
 import { ipcMain } from 'electron';
-import type { ShortcutButtonConfig } from '../../ui/shortcuts/types.js';
 import { createShortcutConfigDialog } from '../../windows/factories/ShortcutConfigWindowFactory.js';
 import { getWindowManager } from '../../windows/WindowManager.js';
 

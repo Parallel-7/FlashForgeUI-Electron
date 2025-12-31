@@ -2,6 +2,7 @@
  * @fileoverview Spoolman integration routes (config, search, active spool management).
  */
 
+import type { SpoolSearchQuery } from '@shared/types/spoolman.js';
 import {
   ActiveSpoolResponse,
   SpoolmanConfigResponse,
@@ -21,7 +22,7 @@ import type { AuthenticatedRequest } from '../auth-middleware.js';
 import { type RouteDependencies, resolveContext, sendErrorResponse } from './route-helpers.js';
 
 export function registerSpoolmanRoutes(router: Router, deps: RouteDependencies): void {
-  router.get('/spoolman/config', async (req: AuthenticatedRequest, res: Response) => {
+  router.get('/spoolman/config', async (_req: AuthenticatedRequest, res: Response) => {
     try {
       const activeContextId = deps.contextManager.getActiveContextId();
       if (!activeContextId) {
@@ -65,7 +66,7 @@ export function registerSpoolmanRoutes(router: Router, deps: RouteDependencies):
 
       const searchParam = typeof req.query?.search === 'string' ? req.query.search.trim() : undefined;
 
-      const searchQuery: import('../../../types/spoolman.js').SpoolSearchQuery = {
+      const searchQuery: SpoolSearchQuery = {
         limit: 50,
         allow_archived: false,
       };

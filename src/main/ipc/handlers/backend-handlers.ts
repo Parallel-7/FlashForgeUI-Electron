@@ -16,7 +16,7 @@
  */
 
 import { ipcMain } from 'electron';
-import type { PrinterBackendManager } from '../../managers/PrinterBackendManager.js';
+import { PrinterBackendManager } from '../../managers/PrinterBackendManager.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 import type { getWindowManager } from '../../windows/WindowManager.js';
 
@@ -124,9 +124,7 @@ export function registerBackendHandlers(backendManager: PrinterBackendManager, _
         return null;
       }
 
-      const backendManager = await import('../../managers/PrinterBackendManager.js').then((m) =>
-        m.getPrinterBackendManager()
-      );
+      const backendManager = PrinterBackendManager.getInstance();
       const features = backendManager.getFeatures(contextId);
       const capabilities = backendManager.getBackendCapabilities(contextId);
       console.log('IPC printer:get-features - features:', features);

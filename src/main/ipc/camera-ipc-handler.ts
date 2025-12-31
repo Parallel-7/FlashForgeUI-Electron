@@ -21,7 +21,6 @@
 import { logVerbose } from '@shared/logging.js';
 import { CameraProxyStatus, ResolvedCameraConfig } from '@shared/types/camera/index.js';
 import { IpcMainInvokeEvent, ipcMain } from 'electron';
-import { getConfigManager } from '../managers/ConfigManager.js';
 import { getPrinterBackendManager } from '../managers/PrinterBackendManager.js';
 import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
 import { getCameraProxyService } from '../services/CameraProxyService.js';
@@ -34,11 +33,9 @@ import { formatCameraProxyUrl, getCameraUserConfig, resolveCameraConfig } from '
 const CAMERA_IPC_LOG_NAMESPACE = 'CameraIPCHandler';
 
 export class CameraIPCHandler {
-  private readonly configManager = getConfigManager();
   private readonly cameraProxyService = getCameraProxyService();
   private readonly rtspStreamService = getRtspStreamService();
   private readonly contextManager = getPrinterContextManager();
-  private currentPrinterIpAddress: string | null = null;
   private logDebug(message: string, ...args: unknown[]): void {
     logVerbose(CAMERA_IPC_LOG_NAMESPACE, message, ...args);
   }
@@ -91,7 +88,7 @@ export class CameraIPCHandler {
     );
 
     // Enable/disable camera preview
-    ipcMain.handle('camera:set-enabled', async (event: IpcMainInvokeEvent, enabled: boolean): Promise<void> => {
+    ipcMain.handle('camera:set-enabled', async (_event: IpcMainInvokeEvent, enabled: boolean): Promise<void> => {
       // This controls whether the UI should display the camera preview
       // The camera proxy server continues running - only the client disconnects
       this.logDebug(`Camera preview ${enabled ? 'enabled' : 'disabled'} by renderer`);
@@ -243,22 +240,6 @@ export class CameraIPCHandler {
   }
 
   /**
-   * Update camera configuration when settings change
-   */
-  private async updateCameraConfiguration(): Promise<void> {
-    const config = await this.getCurrentCameraConfig();
-    const contextId = this.getActiveContextId();
-
-    if (config && config.isAvailable && config.streamUrl) {
-      this.logDebug(`Camera configuration updated: ${config.sourceType} - ${config.streamUrl}`);
-      await this.cameraProxyService.setStreamUrl(contextId, config.streamUrl);
-    } else {
-      this.logDebug('Camera configuration updated: No camera available');
-      await this.cameraProxyService.removeContext(contextId);
-    }
-  }
-
-  /**
    * Get current camera configuration for a specific context
    * @param contextId - The context ID to get camera config for
    */
@@ -317,9 +298,6 @@ export class CameraIPCHandler {
       return;
     }
 
-    // Store IP address from context
-    this.currentPrinterIpAddress = context.printerDetails.IPAddress;
-
     const config = await this.getCurrentCameraConfigForContext(contextId);
 
     if (config && config.isAvailable && config.streamUrl) {
@@ -360,7 +338,6 @@ export class CameraIPCHandler {
    */
   public async handlePrinterDisconnected(contextId?: string): Promise<void> {
     this.logDebug('Clearing camera stream URL due to printer disconnection');
-    this.currentPrinterIpAddress = null;
     const targetContextId = contextId || this.getActiveContextId();
     await this.cameraProxyService.removeContext(targetContextId);
     await this.rtspStreamService.stopStream(targetContextId);

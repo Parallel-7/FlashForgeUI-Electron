@@ -68,6 +68,7 @@ interface ElectronAPI {
   removeAllListeners: () => void;
   showInputDialog: (options: InputDialogOptions) => Promise<string | null>;
   invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
+  isProxyAvailable: boolean;
   requestPrinterStatus: () => Promise<unknown>;
   requestMaterialStationStatus: () => Promise<unknown>;
   requestModelPreview: () => Promise<string | null>;
@@ -556,7 +557,7 @@ const electronAPI: ElectronAPI = {
 
   receive: (channel: string, func: IPCListener) => {
     if (validReceiveChannels.includes(channel)) {
-      const wrappedFunc: IPCListener = (event: unknown, ...args: unknown[]) => func(...args);
+      const wrappedFunc: IPCListener = (_event: unknown, ...args: unknown[]) => func(...args);
       listeners.set(channel, { original: func, wrapped: wrappedFunc });
       ipcRenderer.on(channel, wrappedFunc);
     } else {
@@ -691,7 +692,7 @@ const electronAPI: ElectronAPI = {
   dialog: dialogBridge,
 
   onPlatformInfo: (callback: (platform: string) => void) => {
-    const wrappedCallback: IPCListener = (event: unknown, platform: unknown) => {
+    const wrappedCallback: IPCListener = (_event: unknown, platform: unknown) => {
       if (typeof platform === 'string') {
         callback(platform);
       } else {
@@ -832,7 +833,7 @@ const electronAPI: ElectronAPI = {
     },
 
     onSpoolSelected: (callback: (spool: unknown) => void) => {
-      const wrappedCallback: IPCListener = (event: unknown, spool: unknown) => {
+      const wrappedCallback: IPCListener = (_event: unknown, spool: unknown) => {
         callback(spool);
       };
       listeners.set('spoolman:spool-selected', { original: callback as IPCListener, wrapped: wrappedCallback });
@@ -840,7 +841,7 @@ const electronAPI: ElectronAPI = {
     },
 
     onSpoolUpdated: (callback: (spool: unknown) => void) => {
-      const wrappedCallback: IPCListener = (event: unknown, spool: unknown) => {
+      const wrappedCallback: IPCListener = (_event: unknown, spool: unknown) => {
         callback(spool);
       };
       listeners.set('spoolman:spool-updated', { original: callback as IPCListener, wrapped: wrappedCallback });

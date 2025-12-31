@@ -20,6 +20,7 @@
 
 import { EndstopStatus, FlashForgeClient, MachineStatus, PrintStatus, TempData, TempInfo } from '@ghosttypes/ff-api';
 import {
+  BackendInitOptions,
   BasicJobInfo,
   CommandResult,
   GCodeCommandResult,
@@ -39,7 +40,7 @@ import { BasePrinterBackend } from './BasePrinterBackend.js';
 export class GenericLegacyBackend extends BasePrinterBackend {
   private readonly legacyClient: FlashForgeClient;
 
-  constructor(options: import('../types/printer-backend/index.js').BackendInitOptions) {
+  constructor(options: BackendInitOptions) {
     super(options);
 
     // Legacy backend only uses FlashForgeClient

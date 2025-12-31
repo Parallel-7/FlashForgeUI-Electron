@@ -74,11 +74,8 @@
 import { is } from '@electron-toolkit/utils';
 import { app, BrowserWindow, WebPreferences } from 'electron';
 import path from 'path';
-import { fileURLToPath } from 'url';
 import { getUIWindowOptions, injectUIStyleVariables } from '../../utils/CSSVariables.js';
 import { createPreloadPath, PreloadPath, WINDOW_SIZES, WindowDimensions } from './WindowTypes.js';
-
-const _dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Create standardized secure web preferences for all windows

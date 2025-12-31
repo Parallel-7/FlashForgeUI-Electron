@@ -195,7 +195,7 @@ export class CameraProxyService extends EventEmitter {
     });
 
     // Set up health check endpoint
-    app.get('/health', (req, res) => {
+    app.get('/health', (_req, res) => {
       const streamInfo = this.contextStreams.get(contextId);
       res.json({
         contextId,

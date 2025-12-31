@@ -23,8 +23,6 @@
  */
 
 import { BrowserWindow, ipcMain } from 'electron';
-import path from 'path';
-import { fileURLToPath } from 'url';
 import {
   createModalWindow,
   createResponseChannelName,
@@ -42,8 +40,6 @@ import {
   createWindowWidth,
 } from '../shared/WindowTypes.js';
 import { getWindowManager } from '../WindowManager.js';
-
-const _dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /**
  * Window data storage type

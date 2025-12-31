@@ -352,7 +352,7 @@ const createMainWindow = async (): Promise<void> => {
   });
 
   // Handle web contents errors
-  mainWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+  mainWindow.webContents.on('did-fail-load', (_event, errorCode, errorDescription, validatedURL) => {
     console.error(`Web contents failed to load: ${errorDescription} (${errorCode})`);
     console.error(`Failed URL: ${validatedURL}`);
 

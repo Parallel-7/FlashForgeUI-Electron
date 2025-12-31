@@ -19,7 +19,7 @@
 
 // Re-export types from ff-api
 // Direct re-exports from ff-api index
-export {
+export type {
   AD5XLocalJobParams,
   AD5XMaterialMapping,
   AD5XSingleColorJobParams,
@@ -30,7 +30,7 @@ export {
 } from '@ghosttypes/ff-api';
 // Keep our UI-specific types that transform the data structure
 // AD5X job info extends the base job info with material station data
-export { AD5XJobInfo, MaterialSlotInfo, MaterialStationStatus } from '@shared/types/printer-backend/index.js';
+export type { AD5XJobInfo, MaterialSlotInfo, MaterialStationStatus } from '@shared/types/printer-backend/index.js';
 
 // Import MatlStationInfo for type definitions
 import type { MatlStationInfo as MatlStationInfoType } from '@ghosttypes/ff-api';

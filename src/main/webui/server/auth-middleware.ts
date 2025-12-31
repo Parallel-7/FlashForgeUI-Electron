@@ -132,7 +132,7 @@ export function createLoginRateLimiter() {
  * Error handling middleware
  */
 export function createErrorMiddleware() {
-  return (err: Error, req: Request, res: Response, _next: NextFunction): void => {
+  return (err: Error, _req: Request, res: Response, _next: NextFunction): void => {
     console.error('Express error:', err);
 
     const response: StandardAPIResponse = {

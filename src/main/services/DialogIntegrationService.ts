@@ -20,7 +20,13 @@
 import { ConnectionResult, DiscoveredPrinter, SavedPrinterMatch, StoredPrinterDetails } from '@shared/types/printer.js';
 import { type BrowserWindow, type IpcMainEvent, ipcMain } from 'electron';
 import { EventEmitter } from 'events';
+import {
+  createAutoConnectChoiceDialog,
+  createPrinterConnectedWarningDialog,
+} from '../windows/factories/DialogWindowFactory.js';
+import { createPrinterSelectionWindow } from '../windows/WindowFactory.js';
 import { getWindowManager } from '../windows/WindowManager.js';
+import { getSavedPrinterService } from './SavedPrinterService.js';
 
 /**
  * Service responsible for dialog integration and user interaction
@@ -50,15 +56,12 @@ export class DialogIntegrationService extends EventEmitter {
   public async confirmDisconnectForScan(currentPrinterName?: string): Promise<boolean> {
     const printerName = currentPrinterName || 'Unknown Printer';
 
-    // Dynamic import to avoid circular dependencies
-    return import('../windows/factories/DialogWindowFactory.js')
-      .then(async ({ createPrinterConnectedWarningDialog }) => {
-        return await createPrinterConnectedWarningDialog({ printerName });
-      })
-      .catch((error) => {
-        console.error('Error importing DialogWindowFactory:', error);
-        return false; // Default to cancel on error
-      });
+    try {
+      return await createPrinterConnectedWarningDialog({ printerName });
+    } catch (error) {
+      console.error('Error showing printer connected warning dialog:', error);
+      return false; // Default to cancel on error
+    }
   }
 
   /**
@@ -67,56 +70,48 @@ export class DialogIntegrationService extends EventEmitter {
    */
   public async showPrinterSelectionDialog(printers: DiscoveredPrinter[]): Promise<DiscoveredPrinter | null> {
     return new Promise((resolve) => {
-      // Dynamic import to avoid circular dependencies
-      import('../windows/WindowFactory.js')
-        .then(({ createPrinterSelectionWindow }) => {
-          createPrinterSelectionWindow();
-          const printerSelectionWindow = this.windowManager.getPrinterSelectionWindow();
+      createPrinterSelectionWindow();
+      const printerSelectionWindow = this.windowManager.getPrinterSelectionWindow();
 
-          // Set up one-time event handlers for this specific selection session
-          const handlePrinterSelection = async (_: IpcMainEvent, printer: unknown): Promise<void> => {
-            console.log('Discovered printer selected:', printer);
+      // Set up one-time event handlers for this specific selection session
+      const handlePrinterSelection = async (_: IpcMainEvent, printer: unknown): Promise<void> => {
+        console.log('Discovered printer selected:', printer);
 
-            try {
-              // Use comprehensive validation with proper error handling
-              const validatedPrinter = this.validateDiscoveredPrinterData(printer);
-              if (!validatedPrinter) {
-                console.error('Failed to validate discovered printer data');
-                resolve(null);
-                return;
-              }
-
-              resolve(validatedPrinter);
-            } catch (error) {
-              console.error('Error handling discovered printer selection:', error);
-              resolve(null);
-            } finally {
-              // Always clean up - close window and remove listeners
-              this.cleanupDiscoveredSelectionListeners();
-              const currentWindow = this.windowManager.getPrinterSelectionWindow();
-              if (currentWindow && !currentWindow.isDestroyed()) {
-                currentWindow.close();
-              }
-            }
-          };
-
-          const handleSelectionCancel = (): void => {
-            console.log('Discovered printer selection cancelled');
+        try {
+          // Use comprehensive validation with proper error handling
+          const validatedPrinter = this.validateDiscoveredPrinterData(printer);
+          if (!validatedPrinter) {
+            console.error('Failed to validate discovered printer data');
             resolve(null);
-          };
+            return;
+          }
 
-          // Set up IPC listeners
-          this.setupDiscoveredSelectionListeners(printerSelectionWindow, handlePrinterSelection, handleSelectionCancel);
-
-          // Send discovered printer data to the window once it's ready
-          setTimeout(() => {
-            this.sendDiscoveredPrinterData(printers);
-          }, 500); // Delay to ensure window is ready
-        })
-        .catch((error) => {
-          console.error('Error importing WindowFactory:', error);
+          resolve(validatedPrinter);
+        } catch (error) {
+          console.error('Error handling discovered printer selection:', error);
           resolve(null);
-        });
+        } finally {
+          // Always clean up - close window and remove listeners
+          this.cleanupDiscoveredSelectionListeners();
+          const currentWindow = this.windowManager.getPrinterSelectionWindow();
+          if (currentWindow && !currentWindow.isDestroyed()) {
+            currentWindow.close();
+          }
+        }
+      };
+
+      const handleSelectionCancel = (): void => {
+        console.log('Discovered printer selection cancelled');
+        resolve(null);
+      };
+
+      // Set up IPC listeners
+      this.setupDiscoveredSelectionListeners(printerSelectionWindow, handlePrinterSelection, handleSelectionCancel);
+
+      // Send discovered printer data to the window once it's ready
+      setTimeout(() => {
+        this.sendDiscoveredPrinterData(printers);
+      }, 500); // Delay to ensure window is ready
     });
   }
 
@@ -129,58 +124,52 @@ export class DialogIntegrationService extends EventEmitter {
     onSelection: (serialNumber: string) => Promise<ConnectionResult>
   ): Promise<ConnectionResult> {
     return new Promise((resolve) => {
-      // Dynamic import to avoid circular dependencies
-      import('../windows/WindowFactory.js')
-        .then(({ createPrinterSelectionWindow }) => {
-          createPrinterSelectionWindow();
-          const printerSelectionWindow = this.windowManager.getPrinterSelectionWindow();
+      createPrinterSelectionWindow();
+      const printerSelectionWindow = this.windowManager.getPrinterSelectionWindow();
 
-          // Set up one-time event handlers for this specific selection session
-          const handleSavedPrinterSelection = async (_: IpcMainEvent, printer: unknown): Promise<void> => {
-            console.log('Saved printer selected:', printer);
+      // Set up one-time event handlers for this specific selection session
 
-            try {
-              if (!this.validatePrinterSelection(printer)) {
-                resolve({ success: false, error: 'Invalid printer data received' });
-                return;
-              }
+      // Set up one-time event handlers for this specific selection session
+      const handleSavedPrinterSelection = async (_: IpcMainEvent, printer: unknown): Promise<void> => {
+        console.log('Saved printer selected:', printer);
 
-              // Now TypeScript knows printer has serialNumber property
-              const printerSerial = printer.serialNumber;
+        try {
+          if (!this.validatePrinterSelection(printer)) {
+            resolve({ success: false, error: 'Invalid printer data received' });
+            return;
+          }
 
-              // Close dialog immediately so user can see the loading dialog
-              this.cleanupSavedSelectionListeners();
-              const currentWindow = this.windowManager.getPrinterSelectionWindow();
-              if (currentWindow && !currentWindow.isDestroyed()) {
-                currentWindow.close();
-              }
+          // Now TypeScript knows printer has serialNumber property
+          const printerSerial = printer.serialNumber;
 
-              // Use the callback to handle the connection
-              const result = await onSelection(printerSerial);
-              resolve(result);
-            } catch (error) {
-              console.error('Error handling saved printer selection:', error);
-              resolve({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
-            }
-          };
+          // Close dialog immediately so user can see the loading dialog
+          this.cleanupSavedSelectionListeners();
+          const currentWindow = this.windowManager.getPrinterSelectionWindow();
+          if (currentWindow && !currentWindow.isDestroyed()) {
+            currentWindow.close();
+          }
 
-          const handleSelectionCancel = (): void => {
-            console.log('Saved printer selection cancelled');
-            resolve({ success: false, error: 'User cancelled printer selection' });
-          };
+          // Use the callback to handle the connection
+          const result = await onSelection(printerSerial);
+          resolve(result);
+        } catch (error) {
+          console.error('Error handling saved printer selection:', error);
+          resolve({ success: false, error: error instanceof Error ? error.message : 'Unknown error' });
+        }
+      };
 
-          // Set up IPC listeners
-          this.setupSelectionListeners(printerSelectionWindow, handleSavedPrinterSelection, handleSelectionCancel);
+      const handleSelectionCancel = (): void => {
+        console.log('Saved printer selection cancelled');
+        resolve({ success: false, error: 'User cancelled printer selection' });
+      };
 
-          // Send saved printer data to the window once it's ready
-          setTimeout(() => {
-            this.sendSavedPrinterData(matches);
-          }, 500); // Delay to ensure window is ready
-        })
-        .catch((error) => {
-          console.error('Error importing WindowFactory:', error);
-          resolve({ success: false, error: 'Failed to create selection window' });
-        });
+      // Set up IPC listeners
+      this.setupSelectionListeners(printerSelectionWindow, handleSavedPrinterSelection, handleSelectionCancel);
+
+      // Send saved printer data to the window once it's ready
+      setTimeout(() => {
+        this.sendSavedPrinterData(matches);
+      }, 500); // Delay to ensure window is ready
     });
   }
 
@@ -192,25 +181,23 @@ export class DialogIntegrationService extends EventEmitter {
     lastUsedPrinter: StoredPrinterDetails | null,
     savedPrinterCount: number
   ): Promise<string | null> {
-    // Dynamic import to avoid circular dependencies
-    return import('../windows/factories/DialogWindowFactory.js')
-      .then(async ({ createAutoConnectChoiceDialog }) => {
-        const dialogData = {
-          lastUsedPrinter: lastUsedPrinter
-            ? {
-                name: lastUsedPrinter.Name,
-                serialNumber: lastUsedPrinter.SerialNumber,
-              }
-            : null,
-          savedPrinterCount,
-        };
+    // Import needed for dialog creation is already at top level
+    try {
+      const dialogData = {
+        lastUsedPrinter: lastUsedPrinter
+          ? {
+              name: lastUsedPrinter.Name,
+              serialNumber: lastUsedPrinter.SerialNumber,
+            }
+          : undefined,
+        savedPrinterCount,
+      };
 
-        return await createAutoConnectChoiceDialog(dialogData);
-      })
-      .catch((error) => {
-        console.error('Error importing DialogWindowFactory:', error);
-        return null;
-      });
+      return await createAutoConnectChoiceDialog(dialogData);
+    } catch (error) {
+      console.error('Error showing auto-connect choice dialog:', error);
+      return null;
+    }
   }
 
   /**
@@ -222,20 +209,6 @@ export class DialogIntegrationService extends EventEmitter {
       typeof printer === 'object' &&
       Object.prototype.hasOwnProperty.call(printer, 'serialNumber') &&
       typeof (printer as { [key: string]: unknown })['serialNumber'] === 'string'
-    );
-  }
-
-  /**
-   * Validate discovered printer selection data
-   */
-  private validateDiscoveredPrinterSelection(
-    printer: unknown
-  ): printer is { name?: string; ipAddress: string; serialNumber?: string; model?: string } {
-    return (
-      printer !== null &&
-      typeof printer === 'object' &&
-      Object.prototype.hasOwnProperty.call(printer, 'ipAddress') &&
-      typeof (printer as { [key: string]: unknown })['ipAddress'] === 'string'
     );
   }
 
@@ -414,31 +387,23 @@ export class DialogIntegrationService extends EventEmitter {
       // Set mode to saved
       currentWindow.webContents.send('printer-selection:mode', 'saved');
 
-      // Import saved printer service to prepare data
-      import('./SavedPrinterService.js')
-        .then(({ getSavedPrinterService }) => {
-          const savedPrinterService = getSavedPrinterService();
+      // Send to UI via IPC
+      const savedPrinterService = getSavedPrinterService();
+      const validMatches = matches.filter((match) => {
+        if (!match || !match.savedDetails) {
+          console.warn('Invalid saved printer match:', match);
+          return false;
+        }
+        // Note: discoveredPrinter can be null for offline printers - this is expected
+        return true;
+      });
 
-          // Add comprehensive null checks for SavedPrinterMatch.discoveredPrinter
-          const validMatches = matches.filter((match) => {
-            if (!match || !match.savedDetails) {
-              console.warn('Invalid saved printer match:', match);
-              return false;
-            }
-            // Note: discoveredPrinter can be null for offline printers - this is expected
-            return true;
-          });
+      const savedPrinterInfos = savedPrinterService.prepareSavedPrinterData(validMatches);
+      const lastUsedPrinter = savedPrinterService.getLastUsedPrinter();
+      const lastUsedSerial = lastUsedPrinter?.SerialNumber || null;
 
-          const savedPrinterInfos = savedPrinterService.prepareSavedPrinterData(validMatches);
-          const lastUsedPrinter = savedPrinterService.getLastUsedPrinter();
-          const lastUsedSerial = lastUsedPrinter?.SerialNumber || null;
-
-          // Send saved printer data
-          currentWindow.webContents.send('printer-selection:receive-saved-printers', savedPrinterInfos, lastUsedSerial);
-        })
-        .catch((error) => {
-          console.error('Error importing SavedPrinterService:', error);
-        });
+      // Send saved printer data
+      currentWindow.webContents.send('printer-selection:receive-saved-printers', savedPrinterInfos, lastUsedSerial);
     }
   }
 }
