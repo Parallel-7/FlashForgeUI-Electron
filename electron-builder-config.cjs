@@ -38,6 +38,7 @@ console.log(`[electron-builder] Channel: ${channel || 'latest'} (prerelease: ${i
 module.exports = {
     appId: "com.ghosttypes.flashforgeui",
     productName: "FlashForgeUI",
+    executableName: "FlashForgeUI",
     copyright: `Copyright © ${new Date().getFullYear()} GhostTypes`,
 
     // Shared configurations

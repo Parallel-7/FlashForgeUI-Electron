@@ -4,16 +4,16 @@
 # This script runs after the package is installed
 
 # Set proper permissions for the application
-chmod +x /opt/FlashForgeUI/flashforge-ui-ts || true
+chmod +x /opt/FlashForgeUI/FlashForgeUI || true
 
 # Create desktop entry if it doesn't exist
-if [ ! -f /usr/share/applications/flashforge-ui-ts.desktop ]; then
-    cat > /usr/share/applications/flashforge-ui-ts.desktop << EOF
+if [ ! -f /usr/share/applications/FlashForgeUI.desktop ]; then
+    cat > /usr/share/applications/FlashForgeUI.desktop << EOF
 [Desktop Entry]
 Name=FlashForgeUI
-Comment=FlashForge 3D Printer Management Tool
-Exec=/opt/FlashForgeUI/flashforge-ui-ts
-Icon=/opt/FlashForgeUI/resources/app/src/icons/icon.png
+Comment=Monitoring and Control software for FlashForge printers
+Exec=/opt/FlashForgeUI/FlashForgeUI
+Icon=FlashForgeUI
 Type=Application
 Categories=Utility;
 StartupNotify=true
@@ -26,8 +26,17 @@ if command -v update-desktop-database >/dev/null 2>&1; then
 fi
 
 # Create symlink in /usr/local/bin for CLI access (optional)
-if [ ! -f /usr/local/bin/flashforge-ui-ts ]; then
-    ln -sf /opt/FlashForgeUI/flashforge-ui-ts /usr/local/bin/flashforge-ui-ts || true
+if [ ! -f /usr/local/bin/FlashForgeUI ]; then
+    ln -sf /opt/FlashForgeUI/FlashForgeUI /usr/local/bin/FlashForgeUI || true
 fi
 
-exit 0 
+# Clean up old flashforge-ui-ts entries from previous installations
+if [ -f /usr/share/applications/flashforge-ui-ts.desktop ]; then
+    rm -f /usr/share/applications/flashforge-ui-ts.desktop || true
+fi
+if [ -L /usr/local/bin/flashforge-ui-ts ]; then
+    rm -f /usr/local/bin/flashforge-ui-ts || true
+fi
+
+exit 0
+ 
