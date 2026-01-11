@@ -29,6 +29,7 @@ import {
   CameraPreviewComponent,
   ControlsGridComponent,
   FiltrationControlsComponent,
+  IFSStationComponent,
   JobStatsComponent,
   LogPanelComponent,
   ModelPreviewComponent,
@@ -191,6 +192,8 @@ function createComponentInstance(componentId: string, container: HTMLElement) {
       return new FiltrationControlsComponent(container);
     case 'spoolman-tracker':
       return new SpoolmanComponent(container);
+    case 'ifs-station':
+      return new IFSStationComponent(container);
     default:
       console.error(`[ComponentDialog] Unknown component ID: ${componentId}`);
       return null;

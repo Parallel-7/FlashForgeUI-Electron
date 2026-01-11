@@ -39,7 +39,6 @@ import type { AppConfig, ThemeColors } from '@shared/types/config.js';
 import { sanitizeTheme } from '@shared/types/config.js';
 import {
   createAboutDialog,
-  createIFSDialog,
   createInputDialog,
   createJobPickerWindow,
   createJobUploaderWindow,
@@ -566,67 +565,6 @@ export function registerDialogHandlers(configManager: ConfigManager, windowManag
     } catch (error) {
       console.warn('Error checking AD5X printer status:', error);
       return false;
-    }
-  });
-
-  // IFS dialog handlers
-  ipcMain.on('open-ifs-dialog', () => {
-    console.log('IFS dialog handler called - creating IFS dialog');
-    createIFSDialog();
-  });
-
-  ipcMain.on('ifs-close-window', () => {
-    const ifsWindow = windowManager.getIFSDialogWindow();
-    if (ifsWindow) {
-      ifsWindow.close();
-    }
-  });
-
-  ipcMain.on('ifs-request-material-station', (event) => {
-    const backendManager = getPrinterBackendManager();
-    const contextManager = getPrinterContextManager();
-    const contextId = contextManager.getActiveContextId();
-
-    if (!contextId) {
-      // Send empty/disconnected state
-      const emptyData = {
-        connected: false,
-        slots: [],
-        activeSlot: null,
-        errorMessage: 'No active printer context',
-      };
-      event.sender.send('ifs-dialog-update-material-station', emptyData);
-      return;
-    }
-
-    const materialStationData = backendManager.getMaterialStationStatus(contextId);
-
-    if (materialStationData) {
-      // Transform backend data to dialog format
-      const dialogData = {
-        connected: materialStationData.connected,
-        slots: materialStationData.slots.map((slot) => ({
-          slotId: slot.slotId,
-          materialType: slot.materialType,
-          materialColor: slot.materialColor,
-          isEmpty: slot.isEmpty,
-          isActive: materialStationData.activeSlot !== null && slot.slotId === materialStationData.activeSlot - 1,
-        })),
-        activeSlot: materialStationData.activeSlot,
-        errorMessage: materialStationData.errorMessage,
-      };
-
-      event.sender.send('ifs-dialog-update-material-station', dialogData);
-    } else {
-      // Send empty/disconnected state
-      const emptyData = {
-        connected: false,
-        slots: [],
-        activeSlot: null,
-        errorMessage: 'Material station not available',
-      };
-
-      event.sender.send('ifs-dialog-update-material-station', emptyData);
     }
   });
 

@@ -88,7 +88,6 @@ export enum WindowType {
   PRINTER_SELECTION = 'printerSelection',
   JOB_PICKER = 'jobPicker',
   SEND_COMMANDS = 'sendCommands',
-  IFS_DIALOG = 'ifsDialog',
   MATERIAL_INFO_DIALOG = 'materialInfoDialog',
   MATERIAL_MATCHING_DIALOG = 'materialMatchingDialog',
   SINGLE_COLOR_CONFIRMATION_DIALOG = 'singleColorConfirmationDialog',
@@ -283,19 +282,6 @@ class WindowManager {
 
   public hasSendCommandsWindow(): boolean {
     return this.hasWindow(WindowType.SEND_COMMANDS);
-  }
-
-  // Convenience methods for IFS dialog access
-  public getIFSDialogWindow(): BrowserWindow | null {
-    return this.getWindow(WindowType.IFS_DIALOG);
-  }
-
-  public setIFSDialogWindow(window: BrowserWindow | null): void {
-    this.setWindow(WindowType.IFS_DIALOG, window);
-  }
-
-  public hasIFSDialogWindow(): boolean {
-    return this.hasWindow(WindowType.IFS_DIALOG);
   }
 
   // Convenience methods for material info dialog access

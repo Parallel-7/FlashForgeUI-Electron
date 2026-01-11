@@ -16,6 +16,7 @@ import {
   ControlsGridComponent,
   componentManager,
   FiltrationControlsComponent,
+  IFSStationComponent,
   JobStatsComponent,
   LogPanelComponent,
   ModelPreviewComponent,
@@ -430,6 +431,8 @@ export class RendererGridController {
       }
       case 'spoolman-tracker':
         return new SpoolmanComponent(container);
+      case 'ifs-station':
+        return new IFSStationComponent(container);
       default:
         console.error(`Unknown component ID: ${componentId}`);
         return null;

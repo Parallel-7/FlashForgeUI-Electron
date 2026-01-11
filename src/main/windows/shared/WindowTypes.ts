@@ -232,12 +232,6 @@ export const WINDOW_SIZES = {
     minWidth: createWindowMinWidth(500),
     minHeight: createWindowMinHeight(400),
   },
-  IFS_DIALOG: {
-    width: createWindowWidth(600),
-    height: createWindowHeight(700),
-    minWidth: createWindowMinWidth(600),
-    minHeight: createWindowMinHeight(650),
-  },
   MATERIAL_INFO: {
     width: createWindowWidth(700),
     height: createWindowHeight(620),

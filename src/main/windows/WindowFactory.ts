@@ -87,7 +87,6 @@ export {
 // Dialog windows with user interaction
 export {
   createConnectChoiceDialog,
-  createIFSDialog,
   createInputDialog,
   createMaterialInfoDialog,
   createMaterialMatchingDialog,

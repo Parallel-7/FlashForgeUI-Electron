@@ -36,3 +36,5 @@ export { PrinterTabsComponent } from './printer-tabs/index.js';
 // Spoolman Integration Component
 export { SpoolmanComponent } from './spoolman/index.js';
 export { TemperatureControlsComponent } from './temperature-controls/index.js';
+// IFS Material Station Component
+export { IFSStationComponent } from './ifs-station/index.js';

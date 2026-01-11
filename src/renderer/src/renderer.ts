@@ -145,7 +145,6 @@ function handleAllContextsRemoved(): void {
   activeContextId = null;
   activeContextSerial = null;
   editModeController.setActiveSerial(null);
-  legacyUiController.setIfsMenuItemVisible(false);
 
   if (gridController.areComponentsInitialized()) {
     gridController.clearAllComponents();
@@ -245,8 +244,6 @@ async function initializePrinterTabs(): Promise<void> {
           printerTabsComponent.setActiveTab(event.contextId);
         }
 
-        legacyUiController.setIfsMenuItemVisible(false);
-
         const serialLabel = activeContextSerial ?? 'default';
         logDebug(`[PerPrinter] Switching UI to context ${event.contextId} (serial: ${serialLabel})`);
 
@@ -336,10 +333,6 @@ function initializePollingListeners(): void {
     lastPollingData = pollingData;
 
     try {
-      // Update IFS menu item visibility for AD5X printers with material station
-      const shouldShowIFS = Boolean(pollingData.materialStation?.connected) && Boolean(pollingData.isConnected);
-      legacyUiController.setIfsMenuItemVisible(shouldShowIFS);
-
       // COMPONENT SYSTEM INTEGRATION: Replace updateAllPanels with componentManager.updateAll
       if (gridController.areComponentsInitialized() && componentManager.isInitialized()) {
         try {
@@ -394,8 +387,7 @@ function initializeStateAndEventListeners(): void {
     logDebug('Printer disconnected');
     logMessage('Printer disconnected');
     resetUI();
-    legacyUiController.setIfsMenuItemVisible(false);
-    logDebug('[LegacyUI] Reset legacy printer flag on state disconnect');
+    logDebug('[LegacyUI] Reset UI on state disconnect');
   });
 
   // Listen for backend events

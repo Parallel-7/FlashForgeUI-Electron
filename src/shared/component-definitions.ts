@@ -143,4 +143,16 @@ export const COMPONENT_REGISTRY_DATA: ReadonlyArray<ComponentDefinition> = [
     required: false,
     singleton: true,
   },
+
+  {
+    id: 'ifs-station',
+    name: 'IFS Material Station',
+    icon: 'grid-3x3',
+    defaultSize: { w: 6, h: 3 },
+    minSize: { w: 2, h: 2 },
+    category: 'main',
+    description: 'Intelligent Filament System material station status (AD5X only)',
+    required: false,
+    singleton: true,
+  },
 ];

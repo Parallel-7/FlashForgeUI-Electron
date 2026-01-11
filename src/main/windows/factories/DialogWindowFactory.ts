@@ -330,46 +330,6 @@ export const createMaterialInfoDialog = (materialData: unknown): void => {
   windowManager.setMaterialInfoDialogWindow(materialInfoDialogWindow);
 };
 
-/**
- * Create the IFS dialog window for material station display
- */
-export const createIFSDialog = (): void => {
-  const windowManager = getWindowManager();
-
-  if (windowManager.hasIFSDialogWindow()) {
-    windowManager.getIFSDialogWindow()?.focus();
-    return;
-  }
-
-  const mainWindow = windowManager.getMainWindow();
-  if (!validateParentWindow(mainWindow, 'IFS dialog')) {
-    return;
-  }
-
-  const ifsDialogWindow = createModalWindow(mainWindow, WINDOW_SIZES.IFS_DIALOG, createUIPreloadPath('ifs-dialog'), {
-    resizable: true,
-    frame: false,
-  });
-
-  // Load HTML and setup lifecycle
-  void loadWindowHTML(ifsDialogWindow, 'ifs-dialog');
-
-  // Send initialization message to dialog when ready
-  ifsDialogWindow.webContents.on('did-finish-load', () => {
-    if (ifsDialogWindow && !ifsDialogWindow.isDestroyed()) {
-      ifsDialogWindow.webContents.send('ifs-dialog-init');
-    }
-  });
-
-  // Setup window lifecycle with cleanup
-  setupWindowLifecycle(ifsDialogWindow, () => {
-    windowManager.setIFSDialogWindow(null);
-  });
-
-  setupDevTools(ifsDialogWindow);
-  windowManager.setIFSDialogWindow(ifsDialogWindow);
-};
-
 // Global handler state for auto-connect choice dialog to prevent duplicate registrations
 let globalResponseChannelHandler:
   | ((_event: unknown) => Promise<AutoConnectChoiceDialogData & { responseChannel: string }>)

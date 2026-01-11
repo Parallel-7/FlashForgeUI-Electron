@@ -9,14 +9,13 @@
 
 import { initializeUIAnimations } from '../../renderer/services/ui-updater.js';
 
-const MAIN_MENU_ACTIONS = ['connect', 'settings', 'status', 'ifs', 'pin-config', 'about'] as const;
+const MAIN_MENU_ACTIONS = ['connect', 'settings', 'status', 'pin-config', 'about'] as const;
 type MainMenuAction = (typeof MAIN_MENU_ACTIONS)[number];
 
 const MAIN_MENU_ACTION_CHANNELS: Record<MainMenuAction, string> = {
   connect: 'open-printer-selection',
   settings: 'open-settings-window',
   status: 'open-status-dialog',
-  ifs: 'open-ifs-dialog',
   'pin-config': 'shortcut-config:open',
   about: 'open-about-dialog',
 };
@@ -25,7 +24,6 @@ const MAIN_MENU_SHORTCUTS: Partial<Record<MainMenuAction, { key: string; label: 
   connect: { key: 'k', label: 'K' },
   settings: { key: ',', label: ',' },
   status: { key: 'i', label: 'I' },
-  ifs: { key: 'm', label: 'M' },
   'pin-config': { key: 'p', label: 'P' },
 };
 
@@ -54,16 +52,14 @@ class MenuShortcutManager {
     connect: true,
     settings: true,
     status: true,
-    ifs: false,
     'pin-config': true,
     about: true,
   };
 
   constructor(private readonly onShortcutTriggered?: () => void) {}
 
-  initialize(initialIfsEnabled: boolean): void {
+  initialize(): void {
     this.isMac = window.PLATFORM === 'darwin';
-    this.enabledActions.ifs = initialIfsEnabled;
     this.updateShortcutLabels();
 
     if (this.initialized) {
@@ -212,7 +208,6 @@ export class LegacyUiController {
   private mainMenuCloseTimeout: number | null = null;
   private readonly menuShortcutManager: MenuShortcutManager;
   private currentLoadingState: LoadingState = { ...defaultLoadingState };
-  private ifsMenuItemVisible = false;
 
   constructor(private readonly logMessage: (message: string) => void) {
     this.menuShortcutManager = new MenuShortcutManager(() => this.closeMainMenu());
@@ -223,27 +218,11 @@ export class LegacyUiController {
     this.setupWindowControls();
     this.setupLoadingEventListeners();
     this.initializeMainMenu();
-    this.menuShortcutManager.initialize(this.ifsMenuItemVisible);
+    this.menuShortcutManager.initialize();
   }
 
   dispose(): void {
     this.menuShortcutManager.dispose();
-  }
-
-  setIfsMenuItemVisible(visible: boolean): void {
-    if (this.ifsMenuItemVisible === visible) {
-      return;
-    }
-    this.ifsMenuItemVisible = visible;
-    const ifsMenuItem = document.getElementById('menu-item-ifs');
-    if (ifsMenuItem) {
-      if (visible) {
-        ifsMenuItem.classList.remove('hidden');
-      } else {
-        ifsMenuItem.classList.add('hidden');
-      }
-    }
-    this.menuShortcutManager.setActionEnabled('ifs', visible);
   }
 
   private setupWindowControls(): void {
@@ -426,9 +405,6 @@ export class LegacyUiController {
         this.mainMenuButton?.focus();
       }
     });
-
-    // Ensure shortcuts reflect initial visibility.
-    this.setIfsMenuItemVisible(this.ifsMenuItemVisible);
   }
 
   private closeMainMenu(): void {
