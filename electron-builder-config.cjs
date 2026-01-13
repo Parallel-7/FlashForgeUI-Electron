@@ -152,17 +152,20 @@ module.exports = {
     },
 
     // macOS configuration
+    // Note: Using separate x64 and arm64 builds instead of universal to avoid binary
+    // merging issues with architecture-specific go2rtc binaries. electron-updater
+    // automatically selects the correct architecture from the release manifest.
     mac: {
         icon: "src/icons/icon.icns",
         category: "public.app-category.utilities",
         target: [
             {
                 target: "dmg",
-                arch: ["universal"],
+                arch: ["x64", "arm64"],
             },
             {
                 target: "zip",
-                arch: ["universal"],
+                arch: ["x64", "arm64"],
             },
         ],
         // Ensure macOS prompts for local network permission (required for Sequoia 15.0+)
@@ -171,16 +174,11 @@ module.exports = {
             NSLocalNetworkUsageDescription: "FlashForgeUI requires access to your local network to discover and communicate with FlashForge 3D printers on your network."
         },
 
-        // Bundle go2rtc binaries for macOS (both arm64 and x64 for universal builds)
+        // Bundle go2rtc binary for current architecture (${arch} is resolved by electron-builder)
         extraResources: [
             {
-                from: "resources/bin/darwin-arm64",
-                to: "bin/darwin-arm64",
-                filter: ["go2rtc"]
-            },
-            {
-                from: "resources/bin/darwin-x64",
-                to: "bin/darwin-x64",
+                from: "resources/bin/darwin-${arch}",
+                to: "bin/darwin-${arch}",
                 filter: ["go2rtc"]
             }
         ],
