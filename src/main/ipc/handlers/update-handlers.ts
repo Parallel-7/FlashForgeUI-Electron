@@ -90,8 +90,8 @@ export function registerUpdateHandlers(configManager: ConfigManager, windowManag
 
   ipcMain.handle('set-update-channel', async (_event: IpcMainInvokeEvent, channel: 'stable' | 'alpha') => {
     const normalized = channel === 'alpha' ? 'alpha' : 'stable';
+    // Only set via configManager - AutoUpdateService listens to config:UpdateChannel event
     configManager.set('UpdateChannel', normalized);
-    updateService.setUpdateChannel(normalized);
     return { success: true };
   });
 

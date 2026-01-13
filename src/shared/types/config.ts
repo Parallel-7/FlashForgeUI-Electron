@@ -16,7 +16,7 @@
  *
  * Configuration Categories:
  * - Notifications: AlertWhenComplete, AlertWhenCooled, AudioAlerts, VisualAlerts
- * - UI Behavior: AlwaysOnTop, RoundedUI, DebugMode
+ * - UI Behavior: AlwaysOnTop, RoundedUI, DebugMode, DebugNetworkLogging
  * - Camera: CustomCamera, CustomCameraUrl, CameraProxyPort
  * - WebUI: WebUIEnabled, WebUIPort, WebUIPassword
  * - Integrations: DiscordSync, Spoolman
@@ -82,6 +82,7 @@ export interface AppConfig {
   readonly AudioAlerts: boolean;
   readonly VisualAlerts: boolean;
   readonly DebugMode: boolean;
+  readonly DebugNetworkLogging: boolean;
   readonly WebhookUrl: string;
   readonly CustomCamera: boolean;
   readonly CustomCameraUrl: string;
@@ -119,6 +120,7 @@ export interface MutableAppConfig {
   AudioAlerts: boolean;
   VisualAlerts: boolean;
   DebugMode: boolean;
+  DebugNetworkLogging: boolean;
   WebhookUrl: string;
   CustomCamera: boolean;
   CustomCameraUrl: string;
@@ -261,6 +263,7 @@ export const DEFAULT_CONFIG: AppConfig = {
   AudioAlerts: true,
   VisualAlerts: true,
   DebugMode: false,
+  DebugNetworkLogging: false,
   WebhookUrl: '',
   CustomCamera: false,
   CustomCameraUrl: '',
@@ -451,6 +454,12 @@ export function sanitizeConfig(config: Partial<AppConfig>): AppConfig {
         }
       }
     }
+  }
+
+  // Enforce: network logging requires debug mode to be enabled
+  // If DebugMode is off, DebugNetworkLogging must also be off
+  if (!sanitized.DebugMode && sanitized.DebugNetworkLogging) {
+    sanitized.DebugNetworkLogging = false;
   }
 
   // Sanitize theme objects separately

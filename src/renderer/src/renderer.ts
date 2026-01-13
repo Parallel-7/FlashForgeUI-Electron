@@ -24,7 +24,7 @@
 // Core styles and dependencies
 import './index.css';
 
-import { logVerbose } from '@shared/logging.js';
+import { logVerbose, setDebugModeEnabled } from '@shared/logging.js';
 import { computeThemePalette } from '@shared/themeColorUtils.js';
 import type { ThemeColors } from '@shared/types/config.js';
 import { DEFAULT_THEME } from '@shared/types/config.js';
@@ -51,6 +51,47 @@ import { layoutPersistence } from './ui/gridstack/LayoutPersistence.js';
 import { LegacyUiController } from './ui/legacy/LegacyUiController.js';
 // Shortcut system imports
 import { DEFAULT_SHORTCUT_CONFIG } from './ui/shortcuts/types.js';
+
+// ============================================================================
+// DEBUG STATE SYNCHRONIZATION
+// ============================================================================
+
+/** Debug state received from main process */
+interface DebugState {
+  debugEnabled: boolean;
+  networkEnabled: boolean;
+  cliDebugOverride?: boolean;
+  cliNetworkOverride?: boolean;
+}
+
+/**
+ * Initialize debug mode state from main process
+ * This ensures verbose logging works correctly in renderer
+ */
+async function initializeDebugState(): Promise<void> {
+  try {
+    const state = (await window.api.invoke('debug:get-state')) as DebugState;
+    if (state && typeof state.debugEnabled === 'boolean') {
+      setDebugModeEnabled(state.debugEnabled);
+      logVerbose('Renderer', `Debug mode initialized: ${state.debugEnabled}`);
+    }
+  } catch (error) {
+    console.warn('[Debug] Failed to get initial debug state:', error);
+  }
+}
+
+/**
+ * Listen for debug state changes from main process
+ */
+function setupDebugStateListener(): void {
+  window.api.receive('debug:state-changed', (state: unknown) => {
+    const debugState = state as DebugState;
+    if (debugState && typeof debugState.debugEnabled === 'boolean') {
+      setDebugModeEnabled(debugState.debugEnabled);
+      logVerbose('Renderer', `Debug mode updated: ${debugState.debugEnabled}`);
+    }
+  });
+}
 
 // ============================================================================
 // COMPONENT SYSTEM STATE
@@ -563,6 +604,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     logMessage('ERROR: API not available - some features may not work');
     return;
   }
+
+  // Initialize debug state from main process EARLY so verbose logging works
+  await initializeDebugState();
+  setupDebugStateListener();
 
   // Apply platform-specific styling IMMEDIATELY (no IPC needed)
   if (window.PLATFORM) {

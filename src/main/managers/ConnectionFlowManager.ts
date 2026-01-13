@@ -54,6 +54,7 @@ import {
   getDefaultCheckCode,
   shouldPromptForCheckCode,
 } from '../utils/PrinterUtils.js';
+import { getDebugLogService } from '../services/DebugLogService.js';
 import { getConfigManager } from './ConfigManager.js';
 import { getLoadingManager } from './LoadingManager.js';
 import { getPrinterBackendManager } from './PrinterBackendManager.js';
@@ -450,9 +451,19 @@ export class ConnectionFlowManager extends EventEmitter {
     }
 
     const currentDetails = context.printerDetails;
+    const debugLogService = getDebugLogService();
 
     try {
       console.log(`Starting disconnect sequence for context ${contextId}...`);
+
+      // Log disconnection for network debugging
+      if (currentDetails?.IPAddress) {
+        debugLogService.logDisconnection(
+          currentDetails.IPAddress,
+          'User-initiated disconnect',
+          true // Expected disconnect
+        );
+      }
 
       // Stop polling first
       this.emit('pre-disconnect', contextId);
@@ -522,6 +533,14 @@ export class ConnectionFlowManager extends EventEmitter {
   private async connectToPrinter(discoveredPrinter: DiscoveredPrinter): Promise<ConnectionResult> {
     // Start tracking this connection flow
     const flowId = this.startFlow();
+
+    // Log connection attempt for network debugging
+    const debugLogService = getDebugLogService();
+    debugLogService.logConnectionAttempt(
+      discoveredPrinter.ipAddress,
+      8899, // Standard FlashForge port
+      discoveredPrinter.serialNumber ? 'known' : 'discovered'
+    );
 
     this.loadingManager.show({ message: `Connecting to ${discoveredPrinter.name}...`, canCancel: false });
     this.emit('connecting-to-printer', discoveredPrinter.name);
@@ -690,6 +709,13 @@ export class ConnectionFlowManager extends EventEmitter {
       this.loadingManager.showSuccess(`Connected to ${printerDetails.Name} at ${printerDetails.IPAddress}`, 4000);
       this.emit('connected', printerDetails);
 
+      // Log successful connection for network debugging
+      debugLogService.logConnectionSuccess(
+        printerDetails.IPAddress,
+        8899,
+        printerDetails.Name
+      );
+
       // End flow tracking
       this.endFlow(flowId);
 
@@ -702,6 +728,14 @@ export class ConnectionFlowManager extends EventEmitter {
       const errorMessage = getConnectionErrorMessage(error);
       this.loadingManager.showError(`Connection failed: ${errorMessage}`, 5000);
       this.emit('connection-failed', errorMessage);
+
+      // Log connection failure for network debugging
+      debugLogService.logConnectionFailure(
+        discoveredPrinter.ipAddress,
+        8899,
+        errorMessage,
+        error instanceof Error ? error : undefined
+      );
 
       // End flow tracking on error
       this.endFlow(flowId);

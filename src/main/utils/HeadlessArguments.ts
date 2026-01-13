@@ -9,9 +9,35 @@
  *   --headless --all-saved-printers
  *   --headless --printers="192.168.1.100:new:12345678,192.168.1.101:legacy"
  *   --headless --webui-port=3001 --webui-password=mypassword
+ *   --headless --debug --debug-network
  */
 
 import type { PrinterClientType } from '@shared/types/printer.js';
+
+/**
+ * Debug CLI flags parsed from command-line arguments
+ * These work in both desktop and headless modes
+ */
+export interface DebugFlags {
+  /** Enable debug logging for this session */
+  debug: boolean;
+  /** Enable network-specific debug logging for this session */
+  debugNetwork: boolean;
+}
+
+/**
+ * Parse debug-related CLI arguments
+ * Works for both headless and desktop modes
+ *
+ * @returns DebugFlags with parsed values
+ */
+export function parseDebugFlags(): DebugFlags {
+  const args = process.argv;
+  return {
+    debug: args.includes('--debug'),
+    debugNetwork: args.includes('--debug-network'),
+  };
+}
 
 /**
  * Specification for a single printer connection in headless mode
@@ -31,6 +57,10 @@ export interface HeadlessConfig {
   printers?: PrinterSpec[]; // For explicit printer specifications
   webUIPort?: number;
   webUIPassword?: string;
+  /** Enable debug logging for this session */
+  debug?: boolean;
+  /** Enable network-specific debug logging for this session */
+  debugNetwork?: boolean;
 }
 
 /**
@@ -78,12 +108,18 @@ export function parseHeadlessArguments(): HeadlessConfig | null {
   const webUIPort = parseNumberArgument(args, '--webui-port');
   const webUIPassword = parseStringArgument(args, '--webui-password');
 
+  // Parse debug flags
+  const debug = args.includes('--debug');
+  const debugNetwork = args.includes('--debug-network');
+
   return {
     enabled: true,
     mode,
     printers,
     webUIPort,
     webUIPassword,
+    debug,
+    debugNetwork,
   };
 }
 

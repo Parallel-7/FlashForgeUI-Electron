@@ -59,6 +59,7 @@ const settingsAPI: ISettingsAPI = {
   testSpoolmanConnection: (url: string) => ipcRenderer.invoke('spoolman:test-connection', url),
   testDiscordWebhook: (url: string) => ipcRenderer.invoke('discord:test-webhook', url),
   getRoundedUISupportInfo: () => ipcRenderer.invoke('rounded-ui:get-support-info'),
+  openLogFolder: () => ipcRenderer.invoke('debug:open-log-folder'),
 };
 
 const printerSettingsAPI: IPrinterSettingsAPI = {

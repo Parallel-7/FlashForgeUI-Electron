@@ -234,8 +234,11 @@ export class MultiContextPollingCoordinator extends EventEmitter {
       retryDelayMs: 2000,
     };
 
-    // Create and configure polling service
-    const pollingService = new PrinterPollingService(config);
+    // Get printer IP for network logging
+    const printerIP = context.printerDetails?.IPAddress || 'unknown';
+
+    // Create and configure polling service with printer IP
+    const pollingService = new PrinterPollingService(config, printerIP);
 
     // Create a wrapper that adapts the context-aware backend to the polling service's interface
     // PrinterPollingService expects methods without contextId, so we bind the contextId here

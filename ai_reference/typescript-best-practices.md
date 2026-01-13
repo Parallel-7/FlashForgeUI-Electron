@@ -77,7 +77,7 @@ The project uses two TypeScript configurations for different build targets:
 2. **Module Resolution**: Use `"node"` for main process, `"bundler"` for renderer
 3. **Target/Lib**: ES2020 provides good balance of modern features and compatibility
 4. **Source Maps**: Enable for debugging, disable for production renderer builds
-5. **Declarations**: Generate for main process only, not renderer (webpack handles bundling)
+5. **Declarations**: Generate for main process only, not renderer (electron-vite handles bundling)
 
 ## Type Safety Best Practices
 

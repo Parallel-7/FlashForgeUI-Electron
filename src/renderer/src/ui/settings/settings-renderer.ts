@@ -92,6 +92,7 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'audio-alerts': 'AudioAlerts',
   'visual-alerts': 'VisualAlerts',
   'debug-mode': 'DebugMode',
+  'debug-network-logging': 'DebugNetworkLogging',
   'webhook-url': 'WebhookUrl',
   'custom-camera': 'CustomCamera',
   'custom-camera-url': 'CustomCameraUrl',
@@ -272,11 +273,58 @@ class SettingsRenderer {
       this.webUIEnabledToggle.addEventListener('change', () => this.handleWebUIEnabledToggle());
     }
 
+    // Debug mode toggle - show/hide network logging option
+    const debugModeInput = this.inputs.get('debug-mode');
+    if (debugModeInput) {
+      debugModeInput.addEventListener('change', () => this.updateDebugNetworkOptionVisibility());
+    }
+
+    // Open log folder button
+    const openLogFolderBtn = document.getElementById('btn-open-log-folder');
+    if (openLogFolderBtn) {
+      openLogFolderBtn.addEventListener('click', () => this.handleOpenLogFolder());
+    }
+
     this.settingsAPI?.onConfigUpdated((config) => {
       console.log('[Settings] Received config update from main process:', config);
       this.settings.global = { ...config };
       this.loadConfiguration();
     });
+  }
+
+  /**
+   * Update visibility of the network logging option based on debug mode state
+   */
+  private updateDebugNetworkOptionVisibility(): void {
+    const debugModeInput = this.inputs.get('debug-mode');
+    const networkOption = document.getElementById('debug-network-option');
+
+    if (debugModeInput && networkOption) {
+      const isDebugEnabled = debugModeInput.checked;
+      networkOption.style.display = isDebugEnabled ? 'block' : 'none';
+
+      // If debug mode is disabled, also disable network logging
+      if (!isDebugEnabled) {
+        const networkLoggingInput = this.inputs.get('debug-network-logging');
+        if (networkLoggingInput) {
+          networkLoggingInput.checked = false;
+          // Trigger change handler to update settings
+          this.handleInputChange('debug-network-logging');
+        }
+      }
+    }
+  }
+
+  /**
+   * Handle opening the log folder in the system file explorer
+   */
+  private handleOpenLogFolder(): void {
+    if (this.settingsAPI?.openLogFolder) {
+      void this.settingsAPI.openLogFolder();
+    } else {
+      console.warn('[Settings] openLogFolder API not available');
+      this.showSaveStatus('Unable to open log folder', true);
+    }
   }
 
   private async requestInitialConfig(): Promise<void> {
@@ -387,6 +435,7 @@ class SettingsRenderer {
 
     // Update input states after loading
     this.updateInputStates();
+    this.updateDebugNetworkOptionVisibility();
     this.hasUnsavedChanges = false;
     this.updateSaveButtonState();
   }

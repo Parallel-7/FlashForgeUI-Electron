@@ -28,6 +28,7 @@ import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.j
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 import { getGo2rtcService } from '../../services/Go2rtcService.js';
 import { getLogService } from '../../services/LogService.js';
+import { getDebugLogService } from '../../services/DebugLogService.js';
 import { getModelDisplayName } from '../../utils/PrinterUtils.js';
 import { getRoundedUISupportInfo } from '../../utils/RoundedUICompatibility.js';
 import { getWebUIManager } from '../../webui/server/WebUIManager.js';
@@ -146,6 +147,22 @@ export function registerDialogHandlers(configManager: ConfigManager, windowManag
 
   ipcMain.handle('rounded-ui:get-support-info', async () => {
     return getRoundedUISupportInfo();
+  });
+
+  // Open debug log folder in system file explorer
+  ipcMain.handle('debug:open-log-folder', async () => {
+    const debugLogService = getDebugLogService();
+    const logsDir = debugLogService.getLogsDirectory();
+    await shell.openPath(logsDir);
+  });
+
+  // Get effective debug state (for renderer initial sync)
+  ipcMain.handle('debug:get-state', () => {
+    const debugLogService = getDebugLogService();
+    return {
+      debugEnabled: debugLogService.isDebugEnabled(),
+      networkEnabled: debugLogService.isNetworkEnabled(),
+    };
   });
 
   // Test Discord webhook

@@ -89,7 +89,9 @@ Available MCP search tools:
 | `npm run docs:check` | Go script scanning for missing `@fileoverview` blocks | Ensures all TypeScript files have documentation headers |
 | `npm run specs:list -- --type active|completed` | Lists AI spec Markdown files (top-level or archive) | Defaults to active specs; pass `--type completed` for `ai_specs/archive` |
 | `npm run audit:dead-code` | Custom dead code analyzer using ts-morph | Discovers entrypoints dynamically and reports unused files/exports |
-| `npm run build:*` | Build main / renderer / WebUI / platform packages | Only when user asks or when structural build impacts occur |
+| `npm run build` | Build main + renderer + WebUI using electron-vite | Full build of all processes; only when user asks or when structural build impacts occur |
+| `npm run build:webui` | Build WebUI static files only (TypeScript compilation) | Compiles WebUI TypeScript and copies assets to output |
+| `npm run build:win` / `build:linux` / `build:mac` | Platform-specific electron-builder packages | Creates distributable packages for specific platforms |
 | `npm run linecount` / `linecount -- --min-lines=N` | TypeScript LOC summary; optionally filter files with N+ lines | Informational only |
 
 ---
@@ -114,10 +116,10 @@ Call out unverified runtime assumptions explicitly in deliverables.
 
 In order to verify you are complete with a task, you go through this checklist:
 1. Run type checking, if there's errors iterate until they are fixed properly (no band-aids, etc)
-2. Once type checking passes, run build:renderer. This ensure webpack compiles without errors, and if there are any, iterate until they are fixed properly (no band-aids, etc)
-3. Once build:renderer passes, the final check is running lint. It's important to never ignore the errors, the more they pile up the harder it becomes to do cleanups/maintain the codebase.
+2. Once type checking passes, run build. This ensures electron-vite compiles both main and renderer processes without errors, and if there are any, iterate until they are fixed properly (no band-aids, etc)
+3. Once build passes, the final check is running lint. It's important to never ignore the errors, the more they pile up the harder it becomes to do cleanups/maintain the codebase.
 
-Do not say you are done with something despite not having run one/any of these checks, and the same if one fails. All must be ran and pass to ensure codebase quality and production readiness.
+Do not say you are done with something despite not having run one/any of these checks, and the same if one fails. All must be run and pass to ensure codebase quality and production readiness.
 
 ---
 

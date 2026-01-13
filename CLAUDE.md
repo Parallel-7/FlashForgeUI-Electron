@@ -1,6 +1,6 @@
 # FlashForgeUI-Electron Development Guide
 
-**Last Updated:** 2025-12-28 22:26 ET (America/New_York)
+**Last Updated:** 2026-01-12 19:15 ET (America/New_York)
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -57,8 +57,8 @@ For detailed architectural information, see the comprehensive reference document
 
 - **Completion Checklist** (from [TOOLING.md](ai_reference/TOOLING.md)):
   1. Run type checking, if there's errors iterate until they are fixed properly (no band-aids, etc)
-  2. Once type checking passes, run build:renderer. This ensures webpack compiles without errors, and if there are any, iterate until they are fixed properly (no band-aids, etc)
-  3. Once build:renderer passes, the final check is running lint. It's important to never ignore the errors, the more they pile up the harder it becomes to do cleanups/maintain the codebase.
+  2. Once type checking passes, run build. This ensures electron-vite compiles both main and renderer processes without errors, and if there are any, iterate until they are fixed properly (no band-aids, etc)
+  3. Once build passes, the final check is running lint. It's important to never ignore the errors, the more they pile up the harder it becomes to do cleanups/maintain the codebase.
 
   Do not say you are done with something despite not having run one/any of these checks, and the same if one fails. All must be run and pass to ensure codebase quality and production readiness.
 

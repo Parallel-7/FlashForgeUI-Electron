@@ -324,9 +324,22 @@
             <section id="tab-panel-advanced" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-advanced" hidden>
                 <h3 class="tab-panel-title">Advanced</h3>
                 <div class="settings-section">
+                    <h4 class="section-title">Debug Logging</h4>
                     <label class="checkbox-label">
                         <input type="checkbox" id="debug-mode"> Debug Mode
                     </label>
+                    <div id="debug-network-option" class="nested-option" style="margin-left: 24px; display: none;">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="debug-network-logging"> Enable Network Logging
+                        </label>
+                        <div class="settings-info-text" style="margin-left: 24px; margin-top: 4px;">
+                            Logs detailed printer connection events, disconnections, and retry attempts.
+                        </div>
+                    </div>
+                    <div class="settings-info-text" style="margin-top: 8px;">
+                        When enabled, detailed logs are saved to a file. Requires app restart.
+                    </div>
+                    <button id="btn-open-log-folder" class="settings-action-button" style="margin-top: 8px;">Open Log Location</button>
                 </div>
 
                 <div class="settings-section">

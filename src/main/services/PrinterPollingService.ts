@@ -32,6 +32,7 @@ import type {
 import { createEmptyPollingData, DEFAULT_POLLING_CONFIG } from '@shared/types/polling.js';
 import { EventEmitter } from '../utils/EventEmitter.js';
 import { printerDataTransformer } from './PrinterDataTransformer.js';
+import { getDebugLogService } from './DebugLogService.js';
 
 const POLLING_LOG_NAMESPACE = 'PrinterPollingService';
 
@@ -115,6 +116,9 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
   private currentData: PollingData;
   private backendManager: BackendManager | null = null;
 
+  /** Printer IP address for network logging (defaults to 'unknown' if not provided) */
+  private readonly printerIP: string;
+
   // Enhanced thumbnail caching
   private lastJobName: string | null = null;
   private currentThumbnail: string | null = null;
@@ -124,7 +128,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
     logVerbose(POLLING_LOG_NAMESPACE, message, ...args);
   }
 
-  constructor(config: Partial<PollingConfig> = {}) {
+  constructor(config: Partial<PollingConfig> = {}, printerIP: string = 'unknown') {
     super();
 
     this.config = {
@@ -132,6 +136,7 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
       ...config,
     };
 
+    this.printerIP = printerIP;
     this.currentData = createEmptyPollingData();
   }
 
@@ -470,6 +475,10 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
 
     console.error(`Polling error (attempt ${this.retryCount}/${this.config.maxRetries}):`, errorMessage);
 
+    // Log polling failure for network debugging with printer IP
+    const debugLogService = getDebugLogService();
+    debugLogService.logPollingFailure(this.printerIP, errorMessage, this.retryCount);
+
     this.emit(POLLING_EVENTS.POLLING_ERROR, {
       error: errorMessage,
       timestamp: new Date(),
@@ -479,6 +488,10 @@ export class PrinterPollingService extends EventEmitter<PollingServiceEventMap> 
 
     if (!willRetry) {
       console.error('Max polling retries reached, stopping polling');
+
+      // Log that polling is stopping due to exhausted retries (not a network disconnect)
+      debugLogService.logPollingStopped(this.printerIP, this.config.maxRetries, errorMessage);
+
       this.stop();
     }
   }

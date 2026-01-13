@@ -310,9 +310,13 @@ export class ConfigManager extends EventEmitter {
           const previousConfig = { ...this.currentConfig };
           this.currentConfig = { ...sanitizedConfig };
 
-          // Emit update event for initialization
-          const changedKeys = Object.keys(DEFAULT_CONFIG) as Array<keyof AppConfig>;
-          this.emitUpdateEvent(previousConfig, changedKeys);
+          // Only emit events for keys that actually changed from defaults
+          const changedKeys = (Object.keys(DEFAULT_CONFIG) as Array<keyof AppConfig>).filter(
+            (key) => previousConfig[key] !== sanitizedConfig[key]
+          );
+          if (changedKeys.length > 0) {
+            this.emitUpdateEvent(previousConfig, changedKeys);
+          }
 
           const needsResave = this.configNeedsResave(loadedData as unknown as Record<string, unknown>, sanitizedConfig);
           if (needsResave) {
@@ -325,8 +329,13 @@ export class ConfigManager extends EventEmitter {
           const previousConfig = { ...this.currentConfig };
           this.currentConfig = sanitizedConfig;
 
-          const changedKeys = Object.keys(DEFAULT_CONFIG) as Array<keyof AppConfig>;
-          this.emitUpdateEvent(previousConfig, changedKeys);
+          // Only emit events for keys that actually changed
+          const changedKeys = (Object.keys(DEFAULT_CONFIG) as Array<keyof AppConfig>).filter(
+            (key) => previousConfig[key] !== sanitizedConfig[key]
+          );
+          if (changedKeys.length > 0) {
+            this.emitUpdateEvent(previousConfig, changedKeys);
+          }
 
           // Save the sanitized version
           this.scheduleSave();

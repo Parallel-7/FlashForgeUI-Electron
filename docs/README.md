@@ -42,7 +42,7 @@ Launch FlashForgeUI with the `--headless` flag:
 FlashForgeUI.exe --enable-logging --headless
 ```
 
-The WebUI will be accessible at `http://localhost:3001` by default.
+The WebUI will be accessible at `http://localhost:3000` by default.
 
 ## Command-Line Arguments
 
@@ -87,7 +87,7 @@ FlashForgeUI.exe --enable-logging --headless --printers="192.168.1.100:new:12345
 ### WebUI Server Configuration
 
 **`--webui-port=<port>`**
-- Sets the WebUI server port (default: 3001)
+- Sets the WebUI server port (default: 3000)
 ```bash
 FlashForgeUI.exe --enable-logging --headless --webui-port=8080
 ```
@@ -97,6 +97,32 @@ FlashForgeUI.exe --enable-logging --headless --webui-port=8080
 ```bash
 FlashForgeUI.exe --enable-logging --headless --webui-password=mypassword
 ```
+
+### Debug Logging
+
+**`--debug`**
+- Enables debug logging to file
+- Logs are saved to timestamped files in the app's logs directory
+- Includes verbose application logs, status updates, and general debugging info
+- Can be combined with `--debug-network` for comprehensive logging
+```bash
+FlashForgeUI.exe --enable-logging --headless --last-used --debug
+```
+
+**`--debug-network`**
+- Enables network-specific debug logging
+- Requires debug mode to be enabled (via `--debug` flag or the DebugMode config setting)
+- Logs connection attempts, failures, polling errors, and disconnections
+- Useful for diagnosing printer connectivity issues
+```bash
+FlashForgeUI.exe --enable-logging --headless --last-used --debug --debug-network
+```
+
+Debug logs can be downloaded from the WebUI at:
+- `/api/debug/logs` - List all debug log files
+- `/api/debug/latest` - Download most recent debug log
+- `/api/debug/network-logs` - List all network debug log files
+- `/api/debug/network-latest` - Download most recent network log
 
 ## Common Usage Examples
 
@@ -135,7 +161,7 @@ FlashForgeUI.exe --enable-logging --headless --last-used --webui-port=8080 --web
 Once running, access the WebUI from any browser on your network:
 
 ```
-http://<server-ip>:3001
+http://<server-ip>:3000
 ```
 
 Default password is configured in your application settings (or use `--webui-password=` to override).

@@ -651,7 +651,7 @@ class StaticFileManager {
 
   getMainHTMLPath(): string {
     if (this.environmentService.isDevelopment()) {
-      // Development: Use webpack dev server or local files
+      // Development: Use Vite dev server or local build files
       return path.join(__dirname, '../../dist/renderer/index.html');
     } else if (this.environmentService.isPackaged()) {
       // Production: Use asar-packaged files
@@ -1028,42 +1028,25 @@ class CameraProxyService extends EventEmitter {
 }
 ```
 
-### Webpack Optimization
+### Electron-Vite Build Optimization
 
-Configure webpack for optimal bundle size and performance:
+FlashForgeUI uses electron-vite (built on Vite) for optimal build performance and modern bundling:
 
-```javascript
-// webpack.config.js optimization
-module.exports = {
-  target: 'electron-renderer',
-  
-  optimization: {
-    minimize: process.env.NODE_ENV === 'production',
-    splitChunks: process.env.NODE_ENV === 'production' ? {
-      chunks: 'all',
-      cacheGroups: {
-        vendor: {
-          test: /[\\/]node_modules[\\/]/,
-          name: 'vendors',
-          chunks: 'all',
-        }
-      }
-    } : false
-  },
-  
-  // Externals to reduce bundle size
-  externals: {
-    electron: 'commonjs electron'
-  },
-  
-  // Performance hints
-  performance: {
-    hints: process.env.NODE_ENV === 'production' ? 'warning' : false,
-    maxEntrypointSize: 512000,
-    maxAssetSize: 512000
-  }
-};
-```
+**Key benefits:**
+- **Fast HMR**: Hot Module Replacement for rapid development iteration
+- **Optimized bundling**: Vite's Rollup-based production builds with tree-shaking
+- **Built-in TypeScript**: Native TypeScript support without additional configuration
+- **Code splitting**: Automatic vendor chunk splitting for better caching
+- **ESM-first**: Modern ES modules by default with CommonJS fallback
+
+**Configuration** is handled via `electron.vite.config.ts` at the project root. electron-vite automatically:
+- Sets `target: 'electron-renderer'` for renderer builds
+- Externalizes `electron` and Node.js built-ins
+- Optimizes bundle size with production minification
+- Generates source maps for debugging
+- Splits vendor dependencies into separate chunks
+
+For most projects, electron-vite's defaults provide optimal performance without manual webpack-style configuration.
 
 ## Security Best Practices
 
@@ -1216,23 +1199,30 @@ Implement CSP for renderer processes:
 
 ## Build and Packaging Considerations
 
-### Multi-Target TypeScript Compilation
+### Multi-Target Build Process with electron-vite
 
-Use separate build processes for different targets:
+FlashForgeUI uses electron-vite for building main and renderer processes, with separate TypeScript compilation for the WebUI static files:
 
 ```json
 {
   "scripts": {
-    "build": "npm run build:main && npm run build:renderer && npm run build:webui",
-    "build:main": "tsc",
-    "build:renderer": "webpack --config webpack.config.js",
-    "build:webui": "tsc --project src/webui/static/tsconfig.json && npm run build:webui:copy",
-    "dev": "concurrently \"npm run build:main:watch\" \"npm run build:renderer:watch\"",
-    "build:main:watch": "tsc --watch",
-    "build:renderer:watch": "webpack --config webpack.config.js --watch"
+    "build": "npm run build:webui && electron-vite build",
+    "build:webui": "tsc --project src/main/webui/static/tsconfig.json && npm run build:webui:copy",
+    "build:webui:copy": "node scripts/copy-webui-assets.cjs",
+    "dev": "npm run build:webui && electron-vite dev",
+    "start": "electron-vite preview",
+    "build:win": "tsx scripts/platform-build-wrapper.ts --platform win",
+    "build:linux": "tsx scripts/platform-build-wrapper.ts --platform linux",
+    "build:mac": "tsx scripts/platform-build-wrapper.ts --platform mac"
   }
 }
 ```
+
+**Key points:**
+- **electron-vite** handles both main and renderer process compilation in a single command
+- WebUI static files are compiled separately with TypeScript (they run in Express, not Electron renderer)
+- Platform-specific builds use wrapper scripts that ensure proper environment setup
+- No need for separate `build:main` or `build:renderer` scripts - electron-vite handles both
 
 ### Electron Builder Configuration
 

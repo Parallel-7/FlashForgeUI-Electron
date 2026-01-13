@@ -145,7 +145,7 @@ class AutoUpdateService extends EventEmitter {
     });
 
     autoUpdater.on('error', (error: Error) => {
-      log.error('[AutoUpdate] Error:', error);
+      // Note: electron-updater already logs errors via autoUpdater.logger
       this.handleError(error);
     });
   }

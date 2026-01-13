@@ -56,7 +56,9 @@ import {
   isRoundedUISupported,
   type RoundedUIUnsupportedReason,
 } from './utils/RoundedUICompatibility.js';
-import { parseHeadlessArguments, validateHeadlessConfig } from './utils/HeadlessArguments.js';
+import { parseHeadlessArguments, validateHeadlessConfig, parseDebugFlags } from './utils/HeadlessArguments.js';
+import { getDebugLogService } from './services/DebugLogService.js';
+import { setDebugModeEnabled } from '@shared/logging.js';
 import type { SpoolmanOfflineEvent, SpoolmanOnlineEvent } from './services/SpoolmanHealthMonitor.js';
 import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection.js';
 import { getHeadlessManager } from './managers/HeadlessManager.js';
@@ -85,6 +87,9 @@ import type { ContextCreatedEvent, ContextRemovedEvent, ContextSwitchEvent } fro
 // Check for headless mode BEFORE single instance lock
 const headlessConfig = parseHeadlessArguments();
 
+// Parse debug CLI flags (works for both desktop and headless modes)
+const debugFlags = parseDebugFlags();
+
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   // Another instance is already running, quit immediately
@@ -111,6 +116,68 @@ global.printerBackendManager = undefined;
 
 // Power save blocker to prevent OS throttling
 let powerSaveBlockerId: number | null = null;
+
+/**
+ * Initialize the debug logging system
+ * Sets up file-based debug logging based on config and CLI flags
+ */
+const initializeDebugLogging = (): void => {
+  const configManager = getConfigManager();
+  const config = configManager.getConfig();
+
+  // Combine config and CLI flags (OR logic - CLI can override)
+  const debugEnabled = config.DebugMode || debugFlags.debug;
+  const networkDebugEnabled = (config.DebugNetworkLogging || debugFlags.debugNetwork) && debugEnabled;
+
+  // Set global debug flag for shared logging module
+  setDebugModeEnabled(debugEnabled);
+
+  // Initialize debug log service with file writing
+  const debugLogService = getDebugLogService();
+  debugLogService.initialize(debugFlags.debug, debugFlags.debugNetwork);
+
+  // Listen for config changes to update debug state
+  configManager.on('configUpdated', () => {
+    const updatedConfig = configManager.getConfig();
+    const newDebugEnabled = updatedConfig.DebugMode || debugFlags.debug;
+    const newNetworkEnabled = (updatedConfig.DebugNetworkLogging || debugFlags.debugNetwork) && newDebugEnabled;
+
+    setDebugModeEnabled(newDebugEnabled);
+    debugLogService.updateEnabledState();
+
+    // Broadcast effective debug state to all renderer windows
+    broadcastDebugState(newDebugEnabled, newNetworkEnabled);
+  });
+
+  const effectiveDebugEnabled = debugEnabled;
+  const effectiveNetworkEnabled = networkDebugEnabled;
+
+  console.log(`[Debug] Debug mode: ${effectiveDebugEnabled}, Network logging: ${effectiveNetworkEnabled}`);
+  if (effectiveDebugEnabled) {
+    console.log(`[Debug] Log directory: ${debugLogService.getLogsDirectory()}`);
+  }
+};
+
+/**
+ * Broadcast effective debug state to all renderer windows
+ */
+const broadcastDebugState = (debugEnabled: boolean, networkEnabled: boolean): void => {
+  const windowManager = getWindowManager();
+  const windows = windowManager.getActiveWindows();
+
+  const debugState = {
+    debugEnabled,
+    networkEnabled,
+    cliDebugOverride: debugFlags.debug,
+    cliNetworkOverride: debugFlags.debugNetwork,
+  };
+
+  windows.forEach((window) => {
+    if (!window.isDestroyed()) {
+      window.webContents.send('debug:state-changed', debugState);
+    }
+  });
+};
 
 /**
  * Initialize the camera proxy service
@@ -911,6 +978,9 @@ const setupEventDrivenServices = (): void => {
  * Initialize the application
  */
 const initializeApp = async (): Promise<void> => {
+  // Initialize debug logging early (after config is available)
+  initializeDebugLogging();
+
   // CRITICAL: Set up IPC handlers BEFORE creating window to prevent race conditions
   console.log('Setting up IPC handlers before window creation...');
 
@@ -1039,6 +1109,24 @@ async function initializeHeadless(): Promise<void> {
       configManager.once('config-loaded', () => resolve());
     }
   });
+
+  // Initialize debug logging early (uses CLI overrides from headlessConfig)
+  // Merge headless-specific debug flags with parsed debug flags
+  const effectiveDebugFlags = {
+    debug: debugFlags.debug || headlessConfig.debug === true,
+    debugNetwork: debugFlags.debugNetwork || headlessConfig.debugNetwork === true,
+  };
+  const debugLogService = getDebugLogService();
+  const config = configManager.getConfig();
+  const debugEnabled = config.DebugMode || effectiveDebugFlags.debug;
+  const networkEnabled = (config.DebugNetworkLogging || effectiveDebugFlags.debugNetwork) && debugEnabled;
+  setDebugModeEnabled(debugEnabled);
+  debugLogService.initialize(effectiveDebugFlags.debug, effectiveDebugFlags.debugNetwork);
+
+  console.log(`[Headless] Debug mode: ${debugEnabled}, Network logging: ${networkEnabled}`);
+  if (debugEnabled) {
+    console.log(`[Headless] Log directory: ${debugLogService.getLogsDirectory()}`);
+  }
 
   // Initialize go2rtc camera streaming service (unified MJPEG/RTSP handling in headless mode)
   const go2rtcService = getGo2rtcService();
@@ -1344,6 +1432,11 @@ app.on('before-quit', async () => {
     // Shutdown WebUI server
     const webUIManager = getWebUIManager();
     await webUIManager.dispose();
+
+    // Flush and close debug log files
+    const debugLogService = getDebugLogService();
+    debugLogService.dispose();
+    console.log('Debug log service disposed');
 
     // Then cleanup config manager
     const configManager = getConfigManager();

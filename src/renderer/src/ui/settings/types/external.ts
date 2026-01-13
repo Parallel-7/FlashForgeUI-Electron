@@ -32,6 +32,7 @@ export interface ISettingsAPI {
   testSpoolmanConnection: (url: string) => Promise<{ connected: boolean; error?: string }>;
   testDiscordWebhook: (url: string) => Promise<{ success: boolean; error?: string }>;
   getRoundedUISupportInfo: () => Promise<RoundedUISupportInfo>;
+  openLogFolder?: () => Promise<void>;
 }
 
 export interface IPrinterSettingsAPI {

@@ -486,6 +486,7 @@ const validReceiveChannels = [
   'config-loaded',
   'desktop-theme-preview',
   'theme-changed',
+  'debug:state-changed',
 ];
 
 // Expose platform directly (no IPC needed) - available synchronously to renderer
@@ -630,6 +631,7 @@ const electronAPI: ElectronAPI = {
       'spoolman:get-active-spool',
       'spoolman:set-active-spool',
       'spoolman:get-status',
+      'debug:get-state',
     ];
 
     if (validInvokeChannels.includes(channel)) {
