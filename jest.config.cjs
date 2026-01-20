@@ -8,6 +8,9 @@ module.exports = {
     },
     // Optional: Mock CSS/image imports if they cause errors
     moduleNameMapper: {
+      '^(\\.{1,2}/.*)\\.js$': '$1',
+      '^@shared/(.*)\\.js$': '<rootDir>/src/shared/$1',
+      '^@shared/(.*)$': '<rootDir>/src/shared/$1',
       '\\.(css|less|sass|scss)$': 'identity-obj-proxy', // Mocks CSS module imports
       '\\.(gif|ttf|eot|svg|png)$': '<rootDir>/__mocks__/fileMock.js', // Mocks file imports
     },
@@ -32,4 +35,11 @@ module.exports = {
     ],
     coverageDirectory: 'coverage',
     coverageReporters: ['text', 'lcov', 'clover'],
+    globals: {
+      'ts-jest': {
+        diagnostics: {
+          ignoreCodes: [2307]
+        }
+      }
+    }
   };
