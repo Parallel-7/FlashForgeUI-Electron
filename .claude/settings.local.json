@@ -117,7 +117,11 @@
       "Skill(get-time)",
       "Bash(python3:*)",
       "Skill(typescript-best-practices)",
-      "Bash(gh api:*)"
+      "Bash(gh api:*)",
+      "Bash(gh search prs:*)",
+      "Bash(gh search issues:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr diff:*)"
     ],
     "deny": [],
     "additionalDirectories": [
