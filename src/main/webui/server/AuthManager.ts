@@ -73,7 +73,15 @@ export class AuthManager {
     const serverPassword = config.WebUIPassword;
 
     // Check if password matches
-    if (request.password !== serverPassword) {
+    // Ensure password is a string to prevent Buffer.from throwing on undefined/null
+    const passwordInput = typeof request.password === 'string' ? request.password : '';
+    const passwordBuffer = Buffer.from(passwordInput);
+    const serverPasswordBuffer = Buffer.from(serverPassword);
+
+    if (
+      passwordBuffer.length !== serverPasswordBuffer.length ||
+      !crypto.timingSafeEqual(passwordBuffer, serverPasswordBuffer)
+    ) {
       return {
         success: false,
         message: 'Invalid password',
@@ -157,8 +165,13 @@ export class AuthManager {
       // Verify signature
       const secret = this.getTokenSecret();
       const expectedSignature = crypto.createHmac('sha256', secret).update(tokenData).digest('hex');
+      const signatureBuffer = Buffer.from(signature);
+      const expectedSignatureBuffer = Buffer.from(expectedSignature);
 
-      if (signature !== expectedSignature) {
+      if (
+        signatureBuffer.length !== expectedSignatureBuffer.length ||
+        !crypto.timingSafeEqual(signatureBuffer, expectedSignatureBuffer)
+      ) {
         return { isValid: false };
       }
 
@@ -213,8 +226,13 @@ export class AuthManager {
       // Verify signature
       const secret = this.getTokenSecret();
       const expectedSignature = crypto.createHmac('sha256', secret).update(tokenData).digest('hex');
+      const signatureBuffer = Buffer.from(signature);
+      const expectedSignatureBuffer = Buffer.from(expectedSignature);
 
-      if (signature !== expectedSignature) {
+      if (
+        signatureBuffer.length !== expectedSignatureBuffer.length ||
+        !crypto.timingSafeEqual(signatureBuffer, expectedSignatureBuffer)
+      ) {
         return false;
       }
 
