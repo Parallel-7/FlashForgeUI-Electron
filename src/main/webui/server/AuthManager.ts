@@ -321,8 +321,16 @@ export class AuthManager {
    */
   private getTokenSecret(): string {
     const config = this.configManager.getConfig();
-    // Use a combination of password and a fixed salt for the secret
-    return crypto.createHash('sha256').update(config.WebUIPassword).update('ffui-webui-2025').digest('hex');
+    let secret = config.WebUISecret;
+
+    // Generate and save new secret if missing
+    if (!secret) {
+      secret = crypto.randomBytes(32).toString('hex');
+      this.configManager.set('WebUISecret', secret);
+    }
+
+    // Use a combination of password and the unique secret
+    return crypto.createHash('sha256').update(config.WebUIPassword).update(secret).digest('hex');
   }
 
   /**

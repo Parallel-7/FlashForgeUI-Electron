@@ -22,10 +22,14 @@ describe('AuthManager', () => {
     mockConfig = {
       WebUIPassword: 'securepassword123',
       WebUIPasswordRequired: true,
+      WebUISecret: '',
     };
 
     mockConfigManager = {
       getConfig: jest.fn().mockReturnValue(mockConfig),
+      set: jest.fn((key, value) => {
+        mockConfig[key] = value;
+      }),
     };
 
     (getConfigManager as jest.Mock).mockReturnValue(mockConfigManager);
@@ -77,6 +81,26 @@ describe('AuthManager', () => {
 
       expect(result.success).toBe(false);
       expect(result.message).toBe('Invalid password');
+    });
+
+    it('should generate and save WebUISecret if missing during token generation', async () => {
+      mockConfig.WebUISecret = '';
+      await authManager.validateLogin({
+        password: 'securepassword123',
+        rememberMe: false,
+      });
+
+      expect(mockConfigManager.set).toHaveBeenCalledWith('WebUISecret', expect.any(String));
+    });
+
+    it('should use existing WebUISecret if present', async () => {
+      mockConfig.WebUISecret = 'existing-secret';
+      await authManager.validateLogin({
+        password: 'securepassword123',
+        rememberMe: false,
+      });
+
+      expect(mockConfigManager.set).not.toHaveBeenCalled();
     });
   });
 
