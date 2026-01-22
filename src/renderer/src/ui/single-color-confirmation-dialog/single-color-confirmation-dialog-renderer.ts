@@ -60,7 +60,7 @@ interface MaterialSlotInfo {
 
 // Utility functions (inlined to avoid require errors)
 function getSlotDisplayName(slotId: number): string {
-  return `Slot ${slotId + 1}`;
+  return `Slot ${slotId}`; // Slot IDs are already 1-based from API
 }
 
 interface SingleColorConfirmDialogAPI {
@@ -177,16 +177,12 @@ async function loadActiveSlotInfo(api: SingleColorConfirmDialogAPI): Promise<voi
       return;
     }
 
-    // Get the active slot
-    if (
-      materialStation.activeSlot !== null &&
-      materialStation.activeSlot >= 0 &&
-      materialStation.activeSlot < materialStation.slots.length
-    ) {
-      activeSlotInfo = materialStation.slots[materialStation.activeSlot];
+    // activeSlot is 1-based from API, find matching slot by ID
+    if (materialStation.activeSlot !== null && materialStation.activeSlot > 0) {
+      activeSlotInfo = materialStation.slots.find((s) => s.slotId === materialStation.activeSlot) ?? null;
 
       if (activeSlotInfo && activeSlotInfo.isEmpty) {
-        showError(`Active slot ${materialStation.activeSlot + 1} is empty. Please load material before printing.`);
+        showError(`Active slot ${materialStation.activeSlot} is empty. Please load material before printing.`);
         if (startButton) startButton.disabled = true;
       }
     } else {
@@ -299,4 +295,4 @@ function registerThemeListener(api: SingleColorConfirmDialogAPI): void {
 window.addEventListener('unload', cleanup);
 
 // Export for module
-export {};
+export { };

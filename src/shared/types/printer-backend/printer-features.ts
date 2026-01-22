@@ -135,7 +135,7 @@ export interface FeatureOverrideSettings {
  * Material station slot information (AD5X)
  */
 export interface MaterialSlotInfo {
-  readonly slotId: number; // 0-based index from API
+  readonly slotId: number; // 1-based slot ID from API (1, 2, 3, 4)
   readonly materialType: string | null; // Material name from API (PLA, ABS, etc)
   readonly materialColor: string | null; // Hex color string from API
   readonly isEmpty: boolean; // Inverted from API's hasFilament

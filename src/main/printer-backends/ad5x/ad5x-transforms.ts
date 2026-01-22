@@ -29,7 +29,7 @@ import { MaterialSlotInfo, MaterialStationStatus, MatlStationInfo, SlotInfo } fr
 export function transformMaterialStation(info: MatlStationInfo): MaterialStationStatus {
   return {
     connected: true,
-    slots: info.slotInfos.map((slot, index) => transformSlotInfo(slot, index)),
+    slots: info.slotInfos.map((slot) => transformSlotInfo(slot)),
     activeSlot: info.currentSlot,
     overallStatus: determineOverallStatus(info),
     errorMessage: null,
@@ -38,11 +38,11 @@ export function transformMaterialStation(info: MatlStationInfo): MaterialStation
 
 /**
  * Transform ff-api SlotInfo to our MaterialSlotInfo
- * Converts to 0-based indexing and inverts hasFilament to isEmpty for UI clarity
+ * Preserves the slot ID from the API (1-based: 1, 2, 3, 4)
  */
-export function transformSlotInfo(slot: SlotInfo, index: number): MaterialSlotInfo {
+export function transformSlotInfo(slot: SlotInfo): MaterialSlotInfo {
   return {
-    slotId: index, // Convert to 0-based for UI
+    slotId: slot.slotId, // Preserve actual slot ID from printer API
     materialType: slot.hasFilament ? slot.materialName : null,
     materialColor: slot.hasFilament ? slot.materialColor : null,
     isEmpty: !slot.hasFilament,

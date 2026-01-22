@@ -61,7 +61,7 @@ function validateMaterialCompatibility(tool: FFGcodeToolData, slot: MaterialSlot
 }
 
 function createColorDifferenceWarning(toolId: number, toolColor: string, slotId: number, slotColor: string): string {
-  return `Color difference detected: Tool ${toolId + 1} expects ${toolColor} but Slot ${slotId + 1} has ${slotColor}. This is allowed but may affect print appearance.`;
+  return `Color difference detected: Tool ${toolId + 1} expects ${toolColor} but Slot ${slotId} has ${slotColor}. This is allowed but may affect print appearance.`;
 }
 
 function createMaterialMismatchError(
@@ -70,7 +70,7 @@ function createMaterialMismatchError(
   slotId: number,
   slotMaterial: string | null
 ): string {
-  return `Material type mismatch: Tool ${toolId + 1} requires ${toolMaterial}, but Slot ${slotId + 1} contains ${slotMaterial || 'no material'}`;
+  return `Material type mismatch: Tool ${toolId + 1} requires ${toolMaterial}, but Slot ${slotId} contains ${slotMaterial || 'no material'}`;
 }
 
 function hasColorDifference(toolColor: string, slotColor: string | null): boolean {
@@ -270,8 +270,9 @@ function displayIFSSlots(): void {
 
   ifsSlotsElement.innerHTML = '';
 
-  materialStation.slots.forEach((slot, index) => {
-    const item = createSlotItem(slot, index + 1); // Slots are 1-based in UI
+  // Use slot.slotId which is 1-based from API
+  materialStation.slots.forEach((slot) => {
+    const item = createSlotItem(slot);
     if (ifsSlotsElement) {
       ifsSlotsElement.appendChild(item);
     }
@@ -280,18 +281,19 @@ function displayIFSSlots(): void {
 
 /**
  * Create a slot item element
+ * Slot IDs are 1-based from the API
  */
-function createSlotItem(slot: MaterialSlotInfo, slotNumber: number): HTMLElement {
+function createSlotItem(slot: MaterialSlotInfo): HTMLElement {
   const item = document.createElement('div');
   item.className = 'slot-item';
-  item.dataset.slotId = String(slotNumber);
+  item.dataset.slotId = String(slot.slotId);
 
   if (slot.isEmpty) {
     item.classList.add('disabled');
   }
 
   // Check if already assigned
-  const isAssigned = Array.from(currentMappings.values()).some((m) => m.slotId === slotNumber);
+  const isAssigned = Array.from(currentMappings.values()).some((m) => m.slotId === slot.slotId);
   if (isAssigned) {
     item.classList.add('assigned');
   }
@@ -310,7 +312,7 @@ function createSlotItem(slot: MaterialSlotInfo, slotNumber: number): HTMLElement
 
   const label = document.createElement('div');
   label.className = 'slot-label';
-  label.textContent = `Slot ${slotNumber}`;
+  label.textContent = `Slot ${slot.slotId}`;
 
   const material = document.createElement('div');
   if (slot.isEmpty) {
@@ -329,7 +331,7 @@ function createSlotItem(slot: MaterialSlotInfo, slotNumber: number): HTMLElement
 
   // Click handler
   if (!slot.isEmpty && !isAssigned) {
-    item.addEventListener('click', () => handleSlotSelection(slotNumber));
+    item.addEventListener('click', () => handleSlotSelection(slot.slotId));
   }
 
   return item;
@@ -389,8 +391,9 @@ function handleSlotSelection(slotId: number): void {
 function createMapping(): void {
   if (selectedTool === null || selectedSlot === null || !initData || !materialStation) return;
 
+  // Find tool and slot by ID (slotId is 1-based from API)
   const tool = initData.toolDatas.find((t) => t.toolId === selectedTool);
-  const slot = materialStation.slots[selectedSlot - 1]; // Convert to 0-based
+  const slot = materialStation.slots.find((s) => s.slotId === selectedSlot);
 
   if (!tool || !slot || slot.isEmpty) return;
 
@@ -620,4 +623,4 @@ function registerThemeListener(api: MaterialMatchingDialogAPI): void {
 window.addEventListener('unload', cleanup);
 
 // Export for module
-export {};
+export { };

@@ -170,9 +170,11 @@ export class PrinterDataTransformer {
 
   /**
    * Transform a single material slot
+   * API returns 1-based slot IDs (1, 2, 3, 4) - preserve them directly
    */
   private transformMaterialSlot(slotData: Record<string, unknown>, index: number, activeSlot: number): MaterialSlot {
-    const slotId = safeExtractNumber(slotData, 'slotId', index) + 1; // Convert 0-based to 1-based
+    // Use slotId from data if available (already 1-based from API), otherwise use index+1 as fallback
+    const slotId = safeExtractNumber(slotData, 'slotId', index + 1);
     const isEmpty = safeExtractBoolean(slotData, 'isEmpty', true);
     const materialType = safeExtractString(slotData, 'materialType', '');
     const materialColor = safeExtractString(slotData, 'materialColor', '');

@@ -198,8 +198,8 @@ export class IFSStationComponent extends BaseComponent {
     // Check for dialog-specific parent classes
     return Boolean(
       this.container?.closest('.component-wrapper') ||
-        this.container?.closest('.dialog-content') ||
-        document.querySelector('.dialog-container')
+      this.container?.closest('.dialog-content') ||
+      document.querySelector('.dialog-container')
     );
   }
 
@@ -299,16 +299,15 @@ export class IFSStationComponent extends BaseComponent {
   private renderSlots(): void {
     if (!this.slotsContainer) return;
 
-    // AD5X has 4 slots (0-3 in backend, 1-4 in UI)
-    for (let uiSlot = 1; uiSlot <= 4; uiSlot++) {
-      const slotElement = this.slotsContainer.querySelector(`[data-slot="${uiSlot}"]`);
+    // AD5X has 4 slots with 1-based IDs (1, 2, 3, 4)
+    for (let slotNumber = 1; slotNumber <= 4; slotNumber++) {
+      const slotElement = this.slotsContainer.querySelector(`[data-slot="${slotNumber}"]`);
       if (!slotElement) continue;
 
-      // Find matching slot data (backend uses 0-based, UI uses 1-based)
-      const backendSlotId = uiSlot - 1;
-      const slotData = this.slots.find((s) => s.slotId === backendSlotId || s.slotId === uiSlot);
+      // Find matching slot data by 1-based slot ID from the API
+      const slotData = this.slots.find((s) => s.slotId === slotNumber);
 
-      this.renderSingleSlot(slotElement as HTMLElement, uiSlot, slotData);
+      this.renderSingleSlot(slotElement as HTMLElement, slotNumber, slotData);
     }
 
     // Update active indicator

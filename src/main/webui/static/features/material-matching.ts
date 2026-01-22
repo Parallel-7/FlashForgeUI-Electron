@@ -264,11 +264,10 @@ export function renderMaterialSlots(status: MaterialStationStatus | null): void 
   }
 
   status.slots.forEach((slot) => {
-    const displaySlotId = slot.slotId + 1;
+    // slotId is already 1-based from API
     const item = document.createElement('div');
     item.className = 'material-slot-item';
-    item.dataset.slotId = `${displaySlotId}`;
-    item.dataset.rawSlotId = `${slot.slotId}`;
+    item.dataset.slotId = `${slot.slotId}`;
     item.dataset.materialType = slot.materialType ?? '';
     item.dataset.materialColor = slot.materialColor ?? '';
     item.dataset.isEmpty = slot.isEmpty ? 'true' : 'false';
@@ -277,7 +276,7 @@ export function renderMaterialSlots(status: MaterialStationStatus | null): void 
       item.classList.add('empty');
     }
 
-    if (isSlotAlreadyAssigned(displaySlotId)) {
+    if (isSlotAlreadyAssigned(slot.slotId)) {
       item.classList.add('assigned');
     }
 
@@ -292,7 +291,7 @@ export function renderMaterialSlots(status: MaterialStationStatus | null): void 
 
     const label = document.createElement('div');
     label.className = 'material-slot-label';
-    label.textContent = `Slot ${displaySlotId}`;
+    label.textContent = `Slot ${slot.slotId}`;
 
     const material = document.createElement('div');
     material.className = 'material-slot-material';
@@ -304,7 +303,7 @@ export function renderMaterialSlots(status: MaterialStationStatus | null): void 
     item.appendChild(swatch);
     item.appendChild(info);
 
-    if (slot.isEmpty || isSlotAlreadyAssigned(displaySlotId)) {
+    if (slot.isEmpty || isSlotAlreadyAssigned(slot.slotId)) {
       item.classList.add('disabled');
     }
 
@@ -313,13 +312,13 @@ export function renderMaterialSlots(status: MaterialStationStatus | null): void 
 }
 
 function createSlotInfoFromElement(element: HTMLElement): MaterialSlotInfo | null {
-  const rawSlotId = element.dataset.rawSlotId;
-  if (rawSlotId === undefined) {
+  const slotIdStr = element.dataset.slotId;
+  if (slotIdStr === undefined) {
     return null;
   }
 
   return {
-    slotId: Number(rawSlotId),
+    slotId: Number(slotIdStr), // Already 1-based from API
     isEmpty: element.dataset.isEmpty === 'true',
     materialType: element.dataset.materialType || null,
     materialColor: element.dataset.materialColor || null,
@@ -356,23 +355,20 @@ function handleSlotSelection(slotInfo: MaterialSlotInfo): void {
 
   if (!materialsMatch(tool.materialName, slotInfo.materialType)) {
     showMaterialError(
-      `Material mismatch: Tool ${tool.toolId + 1} requires ${tool.materialName}, but Slot ${
-        slotInfo.slotId + 1
-      } contains ${slotInfo.materialType || 'no material'}.`
+      `Material mismatch: Tool ${tool.toolId + 1} requires ${tool.materialName}, but Slot ${slotInfo.slotId} contains ${slotInfo.materialType || 'no material'}.`
     );
     return;
   }
 
-  const displaySlotId = slotInfo.slotId + 1;
-
-  if (isSlotAlreadyAssigned(displaySlotId)) {
-    showMaterialError(`Slot ${displaySlotId} is already assigned to another tool.`);
+  // slotId is already 1-based from API
+  if (isSlotAlreadyAssigned(slotInfo.slotId)) {
+    showMaterialError(`Slot ${slotInfo.slotId} is already assigned to another tool.`);
     return;
   }
 
   const mapping: MaterialMapping = {
     toolId: tool.toolId,
-    slotId: displaySlotId,
+    slotId: slotInfo.slotId, // Already 1-based
     materialName: tool.materialName,
     toolMaterialColor: tool.materialColor,
     slotMaterialColor: slotInfo.materialColor || DEFAULT_SLOT_GREY,
@@ -383,7 +379,7 @@ function handleSlotSelection(slotInfo: MaterialSlotInfo): void {
 
   if (colorsDiffer(tool.materialColor, slotInfo.materialColor || '')) {
     showMaterialWarning(
-      `Tool ${tool.toolId + 1} color (${tool.materialColor}) does not match Slot ${displaySlotId} color (${slotInfo.materialColor || 'unknown'}). The print will succeed, but appearance may differ.`
+      `Tool ${tool.toolId + 1} color (${tool.materialColor}) does not match Slot ${slotInfo.slotId} color (${slotInfo.materialColor || 'unknown'}). The print will succeed, but appearance may differ.`
     );
   } else {
     clearMaterialMessages();
