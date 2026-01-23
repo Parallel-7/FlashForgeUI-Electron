@@ -7,3 +7,8 @@
 **Vulnerability:** The application used a hardcoded string ('ffui-webui-2025') as a salt for HMAC signatures on session tokens. This makes session tokens predictable if the password is known or weak, and allows rainbow table attacks if the source code is public.
 **Learning:** Hardcoded salts in open-source projects defeat the purpose of salting. Even if combined with a password, they don't provide per-installation uniqueness.
 **Prevention:** Use a random secret generated at runtime (or installation time) and persist it in the application configuration.
+
+## 2026-01-23 - Missing Security Headers
+**Vulnerability:** The WebUI server was missing standard HTTP security headers (X-Frame-Options, X-Content-Type-Options, etc.), potentially exposing it to clickjacking and MIME-type confusion attacks.
+**Learning:** Express.js does not include security headers by default. Explicit middleware is required to set them.
+**Prevention:** Always include the `createSecurityHeadersMiddleware` (or `helmet`) in the Express app setup pipeline.
