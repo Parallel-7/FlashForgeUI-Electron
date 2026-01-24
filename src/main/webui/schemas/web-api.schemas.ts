@@ -65,7 +65,10 @@ export const TemperatureDataSchema = z.object({
  * Job start data validation
  */
 export const JobStartDataSchema = z.object({
-  filename: z.string().min(1),
+  filename: z
+    .string()
+    .min(1)
+    .refine((val) => !/(^|[\\/])\.\.([\\/]|$)/.test(val), 'Path traversal characters (..) are not allowed'),
   leveling: z.boolean().optional().default(false),
   startNow: z.boolean().optional().default(true),
 });
@@ -93,7 +96,10 @@ const MaterialMappingSchema = z.object({
 });
 
 export const JobStartRequestSchema = z.object({
-  filename: z.string().min(1, 'Filename is required'),
+  filename: z
+    .string()
+    .min(1, 'Filename is required')
+    .refine((val) => !/(^|[\\/])\.\.([\\/]|$)/.test(val), 'Path traversal characters (..) are not allowed'),
   leveling: z.boolean().optional().default(false),
   startNow: z.boolean().optional().default(true),
   materialMappings: z

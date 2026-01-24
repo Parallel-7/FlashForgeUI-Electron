@@ -7,3 +7,8 @@
 **Vulnerability:** The application used a hardcoded string ('ffui-webui-2025') as a salt for HMAC signatures on session tokens. This makes session tokens predictable if the password is known or weak, and allows rainbow table attacks if the source code is public.
 **Learning:** Hardcoded salts in open-source projects defeat the purpose of salting. Even if combined with a password, they don't provide per-installation uniqueness.
 **Prevention:** Use a random secret generated at runtime (or installation time) and persist it in the application configuration.
+
+## 2026-01-22 - Path Traversal in API Schemas
+**Vulnerability:** The `JobStartRequestSchema` validated filenames only by length (`min(1)`), allowing path traversal characters (e.g., `../../etc/passwd`). If the backend naively concatenates this filename to a path, it allows arbitrary file read/write.
+**Learning:** Zod's string validation is basic. For file paths, explicit validation against directory traversal (e.g., forbidding `..`) is essential, especially when inputs are passed to filesystem operations.
+**Prevention:** Use `.refine()` in Zod schemas to reject strings containing `..` path segments: `/(^|[\/])\.\.([\/]|$)/`.
