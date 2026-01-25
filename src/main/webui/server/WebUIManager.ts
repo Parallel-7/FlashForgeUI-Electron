@@ -309,6 +309,9 @@ export class WebUIManager extends EventEmitter {
     }
 
     try {
+      // Ensure authentication system is initialized (and passwords migrated)
+      this.authManager.initialize();
+
       const config = this.configManager.getConfig();
 
       // Check if WebUI is enabled
