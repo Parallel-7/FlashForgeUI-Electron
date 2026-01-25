@@ -90,16 +90,52 @@ describe('AuthManager', () => {
         rememberMe: false,
       });
 
+      // Expect calls for both WebUIPassword (migration) and WebUISecret
       expect(mockConfigManager.set).toHaveBeenCalledWith('WebUISecret', expect.any(String));
     });
 
     it('should use existing WebUISecret if present', async () => {
       mockConfig.WebUISecret = 'existing-secret';
+      // Use a hashed password to prevent opportunistic migration from triggering 'set'
+      mockConfig.WebUIPassword = 'pbkdf2:sha512:10000:somesalt:somehash';
+      // We need to mock verifyPassword internal logic or just rely on it returning false?
+      // Wait, verifyPassword calculates hash. If I put a fake hash, verification fails.
+
+      // Easier: Let migration happen, but expect 'WebUISecret' NOT to be set.
+      mockConfig.WebUIPassword = 'securepassword123';
+
       await authManager.validateLogin({
         password: 'securepassword123',
         rememberMe: false,
       });
 
+      expect(mockConfigManager.set).toHaveBeenCalledWith('WebUIPassword', expect.stringMatching(/^pbkdf2:/));
+      expect(mockConfigManager.set).not.toHaveBeenCalledWith('WebUISecret', expect.any(String));
+    });
+
+    it('should migrate plaintext password on login', async () => {
+      mockConfig.WebUIPassword = 'securepassword123';
+
+      const result = await authManager.validateLogin({
+        password: 'securepassword123',
+        rememberMe: false,
+      });
+
+      expect(result.success).toBe(true);
+      expect(mockConfigManager.set).toHaveBeenCalledWith('WebUIPassword', expect.stringMatching(/^pbkdf2:/));
+    });
+  });
+
+  describe('initialize', () => {
+    it('should migrate plaintext password', () => {
+      mockConfig.WebUIPassword = 'securepassword123';
+      authManager.initialize();
+      expect(mockConfigManager.set).toHaveBeenCalledWith('WebUIPassword', expect.stringMatching(/^pbkdf2:/));
+    });
+
+    it('should not migrate already hashed password', () => {
+      mockConfig.WebUIPassword = 'pbkdf2:sha512:10000:salt:hash';
+      authManager.initialize();
       expect(mockConfigManager.set).not.toHaveBeenCalled();
     });
   });

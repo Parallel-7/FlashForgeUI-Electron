@@ -59,6 +59,74 @@ export class AuthManager {
   }
 
   /**
+   * Initialize authentication manager and migrate password if needed
+   */
+  public initialize(): void {
+    const config = this.configManager.getConfig();
+    const currentPassword = config.WebUIPassword;
+
+    // Check if password needs migration (is not hashed)
+    if (currentPassword && !currentPassword.startsWith('pbkdf2:')) {
+      console.log('Migrating WebUI password to secure hash...');
+      const hashedPassword = this.hashPassword(currentPassword);
+      this.configManager.set('WebUIPassword', hashedPassword);
+    }
+  }
+
+  /**
+   * Hash a password using PBKDF2
+   */
+  private hashPassword(password: string): string {
+    const salt = crypto.randomBytes(16).toString('hex');
+    const iterations = 10000;
+    const keylen = 64;
+    const digest = 'sha512';
+
+    const hash = crypto.pbkdf2Sync(password, salt, iterations, keylen, digest).toString('hex');
+    return `pbkdf2:${digest}:${iterations}:${salt}:${hash}`;
+  }
+
+  /**
+   * Verify a password against a stored hash (or plaintext for legacy)
+   */
+  private verifyPassword(password: string, storedPassword: string): boolean {
+    // Handle legacy plaintext passwords
+    if (!storedPassword.startsWith('pbkdf2:')) {
+      const passwordBuffer = Buffer.from(password);
+      const storedBuffer = Buffer.from(storedPassword);
+      if (passwordBuffer.length !== storedBuffer.length) {
+        return false;
+      }
+      return crypto.timingSafeEqual(passwordBuffer, storedBuffer);
+    }
+
+    try {
+      const parts = storedPassword.split(':');
+      if (parts.length !== 5) {
+        return false;
+      }
+
+      const [scheme, digest, iterationsStr, salt, expectedHash] = parts;
+      if (scheme !== 'pbkdf2') {
+        return false;
+      }
+
+      const iterations = parseInt(iterationsStr, 10);
+      const keylen = Buffer.from(expectedHash, 'hex').length;
+
+      const hash = crypto.pbkdf2Sync(password, salt, iterations, keylen, digest).toString('hex');
+
+      const hashBuffer = Buffer.from(hash, 'hex');
+      const expectedHashBuffer = Buffer.from(expectedHash, 'hex');
+
+      return crypto.timingSafeEqual(hashBuffer, expectedHashBuffer);
+    } catch (error) {
+      console.error('Password verification error:', error);
+      return false;
+    }
+  }
+
+  /**
    * Validate login credentials and generate token
    */
   public async validateLogin(request: WebUILoginRequest): Promise<WebUILoginResponse> {
@@ -75,17 +143,19 @@ export class AuthManager {
     // Check if password matches
     // Ensure password is a string to prevent Buffer.from throwing on undefined/null
     const passwordInput = typeof request.password === 'string' ? request.password : '';
-    const passwordBuffer = Buffer.from(passwordInput);
-    const serverPasswordBuffer = Buffer.from(serverPassword);
 
-    if (
-      passwordBuffer.length !== serverPasswordBuffer.length ||
-      !crypto.timingSafeEqual(passwordBuffer, serverPasswordBuffer)
-    ) {
+    if (!this.verifyPassword(passwordInput, serverPassword)) {
       return {
         success: false,
         message: 'Invalid password',
       };
+    }
+
+    // Opportunistic migration: if we just successfully logged in with a plaintext password, hash it now
+    if (!serverPassword.startsWith('pbkdf2:')) {
+      console.log('Migrating WebUI password to secure hash after successful login');
+      const hashedPassword = this.hashPassword(serverPassword);
+      this.configManager.set('WebUIPassword', hashedPassword);
     }
 
     // Generate session token
@@ -281,7 +351,7 @@ export class AuthManager {
 
     return {
       hasPassword: config.WebUIPasswordRequired && !!config.WebUIPassword,
-      defaultPassword: config.WebUIPassword === 'changeme',
+      defaultPassword: this.verifyPassword('changeme', config.WebUIPassword),
       authRequired: config.WebUIPasswordRequired,
     };
   }

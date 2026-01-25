@@ -17,3 +17,10 @@
 **Vulnerability:** The WebUI server was missing standard HTTP security headers (X-Frame-Options, X-Content-Type-Options, Content-Security-Policy, etc.), potentially exposing it to clickjacking, MIME-sniffing, and XSS attacks.
 **Learning:** Express.js does not include security headers by default. Explicit middleware is required to set them.
 **Prevention:** Always include security headers middleware in the Express app setup pipeline to set X-Content-Type-Options, X-Frame-Options, Referrer-Policy, and Content-Security-Policy headers.
+
+## 2026-02-05 - Plaintext Password Migration Pattern
+**Vulnerability:** The application stored the WebUI password in plaintext in `config.json`, allowing anyone with file access to read it.
+**Learning:** Security upgrades often require migration strategies for existing data. A dual-strategy works best:
+1. **Startup Migration:** Check and migrate data when the service initializes.
+2. **Opportunistic Migration:** If startup migration is bypassed (e.g., config hot-reload), migrate when the legacy data is successfully used (e.g., on successful login).
+**Prevention:** Always store passwords hashed (e.g., PBKDF2, Argon2). When upgrading, ensure backward compatibility by detecting the data format (plaintext vs hash) and upgrading it transparently.
