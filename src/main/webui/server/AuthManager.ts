@@ -51,6 +51,7 @@ export class AuthManager {
   private readonly sessions = new Map<string, SessionInfo>();
   private readonly sessionTimeout = 24 * 60 * 60 * 1000; // 24 hours for persistent
   private readonly tempSessionTimeout = 60 * 60 * 1000; // 1 hour for temporary
+  private readonly PBKDF2_ITERATIONS = 210000;
   private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor() {
@@ -78,7 +79,7 @@ export class AuthManager {
    */
   private hashPassword(password: string): string {
     const salt = crypto.randomBytes(16).toString('hex');
-    const iterations = 10000;
+    const iterations = this.PBKDF2_ITERATIONS;
     const keylen = 64;
     const digest = 'sha512';
 
@@ -156,6 +157,23 @@ export class AuthManager {
       console.log('Migrating WebUI password to secure hash after successful login');
       const hashedPassword = this.hashPassword(passwordInput);
       this.configManager.set('WebUIPassword', hashedPassword);
+    } else {
+      // Check if existing hash uses weak iterations and upgrade if needed
+      try {
+        const parts = serverPassword.split(':');
+        if (parts.length === 5) {
+          const iterations = parseInt(parts[2], 10);
+          if (iterations < this.PBKDF2_ITERATIONS) {
+            console.log(
+              `Upgrading WebUI password hash iterations from ${iterations} to ${this.PBKDF2_ITERATIONS} after successful login`
+            );
+            const hashedPassword = this.hashPassword(passwordInput);
+            this.configManager.set('WebUIPassword', hashedPassword);
+          }
+        }
+      } catch (error) {
+        console.warn('Failed to check password hash iterations for upgrade:', error);
+      }
     }
 
     // Generate session token

@@ -24,3 +24,8 @@
 1. **Startup Migration:** Check and migrate data when the service initializes.
 2. **Opportunistic Migration:** If startup migration is bypassed (e.g., config hot-reload), migrate when the legacy data is successfully used (e.g., on successful login).
 **Prevention:** Always store passwords hashed (e.g., PBKDF2, Argon2). When upgrading, ensure backward compatibility by detecting the data format (plaintext vs hash) and upgrading it transparently.
+
+## 2026-02-14 - Weak PBKDF2 Iterations
+**Vulnerability:** The application was using 10,000 iterations for PBKDF2-SHA512 hashing, which is significantly below modern security recommendations (210,000+), making password hashes susceptible to offline brute-force attacks.
+**Learning:** Security constants (like iteration counts) degrade over time as hardware improves. What was secure 5 years ago is now weak. Codebases must handle the evolution of cryptographic parameters.
+**Prevention:** Use a variable iteration count (or format like `$pbkdf2$iterations$salt$hash`) that allows the application to detect weak hashes and upgrade them opportunistically during successful login, rather than hardcoding a single static value for verification.
