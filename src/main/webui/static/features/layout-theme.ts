@@ -758,7 +758,7 @@ function createProfileCard(profile: ThemeProfile): HTMLElement {
 
   card.innerHTML = `
       <div class="profile-card-header">
-        <span class="profile-name">${profile.name}</span>
+        <span class="profile-name"></span>
         <div class="profile-actions">
         </div>
       </div>
@@ -768,6 +768,11 @@ function createProfileCard(profile: ThemeProfile): HTMLElement {
         <div class="profile-color-swatch" style="background-color: ${profile.colors.text};"></div>
       </div>
     `;
+
+  const nameSpan = card.querySelector('.profile-name');
+  if (nameSpan) {
+    nameSpan.textContent = profile.name;
+  }
 
   card.addEventListener('click', () => handleProfileSelect(profile));
 

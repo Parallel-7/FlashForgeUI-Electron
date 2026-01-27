@@ -29,3 +29,8 @@
 **Improvement:** Increased PBKDF2-SHA512 iterations from 10,000 to 210,000 (OWASP recommended minimum) before initial release to protect against offline brute-force attacks.
 **Learning:** Security constants (like iteration counts) degrade over time as hardware improves. When starting a new project, always use current OWASP recommendations rather than outdated defaults.
 **Prevention:** Reference OWASP Password Storage Cheat Sheet for current iteration recommendations when implementing password hashing.
+
+## 2026-02-18 - Stored XSS in Theme Profile Name
+**Vulnerability:** The application was vulnerable to Stored XSS in the theme profile management. The profile name was being interpolated directly into `innerHTML` when rendering profile cards: `<span class="profile-name">${profile.name}</span>`. This allows an attacker (or a compromised account) to create a profile with a name containing malicious scripts (e.g., `<img src=x onerror=alert(1)>`) which would execute when any user views the list of theme profiles.
+**Learning:** Even when inputs are validated on the server or come from authenticated sources, rendering them unsafely using `innerHTML` creates vulnerabilities. String interpolation into HTML is almost always unsafe for user data.
+**Prevention:** Always use safe DOM manipulation methods like `textContent` or `innerText` when rendering untrusted text. If HTML rendering is required, use a sanitizer library (like DOMPurify). In this case, refactoring to use `textContent` for the name field completely eliminates the vector.
