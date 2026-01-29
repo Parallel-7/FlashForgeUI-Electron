@@ -2,22 +2,16 @@
  * @fileoverview WebUI theme configuration routes.
  */
 
-import {
-  sanitizeTheme,
-  ThemeProfileAddData,
-  ThemeProfileDeleteData,
-  ThemeProfileUpdateData,
-} from '@shared/types/config.js';
+import { sanitizeTheme } from '@shared/types/config.js';
 import { StandardAPIResponse } from '@shared/types/web-api.types.js';
 import type { Response, Router } from 'express';
 import { toAppError } from '../../../utils/error.utils.js';
+import {
+  createValidationError,
+  ThemeProfileOperationSchema,
+} from '../../schemas/web-api.schemas.js';
 import type { AuthenticatedRequest } from '../auth-middleware.js';
 import type { RouteDependencies } from './route-helpers.js';
-
-interface ThemeProfileOperationRequestBody {
-  operation: 'add' | 'update' | 'delete';
-  data: ThemeProfileAddData | ThemeProfileUpdateData | ThemeProfileDeleteData;
-}
 
 export function registerPublicThemeRoutes(router: Router, deps: RouteDependencies): void {
   router.get('/api/webui/theme', async (_req, res: Response) => {
@@ -76,27 +70,32 @@ export function registerThemeRoutes(router: Router, deps: RouteDependencies): vo
 
   router.post('/webui/theme/profiles', async (req: AuthenticatedRequest, res: Response) => {
     try {
-      const { operation, data } = req.body as ThemeProfileOperationRequestBody;
+      const validation = ThemeProfileOperationSchema.safeParse(req.body);
+      if (!validation.success) {
+        const validationError = createValidationError(validation.error);
+        return res.status(400).json({
+          success: false,
+          error: validationError.error,
+          details: validationError.details,
+        });
+      }
+
+      const { operation, data } = validation.data;
       const configManager = deps.configManager;
 
       switch (operation) {
         case 'add': {
-          const addData = data as ThemeProfileAddData;
-          configManager.addThemeProfile('web', addData.name, addData.colors);
+          configManager.addThemeProfile('web', data.name, data.colors);
           break;
         }
         case 'update': {
-          const updateData = data as ThemeProfileUpdateData;
-          configManager.updateThemeProfile('web', updateData.originalName, updateData.updatedProfile);
+          configManager.updateThemeProfile('web', data.originalName, data.updatedProfile);
           break;
         }
         case 'delete': {
-          const deleteData = data as ThemeProfileDeleteData;
-          configManager.deleteThemeProfile('web', deleteData.name);
+          configManager.deleteThemeProfile('web', data.name);
           break;
         }
-        default:
-          return res.status(400).json({ success: false, error: 'Invalid operation' });
       }
 
       return res.json({ success: true, message: `Profile ${operation}ed successfully` });

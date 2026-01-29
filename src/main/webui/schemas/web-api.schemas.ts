@@ -212,6 +212,43 @@ export const SpoolClearRequestSchema = z.object({
 });
 
 // ============================================================================
+// THEME PROFILE SCHEMAS
+// ============================================================================
+
+const ThemeColorSchema = z.string().regex(/^#([0-9a-fA-F]{6})$/, 'Invalid hex color code');
+
+export const ThemeColorsSchema = z.object({
+  primary: ThemeColorSchema,
+  secondary: ThemeColorSchema,
+  background: ThemeColorSchema,
+  surface: ThemeColorSchema,
+  text: ThemeColorSchema,
+});
+
+export const ThemeProfileAddSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
+  colors: ThemeColorsSchema,
+});
+
+export const ThemeProfileUpdateSchema = z.object({
+  originalName: z.string().min(1, 'Original name is required'),
+  updatedProfile: z.object({
+    name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
+    colors: ThemeColorsSchema,
+  }),
+});
+
+export const ThemeProfileDeleteSchema = z.object({
+  name: z.string().min(1, 'Name is required'),
+});
+
+export const ThemeProfileOperationSchema = z.discriminatedUnion('operation', [
+  z.object({ operation: z.literal('add'), data: ThemeProfileAddSchema }),
+  z.object({ operation: z.literal('update'), data: ThemeProfileUpdateSchema }),
+  z.object({ operation: z.literal('delete'), data: ThemeProfileDeleteSchema }),
+]);
+
+// ============================================================================
 // TYPE EXPORTS
 // ============================================================================
 
