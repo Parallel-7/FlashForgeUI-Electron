@@ -216,6 +216,11 @@ export const SpoolClearRequestSchema = z.object({
 // ============================================================================
 
 const ThemeColorSchema = z.string().regex(/^#([0-9a-fA-F]{6})$/, 'Invalid hex color code');
+const ThemeProfileNameSchema = z
+  .string()
+  .min(1, 'Name is required')
+  .max(100, 'Name too long')
+  .regex(/^[a-zA-Z0-9 _-]+$/, 'Name contains invalid characters');
 
 export const ThemeColorsSchema = z.object({
   primary: ThemeColorSchema,
@@ -226,14 +231,14 @@ export const ThemeColorsSchema = z.object({
 });
 
 export const ThemeProfileAddSchema = z.object({
-  name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
+  name: ThemeProfileNameSchema,
   colors: ThemeColorsSchema,
 });
 
 export const ThemeProfileUpdateSchema = z.object({
   originalName: z.string().min(1, 'Original name is required'),
   updatedProfile: z.object({
-    name: z.string().min(1, 'Name is required').max(100, 'Name too long'),
+    name: ThemeProfileNameSchema,
     colors: ThemeColorsSchema,
   }),
 });

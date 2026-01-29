@@ -132,4 +132,26 @@ describe('ThemeProfileOperationSchema', () => {
     };
     expect(ThemeProfileOperationSchema.safeParse(invalid).success).toBe(false);
   });
+
+  it('should reject names with invalid characters', () => {
+    const invalidInputs = [
+      'Profile<script>',
+      'Profile/../',
+      'Profile"',
+      "Profile'",
+      'Profile;',
+      'Profile&',
+    ];
+
+    invalidInputs.forEach((name) => {
+      const invalid = {
+        operation: 'add',
+        data: {
+          name,
+          colors: validColors,
+        },
+      };
+      expect(ThemeProfileOperationSchema.safeParse(invalid).success).toBe(false);
+    });
+  });
 });
