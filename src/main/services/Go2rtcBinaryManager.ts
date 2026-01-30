@@ -12,8 +12,9 @@
 import { app } from 'electron';
 import type { ChildProcess } from 'node:child_process';
 import { spawn } from 'node:child_process';
-import fs from 'node:fs';
-import path from 'node:path';
+import * as fs from 'node:fs';
+import * as crypto from 'node:crypto';
+import * as path from 'node:path';
 import type { Go2rtcBinaryInfo, Go2rtcConfig } from '../types/go2rtc.types.js';
 
 /**
@@ -48,6 +49,12 @@ export class Go2rtcBinaryManager {
 
   /** Timeout for graceful shutdown (ms) */
   private readonly shutdownTimeoutMs = 5000;
+
+  /** Basic auth username */
+  private readonly username = 'admin';
+
+  /** Basic auth password - randomly generated on startup */
+  private readonly password = crypto.randomBytes(16).toString('hex');
 
   private constructor() {
     // Register cleanup on app quit
@@ -127,6 +134,20 @@ export class Go2rtcBinaryManager {
   }
 
   /**
+   * Get the basic auth username
+   */
+  public getUsername(): string {
+    return this.username;
+  }
+
+  /**
+   * Get the basic auth password
+   */
+  public getPassword(): string {
+    return this.password;
+  }
+
+  /**
    * Check if go2rtc process is running
    */
   public isRunning(): boolean {
@@ -147,6 +168,8 @@ export class Go2rtcBinaryManager {
     const config: Go2rtcConfig = {
       api: {
         listen: `:${this.apiPort}`,
+        username: this.username,
+        password: this.password,
       },
       webrtc: {
         listen: `:${this.webrtcPort}/tcp`,
@@ -182,6 +205,8 @@ export class Go2rtcBinaryManager {
     if (config.api) {
       lines.push('api:');
       if (config.api.listen) lines.push(`  listen: "${config.api.listen}"`);
+      if (config.api.username) lines.push(`  username: "${config.api.username}"`);
+      if (config.api.password) lines.push(`  password: "${config.api.password}"`);
       // Allow CORS for WebSocket connections from Electron renderer/dev server
       lines.push('  origin: "*"');
     }
