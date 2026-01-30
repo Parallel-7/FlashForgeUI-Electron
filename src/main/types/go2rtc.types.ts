@@ -181,6 +181,8 @@ export interface CameraStreamConfig {
   streamName: string;
   /** API port for additional endpoints */
   apiPort: number;
+  /** Authentication token (password) for client access */
+  token: string;
 }
 
 /**

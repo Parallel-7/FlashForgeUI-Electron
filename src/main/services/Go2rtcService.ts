@@ -288,6 +288,7 @@ export class Go2rtcService extends EventEmitter {
       isAvailable: this.isRunning(),
       streamName: stream.streamName,
       apiPort,
+      token: this.binaryManager.getPassword(),
     };
   }
 

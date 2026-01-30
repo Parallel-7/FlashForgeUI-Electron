@@ -107,7 +107,7 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
       // Build WebSocket URL for WebUI client
       // WebUI needs to connect to go2rtc on the server's hostname, not localhost
       const host = req.hostname || 'localhost';
-      const wsUrl = `ws://${host}:${streamConfig.apiPort}/api/ws?src=${encodeURIComponent(streamConfig.streamName)}`;
+      const wsUrl = `ws://${host}:${streamConfig.apiPort}/api/ws?src=${encodeURIComponent(streamConfig.streamName)}&token=${encodeURIComponent(streamConfig.token)}`;
 
       const response = {
         success: true,

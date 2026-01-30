@@ -330,7 +330,12 @@ export class Go2rtcBinaryManager {
       }
 
       try {
-        const response = await fetch(`${this.getApiUrl()}/api`);
+        const auth = Buffer.from(`${this.username}:${this.password}`).toString('base64');
+        const response = await fetch(`${this.getApiUrl()}/api`, {
+          headers: {
+            Authorization: `Basic ${auth}`,
+          },
+        });
         if (response.ok) {
           return; // Ready!
         }
