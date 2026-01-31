@@ -1,6 +1,6 @@
 # FlashForgeUI-Electron Development Guide
 
-**Last Updated:** 2026-01-24 17:53 ET (America/New_York)
+**Last Updated:** 2026-01-31 20:30 ET (America/New_York)
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 

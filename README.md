@@ -9,7 +9,7 @@
 ![Platforms](https://img.shields.io/badge/Platforms-Win%20%7C%20macOS%20%7C%20Linux-3178c6?style=flat)
 ![Downloads](https://img.shields.io/github/downloads/Parallel-7/FlashForgeUI-Electron/total?style=flat&color=brightgreen)
 ![Latest](https://img.shields.io/github/downloads/Parallel-7/FlashForgeUI-Electron/latest/total?style=flat&color=blue)
-![Version](https://img.shields.io/badge/Version-1.0.4-brightgreen?style=flat)
+![Version](https://img.shields.io/badge/Version-1.0.4--alpha.3-orange?style=flat)
 
 ![Electron](https://img.shields.io/badge/Electron-35.7.5-47848f?style=flat&logo=electron)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.7.2-3178c6?style=flat&logo=typescript)
@@ -28,8 +28,8 @@
 
 | Resource | Description |
 | --- | --- |
-| **[Download Stable Release](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/tag/v1.0.4)** | Production-ready stable build |
-| **[Download Alpha Release](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/tag/v1.0.5-alpha.1)** | Latest features and improvements |
+| **[Download Stable Release](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/latest)** | Production-ready stable build |
+| **[Download Alpha Release](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/tag/v1.0.4-alpha.3)** | Latest features and improvements |
 | **[User Guide](https://github.com/Parallel-7/FlashForgeUI-Electron/tree/main/docs)** | Documentation and setup instructions |
 
 </div>

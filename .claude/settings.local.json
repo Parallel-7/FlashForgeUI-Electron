@@ -125,7 +125,12 @@
       "Bash(git pull:*)",
       "Bash(pnpm:*)",
       "Skill(best-practices)",
-      "Skill(electron)"
+      "Skill(electron)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr checkout:*)",
+      "Bash(git merge:*)",
+      "Bash(git branch:*)"
     ],
     "deny": [],
     "additionalDirectories": [
