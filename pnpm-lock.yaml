@@ -13,7 +13,7 @@ importers:
   .:
     dependencies:
       '@ghosttypes/ff-api':
-        specifier: '*'
+        specifier: 1.0.0-20251122000715
         version: 1.0.0-20251122000715
       '@parallel-7/slicer-meta':
         specifier: ^1.1.0-20251112234641
