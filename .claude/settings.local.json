@@ -130,7 +130,13 @@
       "Bash(gh pr list:*)",
       "Bash(gh pr checkout:*)",
       "Bash(git merge:*)",
-      "Bash(git branch:*)"
+      "Bash(git branch:*)",
+      "Bash(gh workflow:*)",
+      "Bash(gh run list:*)",
+      "Bash(for:*)",
+      "Bash(do echo \"=== COMMIT $commit ===\")",
+      "Bash(done)",
+      "Bash(gemini:*)"
     ],
     "deny": [],
     "additionalDirectories": [
