@@ -146,7 +146,7 @@ export class Go2rtcBinaryManager {
   private async generateConfig(): Promise<string> {
     const config: Go2rtcConfig = {
       api: {
-        listen: `:${this.apiPort}`,
+        listen: `127.0.0.1:${this.apiPort}`,
       },
       webrtc: {
         listen: `:${this.webrtcPort}/tcp`,

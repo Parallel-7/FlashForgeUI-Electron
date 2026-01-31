@@ -44,3 +44,8 @@
 **Vulnerability:** The application was casting `req.body` directly to a discriminated union type (`ThemeProfileOperationRequestBody`) without validation. This allows attackers to send malformed data (e.g., missing fields, invalid types) that matches the TypeScript type structure only superficially, potentially causing backend crashes or logic errors.
 **Learning:** TypeScript types disappear at runtime. Trusting that incoming JSON matches a TS interface is a common source of bugs and vulnerabilities. Discriminated unions (like `operation: 'add' | 'update'`) are particularly prone to this if not validated, as the logic flow depends entirely on the discriminator field.
 **Prevention:** Always use a runtime validation library like Zod to parse and validate payloads, especially for complex structures like discriminated unions. Use `z.discriminatedUnion` to strictly enforce the relationship between the discriminator and the data shape.
+
+## 2026-03-05 - Insecure Sidecar Binding
+**Vulnerability:** The `go2rtc` sidecar service was configured to listen on all interfaces (`0.0.0.0`), exposing its unauthenticated API and camera streams to the local network. This allowed any device on the network to view camera feeds or control streams without authentication.
+**Learning:** Sidecar processes often default to insecure bindings. Relying on obscurity or network trust for helper services negates the security of the main application.
+**Prevention:** Always explicitly bind internal/helper services to `127.0.0.1`. If external access is required, proxy the traffic through the main authenticated application to ensure access controls are enforced.

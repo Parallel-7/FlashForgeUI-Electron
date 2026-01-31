@@ -104,10 +104,18 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
         return sendErrorResponse<StandardAPIResponse>(res, 503, 'Camera stream not available');
       }
 
-      // Build WebSocket URL for WebUI client
-      // WebUI needs to connect to go2rtc on the server's hostname, not localhost
-      const host = req.hostname || 'localhost';
-      const wsUrl = `ws://${host}:${streamConfig.apiPort}/api/ws?src=${encodeURIComponent(streamConfig.streamName)}`;
+      // Build WebSocket URL for WebUI client to connect via proxy
+      // Connect to the WebUI server itself, which proxies to the local go2rtc instance
+      // Use headers.host to respect the port the client used (handles reverse proxies correctly)
+      const host = req.headers.host || 'localhost';
+      const token = req.auth?.token;
+
+      let wsUrl = `ws://${host}/api/camera/stream?src=${encodeURIComponent(streamConfig.streamName)}`;
+
+      // Append token for authentication
+      if (token) {
+        wsUrl += `&token=${token}`;
+      }
 
       const response = {
         success: true,

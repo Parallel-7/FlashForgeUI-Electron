@@ -23,6 +23,7 @@ import { PrinterStatusData, WebSocketCommand, WebSocketMessage } from '@shared/t
 import { EventEmitter } from 'events';
 import * as http from 'http';
 import { RawData, WebSocket, WebSocketServer } from 'ws';
+import { getGo2rtcService } from '../../services/Go2rtcService.js';
 import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 import type { SpoolmanChangedEvent } from '../../services/SpoolmanIntegrationService.js';
@@ -69,6 +70,7 @@ export class WebSocketManager extends EventEmitter {
 
   // WebSocket server
   private wss: WebSocketServer | null = null;
+  private cameraProxyWss: WebSocketServer | null = null;
 
   // Client tracking
   private readonly clients: Map<WebSocket, ClientInfo> = new Map();
@@ -112,6 +114,15 @@ export class WebSocketManager extends EventEmitter {
 
     // Setup event handlers
     this.wss.on('connection', this.handleConnection.bind(this));
+
+    // Create Camera Proxy WebSocket server
+    this.cameraProxyWss = new WebSocketServer({
+      server: httpServer,
+      path: '/api/camera/stream',
+      verifyClient: this.verifyClient.bind(this),
+    });
+
+    this.cameraProxyWss.on('connection', this.handleCameraProxyConnection.bind(this));
 
     // Setup Spoolman integration event listener
     try {
@@ -673,8 +684,112 @@ export class WebSocketManager extends EventEmitter {
       console.log('WebSocket server shut down');
     });
 
+    if (this.cameraProxyWss) {
+      this.cameraProxyWss.close(() => {
+        console.log('Camera Proxy WebSocket server shut down');
+      });
+      this.cameraProxyWss = null;
+    }
+
     this.wss = null;
     this.isRunning = false;
+  }
+
+  /**
+   * Handle new Camera Proxy WebSocket connection
+   */
+  private handleCameraProxyConnection(ws: WebSocket, req: http.IncomingMessage): void {
+    const extendedReq = req as ExtendedIncomingMessage;
+    const token = extendedReq.wsToken;
+
+    if (this.authManager.isAuthenticationRequired() && !token) {
+      console.error('[CameraProxy] Connection without token');
+      ws.close(1008, 'Token required');
+      return;
+    }
+
+    try {
+      // Extract query parameters
+      const url = new URL(req.url || '', `http://${req.headers.host}`);
+      const src = url.searchParams.get('src');
+
+      if (!src) {
+        console.error('[CameraProxy] Missing src parameter');
+        ws.close(1008, 'Missing src parameter');
+        return;
+      }
+
+      // Get go2rtc API port
+      const go2rtcService = getGo2rtcService();
+      if (!go2rtcService.isRunning()) {
+        console.error('[CameraProxy] go2rtc service not running');
+        ws.close(1011, 'Camera service unavailable');
+        return;
+      }
+
+      const apiPort = go2rtcService.getApiPort();
+      const targetUrl = `ws://127.0.0.1:${apiPort}/api/ws?src=${encodeURIComponent(src)}`;
+
+      console.log(`[CameraProxy] Proxying connection for ${src} to ${targetUrl}`);
+
+      // Create upstream connection
+      const upstreamWs = new WebSocket(targetUrl);
+      const messageBuffer: RawData[] = [];
+
+      // Handle client messages immediately to prevent data loss during connection
+      ws.on('message', (data) => {
+        if (upstreamWs.readyState === WebSocket.OPEN) {
+          upstreamWs.send(data);
+        } else if (upstreamWs.readyState === WebSocket.CONNECTING) {
+          // Buffer messages while upstream is connecting
+          messageBuffer.push(data);
+        }
+      });
+
+      // Setup proxy pipe
+      upstreamWs.on('open', () => {
+        // Flush buffered messages
+        while (messageBuffer.length > 0) {
+          const data = messageBuffer.shift();
+          if (data) upstreamWs.send(data);
+        }
+
+        // Forward messages from upstream to client
+        upstreamWs.on('message', (data) => {
+          if (ws.readyState === WebSocket.OPEN) {
+            ws.send(data);
+          }
+        });
+      });
+
+      // Handle close events
+      ws.on('close', (code, reason) => {
+        if (upstreamWs.readyState === WebSocket.OPEN || upstreamWs.readyState === WebSocket.CONNECTING) {
+          upstreamWs.close(code, reason);
+        }
+      });
+
+      upstreamWs.on('close', (code, reason) => {
+        if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+          ws.close(code, reason);
+        }
+      });
+
+      // Handle errors
+      ws.on('error', (error) => {
+        console.error('[CameraProxy] Client WebSocket error:', error);
+        upstreamWs.terminate();
+      });
+
+      upstreamWs.on('error', (error) => {
+        console.error('[CameraProxy] Upstream WebSocket error:', error);
+        ws.terminate();
+      });
+
+    } catch (error) {
+      console.error('[CameraProxy] Failed to setup proxy:', error);
+      ws.close(1011, 'Internal server error');
+    }
   }
 
   /**
