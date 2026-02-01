@@ -44,3 +44,8 @@
 **Vulnerability:** The application was casting `req.body` directly to a discriminated union type (`ThemeProfileOperationRequestBody`) without validation. This allows attackers to send malformed data (e.g., missing fields, invalid types) that matches the TypeScript type structure only superficially, potentially causing backend crashes or logic errors.
 **Learning:** TypeScript types disappear at runtime. Trusting that incoming JSON matches a TS interface is a common source of bugs and vulnerabilities. Discriminated unions (like `operation: 'add' | 'update'`) are particularly prone to this if not validated, as the logic flow depends entirely on the discriminator field.
 **Prevention:** Always use a runtime validation library like Zod to parse and validate payloads, especially for complex structures like discriminated unions. Use `z.discriminatedUnion` to strictly enforce the relationship between the discriminator and the data shape.
+
+## 2026-03-05 - Unauthenticated Camera Access
+**Vulnerability:** The `go2rtc` streaming service was configured to listen on all interfaces (0.0.0.0:1984) without authentication, allowing any device on the network to access the API and view camera streams without logging in.
+**Learning:** Binding to `0.0.0.0` is dangerous for sensitive services unless explicit authentication is enabled. When integrating third-party binaries, always verify their default security posture and enable built-in authentication mechanisms.
+**Prevention:** Configured `go2rtc` with a randomly generated password on startup and updated the application to use these credentials for API calls and WebSocket connections.

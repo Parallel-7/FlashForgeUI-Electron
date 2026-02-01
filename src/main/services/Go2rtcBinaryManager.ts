@@ -12,8 +12,9 @@
 import { app } from 'electron';
 import type { ChildProcess } from 'node:child_process';
 import { spawn } from 'node:child_process';
-import fs from 'node:fs';
-import path from 'node:path';
+import { randomBytes } from 'node:crypto';
+import * as fs from 'node:fs';
+import * as path from 'node:path';
 import type { Go2rtcBinaryInfo, Go2rtcConfig } from '../types/go2rtc.types.js';
 
 /**
@@ -49,6 +50,12 @@ export class Go2rtcBinaryManager {
   /** Timeout for graceful shutdown (ms) */
   private readonly shutdownTimeoutMs = 5000;
 
+  /** Username for Basic Auth */
+  private readonly username = 'admin';
+
+  /** Password for Basic Auth (generated on startup) */
+  private readonly password = randomBytes(16).toString('hex');
+
   private constructor() {
     // Register cleanup on app quit
     app.on('will-quit', () => {
@@ -64,6 +71,13 @@ export class Go2rtcBinaryManager {
       Go2rtcBinaryManager.instance = new Go2rtcBinaryManager();
     }
     return Go2rtcBinaryManager.instance;
+  }
+
+  /**
+   * Get credentials for go2rtc API
+   */
+  public getCredentials(): { username: string; password: string } {
+    return { username: this.username, password: this.password };
   }
 
   /**
@@ -147,6 +161,8 @@ export class Go2rtcBinaryManager {
     const config: Go2rtcConfig = {
       api: {
         listen: `:${this.apiPort}`,
+        username: this.username,
+        password: this.password,
       },
       webrtc: {
         listen: `:${this.webrtcPort}/tcp`,
@@ -182,6 +198,8 @@ export class Go2rtcBinaryManager {
     if (config.api) {
       lines.push('api:');
       if (config.api.listen) lines.push(`  listen: "${config.api.listen}"`);
+      if (config.api.username) lines.push(`  username: "${config.api.username}"`);
+      if (config.api.password) lines.push(`  password: "${config.api.password}"`);
       // Allow CORS for WebSocket connections from Electron renderer/dev server
       lines.push('  origin: "*"');
     }
@@ -299,13 +317,17 @@ export class Go2rtcBinaryManager {
     const startTime = Date.now();
     const checkInterval = 100;
 
+    // Create auth header
+    const auth = Buffer.from(`${this.username}:${this.password}`).toString('base64');
+    const headers = { Authorization: `Basic ${auth}` };
+
     while (Date.now() - startTime < timeoutMs) {
       if (!this.isRunning()) {
         throw new Error('go2rtc process exited during startup');
       }
 
       try {
-        const response = await fetch(`${this.getApiUrl()}/api`);
+        const response = await fetch(`${this.getApiUrl()}/api`, { headers });
         if (response.ok) {
           return; // Ready!
         }
