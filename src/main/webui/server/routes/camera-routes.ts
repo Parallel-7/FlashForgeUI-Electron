@@ -8,6 +8,7 @@
 
 import { CameraStatusResponse, StandardAPIResponse } from '@shared/types/web-api.types.js';
 import type { Response, Router } from 'express';
+import { getGo2rtcBinaryManager } from '../../../services/Go2rtcBinaryManager.js';
 import { getGo2rtcService } from '../../../services/Go2rtcService.js';
 import { getCameraUserConfig, resolveCameraConfig } from '../../../utils/camera-utils.js';
 import { toAppError } from '../../../utils/error.utils.js';
@@ -107,7 +108,14 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
       // Build WebSocket URL for WebUI client
       // WebUI needs to connect to go2rtc on the server's hostname, not localhost
       const host = req.hostname || 'localhost';
-      const wsUrl = `ws://${host}:${streamConfig.apiPort}/api/ws?src=${encodeURIComponent(streamConfig.streamName)}`;
+      let wsUrl = `ws://${host}:${streamConfig.apiPort}/api/ws?src=${encodeURIComponent(streamConfig.streamName)}`;
+
+      // Append authentication credentials if enabled
+      const binaryManager = getGo2rtcBinaryManager();
+      const credentials = binaryManager.getCredentials();
+      if (credentials) {
+        wsUrl += `&username=${encodeURIComponent(credentials.username)}&password=${encodeURIComponent(credentials.password)}`;
+      }
 
       const response = {
         success: true,

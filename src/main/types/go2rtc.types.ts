@@ -87,6 +87,10 @@ export interface Go2rtcConfig {
     listen?: string;
     /** Base path for API */
     base_path?: string;
+    /** API username for Basic Auth */
+    username?: string;
+    /** API password for Basic Auth */
+    password?: string;
   };
   /** WebRTC configuration */
   webrtc?: {

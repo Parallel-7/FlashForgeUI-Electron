@@ -12,6 +12,7 @@
 import { app } from 'electron';
 import type { ChildProcess } from 'node:child_process';
 import { spawn } from 'node:child_process';
+import * as crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import type { Go2rtcBinaryInfo, Go2rtcConfig } from '../types/go2rtc.types.js';
@@ -48,6 +49,9 @@ export class Go2rtcBinaryManager {
 
   /** Timeout for graceful shutdown (ms) */
   private readonly shutdownTimeoutMs = 5000;
+
+  /** Credentials for API access */
+  private credentials: { username: string; password: string } | null = null;
 
   private constructor() {
     // Register cleanup on app quit
@@ -141,12 +145,25 @@ export class Go2rtcBinaryManager {
   }
 
   /**
+   * Get credentials for API access
+   */
+  public getCredentials(): { username: string; password: string } | null {
+    return this.credentials;
+  }
+
+  /**
    * Generate and write the go2rtc configuration file
    */
   private async generateConfig(): Promise<string> {
+    // Generate secure password
+    const password = crypto.randomBytes(16).toString('hex');
+    this.credentials = { username: 'flashforge', password };
+
     const config: Go2rtcConfig = {
       api: {
         listen: `:${this.apiPort}`,
+        username: this.credentials.username,
+        password: this.credentials.password,
       },
       webrtc: {
         listen: `:${this.webrtcPort}/tcp`,
@@ -182,6 +199,8 @@ export class Go2rtcBinaryManager {
     if (config.api) {
       lines.push('api:');
       if (config.api.listen) lines.push(`  listen: "${config.api.listen}"`);
+      if (config.api.username) lines.push(`  username: "${config.api.username}"`);
+      if (config.api.password) lines.push(`  password: "${config.api.password}"`);
       // Allow CORS for WebSocket connections from Electron renderer/dev server
       lines.push('  origin: "*"');
     }
@@ -305,7 +324,12 @@ export class Go2rtcBinaryManager {
       }
 
       try {
-        const response = await fetch(`${this.getApiUrl()}/api`);
+        const headers: HeadersInit = {};
+        if (this.credentials) {
+          const auth = Buffer.from(`${this.credentials.username}:${this.credentials.password}`).toString('base64');
+          headers['Authorization'] = `Basic ${auth}`;
+        }
+        const response = await fetch(`${this.getApiUrl()}/api`, { headers });
         if (response.ok) {
           return; // Ready!
         }

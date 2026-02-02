@@ -96,6 +96,20 @@ export class Go2rtcService extends EventEmitter {
   }
 
   /**
+   * Get Authorization headers for go2rtc API
+   */
+  private getAuthHeaders(): HeadersInit {
+    const credentials = this.binaryManager.getCredentials();
+    if (!credentials) {
+      return {};
+    }
+    const auth = Buffer.from(`${credentials.username}:${credentials.password}`).toString('base64');
+    return {
+      Authorization: `Basic ${auth}`,
+    };
+  }
+
+  /**
    * Initialize the service by starting go2rtc
    */
   public async initialize(): Promise<void> {
@@ -167,7 +181,10 @@ export class Go2rtcService extends EventEmitter {
       const apiUrl = this.binaryManager.getApiUrl();
       const response = await fetch(
         `${apiUrl}/api/streams?name=${encodeURIComponent(streamName)}&src=${encodeURIComponent(sourceUrl)}`,
-        { method: 'PUT' }
+        {
+          method: 'PUT',
+          headers: this.getAuthHeaders(),
+        }
       );
 
       if (!response.ok) {
@@ -213,6 +230,7 @@ export class Go2rtcService extends EventEmitter {
         const apiUrl = this.binaryManager.getApiUrl();
         const response = await fetch(`${apiUrl}/api/streams?name=${encodeURIComponent(stream.streamName)}`, {
           method: 'DELETE',
+          headers: this.getAuthHeaders(),
         });
 
         if (!response.ok && response.status !== 404) {
@@ -292,7 +310,14 @@ export class Go2rtcService extends EventEmitter {
     }
 
     const apiUrl = this.binaryManager.getApiUrl();
-    return `${apiUrl}/api/frame.jpeg?src=${encodeURIComponent(stream.streamName)}`;
+    let url = `${apiUrl}/api/frame.jpeg?src=${encodeURIComponent(stream.streamName)}`;
+
+    const credentials = this.binaryManager.getCredentials();
+    if (credentials) {
+      url += `&username=${encodeURIComponent(credentials.username)}&password=${encodeURIComponent(credentials.password)}`;
+    }
+
+    return url;
   }
 
   /**
@@ -306,7 +331,9 @@ export class Go2rtcService extends EventEmitter {
 
     try {
       const apiUrl = this.binaryManager.getApiUrl();
-      const response = await fetch(`${apiUrl}/api/streams?src=${encodeURIComponent(stream.streamName)}`);
+      const response = await fetch(`${apiUrl}/api/streams?src=${encodeURIComponent(stream.streamName)}`, {
+        headers: this.getAuthHeaders(),
+      });
 
       if (!response.ok) {
         return null;
@@ -330,7 +357,9 @@ export class Go2rtcService extends EventEmitter {
 
     try {
       const apiUrl = this.binaryManager.getApiUrl();
-      const response = await fetch(`${apiUrl}/api/streams`);
+      const response = await fetch(`${apiUrl}/api/streams`, {
+        headers: this.getAuthHeaders(),
+      });
 
       if (!response.ok) {
         return {};
