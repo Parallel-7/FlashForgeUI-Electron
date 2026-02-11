@@ -21,12 +21,11 @@
 import { EventEmitter } from 'node:events';
 import type {
   CameraStreamConfig,
-  Go2rtcServiceEvents,
   Go2rtcServiceStatus,
   Go2rtcStreamInfo,
   Go2rtcStreamsResponse,
 } from '../types/go2rtc.types.js';
-import { getGo2rtcBinaryManager, Go2rtcBinaryManager } from './Go2rtcBinaryManager.js';
+import { Go2rtcBinaryManager, getGo2rtcBinaryManager } from './Go2rtcBinaryManager.js';
 
 /**
  * Internal stream configuration

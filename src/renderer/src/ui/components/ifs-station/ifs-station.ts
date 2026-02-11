@@ -198,8 +198,8 @@ export class IFSStationComponent extends BaseComponent {
     // Check for dialog-specific parent classes
     return Boolean(
       this.container?.closest('.component-wrapper') ||
-      this.container?.closest('.dialog-content') ||
-      document.querySelector('.dialog-container')
+        this.container?.closest('.dialog-content') ||
+        document.querySelector('.dialog-container')
     );
   }
 

@@ -9,13 +9,14 @@
 
 import { initializeUIAnimations } from '../../renderer/services/ui-updater.js';
 
-const MAIN_MENU_ACTIONS = ['connect', 'settings', 'status', 'pin-config', 'about'] as const;
+const MAIN_MENU_ACTIONS = ['connect', 'settings', 'status', 'calibration', 'pin-config', 'about'] as const;
 type MainMenuAction = (typeof MAIN_MENU_ACTIONS)[number];
 
 const MAIN_MENU_ACTION_CHANNELS: Record<MainMenuAction, string> = {
   connect: 'open-printer-selection',
   settings: 'open-settings-window',
   status: 'open-status-dialog',
+  calibration: 'open-calibration-dialog',
   'pin-config': 'shortcut-config:open',
   about: 'open-about-dialog',
 };
@@ -52,6 +53,7 @@ class MenuShortcutManager {
     connect: true,
     settings: true,
     status: true,
+    calibration: true,
     'pin-config': true,
     about: true,
   };

@@ -43,8 +43,8 @@ import {
   createLoginRateLimiter,
   createRequestLogger,
 } from './auth-middleware.js';
-import { createSecurityMiddleware } from './security-middleware.js';
 import { registerPublicThemeRoutes } from './routes/theme-routes.js';
+import { createSecurityMiddleware } from './security-middleware.js';
 import { getWebSocketManager } from './WebSocketManager.js';
 
 /**

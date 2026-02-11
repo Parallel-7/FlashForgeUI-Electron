@@ -13,6 +13,7 @@ import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.j
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegrationService.js';
 import { registerCameraRoutes } from './routes/camera-routes.js';
+import { registerCalibrationRoutes } from './routes/calibration-routes.js';
 import { registerContextRoutes } from './routes/context-routes.js';
 import { registerDebugRoutes } from './routes/debug-routes.js';
 import { registerFiltrationRoutes } from './routes/filtration-routes.js';
@@ -43,6 +44,7 @@ export function createAPIRoutes(deps: RouteDependencies = buildRouteDependencies
   registerFiltrationRoutes(router, deps);
   registerJobRoutes(router, deps);
   registerCameraRoutes(router, deps);
+  registerCalibrationRoutes(router, deps);
   registerContextRoutes(router, deps);
   registerThemeRoutes(router, deps);
   registerSpoolmanRoutes(router, deps);

@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Calibration Assistant</title>
+  <link rel="stylesheet" href="calibration-dialog.css" />
+</head>
+<body>
+<div class="dialog-container dialog-container--full">
+  <!-- Header -->
+  <div class="dialog-header">
+    <div class="dialog-title">
+      <span class="dialog-icon" aria-hidden="true">
+        <i data-lucide="ruler" aria-hidden="true"></i>
+      </span>
+      <span class="dialog-title-text">Calibration Assistant</span>
+    </div>
+    <button class="dialog-close" id="btn-close" aria-label="Close">
+      <i data-lucide="x" aria-hidden="true"></i>
+    </button>
+  </div>
+
+  <!-- Content -->
+  <div class="dialog-content">
+    <div class="calibration-header">
+      <div id="printer-context-indicator" class="printer-context-indicator" aria-live="polite"></div>
+      <div id="ssh-status-indicator" class="ssh-status-indicator">
+        <span class="ssh-status-dot disconnected"></span>
+        <span class="ssh-status-text">SSH: Disconnected</span>
+      </div>
+    </div>
+
+    <nav class="calibration-tabs" role="tablist" aria-label="Calibration categories">
+      <button class="calibration-tab-button" role="tab" id="tab-button-bed" data-tab="bed" aria-controls="tab-panel-bed" aria-selected="true">
+        <i data-lucide="grid-3x3" aria-hidden="true"></i>
+        Bed Leveling
+      </button>
+      <button class="calibration-tab-button" role="tab" id="tab-button-shaper" data-tab="shaper" aria-controls="tab-panel-shaper" aria-selected="false" tabindex="-1">
+        <i data-lucide="activity" aria-hidden="true"></i>
+        Input Shaper
+      </button>
+      <button class="calibration-tab-button" role="tab" id="tab-button-ssh" data-tab="ssh" aria-controls="tab-panel-ssh" aria-selected="false" tabindex="-1">
+        <i data-lucide="terminal" aria-hidden="true"></i>
+        SSH Settings
+      </button>
+      <button class="calibration-tab-button" role="tab" id="tab-button-history" data-tab="history" aria-controls="tab-panel-history" aria-selected="false" tabindex="-1">
+        <i data-lucide="history" aria-hidden="true"></i>
+        History
+      </button>
+    </nav>
+
+    <div class="tab-panels">
+      <!-- Bed Leveling Tab -->
+      <section id="tab-panel-bed" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-bed">
+        <div class="panel-layout">
+          <div class="panel-main">
+            <div class="mesh-visualization-container">
+              <canvas id="mesh-canvas" width="400" height="400"></canvas>
+              <div id="mesh-stats" class="mesh-stats">
+                <div class="stat-item">
+                  <span class="stat-label">Range:</span>
+                  <span id="stat-range" class="stat-value">--</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Max Dev:</span>
+                  <span id="stat-max-dev" class="stat-value">--</span>
+                </div>
+                <div class="stat-item">
+                  <span class="stat-label">Std Dev:</span>
+                  <span id="stat-std-dev" class="stat-value">--</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="mesh-controls">
+              <button id="btn-load-file" class="control-button primary">
+                <i data-lucide="file-up" aria-hidden="true"></i>
+                Load Config File
+              </button>
+              <button id="btn-fetch-ssh" class="control-button" disabled>
+                <i data-lucide="download" aria-hidden="true"></i>
+                Fetch via SSH
+              </button>
+              <select id="mesh-profile-select" class="profile-select" disabled>
+                <option value="">Select Profile</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="panel-sidebar">
+            <div class="workflow-section">
+              <h3 class="section-title">Calibration Workflow</h3>
+              <div id="workflow-stages" class="workflow-stages">
+                <div class="workflow-stage" data-stage="initial">
+                  <span class="stage-icon"><i data-lucide="circle" aria-hidden="true"></i></span>
+                  <span class="stage-label">Load Mesh Data</span>
+                </div>
+                <div class="workflow-stage" data-stage="belt_sync">
+                  <span class="stage-icon"><i data-lucide="circle" aria-hidden="true"></i></span>
+                  <span class="stage-label">Belt Sync Check</span>
+                </div>
+                <div class="workflow-stage" data-stage="screw_adjust">
+                  <span class="stage-icon"><i data-lucide="circle" aria-hidden="true"></i></span>
+                  <span class="stage-label">Screw Adjustments</span>
+                </div>
+                <div class="workflow-stage" data-stage="tape_compensate">
+                  <span class="stage-icon"><i data-lucide="circle" aria-hidden="true"></i></span>
+                  <span class="stage-label">Tape Compensation</span>
+                </div>
+              </div>
+
+              <button id="btn-run-workflow" class="control-button primary" disabled>
+                <i data-lucide="play" aria-hidden="true"></i>
+                Run Analysis
+              </button>
+            </div>
+
+            <div id="results-section" class="results-section" hidden>
+              <h3 class="section-title">Adjustments Required</h3>
+
+              <div id="screw-adjustments" class="adjustments-container">
+                <h4 class="subsection-title">Screw Adjustments</h4>
+                <div id="screw-adjustments-list" class="adjustments-list"></div>
+              </div>
+
+              <div id="tape-recommendations" class="adjustments-container">
+                <h4 class="subsection-title">Tape Recommendations</h4>
+                <div id="tape-recommendations-list" class="adjustments-list"></div>
+              </div>
+
+              <div class="improvement-display">
+                <span class="improvement-label">Improvement:</span>
+                <span id="improvement-value" class="improvement-value">--%</span>
+              </div>
+
+              <button id="btn-visual-recommendations" class="control-button">
+                <i data-lucide="sparkles" aria-hidden="true"></i>
+                Visualize Recommendations
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Input Shaper Tab -->
+      <section id="tab-panel-shaper" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-shaper" hidden>
+        <div class="panel-layout">
+          <div class="panel-main">
+            <div class="shaper-visualization-container">
+              <canvas id="shaper-canvas" width="600" height="300"></canvas>
+              <div class="axis-selector">
+                <button id="btn-axis-x" class="axis-button active" data-axis="x">X Axis</button>
+                <button id="btn-axis-y" class="axis-button" data-axis="y">Y Axis</button>
+              </div>
+            </div>
+
+            <div class="shaper-controls">
+              <button id="btn-load-shaper-csv" class="control-button primary">
+                <i data-lucide="file-up" aria-hidden="true"></i>
+                Load CSV File
+              </button>
+              <button id="btn-fetch-shaper-ssh" class="control-button" disabled>
+                <i data-lucide="download" aria-hidden="true"></i>
+                Fetch via SSH
+              </button>
+            </div>
+          </div>
+
+          <div class="panel-sidebar">
+            <div class="shaper-results-section">
+              <h3 class="section-title">Recommended Shaper</h3>
+              <div id="shaper-recommendation" class="shaper-recommendation">
+                <div class="shaper-empty-state">
+                  Load accelerometer data to see recommendations
+                </div>
+              </div>
+            </div>
+
+            <div class="shaper-comparison">
+              <h3 class="section-title">All Shapers</h3>
+              <div id="shaper-comparison-list" class="shaper-comparison-list">
+                <div class="shaper-empty-state">
+                  No data loaded
+                </div>
+              </div>
+            </div>
+
+            <div class="shaper-config">
+              <h3 class="section-title">Config Output</h3>
+              <pre id="shaper-config-output" class="shaper-config-output">Load data to generate config</pre>
+              <div class="shaper-config-actions">
+                <button id="btn-copy-shaper-config" class="control-button">
+                  <i data-lucide="copy" aria-hidden="true"></i>
+                  Copy
+                </button>
+                <button id="btn-save-shaper-config" class="control-button">
+                  <i data-lucide="download" aria-hidden="true"></i>
+                  Export Config
+                </button>
+                <button id="btn-upload-shaper-config" class="control-button" disabled>
+                  <i data-lucide="upload" aria-hidden="true"></i>
+                  Upload via SSH
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SSH Settings Tab -->
+      <section id="tab-panel-ssh" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-ssh" hidden>
+        <div class="settings-panel">
+          <h3 class="section-title">SSH Connection</h3>
+          <div class="settings-info-text">
+            Connect to your printer via SSH to fetch configuration files directly.
+            SSH can be enabled on stock FlashForge firmware using the Stone-Time method.
+          </div>
+
+          <div class="settings-section">
+            <div class="input-group">
+              <label for="ssh-host">Printer IP Address:</label>
+              <input type="text" id="ssh-host" class="settings-input" placeholder="192.168.1.100">
+            </div>
+
+            <div class="input-group">
+              <label for="ssh-port">SSH Port:</label>
+              <input type="number" id="ssh-port" class="settings-input" value="22" min="1" max="65535">
+            </div>
+
+            <div class="input-group">
+              <label for="ssh-username">Username:</label>
+              <input type="text" id="ssh-username" class="settings-input" value="root">
+            </div>
+
+            <div class="input-group">
+              <label for="ssh-password">Password:</label>
+              <input type="password" id="ssh-password" class="settings-input" placeholder="Enter password">
+            </div>
+
+            <div class="input-group">
+              <label for="ssh-key-path">SSH Private Key (optional):</label>
+              <div class="input-with-button">
+                <input type="text" id="ssh-key-path" class="settings-input" placeholder="C:\\path\\to\\id_rsa">
+                <button id="btn-ssh-key-browse" class="control-button">
+                  <i data-lucide="folder-open" aria-hidden="true"></i>
+                  Browse
+                </button>
+              </div>
+            </div>
+
+            <label class="checkbox-label">
+              <input type="checkbox" id="ssh-save-credentials"> Save credentials for this printer
+            </label>
+          </div>
+
+          <div class="ssh-connection-buttons">
+            <button id="btn-ssh-connect" class="control-button primary">
+              <i data-lucide="plug" aria-hidden="true"></i>
+              Connect
+            </button>
+            <button id="btn-ssh-disconnect" class="control-button" disabled>
+              <i data-lucide="unplug" aria-hidden="true"></i>
+              Disconnect
+            </button>
+            <button id="btn-ssh-test" class="control-button">
+              <i data-lucide="check-circle" aria-hidden="true"></i>
+              Test Connection
+            </button>
+          </div>
+
+          <div id="ssh-test-result" class="ssh-test-result"></div>
+
+          <div class="settings-section">
+            <h4 class="subsection-title">Remote Paths</h4>
+            <div class="settings-info-text">
+              Default paths for FlashForge printers with Klipper firmware.
+            </div>
+            <div class="input-group">
+              <label for="ssh-config-path">printer.cfg Path:</label>
+              <input type="text" id="ssh-config-path" class="settings-input" value="/home/klipper/printer_data/config/printer.cfg">
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- History Tab -->
+      <section id="tab-panel-history" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-history" hidden>
+        <div class="history-panel">
+          <div class="history-header">
+            <h3 class="section-title">Calibration History</h3>
+            <button id="btn-clear-history" class="control-button danger">
+              <i data-lucide="trash-2" aria-hidden="true"></i>
+              Clear History
+            </button>
+          </div>
+
+          <div id="history-list" class="history-list">
+            <div class="history-empty-state">
+              No calibration history for this printer
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="dialog-footer">
+    <div class="footer-left">
+      <span id="status-message" class="status-message"></span>
+    </div>
+    <div class="dialog-buttons">
+      <label class="export-format">
+        <span class="export-format-label">Format</span>
+        <select id="export-format" class="export-format-select">
+          <option value="json">JSON</option>
+          <option value="csv">CSV</option>
+          <option value="png">PNG</option>
+          <option value="pdf">PDF</option>
+        </select>
+      </label>
+      <button class="dialog-button" id="btn-export">
+        <i data-lucide="download" aria-hidden="true"></i>
+        Export Report
+      </button>
+      <button class="dialog-button cancel" id="btn-close-footer">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="visual-rec-overlay" class="visual-rec-overlay hidden" role="dialog" aria-modal="true" aria-label="Visual recommendations">
+  <div class="visual-rec-dialog">
+    <div class="visual-rec-header">
+      <div class="visual-rec-title">
+        <i data-lucide="sparkles" aria-hidden="true"></i>
+        Visual Recommendations
+      </div>
+      <button id="btn-visual-rec-close" class="dialog-close" aria-label="Close visual recommendations">
+        <i data-lucide="x" aria-hidden="true"></i>
+      </button>
+    </div>
+    <div class="visual-rec-content">
+      <canvas id="recommendation-canvas" width="620" height="420"></canvas>
+      <div class="visual-rec-legend">
+        <div class="legend-item"><span class="legend-swatch cw"></span>Clockwise adjustment</div>
+        <div class="legend-item"><span class="legend-swatch ccw"></span>Counter-clockwise adjustment</div>
+        <div class="legend-item"><span class="legend-swatch tape"></span>Tape layers</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="./calibration-dialog-renderer.ts"></script>
+</body>
+</html>

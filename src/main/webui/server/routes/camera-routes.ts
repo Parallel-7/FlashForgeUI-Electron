@@ -14,6 +14,10 @@ import { toAppError } from '../../../utils/error.utils.js';
 import type { AuthenticatedRequest } from '../auth-middleware.js';
 import { type RouteDependencies, resolveContext, sendErrorResponse } from './route-helpers.js';
 
+function isGo2rtcSourceType(sourceType: string): sourceType is 'builtin' | 'custom' {
+  return sourceType === 'builtin' || sourceType === 'custom';
+}
+
 export function registerCameraRoutes(router: Router, deps: RouteDependencies): void {
   router.get('/camera/status', async (req: AuthenticatedRequest, res: Response) => {
     try {
@@ -85,12 +89,11 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
       // Add stream if not already added
       if (!go2rtcService.hasStream(contextId)) {
         try {
-          await go2rtcService.addStream(
-            contextId,
-            cameraConfig.streamUrl,
-            cameraConfig.sourceType,
-            cameraConfig.streamType
-          );
+          if (!isGo2rtcSourceType(cameraConfig.sourceType)) {
+            return sendErrorResponse<StandardAPIResponse>(res, 503, 'Camera source type not supported');
+          }
+
+          await go2rtcService.addStream(contextId, cameraConfig.streamUrl, cameraConfig.sourceType, cameraConfig.streamType);
         } catch (streamError) {
           console.error(`[WebUI] Failed to setup stream for context ${contextId}:`, streamError);
           return sendErrorResponse<StandardAPIResponse>(res, 503, 'Failed to setup camera stream');

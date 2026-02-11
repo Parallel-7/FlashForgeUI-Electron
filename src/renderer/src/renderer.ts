@@ -584,6 +584,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       'printer',
       'settings',
       'bar-chart-3',
+      'ruler',
       'grid-3x3',
       'pin',
       'info',

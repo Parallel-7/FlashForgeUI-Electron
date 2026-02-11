@@ -9,11 +9,11 @@
  * @see src/main/types/go2rtc.types.ts for type definitions
  */
 
-import { app } from 'electron';
 import type { ChildProcess } from 'node:child_process';
 import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
+import { app } from 'electron';
 import type { Go2rtcBinaryInfo, Go2rtcConfig } from '../types/go2rtc.types.js';
 
 /**

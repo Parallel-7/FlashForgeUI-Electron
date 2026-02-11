@@ -1,4 +1,3 @@
-
 import { JobStartRequestSchema, ThemeProfileOperationSchema } from '../web-api.schemas';
 
 describe('JobStartRequestSchema', () => {
@@ -134,14 +133,7 @@ describe('ThemeProfileOperationSchema', () => {
   });
 
   it('should reject names with invalid characters', () => {
-    const invalidInputs = [
-      'Profile<script>',
-      'Profile/../',
-      'Profile"',
-      "Profile'",
-      'Profile;',
-      'Profile&',
-    ];
+    const invalidInputs = ['Profile<script>', 'Profile/../', 'Profile"', "Profile'", 'Profile;', 'Profile&'];
 
     invalidInputs.forEach((name) => {
       const invalid = {

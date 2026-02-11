@@ -350,6 +350,7 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
    * Get printer status using legacy API (fallback)
    */
   protected async getPrinterStatusLegacy(originalError: unknown): Promise<StatusResult> {
+    void originalError;
     try {
       const printerInfo = await this.legacyClient.getPrinterInfo();
 

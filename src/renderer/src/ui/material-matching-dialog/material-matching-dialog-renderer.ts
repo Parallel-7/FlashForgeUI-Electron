@@ -623,4 +623,4 @@ function registerThemeListener(api: MaterialMatchingDialogAPI): void {
 window.addEventListener('unload', cleanup);
 
 // Export for module
-export { };
+export {};

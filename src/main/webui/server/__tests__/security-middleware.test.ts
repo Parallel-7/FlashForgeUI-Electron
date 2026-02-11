@@ -21,9 +21,18 @@ describe('createSecurityMiddleware', () => {
     expect(mockResponse.setHeader).toHaveBeenCalledWith('X-Content-Type-Options', 'nosniff');
     expect(mockResponse.setHeader).toHaveBeenCalledWith('X-Frame-Options', 'SAMEORIGIN');
     expect(mockResponse.setHeader).toHaveBeenCalledWith('Referrer-Policy', 'strict-origin-when-cross-origin');
-    expect(mockResponse.setHeader).toHaveBeenCalledWith('Content-Security-Policy', expect.stringContaining("default-src 'self'"));
-    expect(mockResponse.setHeader).toHaveBeenCalledWith('Content-Security-Policy', expect.stringContaining("object-src 'none'"));
-    expect(mockResponse.setHeader).toHaveBeenCalledWith('Content-Security-Policy', expect.stringContaining("base-uri 'self'"));
+    expect(mockResponse.setHeader).toHaveBeenCalledWith(
+      'Content-Security-Policy',
+      expect.stringContaining("default-src 'self'")
+    );
+    expect(mockResponse.setHeader).toHaveBeenCalledWith(
+      'Content-Security-Policy',
+      expect.stringContaining("object-src 'none'")
+    );
+    expect(mockResponse.setHeader).toHaveBeenCalledWith(
+      'Content-Security-Policy',
+      expect.stringContaining("base-uri 'self'")
+    );
 
     expect(nextFunction).toHaveBeenCalled();
   });

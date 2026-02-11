@@ -79,6 +79,7 @@ export type { InputDialogOptions } from './shared/WindowTypes.js';
 // Core application windows
 export {
   createAboutDialog,
+  createCalibrationDialog,
   createLogDialog,
   createSettingsWindow,
   createStatusWindow,

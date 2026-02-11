@@ -98,6 +98,7 @@ export enum WindowType {
   COMPONENT_DIALOG = 'componentDialog',
   UPDATE_DIALOG = 'updateDialog',
   ABOUT_DIALOG = 'aboutDialog',
+  CALIBRATION_DIALOG = 'calibrationDialog',
 }
 
 class WindowManager {
@@ -399,6 +400,19 @@ class WindowManager {
 
   public hasUpdateDialogWindow(): boolean {
     return this.hasWindow(WindowType.UPDATE_DIALOG);
+  }
+
+  // Convenience methods for calibration dialog access
+  public getCalibrationDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.CALIBRATION_DIALOG);
+  }
+
+  public setCalibrationDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.CALIBRATION_DIALOG, window);
+  }
+
+  public hasCalibrationDialogWindow(): boolean {
+    return this.hasWindow(WindowType.CALIBRATION_DIALOG);
   }
 
   /**

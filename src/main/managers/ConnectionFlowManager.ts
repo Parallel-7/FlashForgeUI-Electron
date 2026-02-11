@@ -41,6 +41,7 @@ import { EventEmitter } from 'events';
 import { getAutoConnectService } from '../services/AutoConnectService.js';
 import { getConnectionEstablishmentService } from '../services/ConnectionEstablishmentService.js';
 import { getConnectionStateManager } from '../services/ConnectionStateManager.js';
+import { getDebugLogService } from '../services/DebugLogService.js';
 import { getDialogIntegrationService } from '../services/DialogIntegrationService.js';
 import { getPrinterDiscoveryService } from '../services/PrinterDiscoveryService.js';
 import { getSavedPrinterService } from '../services/SavedPrinterService.js';
@@ -54,7 +55,6 @@ import {
   getDefaultCheckCode,
   shouldPromptForCheckCode,
 } from '../utils/PrinterUtils.js';
-import { getDebugLogService } from '../services/DebugLogService.js';
 import { getConfigManager } from './ConfigManager.js';
 import { getLoadingManager } from './LoadingManager.js';
 import { getPrinterBackendManager } from './PrinterBackendManager.js';

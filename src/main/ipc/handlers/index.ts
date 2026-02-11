@@ -28,6 +28,7 @@ import type { getWindowManager } from '../../windows/WindowManager.js';
 type WindowManager = ReturnType<typeof getWindowManager>;
 
 import { registerBackendHandlers } from './backend-handlers.js';
+import { registerCalibrationHandlers } from './calibration-handlers.js';
 import { registerCameraHandlers } from './camera-handlers.js';
 import { registerComponentDialogHandlers } from './component-dialog-handlers.js';
 import { registerConnectionHandlers } from './connection-handlers.js';
@@ -65,6 +66,7 @@ export function registerAllIpcHandlers(managers: AppManagers): void {
   registerBackendHandlers(backendManager, windowManager);
   registerJobHandlers(backendManager, windowManager);
   registerDialogHandlers(configManager, windowManager);
+  registerCalibrationHandlers();
   registerMaterialHandlers(backendManager);
   registerControlHandlers(backendManager);
   registerWebUIHandlers();

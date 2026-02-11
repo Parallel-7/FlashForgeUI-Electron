@@ -406,6 +406,7 @@ const validSendChannels = [
   'connect-button-clicked',
   'open-settings-window',
   'open-status-dialog',
+  'open-calibration-dialog',
   'open-about-dialog',
   'open-printer-selection',
   'open-job-uploader',

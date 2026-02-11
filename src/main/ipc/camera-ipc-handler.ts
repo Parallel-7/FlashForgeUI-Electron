@@ -24,14 +24,19 @@
  */
 
 import { logVerbose } from '@shared/logging.js';
+import type { CameraSourceType } from '@shared/types/camera/index.js';
 import { Go2rtcCameraStreamConfig, ResolvedCameraConfig } from '@shared/types/camera/index.js';
 import { IpcMainInvokeEvent, ipcMain } from 'electron';
 import { getPrinterBackendManager } from '../managers/PrinterBackendManager.js';
 import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
-import { getGo2rtcService, Go2rtcService } from '../services/Go2rtcService.js';
+import { Go2rtcService, getGo2rtcService } from '../services/Go2rtcService.js';
 import { getCameraUserConfig, resolveCameraConfig } from '../utils/camera-utils.js';
 
 const CAMERA_IPC_LOG_NAMESPACE = 'CameraIPCHandler';
+
+function isGo2rtcSourceType(sourceType: CameraSourceType): sourceType is 'builtin' | 'custom' {
+  return sourceType === 'builtin' || sourceType === 'custom';
+}
 
 /**
  * Camera IPC handler class using go2rtc for unified streaming.
@@ -204,6 +209,12 @@ export class CameraIPCHandler {
       this.logDebug(`Camera config updated for ${contextId}: ${config.sourceType} - ${config.streamUrl}`);
 
       try {
+        if (!isGo2rtcSourceType(config.sourceType)) {
+          this.logDebug(`Camera source type ${config.sourceType} not supported for streaming`);
+          await this.go2rtcService.removeStream(contextId);
+          return;
+        }
+
         await this.go2rtcService.addStream(contextId, config.streamUrl, config.sourceType, config.streamType);
         this.logDebug(`go2rtc stream setup for context ${contextId}`);
       } catch (error) {
@@ -283,6 +294,12 @@ export class CameraIPCHandler {
       );
 
       try {
+        if (!isGo2rtcSourceType(config.sourceType)) {
+          this.logDebug(`Camera source type ${config.sourceType} not supported for streaming`);
+          await this.go2rtcService.removeStream(contextId);
+          return;
+        }
+
         await this.go2rtcService.addStream(contextId, config.streamUrl, config.sourceType, config.streamType);
         this.logDebug(`go2rtc stream setup for context ${contextId}`);
       } catch (error) {
