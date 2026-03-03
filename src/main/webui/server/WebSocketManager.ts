@@ -491,11 +491,13 @@ export class WebSocketManager extends EventEmitter {
       nozzleTargetTemperature: Math.round(extruderTemp.target),
       // Progress from currentJob if available
       progress: currentJob ? currentJob.progress.percentage : 0,
-      currentLayer: currentJob?.progress.currentLayer || undefined,
-      totalLayers: currentJob?.progress.totalLayers || undefined,
+      currentLayer: currentJob?.progress.currentLayer ?? undefined,
+      totalLayers: currentJob?.progress.totalLayers ?? undefined,
       jobName: currentJob?.fileName || null,
-      timeElapsed: currentJob?.progress.elapsedTime || undefined,
-      timeRemaining: currentJob?.progress.timeRemaining || undefined,
+      timeElapsed: currentJob?.progress.elapsedTime ?? undefined,
+      timeRemaining: currentJob?.progress.timeRemaining ?? undefined,
+      formattedEta: currentJob?.progress.formattedEta !== undefined ? currentJob.progress.formattedEta : undefined,
+      elapsedTimeSeconds: currentJob?.progress.elapsedTimeSeconds !== undefined ? currentJob.progress.elapsedTimeSeconds : undefined,
       filtrationMode: filtrationMode,
       // Weight and length from job progress
       estimatedWeight: currentJob?.progress.weightUsed || undefined,

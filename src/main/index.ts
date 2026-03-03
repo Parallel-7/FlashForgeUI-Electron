@@ -654,7 +654,7 @@ const setupPrinterContextEventForwarding = (): void => {
 
       // Wire Discord service to print state events for event-driven notifications
       stateMonitor.on('print-completed', (event: { contextId: string; jobName: string; status: PrinterStatus }) => {
-        const duration = event.status.currentJob?.progress.elapsedTime;
+        const duration = event.status.currentJob?.progress.elapsedTimeSeconds;
         void discordService.notifyPrintComplete(event.contextId, event.jobName, duration);
       });
 

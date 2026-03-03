@@ -44,6 +44,7 @@ interface ExtendedPrinterStatus {
   readonly estimatedRightWeight?: number;
   readonly cumulativeFilament?: number;
   readonly cumulativePrintTime?: number;
+  readonly printEta?: string;
 }
 
 export function registerPrinterStatusRoutes(router: Router, deps: RouteDependencies): void {
@@ -67,6 +68,8 @@ export function registerPrinterStatusRoutes(router: Router, deps: RouteDependenc
       let estimatedWeight: number | undefined;
       let estimatedLength: number | undefined;
       let timeElapsed: number | undefined;
+      let elapsedTimeSeconds: number | undefined;
+      let formattedEta: string | undefined;
       let cumulativeFilament: number | undefined;
       let cumulativePrintTime: number | undefined;
 
@@ -80,7 +83,12 @@ export function registerPrinterStatusRoutes(router: Router, deps: RouteDependenc
         estimatedLength = statusResult.status.estimatedRightLen
           ? statusResult.status.estimatedRightLen / 1000
           : undefined;
-        timeElapsed = statusResult.status.printDuration;
+        // printDuration is raw seconds — convert to minutes for consistency with WebSocket path
+        timeElapsed = statusResult.status.printDuration !== undefined
+          ? Math.round(statusResult.status.printDuration / 60)
+          : undefined;
+        elapsedTimeSeconds = statusResult.status.printDuration;
+        formattedEta = statusResult.status.printEta;
 
         if ('cumulativeFilament' in statusResult.status) {
           cumulativeFilament = statusResult.status.cumulativeFilament as number;
@@ -109,6 +117,8 @@ export function registerPrinterStatusRoutes(router: Router, deps: RouteDependenc
           estimatedLength,
           cumulativeFilament,
           cumulativePrintTime,
+          formattedEta,
+          elapsedTimeSeconds,
         },
       };
 

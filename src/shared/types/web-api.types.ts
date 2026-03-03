@@ -83,6 +83,8 @@ export interface PrinterStatusData {
   thumbnailData?: string | null;
   cumulativeFilament?: number;
   cumulativePrintTime?: number;
+  formattedEta?: string;
+  elapsedTimeSeconds?: number;
 }
 
 // ============================================================================
@@ -130,6 +132,8 @@ export interface PrinterStatus {
   estimatedLength?: number;
   cumulativeFilament?: number;
   cumulativePrintTime?: number;
+  formattedEta?: string;
+  elapsedTimeSeconds?: number;
 }
 
 export interface PrinterStatusResponse extends StandardAPIResponse {

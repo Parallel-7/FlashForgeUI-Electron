@@ -564,24 +564,33 @@ export class DiscordNotificationService extends EventEmitter {
         inline: false,
       });
 
-      // Print time (elapsed)
-      if (status.currentJob.progress.elapsedTime !== undefined) {
+      // Print time (elapsed) — use elapsedTimeSeconds (seconds) for formatDuration
+      if (status.currentJob.progress.elapsedTimeSeconds !== undefined) {
         fields.push({
           name: 'Print Time',
-          value: this.formatDuration(status.currentJob.progress.elapsedTime),
+          value: this.formatDuration(status.currentJob.progress.elapsedTimeSeconds),
           inline: true,
         });
       }
 
-      // ETA (estimated time remaining)
-      if (status.currentJob.progress.timeRemaining !== undefined && status.currentJob.progress.timeRemaining !== null) {
-        const etaDate = new Date(Date.now() + status.currentJob.progress.timeRemaining * 1000);
-        const formattedETA = etaDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        fields.push({
-          name: 'ETA',
-          value: formattedETA,
-          inline: true,
-        });
+      // ETA — prefer formattedEta (firmware), fall back to timeRemaining (minutes)
+      {
+        const { formattedEta, timeRemaining } = status.currentJob.progress;
+        let etaDate: Date | null = null;
+        if (formattedEta && formattedEta !== '--:--') {
+          const [h, m] = formattedEta.split(':').map(Number);
+          etaDate = new Date(Date.now() + (h * 60 + m) * 60_000);
+        } else if (timeRemaining != null) {
+          etaDate = new Date(Date.now() + timeRemaining * 60_000); // timeRemaining is minutes
+        }
+        if (etaDate) {
+          const formattedETA = etaDate.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+          fields.push({
+            name: 'ETA',
+            value: formattedETA,
+            inline: true,
+          });
+        }
       }
 
       // Layer info

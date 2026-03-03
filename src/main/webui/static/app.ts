@@ -112,6 +112,8 @@ export interface PrinterStatus {
   thumbnailData?: string | null; // Base64 encoded thumbnail
   cumulativeFilament?: number; // Total lifetime filament usage in meters
   cumulativePrintTime?: number; // Total lifetime print time in minutes
+  formattedEta?: string; // Firmware ETA string (e.g. "04:48" = 4h48m remaining)
+  elapsedTimeSeconds?: number; // Precise elapsed seconds for HH:MM:SS display
 }
 
 export interface PrinterFeatures {

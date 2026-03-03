@@ -117,3 +117,30 @@ export function formatLifetimeFilament(meters: number): string {
 
   return `${meters.toFixed(2)}m`;
 }
+
+/**
+ * Format elapsed time from seconds to H:MM:SS or MM:SS.
+ * Mirrors the desktop's formatJobTime in src/shared/utils/time.utils.ts.
+ */
+export function formatElapsedSeconds(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  const mm = String(m).padStart(2, '0');
+  const ss = String(s).padStart(2, '0');
+  return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
+}
+
+/**
+ * Convert a firmware ETA string (HH:MM remaining) to a clock time string.
+ * Mirrors the desktop's formatETAToCompletionTime in job-stats.ts.
+ */
+export function formatETAFromString(hhmm: string): string {
+  const [hours, minutes] = hhmm.split(':').map(Number);
+  const completion = new Date(Date.now() + (hours * 60 + minutes) * 60_000);
+  return completion.toLocaleTimeString('en-US', {
+    hour: 'numeric',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
