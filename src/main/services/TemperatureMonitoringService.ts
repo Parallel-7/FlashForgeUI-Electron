@@ -113,6 +113,37 @@ export class TemperatureMonitoringService extends EventEmitter<TempMonitorEventM
 
   private temperatureCheckTimer: NodeJS.Timeout | null = null;
   private lastPrinterStatus: PrinterStatus | null = null;
+  private readonly handlePollingStatusUpdated = (status: PrinterStatus): void => {
+    this.lastPrinterStatus = status;
+
+    if (this.state.monitoringActive) {
+      void this.checkTemperature(status);
+    }
+  };
+  private readonly handlePrintCompleted = (event: { contextId: string }): void => {
+    if (event.contextId === this.contextId) {
+      console.log('[TemperatureMonitor] Print completed, starting temperature monitoring');
+      this.startMonitoring();
+    }
+  };
+  private readonly handlePrintStarted = (event: { contextId: string }): void => {
+    if (event.contextId === this.contextId) {
+      console.log('[TemperatureMonitor] Print started, resetting state');
+      this.resetState();
+    }
+  };
+  private readonly handlePrintCancelled = (event: { contextId: string }): void => {
+    if (event.contextId === this.contextId) {
+      console.log('[TemperatureMonitor] Print cancelled, resetting state');
+      this.resetState();
+    }
+  };
+  private readonly handlePrintError = (event: { contextId: string }): void => {
+    if (event.contextId === this.contextId) {
+      console.log('[TemperatureMonitor] Print error, resetting state');
+      this.resetState();
+    }
+  };
 
   constructor(contextId: string, config?: Partial<TemperatureMonitorConfig>) {
     super();
@@ -162,15 +193,7 @@ export class TemperatureMonitoringService extends EventEmitter<TempMonitorEventM
   private setupPollingServiceListeners(): void {
     if (!this.pollingService) return;
 
-    // Listen for status updates to track current temperature
-    this.pollingService.on('status-updated', (status: PrinterStatus) => {
-      this.lastPrinterStatus = status;
-
-      // Update temperature monitoring if active
-      if (this.state.monitoringActive) {
-        void this.checkTemperature(status);
-      }
-    });
+    this.pollingService.on('status-updated', this.handlePollingStatusUpdated);
   }
 
   /**
@@ -179,7 +202,7 @@ export class TemperatureMonitoringService extends EventEmitter<TempMonitorEventM
   private removePollingServiceListeners(): void {
     if (!this.pollingService) return;
 
-    this.pollingService.removeAllListeners('status-updated');
+    this.pollingService.off('status-updated', this.handlePollingStatusUpdated);
   }
 
   /**
@@ -188,37 +211,10 @@ export class TemperatureMonitoringService extends EventEmitter<TempMonitorEventM
   private setupPrintStateMonitorListeners(): void {
     if (!this.printStateMonitor) return;
 
-    // Start monitoring when print completes
-    this.printStateMonitor.on('print-completed', (event) => {
-      if (event.contextId === this.contextId) {
-        console.log('[TemperatureMonitor] Print completed, starting temperature monitoring');
-        this.startMonitoring();
-      }
-    });
-
-    // Reset state when print starts
-    this.printStateMonitor.on('print-started', (event) => {
-      if (event.contextId === this.contextId) {
-        console.log('[TemperatureMonitor] Print started, resetting state');
-        this.resetState();
-      }
-    });
-
-    // Reset state when print cancelled
-    this.printStateMonitor.on('print-cancelled', (event) => {
-      if (event.contextId === this.contextId) {
-        console.log('[TemperatureMonitor] Print cancelled, resetting state');
-        this.resetState();
-      }
-    });
-
-    // Reset state when print error
-    this.printStateMonitor.on('print-error', (event) => {
-      if (event.contextId === this.contextId) {
-        console.log('[TemperatureMonitor] Print error, resetting state');
-        this.resetState();
-      }
-    });
+    this.printStateMonitor.on('print-completed', this.handlePrintCompleted);
+    this.printStateMonitor.on('print-started', this.handlePrintStarted);
+    this.printStateMonitor.on('print-cancelled', this.handlePrintCancelled);
+    this.printStateMonitor.on('print-error', this.handlePrintError);
   }
 
   /**
@@ -227,10 +223,10 @@ export class TemperatureMonitoringService extends EventEmitter<TempMonitorEventM
   private removePrintStateMonitorListeners(): void {
     if (!this.printStateMonitor) return;
 
-    this.printStateMonitor.removeAllListeners('print-completed');
-    this.printStateMonitor.removeAllListeners('print-started');
-    this.printStateMonitor.removeAllListeners('print-cancelled');
-    this.printStateMonitor.removeAllListeners('print-error');
+    this.printStateMonitor.off('print-completed', this.handlePrintCompleted);
+    this.printStateMonitor.off('print-started', this.handlePrintStarted);
+    this.printStateMonitor.off('print-cancelled', this.handlePrintCancelled);
+    this.printStateMonitor.off('print-error', this.handlePrintError);
   }
 
   // ============================================================================

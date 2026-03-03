@@ -15,6 +15,8 @@
 
 import type { PrinterPollingService } from './PrinterPollingService.js';
 import { PrintStateMonitor } from './PrintStateMonitor.js';
+import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
+import type { ContextRemovedEvent } from '@shared/types/PrinterContext.js';
 
 /**
  * Multi-context coordinator for print state monitoring
@@ -22,6 +24,26 @@ import { PrintStateMonitor } from './PrintStateMonitor.js';
  */
 export class MultiContextPrintStateMonitor {
   private readonly monitors: Map<string, PrintStateMonitor> = new Map();
+  private readonly contextManager = getPrinterContextManager();
+  private readonly handleContextRemovedBound = (event: ContextRemovedEvent): void => {
+    this.destroyMonitor(event.contextId);
+  };
+  private isInitialized = false;
+
+  /**
+   * Initialize the multi-context print state monitor
+   * Sets up event listeners for context lifecycle events
+   */
+  public initialize(): void {
+    if (this.isInitialized) {
+      console.log('[MultiContextPrintStateMonitor] Already initialized');
+      return;
+    }
+
+    this.contextManager.on('context-removed', this.handleContextRemovedBound);
+    this.isInitialized = true;
+    console.log('[MultiContextPrintStateMonitor] Initialized');
+  }
 
   /**
    * Create a print state monitor for a specific context
@@ -96,6 +118,11 @@ export class MultiContextPrintStateMonitor {
     }
 
     this.monitors.clear();
+
+    if (this.isInitialized) {
+      this.contextManager.off('context-removed', this.handleContextRemovedBound);
+      this.isInitialized = false;
+    }
   }
 }
 

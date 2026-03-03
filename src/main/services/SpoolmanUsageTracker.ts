@@ -54,6 +54,21 @@ export class SpoolmanUsageTracker extends EventEmitter {
   private readonly configManager = getConfigManager();
   private printStateMonitor: PrintStateMonitor | null = null;
   private usageRecordedForPrint: string | null = null;
+  private readonly onPrintCompleted = (event: {
+    contextId: string;
+    jobName: string;
+    status: PrinterStatus;
+    completedAt: Date;
+  }): void => {
+    if (event.contextId === this.contextId) {
+      void this.handlePrintCompleted(event);
+    }
+  };
+  private readonly onPrintStarted = (event: { contextId: string }): void => {
+    if (event.contextId === this.contextId) {
+      this.resetTracking();
+    }
+  };
 
   constructor(contextId: string) {
     super();
@@ -87,19 +102,8 @@ export class SpoolmanUsageTracker extends EventEmitter {
   private setupPrintStateMonitorListeners(): void {
     if (!this.printStateMonitor) return;
 
-    // Trigger Spoolman deduction immediately when print completes
-    this.printStateMonitor.on('print-completed', (event) => {
-      if (event.contextId === this.contextId) {
-        void this.handlePrintCompleted(event);
-      }
-    });
-
-    // Reset tracking when new print starts
-    this.printStateMonitor.on('print-started', (event) => {
-      if (event.contextId === this.contextId) {
-        this.resetTracking();
-      }
-    });
+    this.printStateMonitor.on('print-completed', this.onPrintCompleted);
+    this.printStateMonitor.on('print-started', this.onPrintStarted);
   }
 
   /**
@@ -108,8 +112,8 @@ export class SpoolmanUsageTracker extends EventEmitter {
   private removePrintStateMonitorListeners(): void {
     if (!this.printStateMonitor) return;
 
-    this.printStateMonitor.removeAllListeners('print-completed');
-    this.printStateMonitor.removeAllListeners('print-started');
+    this.printStateMonitor.off('print-completed', this.onPrintCompleted);
+    this.printStateMonitor.off('print-started', this.onPrintStarted);
   }
 
   // ============================================================================

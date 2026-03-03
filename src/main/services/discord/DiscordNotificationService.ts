@@ -7,8 +7,8 @@
  * and event-driven immediate notifications.
  *
  * Key Features:
- * - Multi-context support: Independent timers and state tracking per printer
- * - Hybrid update mode: Timer-based intervals + event-driven state changes
+ * - Multi-context support: Shared periodic timer and per-printer state tracking
+ * - Hybrid update mode: Global timer-based intervals + event-driven state changes
  * - Rate limiting: Sequential message sending with configurable delays
  * - 1:1 embed structure: Matches original JavaScript implementation exactly
  * - Idle transition detection: Sends notification when transitioning to idle state
@@ -16,7 +16,7 @@
  * - Error handling: Network failures don't crash the service
  *
  * Architecture:
- * - Per-context update timers (Map<contextId, timer>)
+ * - Single global periodic update timer
  * - Per-context state tracking for idle transition detection
  * - Integration with PrinterContextManager for multi-printer iteration
  * - Integration with ConfigManager for settings and change detection
@@ -37,6 +37,7 @@ import type {
   DiscordServiceConfig,
   DiscordWebhookPayload,
 } from '@shared/types/discord.js';
+import type { ContextRemovedEvent } from '@shared/types/PrinterContext.js';
 import type { PrinterState, PrinterStatus } from '@shared/types/polling.js';
 import { EventEmitter } from 'events';
 import { type ConfigManager, getConfigManager } from '../../managers/ConfigManager.js';
@@ -45,6 +46,8 @@ import {
   type PrinterContext,
   type PrinterContextManager,
 } from '../../managers/PrinterContextManager.js';
+import type { TemperatureMonitoringService } from '../TemperatureMonitoringService.js';
+import type { PrintStateMonitor } from '../PrintStateMonitor.js';
 
 /**
  * Printer state for Discord notifications
@@ -58,17 +61,35 @@ type DiscordPrinterState = 'idle' | 'printing' | 'paused' | 'unknown';
 export class DiscordNotificationService extends EventEmitter {
   private readonly configManager: ConfigManager;
   private readonly contextManager: PrinterContextManager;
+  private readonly handleConfigUpdatedBound: () => void;
+  private readonly handleContextRemovedBound: (event: ContextRemovedEvent) => void;
 
   // Per-context state tracking
-  private readonly updateTimers = new Map<string, NodeJS.Timeout>();
   private readonly lastPrinterState = new Map<string, DiscordPrinterState>();
   private readonly cachedStatuses = new Map<string, PrinterStatus>();
+  private readonly monitorListeners = new Map<
+    string,
+    {
+      stateMonitor: PrintStateMonitor;
+      printCompletedListener: (event: {
+        contextId: string;
+        jobName: string;
+        status: PrinterStatus;
+      }) => void;
+      temperatureMonitor?: TemperatureMonitoringService;
+      printerCooledListener?: (event: { contextId: string }) => void;
+    }
+  >();
 
   // Rate limiting
   private readonly RATE_LIMIT_DELAY_MS = 1000; // 1 second between multi-printer messages
 
   // Service state
   private isInitialized = false;
+  private periodicUpdateTimer: NodeJS.Timeout | null = null;
+  private periodicUpdateIntervalMs: number | null = null;
+  private isPeriodicUpdateInProgress = false;
+  private shouldRunPeriodicUpdateAgain = false;
   private currentConfig: DiscordServiceConfig;
 
   constructor(configManager?: ConfigManager, contextManager?: PrinterContextManager) {
@@ -79,6 +100,12 @@ export class DiscordNotificationService extends EventEmitter {
 
     // Initialize config
     this.currentConfig = this.extractDiscordConfig();
+    this.handleConfigUpdatedBound = () => {
+      this.handleConfigUpdate();
+    };
+    this.handleContextRemovedBound = (event: ContextRemovedEvent) => {
+      this.unregisterContext(event.contextId);
+    };
   }
 
   // ============================================================================
@@ -96,14 +123,11 @@ export class DiscordNotificationService extends EventEmitter {
     }
 
     // Listen for config changes
-    this.configManager.on('configUpdated', () => {
-      this.handleConfigUpdate();
-    });
+    this.configManager.on('configUpdated', this.handleConfigUpdatedBound);
+    this.contextManager.on('context-removed', this.handleContextRemovedBound);
 
     // Start timers if Discord sync is enabled
-    if (this.currentConfig.enabled && this.currentConfig.webhookUrl) {
-      this.startAllTimers();
-    }
+    this.reconcilePeriodicTimer({ sendImmediateUpdate: true });
 
     this.isInitialized = true;
     console.log('[DiscordNotificationService] Initialized');
@@ -111,30 +135,70 @@ export class DiscordNotificationService extends EventEmitter {
 
   /**
    * Register a printer context for Discord notifications
-   * Starts update timer for this context
+   * Reconciles the shared periodic timer when contexts change
    */
   public registerContext(contextId: string): void {
     console.log(`[DiscordNotificationService] Registering context ${contextId}`);
 
+    if (this.lastPrinterState.has(contextId)) {
+      console.log(`[DiscordNotificationService] Context ${contextId} already registered`);
+      return;
+    }
+
     // Initialize state tracking
     this.lastPrinterState.set(contextId, 'unknown');
 
-    // Start timer if Discord sync enabled
-    if (this.currentConfig.enabled && this.currentConfig.webhookUrl) {
-      this.startTimerForContext(contextId);
-    }
+    this.reconcilePeriodicTimer();
   }
 
   /**
    * Unregister a printer context
-   * Stops timer and cleans up state
+   * Cleans up state and stops the shared timer when no contexts remain
    */
   public unregisterContext(contextId: string): void {
     console.log(`[DiscordNotificationService] Unregistering context ${contextId}`);
 
-    this.stopTimerForContext(contextId);
+    this.detachContextMonitors(contextId);
     this.lastPrinterState.delete(contextId);
     this.cachedStatuses.delete(contextId);
+    this.reconcilePeriodicTimer();
+  }
+
+  /**
+   * Attach event-driven monitor listeners for a context
+   */
+  public attachContextMonitors(
+    contextId: string,
+    stateMonitor: PrintStateMonitor,
+    temperatureMonitor?: TemperatureMonitoringService
+  ): void {
+    this.detachContextMonitors(contextId);
+
+    const printCompletedListener = (event: {
+      contextId: string;
+      jobName: string;
+      status: PrinterStatus;
+    }): void => {
+      const duration = event.status.currentJob?.progress.elapsedTimeSeconds;
+      void this.notifyPrintComplete(event.contextId, event.jobName, duration);
+    };
+
+    stateMonitor.on('print-completed', printCompletedListener);
+
+    let printerCooledListener: ((event: { contextId: string }) => void) | undefined;
+    if (temperatureMonitor) {
+      printerCooledListener = (event: { contextId: string }): void => {
+        void this.notifyPrinterCooled(event.contextId);
+      };
+      temperatureMonitor.on('printer-cooled', printerCooledListener);
+    }
+
+    this.monitorListeners.set(contextId, {
+      stateMonitor,
+      printCompletedListener,
+      temperatureMonitor,
+      printerCooledListener,
+    });
   }
 
   /**
@@ -143,16 +207,20 @@ export class DiscordNotificationService extends EventEmitter {
   public dispose(): void {
     console.log('[DiscordNotificationService] Disposing...');
 
-    // Stop all timers
-    for (const contextId of this.updateTimers.keys()) {
-      this.stopTimerForContext(contextId);
-    }
+    this.stopPeriodicTimer();
 
     // Clear state
+    for (const contextId of this.monitorListeners.keys()) {
+      this.detachContextMonitors(contextId);
+    }
     this.lastPrinterState.clear();
     this.cachedStatuses.clear();
+    this.shouldRunPeriodicUpdateAgain = false;
+    this.isPeriodicUpdateInProgress = false;
 
     // Remove listeners
+    this.configManager.off('configUpdated', this.handleConfigUpdatedBound);
+    this.contextManager.off('context-removed', this.handleContextRemovedBound);
     this.removeAllListeners();
 
     this.isInitialized = false;
@@ -195,16 +263,10 @@ export class DiscordNotificationService extends EventEmitter {
 
     console.log('[DiscordNotificationService] Config changed, restarting timers');
 
-    // Stop all existing timers
-    this.stopAllTimers();
-
     // Update config
     this.currentConfig = newConfig;
 
-    // Restart timers if enabled
-    if (newConfig.enabled && newConfig.webhookUrl) {
-      this.startAllTimers();
-    }
+    this.reconcilePeriodicTimer({ sendImmediateUpdate: true });
   }
 
   // ============================================================================
@@ -214,74 +276,99 @@ export class DiscordNotificationService extends EventEmitter {
   /**
    * Start update timer for a specific context
    */
-  private startTimerForContext(contextId: string): void {
-    // Stop existing timer if any
-    this.stopTimerForContext(contextId);
+  private reconcilePeriodicTimer(options?: { sendImmediateUpdate?: boolean }): void {
+    const shouldRunTimer = this.shouldRunPeriodicTimer();
+    if (!shouldRunTimer) {
+      this.stopPeriodicTimer();
+      return;
+    }
 
     const intervalMs = this.currentConfig.updateIntervalMinutes * 60 * 1000;
+    const timerNeedsRestart = this.periodicUpdateTimer === null || this.periodicUpdateIntervalMs !== intervalMs;
+    if (!timerNeedsRestart) {
+      if (options?.sendImmediateUpdate) {
+        void this.runPeriodicStatusUpdates();
+      }
+      return;
+    }
 
-    // Create new timer
-    const timer = setInterval(() => {
-      void this.sendStatusUpdatesForAllContexts();
+    this.stopPeriodicTimer();
+    this.startPeriodicTimer(intervalMs, options?.sendImmediateUpdate === true);
+  }
+
+  /**
+   * Determine whether the periodic timer should be running
+   */
+  private shouldRunPeriodicTimer(): boolean {
+    return this.currentConfig.enabled && Boolean(this.currentConfig.webhookUrl) && this.lastPrinterState.size > 0;
+  }
+
+  /**
+   * Start the single periodic update timer
+   */
+  private startPeriodicTimer(intervalMs: number, sendImmediateUpdate: boolean): void {
+    if (sendImmediateUpdate) {
+      void this.runPeriodicStatusUpdates();
+    }
+
+    this.periodicUpdateTimer = setInterval(() => {
+      void this.runPeriodicStatusUpdates();
     }, intervalMs);
-
-    this.updateTimers.set(contextId, timer);
+    this.periodicUpdateIntervalMs = intervalMs;
 
     console.log(
-      `[DiscordNotificationService] Started timer for context ${contextId} (${this.currentConfig.updateIntervalMinutes} min interval)`
+      `[DiscordNotificationService] Started global timer (${this.currentConfig.updateIntervalMinutes} min interval)`
     );
   }
 
   /**
-   * Stop update timer for a specific context
+   * Stop the single periodic update timer
    */
-  private stopTimerForContext(contextId: string): void {
-    const timer = this.updateTimers.get(contextId);
-
-    if (timer) {
-      clearInterval(timer);
-      this.updateTimers.delete(contextId);
-      console.log(`[DiscordNotificationService] Stopped timer for context ${contextId}`);
+  private stopPeriodicTimer(): void {
+    if (this.periodicUpdateTimer) {
+      clearInterval(this.periodicUpdateTimer);
+      this.periodicUpdateTimer = null;
+      this.periodicUpdateIntervalMs = null;
+      console.log('[DiscordNotificationService] Stopped global timer');
     }
   }
 
   /**
-   * Start timers for all registered contexts
+   * Run periodic status updates without overlapping executions
    */
-  private startAllTimers(): void {
-    const contexts = this.contextManager.getAllContexts();
+  private async runPeriodicStatusUpdates(): Promise<void> {
+    if (this.isPeriodicUpdateInProgress) {
+      this.shouldRunPeriodicUpdateAgain = true;
+      return;
+    }
 
-    // Only need one global timer that fires for all contexts
-    // We'll use a synthetic "global" timer key
-    if (contexts.length > 0) {
-      const intervalMs = this.currentConfig.updateIntervalMinutes * 60 * 1000;
+    this.isPeriodicUpdateInProgress = true;
 
-      // Send initial update
-      void this.sendStatusUpdatesForAllContexts();
-
-      // Create recurring timer
-      const timer = setInterval(() => {
-        void this.sendStatusUpdatesForAllContexts();
-      }, intervalMs);
-
-      this.updateTimers.set('__global__', timer);
-
-      console.log(
-        `[DiscordNotificationService] Started global timer (${this.currentConfig.updateIntervalMinutes} min interval)`
-      );
+    try {
+      do {
+        this.shouldRunPeriodicUpdateAgain = false;
+        await this.sendStatusUpdatesForAllContexts();
+      } while (this.shouldRunPeriodicUpdateAgain && this.shouldRunPeriodicTimer());
+    } finally {
+      this.isPeriodicUpdateInProgress = false;
     }
   }
 
   /**
-   * Stop all update timers
+   * Remove monitor listeners for a specific context
    */
-  private stopAllTimers(): void {
-    for (const [contextId, timer] of this.updateTimers) {
-      clearInterval(timer);
-      console.log(`[DiscordNotificationService] Stopped timer for ${contextId}`);
+  private detachContextMonitors(contextId: string): void {
+    const listeners = this.monitorListeners.get(contextId);
+    if (!listeners) {
+      return;
     }
 
-    this.updateTimers.clear();
+    listeners.stateMonitor.off('print-completed', listeners.printCompletedListener);
+    if (listeners.temperatureMonitor && listeners.printerCooledListener) {
+      listeners.temperatureMonitor.off('printer-cooled', listeners.printerCooledListener);
+    }
+
+    this.monitorListeners.delete(contextId);
   }
 
   // ============================================================================

@@ -444,6 +444,14 @@ export class SpoolmanIntegrationService extends EventEmitter {
       await this.clearAllCachedSpools('Server URL changed');
     }
   }
+
+  /**
+   * Dispose the service and release singleton event subscriptions.
+   */
+  public dispose(): void {
+    this.configManager.off('configUpdated', this.handleConfigUpdatedBound);
+    this.removeAllListeners();
+  }
 }
 
 /**
@@ -489,4 +497,16 @@ export function getSpoolmanIntegrationService(): SpoolmanIntegrationService {
     );
   }
   return instance;
+}
+
+/**
+ * Dispose the Spoolman integration singleton.
+ */
+export function disposeSpoolmanIntegrationService(): void {
+  if (!instance) {
+    return;
+  }
+
+  instance.dispose();
+  instance = null;
 }

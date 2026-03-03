@@ -60,6 +60,10 @@ export interface PrinterCooledEvent {
  */
 export class MultiContextTemperatureMonitor extends EventEmitter {
   private readonly monitors = new Map<string, TemperatureMonitoringService>();
+  private readonly contextManager = getPrinterContextManager();
+  private readonly handleContextRemovedBound = (event: { contextId: string }): void => {
+    this.removeMonitorForContext(event.contextId);
+  };
   private isInitialized = false;
 
   constructor() {
@@ -76,13 +80,7 @@ export class MultiContextTemperatureMonitor extends EventEmitter {
       return;
     }
 
-    const contextManager = getPrinterContextManager();
-
-    // Listen for context removal to cleanup monitors
-    contextManager.on('context-removed', (event: unknown) => {
-      const removeEvent = event as { contextId: string };
-      this.removeMonitorForContext(removeEvent.contextId);
-    });
+    this.contextManager.on('context-removed', this.handleContextRemovedBound);
 
     this.isInitialized = true;
     console.log('[MultiContextTemperatureMonitor] Initialized');
@@ -233,6 +231,9 @@ export class MultiContextTemperatureMonitor extends EventEmitter {
     // Remove all event listeners
     this.removeAllListeners();
 
+    if (this.isInitialized) {
+      this.contextManager.off('context-removed', this.handleContextRemovedBound);
+    }
     this.isInitialized = false;
     console.log('[MultiContextTemperatureMonitor] Disposed');
   }

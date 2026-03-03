@@ -8,10 +8,13 @@
  * - Graceful shutdown with resource cleanup
  */
 
+import type { PollingData } from '@shared/types/polling.js';
 import type { PrinterClientType, PrinterDetails } from '@shared/types/printer.js';
 import { applyPerPrinterDefaults } from '@shared/utils/printerSettingsDefaults.js';
 import { EventEmitter } from 'events';
 import { cameraIPCHandler } from '../ipc/camera-ipc-handler.js';
+import { initializeContextServices } from '../services/ContextServiceInitializer.js';
+import { getDiscordNotificationService } from '../services/discord/index.js';
 import { getGo2rtcService } from '../services/Go2rtcService.js';
 import { getMultiContextPollingCoordinator } from '../services/MultiContextPollingCoordinator.js';
 import { getSavedPrinterService } from '../services/SavedPrinterService.js';
@@ -272,9 +275,15 @@ export class HeadlessManager extends EventEmitter {
    * Setup event forwarding from polling coordinator to WebUI
    */
   private setupEventForwarding(): void {
+    const discordService = getDiscordNotificationService();
+
     // Forward polling data to WebUI for real-time updates
     // Note: MultiContextPollingCoordinator emits (contextId, data) - we need both parameters
-    this.pollingCoordinator.on('polling-data', (contextId: string, data) => {
+    this.pollingCoordinator.on('polling-data', (contextId: string, data: PollingData) => {
+      if (data.printerStatus) {
+        discordService.updatePrinterStatus(contextId, data.printerStatus);
+      }
+
       const activeContextId = this.contextManager.getActiveContextId();
       const isActiveContext = activeContextId === contextId;
 
@@ -298,6 +307,7 @@ export class HeadlessManager extends EventEmitter {
     for (const contextId of this.connectedContexts) {
       try {
         this.pollingCoordinator.startPollingForContext(contextId);
+        initializeContextServices(contextId);
         this.logger.logInfo(`Started polling for context: ${contextId}`);
       } catch (error) {
         this.logger.logError(`Failed to start polling for context ${contextId}`, error as Error);

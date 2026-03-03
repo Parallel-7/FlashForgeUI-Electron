@@ -161,7 +161,8 @@ export class PrinterDetailsManager {
     }
 
     // Validate lastUsedPrinterSerial exists in printers if not null
-    if (lastUsedPrinterSerial && !(lastUsedPrinterSerial in printersObj)) {
+    const lastUsedSerial = lastUsedPrinterSerial as string | null;
+    if (lastUsedSerial && !(lastUsedSerial in printersObj)) {
       return false;
     }
 

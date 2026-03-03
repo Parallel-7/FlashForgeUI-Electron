@@ -43,6 +43,10 @@ import type { PrintStateMonitor } from './PrintStateMonitor.js';
 export class MultiContextNotificationCoordinator extends EventEmitter {
   private readonly coordinators = new Map<string, PrinterNotificationCoordinator>();
   private readonly notificationService: NotificationService;
+  private readonly contextManager = getPrinterContextManager();
+  private readonly handleContextRemovedBound = (event: { contextId: string }): void => {
+    this.removeCoordinatorForContext(event.contextId);
+  };
   private isInitialized = false;
 
   constructor() {
@@ -60,13 +64,7 @@ export class MultiContextNotificationCoordinator extends EventEmitter {
       return;
     }
 
-    const contextManager = getPrinterContextManager();
-
-    // Listen for context removal to cleanup coordinators
-    contextManager.on('context-removed', (event: unknown) => {
-      const removeEvent = event as { contextId: string };
-      this.removeCoordinatorForContext(removeEvent.contextId);
-    });
+    this.contextManager.on('context-removed', this.handleContextRemovedBound);
 
     this.isInitialized = true;
     console.log('[MultiContextNotificationCoordinator] Initialized');
@@ -102,8 +100,7 @@ export class MultiContextNotificationCoordinator extends EventEmitter {
     this.coordinators.set(contextId, coordinator);
 
     // Update context manager reference
-    const contextManager = getPrinterContextManager();
-    contextManager.updateNotificationCoordinator(contextId, coordinator);
+    this.contextManager.updateNotificationCoordinator(contextId, coordinator);
 
     console.log(`[MultiContextNotificationCoordinator] Created coordinator for context ${contextId}`);
 
@@ -137,8 +134,7 @@ export class MultiContextNotificationCoordinator extends EventEmitter {
     this.coordinators.delete(contextId);
 
     // Update context manager reference
-    const contextManager = getPrinterContextManager();
-    contextManager.updateNotificationCoordinator(contextId, null);
+    this.contextManager.updateNotificationCoordinator(contextId, null);
 
     console.log(`[MultiContextNotificationCoordinator] Removed coordinator for context ${contextId}`);
 
@@ -192,6 +188,9 @@ export class MultiContextNotificationCoordinator extends EventEmitter {
     // Remove all event listeners
     this.removeAllListeners();
 
+    if (this.isInitialized) {
+      this.contextManager.off('context-removed', this.handleContextRemovedBound);
+    }
     this.isInitialized = false;
     console.log('[MultiContextNotificationCoordinator] Disposed');
   }
