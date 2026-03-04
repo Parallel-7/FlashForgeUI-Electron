@@ -74,7 +74,12 @@ import type { SpoolmanIntegrationService, SpoolmanChangedEvent } from './service
 import { getDiscordNotificationService } from './services/discord/index.js';
 import { getSpoolmanHealthMonitor } from './services/SpoolmanHealthMonitor.js';
 import { showSpoolmanOfflineDialog, hideSpoolmanOfflineDialog } from './windows/dialogs/SpoolmanOfflineDialog.js';
-import type { ContextCreatedEvent, ContextRemovedEvent, ContextSwitchEvent } from '@shared/types/PrinterContext.js';
+import type {
+  ContextConnectionState,
+  ContextCreatedEvent,
+  ContextRemovedEvent,
+  ContextSwitchEvent,
+} from '@shared/types/PrinterContext.js';
 
 /**
  * Main Electron process entry point. Handles app lifecycle, creates the main window,
@@ -689,6 +694,25 @@ const setupConnectionEventForwarding = (): void => {
     void cameraIPCHandler.handlePrinterDisconnected(contextId);
   });
 
+  connectionManager.on('connection-state-changed', (data: unknown) => {
+    if (!isConnectionStateChangedEvent(data)) {
+      console.warn('[Context Event] Ignoring malformed connection-state-changed payload');
+      return;
+    }
+
+    const eventData = data;
+    const mainWindow = windowManager.getMainWindow();
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('printer-context-updated', {
+        contextId: eventData.contextId,
+        updates: {
+          status: eventData.state,
+        },
+      });
+      console.log(`[Context Event] Forwarded context status update: ${eventData.contextId} -> ${eventData.state}`);
+    }
+  });
+
   // Backend initialization notification
   // NOTE: In multi-context mode, polling and camera setup happen in context-created events
   connectionManager.on('backend-initialized', (data: unknown) => {
@@ -1251,6 +1275,23 @@ function isBackendDisposedEvent(value: unknown): value is BackendDisposedEvent {
   }
 
   return value.contextId === undefined || typeof value.contextId === 'string';
+}
+
+type ConnectionStateChangedEvent = {
+  contextId: string;
+  state: ContextConnectionState;
+};
+
+function isContextConnectionState(value: unknown): value is ContextConnectionState {
+  return value === 'connected' || value === 'connecting' || value === 'disconnected' || value === 'error';
+}
+
+function isConnectionStateChangedEvent(value: unknown): value is ConnectionStateChangedEvent {
+  if (!isRecord(value)) {
+    return false;
+  }
+
+  return typeof value.contextId === 'string' && isContextConnectionState(value.state);
 }
 
 function isPollingDataPayload(value: unknown): value is PollingData {
