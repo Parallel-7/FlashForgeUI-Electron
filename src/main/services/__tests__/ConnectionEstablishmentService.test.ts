@@ -100,6 +100,29 @@ describe('ConnectionEstablishmentService', () => {
     });
   });
 
+  it('passes discovered command port to temporary legacy connection', async () => {
+    const service = ConnectionEstablishmentService.getInstance();
+
+    flashForgeClientConfigs.push({
+      initControl: jest.fn().mockResolvedValue(true),
+      getPrinterInfo: jest.fn().mockResolvedValue({
+        TypeName: 'Creator Pro',
+        Name: 'Legacy Printer',
+        SerialNumber: 'SN-LEGACY',
+      }),
+    });
+
+    const result = await service.createTemporaryConnection({
+      name: 'Legacy Printer',
+      ipAddress: '192.168.1.10',
+      serialNumber: 'SN-LEGACY',
+      commandPort: 19099,
+    });
+
+    expect(result.success).toBe(true);
+    expect(flashForgeClientInstances[0].args).toEqual(['192.168.1.10', { port: 19099 }]);
+  });
+
   it('disposes the temporary client after detecting a 5M-family printer', async () => {
     const service = ConnectionEstablishmentService.getInstance();
     jest.useFakeTimers();
@@ -187,6 +210,44 @@ describe('ConnectionEstablishmentService', () => {
       ipAddress: '192.168.1.13',
       serialNumber: 'SN-5M',
     });
+  });
+
+  it('passes discovered command/http ports to dual-api clients when provided', async () => {
+    const service = ConnectionEstablishmentService.getInstance();
+
+    fiveMClientConfigs.push({
+      initialize: jest.fn().mockResolvedValue(true),
+      initControl: jest.fn().mockResolvedValue(true),
+    });
+    flashForgeClientConfigs.push({
+      initControl: jest.fn().mockResolvedValue(true),
+    });
+
+    const result = await service.establishFinalConnection(
+      {
+        name: 'AD5X',
+        ipAddress: '192.168.1.130',
+        serialNumber: 'SN-PORTS',
+        commandPort: 19099,
+        eventPort: 19098,
+      },
+      'AD5X',
+      true,
+      '7777',
+      false
+    );
+
+    expect(result).toEqual({
+      primaryClient: fiveMClientInstances[0],
+      secondaryClient: flashForgeClientInstances[0],
+    });
+    expect(fiveMClientInstances[0].args).toEqual([
+      '192.168.1.130',
+      'SN-PORTS',
+      '7777',
+      { httpPort: 19098, tcpPort: 19099 },
+    ]);
+    expect(flashForgeClientInstances[0].args).toEqual(['192.168.1.130', { port: 19099 }]);
   });
 
   it('reuses the legacy temporary client when the final connection does not need dual-api mode', async () => {

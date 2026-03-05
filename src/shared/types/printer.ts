@@ -36,6 +36,8 @@ export interface PrinterDetails {
   readonly ClientType: PrinterClientType;
   readonly printerModel: string; // typeName from API for future auto-connect logic
   readonly modelType?: PrinterModelType; // Specific model type for backend selection
+  readonly commandPort?: number; // TCP command port (defaults to 8899 when omitted)
+  readonly httpPort?: number; // HTTP/event port (defaults to 8898 when omitted)
 
   // Per-printer settings (overrides global config if set)
   // These are mutable so they can be updated via settings UI
@@ -63,6 +65,8 @@ export interface DiscoveredPrinter {
   readonly model?: string;
   readonly status?: string;
   readonly firmwareVersion?: string;
+  readonly commandPort?: number;
+  readonly eventPort?: number;
 }
 
 /**

@@ -110,6 +110,12 @@ export class PrinterDetailsManager {
     if ('webUIEnabled' in detailsObj && typeof detailsObj.webUIEnabled !== 'boolean') {
       return false;
     }
+    if ('commandPort' in detailsObj && !this.isValidOptionalPort(detailsObj.commandPort)) {
+      return false;
+    }
+    if ('httpPort' in detailsObj && !this.isValidOptionalPort(detailsObj.httpPort)) {
+      return false;
+    }
     if ('activeSpoolData' in detailsObj) {
       // activeSpoolData can be null or an object with specific shape
       if (detailsObj.activeSpoolData !== null && typeof detailsObj.activeSpoolData !== 'object') {
@@ -118,6 +124,16 @@ export class PrinterDetailsManager {
     }
 
     return true;
+  }
+
+  private isValidOptionalPort(value: unknown): boolean {
+    if (value === undefined) {
+      return true;
+    }
+    if (typeof value !== 'number' || !Number.isInteger(value)) {
+      return false;
+    }
+    return value > 0 && value <= 65535;
   }
 
   /**

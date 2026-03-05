@@ -621,6 +621,8 @@ export class ConnectionFlowManager extends EventEmitter {
         ...discoveredPrinter,
         name: printerName,
         serialNumber: serialNumber,
+        commandPort: discoveredPrinter.commandPort,
+        eventPort: discoveredPrinter.eventPort,
       };
 
       console.log('Final printer details for connection:', {
@@ -672,6 +674,8 @@ export class ConnectionFlowManager extends EventEmitter {
         ClientType: ForceLegacyAPI ? 'legacy' : clientType,
         printerModel: tempResult.typeName,
         modelType,
+        commandPort: updatedDiscoveredPrinter.commandPort,
+        httpPort: updatedDiscoveredPrinter.eventPort,
       });
 
       console.log('[ConnectionFlow] Final printer details to save:', printerDetails);
@@ -901,6 +905,8 @@ export class ConnectionFlowManager extends EventEmitter {
         ipAddress: detailsWithDefaults.IPAddress,
         serialNumber: detailsWithDefaults.SerialNumber,
         model: detailsWithDefaults.printerModel,
+        commandPort: detailsWithDefaults.commandPort,
+        eventPort: detailsWithDefaults.httpPort,
       };
 
       // Establish connection
@@ -1075,16 +1081,30 @@ export class ConnectionFlowManager extends EventEmitter {
 
           let updatedPrinterDetails = savedPrinter;
 
-          // Step 3: Update IP address if discovered printer has different IP
-          if (discoveredMatch && discoveredMatch.ipAddress !== savedPrinter.IPAddress) {
-            console.log(
-              `[Headless] IP changed for ${savedPrinter.Name}: ${savedPrinter.IPAddress} → ${discoveredMatch.ipAddress}`
-            );
+          // Step 3: Update saved network coordinates when discovery reports changes
+          const ipChanged = discoveredMatch ? discoveredMatch.ipAddress !== savedPrinter.IPAddress : false;
+          const commandPortChanged =
+            discoveredMatch &&
+            discoveredMatch.commandPort !== undefined &&
+            discoveredMatch.commandPort !== savedPrinter.commandPort;
+          const httpPortChanged =
+            discoveredMatch &&
+            discoveredMatch.eventPort !== undefined &&
+            discoveredMatch.eventPort !== savedPrinter.httpPort;
+
+          if (discoveredMatch && (ipChanged || commandPortChanged || httpPortChanged)) {
+            if (ipChanged) {
+              console.log(
+                `[Headless] IP changed for ${savedPrinter.Name}: ${savedPrinter.IPAddress} -> ${discoveredMatch.ipAddress}`
+              );
+            }
             updatedPrinterDetails = {
               ...savedPrinter,
               IPAddress: discoveredMatch.ipAddress,
+              commandPort: discoveredMatch.commandPort,
+              httpPort: discoveredMatch.eventPort,
             };
-            // Save updated IP
+            // Save updated network coordinates
             await this.savedPrinterService.savePrinter(updatedPrinterDetails);
           }
 
@@ -1215,6 +1235,8 @@ export class ConnectionFlowManager extends EventEmitter {
           ClientType: spec.type,
           printerModel: tempResult.typeName,
           modelType,
+          commandPort: updatedDiscoveredPrinter.commandPort,
+          httpPort: updatedDiscoveredPrinter.eventPort,
         });
 
         await this.savedPrinterService.savePrinter(printerDetails);

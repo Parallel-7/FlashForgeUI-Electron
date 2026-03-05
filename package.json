@@ -47,6 +47,7 @@
     "test:coverage": "jest --coverage",
     "test:e2e": "npm run build:webui && playwright test",
     "test:e2e:electron": "npm run build && playwright test -c playwright.electron.config.ts",
+    "test:e2e:electron:emulator": "node scripts/run-playwright-electron-emulator.cjs",
     "test:e2e:electron:live": "node scripts/run-playwright-electron-live.cjs",
     "full-check": "npm run type-check && npm run lint",
     "audit:dead-code": "ts-node --esm scripts/audit-dead-code.ts"
@@ -67,7 +68,7 @@
     }
   },
   "dependencies": {
-    "@ghosttypes/ff-api": "1.0.0-20260211031842",
+    "@ghosttypes/ff-api": "link:..\\ff-5mp-api-ts",
     "@parallel-7/slicer-meta": "1.1.0-20251121155836",
     "electron-log": "^5.4.3",
     "electron-updater": "^6.8.3",
