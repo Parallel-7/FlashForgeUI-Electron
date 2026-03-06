@@ -1,6 +1,6 @@
 # FlashForgeUI-Electron Development Guide
 
-**Last Updated:** 2026-01-31 20:30 ET (America/New_York)
+**Last Updated:** 2026-03-06 17:54 ET (America/New_York)
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -55,7 +55,9 @@ For detailed architectural information, see the comprehensive reference document
 
 - **Editing**: prefer `Edit` tool for targeted changes, keep diffs minimal, and never revert user-owned changes. Maintain ASCII unless the file already uses Unicode.
 
-- **Documentation**: every `.ts` file must begin with an `@fileoverview` block describing purpose, key exports, and relationships. Run `pnpm docs:check` if unsure.
+- **Documentation**: every repo-maintained `.ts`, `.tsx`, `.js`, `.jsx`, and `.cjs` source file should begin with an `@fileoverview` block describing purpose, key exports, and relationships. Use `pnpm docs:check` to catch gaps under `src/` and `pnpm docs:combine` to refresh `fileoverview-report.md`.
+
+- **Testing workflow**: `pnpm test` runs Jest over `src/`, `pnpm test:e2e` runs browser Playwright against the built WebUI fixture server, and `pnpm test:e2e:electron*` covers desktop Playwright flows. `test:all` currently excludes the Electron suites, so run the Electron slice explicitly when desktop behavior changes.
 
 - **Validation**: run the smallest meaningful checks (`pnpm type-check`, `pnpm lint`, targeted scripts) before handing work back. Reserve `pnpm build*` for user requests or when architectural changes demand it.
 
@@ -70,15 +72,15 @@ For detailed architectural information, see the comprehensive reference document
 
 ## Recent Lessons
 
-1. Component dialog preloads must import typings with `import type {} from '../../types/global';`—runtime `.d.ts` imports break the dialog bootstrap.
+1. Component dialog preloads must import typings with `import type {} from '../../types/global';` - runtime `.d.ts` imports break the dialog bootstrap.
 
 2. The component dialog expects untouched `polling-update` payloads; do not transform the shape before forwarding to `ComponentManager.updateAll`.
 
-3. GridStack initialization (`src/ui/gridstack/`) already registers and wires widgets (e.g., log panel). Removing or duplicating that flow leaves globals unset.
+3. GridStack initialization (`src/ui/gridstack/`) already registers and wires widgets (for example, the log panel). Removing or duplicating that flow leaves globals unset.
 
 4. Spoolman integration deliberately blocks AD5X/material-station contexts (`src/services/SpoolmanIntegrationService.ts`). Removing the guard regresses filament safety checks.
 
-5. **Camera streaming**: `Go2rtcService` provides unified streaming via go2rtc (WebRTC/MSE). `Go2rtcBinaryManager` handles binary lifecycle. `PortAllocator` manages port allocation. Do not manually configure go2rtc streams or bypass the allocator.
+5. **Camera streaming**: `Go2rtcService` provides unified streaming via go2rtc (WebRTC/MSE). `Go2rtcBinaryManager` handles binary lifecycle and configuration handoff. Do not manually configure go2rtc streams outside that service stack.
 
 6. Headless mode and desktop mode share the same connection/polling/camera stack. Avoid `isHeadlessMode()` forks unless absolutely necessary; duplicating logic leads to drift.
 
@@ -88,11 +90,19 @@ For detailed architectural information, see the comprehensive reference document
 
 9. **Release versioning**: Semver treats stable versions as newer than prereleases with the same base (`1.0.3 > 1.0.3-alpha.X`). After releasing a stable version, the next alpha MUST bump the version number. Correct flow:
    ```
-   1.0.3-alpha.1 → 1.0.3-alpha.2 → 1.0.3 (stable)
-                                      ↓
-   1.0.4-alpha.1 → 1.0.4-alpha.2 → 1.0.4 (stable)
+   1.0.3-alpha.1 -> 1.0.3-alpha.2 -> 1.0.3 (stable)
+                                  |
+   1.0.4-alpha.1 -> 1.0.4-alpha.2 -> 1.0.4 (stable)
    ```
-   Never continue `X.Y.Z-alpha.N` after releasing `X.Y.Z` stable—electron-updater will look for `alpha.yml` in the stable release (which doesn't have it) and 404.
+   Never continue `X.Y.Z-alpha.N` after releasing `X.Y.Z` stable - `electron-updater` will look for `alpha.yml` in the stable release (which doesn't have it) and 404.
+
+10. **Legacy mode is per-printer**: backend selection must read the saved printer/context setting instead of any global `ForceLegacyAPI` override. If a 5M-series printer needs legacy behavior, seed or update that printer's own settings rather than adding a process-wide fallback.
+
+11. **Discovery alignment**: the desktop discovery path now follows the updated `@ghosttypes/ff-api` discovery API. If printers connect but tab state or discovery rows look wrong, inspect `src/main/index.ts`, `PrinterDiscoveryService.ts`, and renderer tab updates together instead of patching only one layer.
+
+12. **WebUI cache regressions**: built WebUI assets must remain version-stamped and served with no-cache headers. The browser Playwright suite exists specifically to catch stale asset mixes, icon hydration mismatches, and camera bootstrap regressions before release.
+
+13. **Desktop E2E boundaries**: use `e2e-electron/desktop-smoke.spec.ts` for live `%APPDATA%` smoke coverage and `e2e-electron/desktop-emulator.spec.ts` for isolated emulator-backed lifecycle coverage. On Windows, prefer the dedicated `package.json` scripts over ad hoc Playwright grep invocations.
 
 ---
 
@@ -100,9 +110,9 @@ For detailed architectural information, see the comprehensive reference document
 
 ### Bootstrapping & Entry
 
-- `src/main/bootstrap.ts` – sets app name/userData path before anything else loads
-- `src/main/index.ts` – main-process orchestrator (imports bootstrap first, registers IPC, creates windows)
-- `src/preload/index.ts` / `src/renderer/src/ui/component-dialog/component-dialog-preload.ts` – context bridges for main + dialog renderers
+- `src/main/bootstrap.ts` - sets app name/userData path before anything else loads
+- `src/main/index.ts` - main-process orchestrator (imports bootstrap first, registers IPC, creates windows)
+- `src/preload/index.ts` / `src/renderer/src/ui/component-dialog/component-dialog-preload.ts` - context bridges for main + dialog renderers
 
 ### Managers & Multi-Context Core
 
@@ -112,14 +122,14 @@ For detailed architectural information, see the comprehensive reference document
 
 ### Backends & Printers
 
-- `src/main/printer-backends/*.ts` – Legacy, Adventurer5M, Adventurer5M Pro, AD5X implementations
-- `src/main/printer-backends/ad5x/*` – material station transforms/types/utils
+- `src/main/printer-backends/*.ts` - Legacy, Adventurer5M, Adventurer5M Pro, AD5X implementations
+- `src/main/printer-backends/ad5x/*` - material station transforms/types/utils
 
 ### Renderer & Components
 
 - `src/renderer/src/renderer.ts`, `src/renderer/src/gridController.ts`, `src/renderer/src/shortcutButtons.ts`, `src/renderer/src/perPrinterStorage.ts`, `src/renderer/src/logging.ts`
 - `src/renderer/src/ui/components/**` (ComponentManager, printer tabs, job info, etc.) + `src/renderer/src/ui/gridstack/**` for layout/palette logic
-- `src/renderer/src/ui/component-dialog/**` – component dialog renderer + preload mirrors
+- `src/renderer/src/ui/component-dialog/**` - component dialog renderer + preload mirrors
 
 ### IPC & Windows
 
@@ -128,14 +138,14 @@ For detailed architectural information, see the comprehensive reference document
 
 ### Settings Dialog
 
-- `src/renderer/src/ui/settings/settings-renderer.ts` – main orchestrator for dual settings management (global + per-printer)
-- `src/renderer/src/ui/settings/sections/SettingsSection.ts` – base interface for modular sections
-- `src/renderer/src/ui/settings/sections/*.ts` – individual setting sections (AutoUpdate, DesktopTheme, Discord, InputDependency, PrinterContext, RoundedUI, SpoolmanTest, Tab)
-- `src/renderer/src/ui/settings/types.ts`, `src/renderer/src/ui/settings/types/external.ts` – shared type definitions
+- `src/renderer/src/ui/settings/settings-renderer.ts` - main orchestrator for dual settings management (global + per-printer)
+- `src/renderer/src/ui/settings/sections/SettingsSection.ts` - base interface for modular sections
+- `src/renderer/src/ui/settings/sections/*.ts` - individual setting sections (AutoUpdate, DesktopTheme, Discord, InputDependency, PrinterContext, RoundedUI, SpoolmanTest, Tab)
+- `src/renderer/src/ui/settings/types.ts`, `src/renderer/src/ui/settings/types/external.ts` - shared type definitions
 
-### Camera, Notifications & Ports
+### Camera & Notifications
 
-- `src/main/services/Go2rtcService.ts`, `Go2rtcBinaryManager.ts`, `src/main/utils/PortAllocator.ts`
+- `src/main/services/Go2rtcService.ts`, `Go2rtcBinaryManager.ts`
 - `src/main/ipc/camera-ipc-handler.ts`, `src/main/webui/server/routes/camera-routes.ts`
 - `src/main/services/notifications/*`, `src/main/services/discord/DiscordNotificationService.ts`
 
@@ -149,7 +159,16 @@ For detailed architectural information, see the comprehensive reference document
 
 - `src/main/utils/HeadlessArguments.ts`, `HeadlessDetection.ts`, `HeadlessLogger.ts`, `src/main/managers/HeadlessManager.ts`
 - `src/main/webui/server/*` (WebUIManager, AuthManager, WebSocketManager, route modules) + `src/main/webui/static/*` (AppState, Transport, features, grid)
-- `docs/README.md` – user-facing headless instructions (keep updated)
+- `docs/README.md` - user-facing headless instructions (keep updated)
+
+### Testing & Automation
+
+- `src/**/__tests__/*` - Jest coverage for managers, services, calibration, WebUI server/routes, WebUI static helpers, and build utilities
+- `e2e/webui-smoke.spec.ts`, `e2e/webui-auth.spec.ts`, `e2e/helpers/webui-fixture-server.ts` - browser Playwright coverage for the built WebUI
+- `e2e-electron/desktop-smoke.spec.ts` - live desktop smoke test against the local FlashForgeUI profile
+- `e2e-electron/desktop-emulator.spec.ts`, `e2e-electron/helpers/emulator-harness.ts` - emulator-backed Electron lifecycle coverage across modern and legacy printers
+- `scripts/run-playwright-electron-live.cjs`, `scripts/run-playwright-electron-emulator.cjs` - entry points for the Electron Playwright suites
+- `package.json` - canonical place for the Electron slice scripts (`test:e2e:electron:emulator`, `:legacy`, `:legacy-multi`, `:modern-multi`, `:smoke`, `:live`)
 
 ---
 
@@ -170,11 +189,13 @@ For detailed architectural information, see the comprehensive reference document
 
 ### Code Inventory
 
-- **`fileoverview-report.md`** (repo root): Aggregates every `@fileoverview` block across `src/**/*.ts`. Use it to understand module responsibilities quickly before editing; it lists ~230 entries with filenames plus their summaries.
+- **`fileoverview-report.md`** (repo root): Aggregates every `@fileoverview` block across `src/**/*.{ts,tsx,js,jsx}`. Use it to understand module responsibilities quickly before editing and regenerate it with `pnpm docs:combine` after large doc/header refreshes.
 - **`pnpm find:console`**: Surfaces `console.<level>` calls (pass `-- --level=debug` etc.) so you can strip leftover logs before packaging or focus on specific severities quickly.
 - **`pnpm find:lucide`**: Shows every file touching Lucide icons, making it simple to prune unused imports or confirm icon hydration paths.
-- **`pnpm docs:check`**: Ensures new/updated files keep their `@fileoverview` headers synchronized with this inventory.
+- **`pnpm docs:check`**: Ensures new/updated source files keep their `@fileoverview` headers synchronized with this inventory, including tests, vendored JS copies, and declaration files under `src/`.
 
 ---
 
-Keep this guide synchronized with the repository—update sections when services, flows, or specs change.
+Keep this guide synchronized with the repository - update sections when services, flows, specs, or test surfaces change.
+
+

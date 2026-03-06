@@ -1,4 +1,16 @@
 /**
+ * @fileoverview Jest coverage for the WebUI camera feature helpers.
+ *
+ * Verifies `camera.js` builds `video-rtc` playback from camera proxy config,
+ * surfaces invalid stream configuration cleanly, and tears down camera UI when
+ * printer capabilities indicate no camera support.
+ */
+/**
+ * @fileoverview JSDOM tests for WebUI camera initialization, proxy-config handling,
+ * and fallback UI states when streams are unavailable.
+ */
+
+/**
  * @jest-environment jsdom
  */
 

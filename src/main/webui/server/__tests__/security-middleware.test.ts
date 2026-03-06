@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Tests for WebUI security middleware header injection and
+ * pass-through request handling.
+ */
+
+/**
+ * @fileoverview Jest coverage for WebUI security middleware.
+ *
+ * Validates the response headers and policy behavior applied to Express
+ * responses to harden the authenticated WebUI surface.
+ */
 import { Request, Response } from 'express';
 import { createSecurityMiddleware } from '../security-middleware';
 

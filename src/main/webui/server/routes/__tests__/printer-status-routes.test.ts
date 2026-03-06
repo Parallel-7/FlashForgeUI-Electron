@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Tests for printer-status WebUI routes covering normalized status
+ * payloads and backend-availability guard rails.
+ */
+
+/**
+ * @fileoverview Jest coverage for WebUI printer-status route handlers.
+ *
+ * Tests status polling, command-facing responses, and route error handling for
+ * the HTTP API that backs WebUI status panels.
+ */
 import express from 'express';
 import { registerPrinterStatusRoutes } from '../printer-status-routes.js';
 import { startTestServer } from '../test-server.js';

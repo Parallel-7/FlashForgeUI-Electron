@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Tests for SavedPrinterService persistence helpers delegated to
+ * PrinterDetailsManager for saved-printer CRUD and last-used selection.
+ */
+
+/**
+ * @fileoverview Jest coverage for `SavedPrinterService`.
+ *
+ * Exercises saved-printer persistence, lookup/update/remove behavior, and the
+ * normalization used by connection and auto-connect features.
+ */
 const mockPrinterDetailsManager = {
   clearAllPrinters: jest.fn(),
   getAllSavedPrinters: jest.fn(),

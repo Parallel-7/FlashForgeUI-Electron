@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Tests for ConnectionStateManager state transitions, client cleanup,
+ * and PrinterContextManager updates during connection changes.
+ */
+
+/**
+ * @fileoverview Jest coverage for `ConnectionStateManager`.
+ *
+ * Verifies connection lifecycle transitions, cancellation/reset behavior, and
+ * the events exposed to dialog and connection orchestration layers.
+ */
 import { EventEmitter } from 'events';
 
 const mockContextManager = Object.assign(new EventEmitter(), {

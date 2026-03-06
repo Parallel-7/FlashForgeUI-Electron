@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 
+/**
+ * @fileoverview Wrapper script that builds FlashForgeUI and runs the live Electron
+ * Playwright smoke test against the local desktop environment.
+ */
+
 const { spawnSync } = require('node:child_process');
 
 const env = {

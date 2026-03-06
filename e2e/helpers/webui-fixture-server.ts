@@ -1,3 +1,10 @@
+/**
+ * @fileoverview In-process fixture server for browser Playwright tests of the built WebUI.
+ *
+ * Serves static WebUI assets with deterministic API and websocket responses so browser tests
+ * can validate auth, context switching, and stale-asset regressions without launching Electron.
+ */
+
 import { readFile } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http';
 import { AddressInfo } from 'node:net';

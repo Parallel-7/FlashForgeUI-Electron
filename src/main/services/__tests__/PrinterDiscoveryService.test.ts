@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Tests for PrinterDiscoveryService discovery orchestration,
+ * singleton lifecycle, and ff-api adapter behavior.
+ */
+
+/**
+ * @fileoverview Jest coverage for `PrinterDiscoveryService`.
+ *
+ * Validates ff-api discovery integration, lifecycle management, and the
+ * discovered-printer payloads surfaced to connection and auto-connect flows.
+ */
 const discoverMock = jest.fn();
 
 jest.mock('@ghosttypes/ff-api', () => ({
@@ -77,4 +88,3 @@ describe('PrinterDiscoveryService', () => {
     });
   });
 });
-

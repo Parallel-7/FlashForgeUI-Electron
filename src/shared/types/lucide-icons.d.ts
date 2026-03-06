@@ -1,3 +1,15 @@
+/**
+ * @fileoverview Ambient declarations for Lucide ESM internals used by the app.
+ *
+ * Provides wildcard icon-module typings plus helper declarations for
+ * `createElement` and `replaceElement` so TypeScript can resolve the Lucide
+ * paths imported by desktop and WebUI icon utilities.
+ */
+/**
+ * @fileoverview Ambient module declarations for Lucide ESM internals imported by
+ * the desktop and WebUI icon hydration code.
+ */
+
 declare module 'lucide/dist/esm/icons/*.js' {
   import type { IconNode } from 'lucide';
   const icon: IconNode;

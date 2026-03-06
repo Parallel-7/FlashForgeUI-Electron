@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Tests for PrinterContextManager context creation, activation,
+ * persistence defaults, and saved-printer bookkeeping.
+ */
+
+/**
+ * @fileoverview Jest coverage for `PrinterContextManager`.
+ *
+ * Exercises context creation, activation, mutation, and teardown while
+ * preserving per-printer details and expected event emission semantics.
+ */
 import type { PrinterDetails } from '@shared/types/printer.js';
 import { getPrinterContextManager, PrinterContextManager } from '../PrinterContextManager.js';
 

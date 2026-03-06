@@ -1,3 +1,15 @@
+/**
+ * @fileoverview Jest coverage for per-printer settings default helpers.
+ *
+ * Confirms the shared defaults utility applies missing printer-detail fields
+ * safely, preserves explicit values, and reports when stored settings are
+ * incomplete.
+ */
+/**
+ * @fileoverview Tests for per-printer settings default helpers covering default application
+ * and detection of incomplete saved-printer records.
+ */
+
 import {
   applyPerPrinterDefaults,
   hasMissingDefaults,

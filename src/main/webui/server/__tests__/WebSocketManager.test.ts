@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Tests for WebSocketManager authentication, message handling,
+ * context-aware status pushes, and client-count updates.
+ */
+
+/**
+ * @fileoverview Jest coverage for `WebSocketManager`.
+ *
+ * Tests WebSocket authentication, client registration, broadcast delivery, and
+ * command/status messaging for the authenticated WebUI realtime channel.
+ */
 const mockValidateToken = jest.fn();
 const mockIsAuthenticationRequired = jest.fn();
 const mockExecuteGCodeCommand = jest.fn();

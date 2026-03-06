@@ -1,5 +1,10 @@
 #!/usr/bin/env node
 
+/**
+ * @fileoverview Wrapper script that builds FlashForgeUI and then runs the Electron Playwright
+ * suite against the external flashforge-emulator-v2 repository.
+ */
+
 const { existsSync } = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');

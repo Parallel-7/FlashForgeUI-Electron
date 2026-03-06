@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Helper utilities for launching and controlling flashforge-emulator-v2 instances
+ * during Electron Playwright runs, including isolated profiles and readiness checks.
+ */
+
 import { type ChildProcessByStdio, spawn, spawnSync } from 'node:child_process';
 import { access, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import os from 'node:os';

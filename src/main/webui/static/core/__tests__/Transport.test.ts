@@ -1,4 +1,16 @@
 /**
+ * @fileoverview Jest coverage for the WebUI transport layer.
+ *
+ * Exercises HTTP request helpers, auth header generation, WebSocket lifecycle
+ * handling, update fan-out, reconnect behavior, and command dispatch failure
+ * paths in `Transport.js`.
+ */
+/**
+ * @fileoverview JSDOM tests for the WebUI Transport layer covering fetch requests,
+ * websocket lifecycle, reconnection, and auth-aware command dispatch.
+ */
+
+/**
  * @jest-environment jsdom
  */
 

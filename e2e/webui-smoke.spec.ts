@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Browser Playwright coverage for built WebUI boot, cache-busted assets,
+ * stale camera/icon regression checks, and printer context switching.
+ */
+
 import { expect, test } from '@playwright/test';
 import { startWebUiFixtureServer, type WebUiFixtureServer } from './helpers/webui-fixture-server';
 

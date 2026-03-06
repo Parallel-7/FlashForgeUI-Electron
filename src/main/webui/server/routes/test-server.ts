@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Lightweight Express test server helper used by route tests
+ * to stand up isolated HTTP fixtures on random local ports.
+ */
+
+/**
+ * @fileoverview Test helper for temporary Express route/server instances.
+ *
+ * Provides a lightweight ephemeral HTTP server wrapper used by WebUI route and
+ * middleware tests to exercise real request/response behavior.
+ */
 import express from 'express';
 import type { Server } from 'http';
 import { AddressInfo } from 'net';

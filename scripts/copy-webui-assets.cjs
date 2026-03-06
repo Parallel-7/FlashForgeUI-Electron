@@ -1,12 +1,11 @@
 #!/usr/bin/env node
 
 /**
- * Copy WebUI static assets from source to build output directory.
+ * @fileoverview Build-time asset copier for the WebUI static bundle.
  *
- * This script copies HTML, CSS, and other static files from src/main/webui/static/
- * to out/webui/static/ as part of the WebUI build process, then applies a build
- * stamp to every local asset URL so browsers cannot mix modules from different
- * WebUI generations under the same stable filenames.
+ * Copies built WebUI artifacts into Electron output, vendors required browser libraries,
+ * and rewrites local asset URLs and module imports with version query stamps so browsers
+ * cannot mix modules from different WebUI generations under the same stable filenames.
  */
 
 const fs = require('fs');

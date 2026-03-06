@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Tests for WebUIManager startup, port binding, static asset serving,
+ * and integration with auth and websocket services.
+ */
+
+/**
+ * @fileoverview Jest coverage for `WebUIManager`.
+ *
+ * Verifies WebUI server startup/shutdown, auth-aware wiring, and coordination
+ * between Express routes, WebSocket handling, and config-driven behavior.
+ */
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
 import * as http from 'http';

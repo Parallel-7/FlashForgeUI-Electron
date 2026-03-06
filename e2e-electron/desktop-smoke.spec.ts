@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Live Electron Playwright smoke test for launching FlashForgeUI against
+ * the real local environment and verifying connected desktop UI rendering.
+ */
+
 import path from 'node:path';
 import { type ElectronApplication, _electron as electron, expect, type Page, test } from '@playwright/test';
 

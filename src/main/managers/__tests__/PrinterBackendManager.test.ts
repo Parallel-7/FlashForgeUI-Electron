@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Tests for PrinterBackendManager backend selection, lifecycle wiring,
+ * and context-driven backend reuse behavior.
+ */
+
+/**
+ * @fileoverview Jest coverage for `PrinterBackendManager`.
+ *
+ * Verifies backend creation, reuse, cleanup, and per-printer legacy/backend
+ * selection while coordinating with the loading and context managers.
+ */
 import type { PrinterDetails } from '@shared/types/printer.js';
 import { EventEmitter } from 'events';
 import { getLoadingManager } from '../LoadingManager.js';

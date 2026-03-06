@@ -1,4 +1,16 @@
 /**
+ * @fileoverview Jest coverage for shared WebUI Lucide icon helpers.
+ *
+ * Tests icon-name normalization, selective hydration from the global Lucide
+ * registry, and initialization of the default icon set expected by WebUI
+ * dialogs and controls.
+ */
+/**
+ * @fileoverview JSDOM tests for shared WebUI icon helpers that translate data-lucide
+ * markup into hydrated Lucide SVG icons.
+ */
+
+/**
  * @jest-environment jsdom
  */
 

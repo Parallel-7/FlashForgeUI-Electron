@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Tests for shared route helper utilities that resolve printer
+ * contexts and emit standardized API error responses.
+ */
+
+/**
+ * @fileoverview Jest coverage for shared WebUI route helpers.
+ *
+ * Verifies the response and async-wrapping helpers reused by the individual
+ * Express route modules in the authenticated WebUI server.
+ */
 import type { Response } from 'express';
 import { resolveContext, sendErrorResponse } from '../route-helpers.js';
 

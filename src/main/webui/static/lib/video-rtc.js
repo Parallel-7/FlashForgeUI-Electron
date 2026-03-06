@@ -1,4 +1,16 @@
 /**
+ * @fileoverview Vendored `VideoRTC` custom element for WebUI camera playback.
+ *
+ * Provides go2rtc-backed WebRTC, MSE, HLS, MP4, and MJPEG playback in the
+ * browser-facing WebUI bundle. This copy is version-stamped into static assets
+ * and should stay behaviorally aligned with the mirrored renderer copy.
+ */
+/**
+ * @fileoverview Vendored go2rtc VideoRTC custom element used by the built WebUI
+ * for browser-side WebRTC, MSE, and MJPEG playback.
+ */
+
+/**
  * VideoRTC v1.6.0 - Video player for go2rtc streaming application.
  *
  * All modern web technologies are supported in almost any browser except Apple Safari.

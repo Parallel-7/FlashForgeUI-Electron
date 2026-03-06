@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Jest coverage for shared WebUI formatting helpers.
+ *
+ * Verifies time, ETA, lifetime counter, and AD5X material-formatting helpers
+ * used across the static WebUI panels and job displays.
+ */
+/**
+ * @fileoverview Tests for shared WebUI formatting helpers covering time, ETA,
+ * material matching, and multi-color job utility behavior.
+ */
+
 import {
   buildMaterialBadgeTooltip,
   colorsDiffer,

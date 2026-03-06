@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Browser Playwright coverage for the built WebUI authentication flow,
+ * remembered tokens, and websocket authentication.
+ */
+
 import { expect, test } from '@playwright/test';
 import { startWebUiFixtureServer, type WebUiFixtureServer } from './helpers/webui-fixture-server';
 

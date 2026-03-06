@@ -1,4 +1,16 @@
 /**
+ * @fileoverview Jest coverage for the WebUI app bootstrap module.
+ *
+ * Verifies the startup sequence in `app.js`, including authenticated and
+ * unauthenticated flows, post-login loading work, and the context/layout hooks
+ * that trigger downstream camera, feature, and Spoolman refreshes.
+ */
+/**
+ * @fileoverview JSDOM tests for the built WebUI app bootstrap flow, including
+ * auth gating, initial data fetches, and context-switch side effects.
+ */
+
+/**
  * @jest-environment jsdom
  */
 

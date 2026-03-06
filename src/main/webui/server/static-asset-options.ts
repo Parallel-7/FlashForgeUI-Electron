@@ -1,3 +1,16 @@
+/**
+ * @fileoverview Shared no-store cache options for serving built WebUI assets.
+ *
+ * Exposes the header map, header-applier, and Express static options factory so the
+ * desktop-hosted WebUI always serves fresh asset bundles instead of stale cached files.
+ */
+
+/**
+ * @fileoverview Shared cache-control helpers for serving WebUI static assets.
+ *
+ * Exposes the header set and Express static options used by `WebUIManager` to
+ * prevent stale desktop/headless bundles from being cached by browsers.
+ */
 import type { Response } from 'express';
 
 export interface WebUIStaticAssetOptions {

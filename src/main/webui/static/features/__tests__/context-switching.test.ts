@@ -1,4 +1,16 @@
 /**
+ * @fileoverview Jest coverage for WebUI printer context switching.
+ *
+ * Tests context list loading, active-context persistence, selector wiring, and
+ * the API/status requests triggered by `context-switching.js` when users swap
+ * between saved printer contexts.
+ */
+/**
+ * @fileoverview JSDOM tests for WebUI printer context switching, including API calls,
+ * layout persistence, and active-context state updates.
+ */
+
+/**
  * @jest-environment jsdom
  */
 

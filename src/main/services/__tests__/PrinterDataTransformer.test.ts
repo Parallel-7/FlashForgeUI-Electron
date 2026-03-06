@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Tests for PrinterDataTransformer normalization of backend status,
+ * job metadata, and legacy field compatibility.
+ */
+
+/**
+ * @fileoverview Jest coverage for `PrinterDataTransformer`.
+ *
+ * Verifies normalization of raw printer status/detail payloads into the shapes
+ * consumed by desktop UI, WebUI, and notification-oriented services.
+ */
 const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
