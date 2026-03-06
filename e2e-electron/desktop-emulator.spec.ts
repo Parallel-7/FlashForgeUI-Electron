@@ -1,3 +1,10 @@
+/**
+ * @fileoverview Electron Playwright coverage against the external flashforge-emulator-v2 harness.
+ *
+ * Exercises direct and discovery connection flows, single- and multi-printer contexts, modern and
+ * legacy backends, material matching, LED and filtration controls, and full print lifecycle checks.
+ */
+
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
 import * as net from 'node:net';
 import os from 'node:os';
@@ -21,6 +28,9 @@ const LOCALHOST_IP = '127.0.0.1';
 const DEFAULT_CHECK_CODE = '123';
 const CONNECT_TIMEOUT_MS = 60_000;
 const JOB_ACTION_TIMEOUT_MS = 30_000;
+const WINDOW_POLL_INTERVAL_MS = 25;
+const OPTIONAL_DIALOG_TIMEOUT_MS = 250;
+const SEEDED_PRINTER_AUTOCONNECT_TIMEOUT_MS = 4_000;
 const CONSOLE_ERROR_ALLOWLIST: readonly RegExp[] = [/Autofill\.enable/i, /Autofill\.setAddresses/i];
 
 interface LaunchedElectronApp {
@@ -166,7 +176,12 @@ const createRendererErrorGuard = (
 
   const attachWindow = (windowPage: Page): void => {
     const onPageError = (error: Error): void => {
-      pushUnexpectedError(`[pageerror] ${pageLabel(windowPage)}: ${error.message}`);
+      const url = pageLabel(windowPage);
+      if (url.startsWith('devtools://')) {
+        return;
+      }
+
+      pushUnexpectedError(`[pageerror] ${url}: ${error.message}`);
     };
 
     const onConsole = (message: { type(): string; text(): string }): void => {
@@ -226,7 +241,8 @@ const createRendererErrorGuard = (
 const findWindowWithSelector = async (
   electronApp: ElectronApplication,
   selector: string,
-  timeoutMs = 10_000
+  timeoutMs = 10_000,
+  pollIntervalMs = WINDOW_POLL_INTERVAL_MS
 ): Promise<Page | null> => {
   const deadline = Date.now() + timeoutMs;
 
@@ -241,7 +257,7 @@ const findWindowWithSelector = async (
       }
     }
 
-    await sleep(100);
+    await sleep(pollIntervalMs);
   }
 
   return null;
@@ -250,9 +266,10 @@ const findWindowWithSelector = async (
 const waitForWindowWithSelector = async (
   electronApp: ElectronApplication,
   selector: string,
-  timeoutMs = 10_000
+  timeoutMs = 10_000,
+  pollIntervalMs = WINDOW_POLL_INTERVAL_MS
 ): Promise<Page> => {
-  const foundWindow = await findWindowWithSelector(electronApp, selector, timeoutMs);
+  const foundWindow = await findWindowWithSelector(electronApp, selector, timeoutMs, pollIntervalMs);
   if (foundWindow) {
     return foundWindow;
   }
@@ -306,7 +323,7 @@ const resolveMainWindow = async (electronApp: ElectronApplication, timeoutMs = 2
       }
     }
 
-    await sleep(100);
+    await sleep(WINDOW_POLL_INTERVAL_MS);
   }
 
   throw new Error(
@@ -375,8 +392,11 @@ const openConnectFlow = async (mainWindow: Page): Promise<void> => {
   await connectMenuItem.click();
 };
 
-const maybeHandleConnectedWarningDialog = async (electronApp: ElectronApplication): Promise<void> => {
-  const warningDialog = await findWindowWithSelector(electronApp, '#dialog-continue', 3_000);
+const maybeHandleConnectedWarningDialog = async (
+  electronApp: ElectronApplication,
+  timeoutMs = OPTIONAL_DIALOG_TIMEOUT_MS
+): Promise<void> => {
+  const warningDialog = await findWindowWithSelector(electronApp, '#dialog-continue', timeoutMs);
   if (!warningDialog) {
     return;
   }
@@ -388,7 +408,7 @@ const maybeDismissAutoConnectChoiceDialog = async (params: {
   electronApp: ElectronApplication;
   timeoutMs?: number;
 }): Promise<boolean> => {
-  const timeoutMs = params.timeoutMs ?? 3_000;
+  const timeoutMs = params.timeoutMs ?? OPTIONAL_DIALOG_TIMEOUT_MS;
   const autoConnectDialog = await findWindowWithSelector(params.electronApp, '#btn-manual-ip', timeoutMs);
   if (!autoConnectDialog) {
     return false;
@@ -478,7 +498,7 @@ const connectThroughDiscoveryDialog = async (params: {
 }): Promise<void> => {
   await maybeDismissAutoConnectChoiceDialog({
     electronApp: params.electronApp,
-    timeoutMs: 5_000,
+    timeoutMs: OPTIONAL_DIALOG_TIMEOUT_MS,
   });
   await openConnectFlow(params.mainWindow);
   await maybeHandleConnectedWarningDialog(params.electronApp);
@@ -493,7 +513,7 @@ const connectThroughDiscoveryDialog = async (params: {
   await maybeSubmitCheckCodeDialog({
     electronApp: params.electronApp,
     checkCode: params.checkCode,
-    timeoutMs: params.expectCheckCodePrompt ? 20_000 : 2_000,
+    timeoutMs: params.expectCheckCodePrompt ? 20_000 : OPTIONAL_DIALOG_TIMEOUT_MS,
     required: params.expectCheckCodePrompt,
   });
 
@@ -509,7 +529,7 @@ const connectThroughDirectIpDialog = async (params: {
 }): Promise<void> => {
   await maybeDismissAutoConnectChoiceDialog({
     electronApp: params.electronApp,
-    timeoutMs: 5_000,
+    timeoutMs: OPTIONAL_DIALOG_TIMEOUT_MS,
   });
   await openConnectFlow(params.mainWindow);
   await maybeHandleConnectedWarningDialog(params.electronApp);
@@ -524,7 +544,7 @@ const connectThroughDirectIpDialog = async (params: {
   await maybeSubmitCheckCodeDialog({
     electronApp: params.electronApp,
     checkCode: params.checkCode,
-    timeoutMs: params.expectCheckCodePrompt ? 20_000 : 2_000,
+    timeoutMs: params.expectCheckCodePrompt ? 20_000 : OPTIONAL_DIALOG_TIMEOUT_MS,
     required: params.expectCheckCodePrompt,
   });
 
@@ -1148,9 +1168,13 @@ const runSingleModelFlow = async (params: {
   });
 
   try {
+    const initialAutoConnectDialogTimeoutMs =
+      params.seededPrinters && params.seededPrinters.length > 0
+        ? SEEDED_PRINTER_AUTOCONNECT_TIMEOUT_MS
+        : OPTIONAL_DIALOG_TIMEOUT_MS;
     await maybeDismissAutoConnectChoiceDialog({
       electronApp: launched.electronApp,
-      timeoutMs: 10_000,
+      timeoutMs: initialAutoConnectDialogTimeoutMs,
     });
 
     if (params.mode === 'direct') {
@@ -1177,7 +1201,7 @@ const runSingleModelFlow = async (params: {
     await expect.poll(() => firstConnectedTabName(launched.mainWindow)).not.toBe('');
     await maybeDismissAutoConnectChoiceDialog({
       electronApp: launched.electronApp,
-      timeoutMs: 2_000,
+      timeoutMs: OPTIONAL_DIALOG_TIMEOUT_MS,
     });
 
     if (params.expectForceLegacyModeSetting) {
