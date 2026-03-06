@@ -48,6 +48,7 @@
     "test:e2e": "npm run build:webui && playwright test",
     "test:e2e:electron": "npm run build && playwright test -c playwright.electron.config.ts",
     "test:e2e:electron:emulator": "node scripts/run-playwright-electron-emulator.cjs",
+    "test:e2e:electron:emulator:legacy": "node scripts/run-playwright-electron-emulator.cjs -g Adventurer",
     "test:e2e:electron:live": "node scripts/run-playwright-electron-live.cjs",
     "full-check": "npm run type-check && npm run lint",
     "audit:dead-code": "ts-node --esm scripts/audit-dead-code.ts"

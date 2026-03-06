@@ -8,15 +8,11 @@ import type { Readable } from 'node:stream';
 const EMULATOR_READY_TOKEN = 'EMULATOR_READY';
 const DEFAULT_START_TIMEOUT_MS = 30_000;
 const DEFAULT_HEALTH_TIMEOUT_MS = 20_000;
+const DEFAULT_HTTP_TIMEOUT_MS = 10_000;
 const HEALTH_POLL_INTERVAL_MS = 250;
 const PROCESS_EXIT_TIMEOUT_MS = 5_000;
 
-type EmulatorModel =
-  | 'adventurer-3'
-  | 'adventurer-4'
-  | 'adventurer-5m'
-  | 'adventurer-5m-pro'
-  | 'adventurer-5x';
+export type EmulatorModel = 'adventurer-3' | 'adventurer-4' | 'adventurer-5m' | 'adventurer-5m-pro' | 'adventurer-5x';
 
 type SimulationMode = 'auto' | 'manual';
 
@@ -42,6 +38,28 @@ export interface EmulatorReadyPayload {
   model: string;
 }
 
+export interface EmulatorAuthConfig {
+  httpPort: number;
+  serial: string;
+  checkCode: string;
+}
+
+export interface EmulatorMaterialMapping {
+  toolId: number;
+  slotId: number;
+  materialName: string;
+  toolMaterialColor: string;
+  slotMaterialColor: string;
+}
+
+export interface EmulatorDetailPayload {
+  status: string;
+  lightStatus: 'open' | 'close';
+  printFileName: string;
+  externalFanStatus: 'open' | 'close';
+  internalFanStatus: 'open' | 'close';
+}
+
 interface WaitForReadyResult {
   readyPayloads: EmulatorReadyPayload[];
   stdoutLines: string[];
@@ -50,6 +68,12 @@ interface WaitForReadyResult {
 
 interface HealthPayload {
   ok: boolean;
+}
+
+interface DetailResponsePayload {
+  code: number;
+  message: string;
+  detail?: EmulatorDetailPayload;
 }
 
 interface StartHarnessResult {
@@ -72,6 +96,22 @@ const formatLogTail = (lines: readonly string[], maxLines = 20): string => {
 
 const getNpmCommand = (): string => {
   return process.platform === 'win32' ? 'npm.cmd' : 'npm';
+};
+
+const fetchWithTimeout = async (url: string, init: RequestInit, timeoutMs: number): Promise<Response> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
+
+  try {
+    return await fetch(url, {
+      ...init,
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 };
 
 const resolveEmulatorRoot = (): string => {
@@ -119,12 +159,16 @@ const buildInstanceArgs = (instance: EmulatorInstanceConfig): string[] => {
   ];
 };
 
-const spawnEmulatorProcess = (emulatorRoot: string, args: readonly string[]): ChildProcessByStdio<null, Readable, Readable> => {
+const spawnEmulatorProcess = (
+  emulatorRoot: string,
+  args: readonly string[]
+): ChildProcessByStdio<null, Readable, Readable> => {
   const child = spawn(getNpmCommand(), args, {
     cwd: emulatorRoot,
     env: process.env,
     stdio: ['ignore', 'pipe', 'pipe'],
     shell: process.platform === 'win32',
+    windowsHide: true,
   }) as ChildProcessByStdio<null, Readable, Readable>;
 
   return child;
@@ -255,9 +299,7 @@ const waitForHealthReady = async (httpPort: number, timeoutMs: number): Promise<
     await sleep(HEALTH_POLL_INTERVAL_MS);
   }
 
-  throw new Error(
-    `Health endpoint did not become ready for httpPort=${httpPort}. Last error: ${lastError ?? 'none'}`
-  );
+  throw new Error(`Health endpoint did not become ready for httpPort=${httpPort}. Last error: ${lastError ?? 'none'}`);
 };
 
 const waitForChildExit = async (
@@ -299,7 +341,9 @@ const stopProcessTree = async (child: ChildProcessByStdio<null, Readable, Readab
   }
 
   if (process.platform === 'win32' && child.pid) {
-    spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F']);
+    spawnSync('taskkill', ['/PID', String(child.pid), '/T', '/F'], {
+      windowsHide: true,
+    });
     await waitForChildExit(child, PROCESS_EXIT_TIMEOUT_MS);
     return;
   }
@@ -389,4 +433,135 @@ export const startEmulatorSupervisor = async (params: {
   return createHarnessResult(child, readiness.readyPayloads, async () => {
     await rm(tempDir, { recursive: true, force: true });
   });
+};
+
+export const fetchEmulatorDetail = async (
+  params: EmulatorAuthConfig & { timeoutMs?: number }
+): Promise<EmulatorDetailPayload> => {
+  const timeoutMs = params.timeoutMs ?? DEFAULT_HTTP_TIMEOUT_MS;
+  const response = await fetchWithTimeout(
+    `http://127.0.0.1:${params.httpPort}/detail`,
+    {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        serialNumber: params.serial,
+        checkCode: params.checkCode,
+      }),
+    },
+    timeoutMs
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch /detail (status=${response.status})`);
+  }
+
+  const payload = (await response.json()) as DetailResponsePayload;
+  if (payload.code !== 0 || !payload.detail) {
+    throw new Error(`Failed to fetch /detail (code=${payload.code}, message=${payload.message})`);
+  }
+
+  return payload.detail;
+};
+
+export const waitForEmulatorDetail = async (
+  params: EmulatorAuthConfig & {
+    predicate: (detail: EmulatorDetailPayload) => boolean;
+    description: string;
+    timeoutMs?: number;
+    pollIntervalMs?: number;
+  }
+): Promise<EmulatorDetailPayload> => {
+  const timeoutMs = params.timeoutMs ?? DEFAULT_HEALTH_TIMEOUT_MS;
+  const pollIntervalMs = params.pollIntervalMs ?? HEALTH_POLL_INTERVAL_MS;
+  const deadline = Date.now() + timeoutMs;
+  let lastDetail: EmulatorDetailPayload | null = null;
+  let lastError: string | null = null;
+
+  while (Date.now() < deadline) {
+    try {
+      const detail = await fetchEmulatorDetail(params);
+      lastDetail = detail;
+      if (params.predicate(detail)) {
+        return detail;
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error.message : String(error);
+    }
+
+    await sleep(pollIntervalMs);
+  }
+
+  throw new Error(
+    `Timed out waiting for emulator detail condition: ${params.description}. Last detail: ${
+      lastDetail ? JSON.stringify(lastDetail) : 'none'
+    }. Last error: ${lastError ?? 'none'}`
+  );
+};
+
+export const seedEmulatorRecentFile = async (
+  params: EmulatorAuthConfig & {
+    fileName: string;
+    gcodeContent?: string;
+    gcodeToolCnt?: number;
+    useMatlStation?: boolean;
+    materialMappings?: readonly EmulatorMaterialMapping[];
+    timeoutMs?: number;
+  }
+): Promise<void> => {
+  const timeoutMs = params.timeoutMs ?? DEFAULT_HTTP_TIMEOUT_MS;
+  const materialMappings = params.materialMappings ? [...params.materialMappings] : [];
+  const resolvedToolCount = params.gcodeToolCnt ?? (materialMappings.length > 0 ? materialMappings.length : 0);
+  const useMatlStation = params.useMatlStation ?? materialMappings.length > 0;
+  const materialMappingsBase64 = Buffer.from(JSON.stringify(materialMappings), 'utf-8').toString('base64');
+  const gcodeContent =
+    params.gcodeContent ??
+    [
+      ';FLAVOR:Marlin',
+      ';TIME:1200',
+      ';Layer height:0.2',
+      'G90',
+      'G28',
+      'M104 S210',
+      'M140 S60',
+      'G1 X10 Y10 Z0.3 F3000',
+      'G1 X100 Y100 E5 F1200',
+      'M104 S0',
+      'M140 S0',
+      'M84',
+    ].join('\n');
+
+  const formData = new FormData();
+  const fileBlob = new Blob([gcodeContent], { type: 'text/plain' });
+  formData.set('gcodeFile', fileBlob, params.fileName);
+
+  const response = await fetchWithTimeout(
+    `http://127.0.0.1:${params.httpPort}/uploadGcode`,
+    {
+      method: 'POST',
+      headers: {
+        serialNumber: params.serial,
+        checkCode: params.checkCode,
+        printNow: 'false',
+        levelingBeforePrint: 'false',
+        flowCalibration: 'false',
+        useMatlStation: String(useMatlStation),
+        gcodeToolCnt: String(resolvedToolCount),
+        materialMappings: materialMappingsBase64,
+      },
+      body: formData,
+    },
+    timeoutMs
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to seed emulator file (status=${response.status})`);
+  }
+
+  const payload = (await response.json()) as { code: number; message: string };
+  if (payload.code !== 0) {
+    throw new Error(`Failed to seed emulator file (code=${payload.code}, message=${payload.message})`);
+  }
 };
