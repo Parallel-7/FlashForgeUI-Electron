@@ -16,7 +16,7 @@
  *
  * Settings Categories:
  * - Global Settings: WebUI, Discord, alerts, Spoolman, debug mode
- * - Per-Printer Settings: Custom camera, custom LEDs, force legacy mode
+ * - Per-Printer Settings: Custom RTSP/HTTP camera, custom LEDs, force legacy mode
  *
  * UI State Management:
  * - Dynamic enable/disable of dependent fields

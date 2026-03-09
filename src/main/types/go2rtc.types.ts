@@ -166,7 +166,7 @@ export interface CameraStreamConfig {
   /** WebSocket URL for stream negotiation (e.g., ws://localhost:1984/api/ws?src=printer_1) */
   wsUrl: string;
   /** Original source type */
-  sourceType: 'builtin' | 'custom';
+  sourceType: 'oem' | 'custom';
   /** Original stream type (before go2rtc conversion) */
   streamType: 'mjpeg' | 'rtsp';
   /** Preferred playback modes */

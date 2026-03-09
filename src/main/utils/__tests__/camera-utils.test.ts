@@ -32,7 +32,7 @@ jest.mock('../../managers/PrinterContextManager.js', () => ({
 function createFeatures(overrides: Partial<PrinterFeatureSet['camera']> = {}): PrinterFeatureSet {
   return {
     camera: {
-      builtin: false,
+      oemStreamUrl: '',
       customEnabled: false,
       customUrl: null,
       ...overrides,
@@ -108,10 +108,12 @@ describe('camera-utils', () => {
     });
   });
 
-  it('derives the default FlashForge camera URL when custom camera is enabled without a URL', () => {
+  it('uses the runtime OEM camera stream when custom camera normalizes off', () => {
     const result = resolveCameraConfig({
       printerIpAddress: '192.168.1.25',
-      printerFeatures: createFeatures(),
+      printerFeatures: createFeatures({
+        oemStreamUrl: 'http://192.168.1.25:8080/?action=stream',
+      }),
       userConfig: {
         customCameraEnabled: true,
         customCameraUrl: '',
@@ -119,14 +121,14 @@ describe('camera-utils', () => {
     });
 
     expect(result).toEqual({
-      sourceType: 'custom',
+      sourceType: 'oem',
       streamType: 'mjpeg',
       streamUrl: 'http://192.168.1.25:8080/?action=stream',
       isAvailable: true,
     });
   });
 
-  it('rejects invalid custom camera URLs and falls back to builtin cameras when available', () => {
+  it('rejects invalid custom camera URLs and uses the OEM stream when present', () => {
     const invalidCustom = resolveCameraConfig({
       printerIpAddress: '192.168.1.25',
       printerFeatures: createFeatures(),
@@ -135,9 +137,11 @@ describe('camera-utils', () => {
         customCameraUrl: 'not-a-url',
       },
     });
-    const builtin = resolveCameraConfig({
+    const oem = resolveCameraConfig({
       printerIpAddress: '192.168.1.25',
-      printerFeatures: createFeatures({ builtin: true }),
+      printerFeatures: createFeatures({
+        oemStreamUrl: 'http://192.168.1.25:8080/?action=stream',
+      }),
       userConfig: {
         customCameraEnabled: false,
         customCameraUrl: null,
@@ -149,8 +153,8 @@ describe('camera-utils', () => {
       isAvailable: false,
       unavailableReason: expect.stringContaining('Custom camera URL is invalid'),
     });
-    expect(builtin).toEqual({
-      sourceType: 'builtin',
+    expect(oem).toEqual({
+      sourceType: 'oem',
       streamType: 'mjpeg',
       streamUrl: 'http://192.168.1.25:8080/?action=stream',
       isAvailable: true,
@@ -173,7 +177,7 @@ describe('camera-utils', () => {
     });
 
     expect(getCameraUserConfig('context-1')).toEqual({
-      customCameraEnabled: true,
+      customCameraEnabled: false,
       customCameraUrl: null,
     });
     expect(getCameraUserConfig()).toEqual({

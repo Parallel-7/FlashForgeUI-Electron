@@ -31,9 +31,11 @@ jest.mock('../../../../services/Go2rtcService.js', () => ({
 describe('camera-routes', () => {
   const go2rtcService = {
     hasStream: jest.fn(),
+    hasMatchingStream: jest.fn(),
     isRunning: jest.fn(),
     initialize: jest.fn(),
     addStream: jest.fn(),
+    removeStream: jest.fn(),
     getStreamConfig: jest.fn(),
   };
   const configManager = {
@@ -51,7 +53,7 @@ describe('camera-routes', () => {
           getBackendStatus: jest.fn().mockReturnValue({
             features: {
               camera: {
-                builtin: false,
+                oemStreamUrl: 'http://192.168.1.25:8080/?action=stream',
                 customEnabled: true,
                 customUrl: null,
               },
@@ -108,6 +110,7 @@ describe('camera-routes', () => {
       };
     });
     go2rtcService.hasStream.mockReturnValue(false);
+    go2rtcService.hasMatchingStream.mockReturnValue(false);
     go2rtcService.isRunning.mockReturnValue(false);
     go2rtcService.getStreamConfig.mockReturnValue({
       streamName: 'context-1-camera',
@@ -116,7 +119,7 @@ describe('camera-routes', () => {
     });
   });
 
-  it('derives a default custom camera URL and returns a go2rtc websocket configuration', async () => {
+  it('uses the runtime OEM camera stream and returns a go2rtc websocket configuration', async () => {
     const deps = createDependencies();
     const server = await startTestServer((app) => {
       const router = express.Router();
@@ -134,14 +137,14 @@ describe('camera-routes', () => {
     expect(go2rtcService.addStream).toHaveBeenCalledWith(
       'context-1',
       'http://192.168.1.25:8080/?action=stream',
-      'custom',
+      'oem',
       'mjpeg'
     );
     expect(body).toEqual({
       success: true,
       wsUrl: expect.stringContaining('/api/ws?src=context-1-camera'),
       streamType: 'mjpeg',
-      sourceType: 'custom',
+      sourceType: 'oem',
       streamName: 'context-1-camera',
       apiPort: 1984,
       mode: 'webrtc,mse,mjpeg',
@@ -166,7 +169,7 @@ describe('camera-routes', () => {
           getBackendStatus: jest.fn().mockReturnValue({
             features: {
               camera: {
-                builtin: false,
+                oemStreamUrl: '',
                 customEnabled: false,
                 customUrl: null,
               },

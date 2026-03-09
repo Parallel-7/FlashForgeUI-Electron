@@ -830,9 +830,10 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
    * Process machine info for backend-specific handling
    * Override in subclasses that need to store machine info (e.g., AD5X for material station)
    */
-  protected async processMachineInfo(_machineInfo: unknown): Promise<void> {
-    // Default implementation does nothing
-    // AD5X backend will override to store for material station data
+  protected async processMachineInfo(machineInfo: unknown): Promise<void> {
+    const info = machineInfo as { CameraStreamUrl?: unknown } | null;
+    const cameraStreamUrl = typeof info?.CameraStreamUrl === 'string' ? info.CameraStreamUrl : '';
+    this.updateOEMCameraStreamUrl(cameraStreamUrl);
   }
 
   /**

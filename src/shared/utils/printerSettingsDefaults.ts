@@ -60,6 +60,33 @@ export interface PerPrinterSettings {
   showCameraFps: boolean;
 }
 
+type CameraSettingSubset = Pick<Partial<PrinterDetails>, 'customCameraEnabled' | 'customCameraUrl'>;
+
+/**
+ * Normalize camera-related per-printer settings without forcing unrelated defaults.
+ * If custom camera is enabled without a URL, disable it and clear the URL.
+ */
+export function normalizeCustomCameraSettings<T extends CameraSettingSubset>(details: T): T {
+  const customCameraUrl = typeof details.customCameraUrl === 'string' ? details.customCameraUrl.trim() : details.customCameraUrl;
+
+  if (details.customCameraEnabled && (!customCameraUrl || customCameraUrl === '')) {
+    return {
+      ...details,
+      customCameraEnabled: false,
+      customCameraUrl: '',
+    };
+  }
+
+  if (customCameraUrl !== details.customCameraUrl) {
+    return {
+      ...details,
+      customCameraUrl,
+    };
+  }
+
+  return { ...details };
+}
+
 /**
  * Apply default values to any missing per-printer settings.
  * Pure function - does not mutate input.
@@ -75,7 +102,7 @@ export interface PerPrinterSettings {
  * ```
  */
 export function applyPerPrinterDefaults<T extends Partial<PrinterDetails>>(details: T): T & PerPrinterSettings {
-  return {
+  return normalizeCustomCameraSettings({
     ...details,
     customCameraEnabled: details.customCameraEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.customCameraEnabled,
     customCameraUrl: details.customCameraUrl ?? PER_PRINTER_SETTINGS_DEFAULTS.customCameraUrl,
@@ -83,7 +110,7 @@ export function applyPerPrinterDefaults<T extends Partial<PrinterDetails>>(detai
     forceLegacyMode: details.forceLegacyMode ?? PER_PRINTER_SETTINGS_DEFAULTS.forceLegacyMode,
     webUIEnabled: details.webUIEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.webUIEnabled,
     showCameraFps: details.showCameraFps ?? PER_PRINTER_SETTINGS_DEFAULTS.showCameraFps,
-  } as T & PerPrinterSettings;
+  }) as T & PerPrinterSettings;
 }
 
 /**

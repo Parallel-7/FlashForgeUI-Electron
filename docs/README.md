@@ -15,10 +15,12 @@ The Adventurer 5M, 5M Pro, and AD5X require a pairing code when connecting for t
 You can find the code in this settings menu on the printer (Printer ID = pairing code)
 <img width="816" height="447" alt="image" src="https://github.com/user-attachments/assets/63ceea70-c956-4626-9690-c4ce20d74018" />
 
-## Custom Camera Setup
-For users with an Adventurer 5M or AD5X with the official camera, simply enable the "Custom Camera" option in settings. The program will automatically set the stream URL internally , based on your printer's IP.
+## Camera Setup
+For 5M-series printers, OEM cameras are detected automatically whenever the printer reports a `cameraStreamUrl`. You do not need to enable any custom camera setting for an official FlashForge camera.
 
-For anyone with a custom RTSP camera, enable that same option , and paste your rtsp:// url in the camera url box. You'll then be able to view it from the Desktop / WebUI
+If you disable the printer-side camera in firmware, FlashForgeUI will treat the camera as unavailable until it is re-enabled on the printer.
+
+For a separate custom RTSP or HTTP camera, enable the custom camera option in settings and paste the full camera URL into the camera URL box. You will then be able to view it from the Desktop and WebUI.
 
 ## Custom LED Setup
 For users with an Adventurer 5M or AD5X that have installed custom LEDs , you'll need to enable the "Custom LEDs" option in settings. This tells the program that you've installed your own LEDs, and allows you to control them from the Desktop / WebUI

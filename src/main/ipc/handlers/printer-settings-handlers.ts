@@ -5,7 +5,11 @@
  * Settings are stored per-printer in printer_details.json.
  */
 
-import { PER_PRINTER_SETTINGS_DEFAULTS } from '@shared/utils/printerSettingsDefaults.js';
+import {
+  applyPerPrinterDefaults,
+  normalizeCustomCameraSettings,
+  PER_PRINTER_SETTINGS_DEFAULTS,
+} from '@shared/utils/printerSettingsDefaults.js';
 import { ipcMain } from 'electron';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 import { getPrinterDetailsManager } from '../../managers/PrinterDetailsManager.js';
@@ -46,14 +50,14 @@ export function initializePrinterSettingsHandlers(): void {
       const details = activeContext.printerDetails;
 
       // Apply defaults for any missing per-printer settings
-      const settings: PrinterSettings = {
+      const settings: PrinterSettings = applyPerPrinterDefaults({
         customCameraEnabled: details.customCameraEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.customCameraEnabled,
         customCameraUrl: details.customCameraUrl ?? PER_PRINTER_SETTINGS_DEFAULTS.customCameraUrl,
         customLedsEnabled: details.customLedsEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.customLedsEnabled,
         forceLegacyMode: details.forceLegacyMode ?? PER_PRINTER_SETTINGS_DEFAULTS.forceLegacyMode,
         webUIEnabled: details.webUIEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.webUIEnabled,
         showCameraFps: details.showCameraFps ?? PER_PRINTER_SETTINGS_DEFAULTS.showCameraFps,
-      };
+      });
 
       console.log('[printer-settings:get] Returning settings:', settings);
       return settings;
@@ -80,7 +84,7 @@ export function initializePrinterSettingsHandlers(): void {
       const currentDetails = activeContext.printerDetails;
 
       // Apply centralized defaults for any missing per-printer settings
-      const settingsWithDefaults: PrinterSettings = {
+      const settingsWithDefaults: PrinterSettings = applyPerPrinterDefaults({
         ...settings,
         customCameraEnabled: settings.customCameraEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.customCameraEnabled,
         customCameraUrl: settings.customCameraUrl ?? PER_PRINTER_SETTINGS_DEFAULTS.customCameraUrl,
@@ -88,7 +92,7 @@ export function initializePrinterSettingsHandlers(): void {
         forceLegacyMode: settings.forceLegacyMode ?? PER_PRINTER_SETTINGS_DEFAULTS.forceLegacyMode,
         webUIEnabled: settings.webUIEnabled ?? PER_PRINTER_SETTINGS_DEFAULTS.webUIEnabled,
         showCameraFps: settings.showCameraFps ?? PER_PRINTER_SETTINGS_DEFAULTS.showCameraFps,
-      };
+      });
 
       // Remove explicit undefined values so validation sees either a boolean or the existing value
       for (const key of Object.keys(settingsWithDefaults) as Array<keyof PrinterSettings>) {
@@ -97,10 +101,10 @@ export function initializePrinterSettingsHandlers(): void {
         }
       }
 
-      const updatedDetails = {
+      const updatedDetails = normalizeCustomCameraSettings({
         ...currentDetails,
         ...settingsWithDefaults,
-      };
+      });
 
       // Save updated details
       await printerDetailsManager.savePrinter(updatedDetails, activeContext.id);

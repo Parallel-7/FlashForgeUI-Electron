@@ -13,6 +13,7 @@
 import {
   applyPerPrinterDefaults,
   hasMissingDefaults,
+  normalizeCustomCameraSettings,
   PER_PRINTER_SETTINGS_DEFAULTS,
 } from '../printerSettingsDefaults.js';
 
@@ -68,5 +69,17 @@ describe('printerSettingsDefaults', () => {
         ...PER_PRINTER_SETTINGS_DEFAULTS,
       })
     ).toBe(false);
+  });
+
+  it('normalizes blank enabled custom camera settings to disabled', () => {
+    expect(
+      normalizeCustomCameraSettings({
+        customCameraEnabled: true,
+        customCameraUrl: '   ',
+      })
+    ).toEqual({
+      customCameraEnabled: false,
+      customCameraUrl: '',
+    });
   });
 });

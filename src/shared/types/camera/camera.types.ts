@@ -2,8 +2,8 @@
  * @fileoverview Type definitions for camera streaming system using go2rtc.
  *
  * Provides type safety for camera configuration, go2rtc streaming gateway,
- * stream URL resolution, and status monitoring. Supports both built-in printer
- * cameras (MJPEG/RTSP) and custom camera URLs.
+ * stream URL resolution, and status monitoring. Supports both OEM printer
+ * cameras and custom camera URLs.
  *
  * All camera types are handled through go2rtc, which provides unified WebRTC/MSE/MJPEG
  * fallback for browser playback using native <video> element rendering.
@@ -16,7 +16,7 @@
  *
  * Camera Source Priority:
  * 1. Custom camera URL (if enabled in user config)
- * 2. Built-in printer camera (if supported by printer features)
+ * 2. OEM printer camera (if reported by the printer)
  * 3. None (camera unavailable with reason tracking)
  *
  * @module types/camera/camera.types
@@ -27,7 +27,7 @@ import { PrinterFeatureSet } from '../printer-backend/index.js';
 /**
  * Camera source types
  */
-export type CameraSourceType = 'builtin' | 'custom' | 'none';
+export type CameraSourceType = 'oem' | 'custom' | 'none';
 
 /**
  * Camera stream protocol types
@@ -112,7 +112,8 @@ export interface CameraIPCMethods {
 export type CameraUrlBuilder = (ipAddress: string) => string;
 
 /**
- * Default camera URL patterns for different printer models
+ * Default camera URL patterns for FlashForge printers.
+ * Retained for reference and compatibility with older tests/utilities.
  */
 export const DEFAULT_CAMERA_PATTERNS = {
   /** Default MJPEG stream pattern for FlashForge printers */

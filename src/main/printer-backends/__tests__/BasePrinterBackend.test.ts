@@ -25,7 +25,7 @@ class TestBackend extends BasePrinterBackend {
   protected getBaseFeatures(): PrinterFeatureSet {
     return {
       camera: {
-        builtin: false,
+        oemStreamUrl: '',
         customUrl: null,
         customEnabled: false,
       },
@@ -160,6 +160,10 @@ class TestBackend extends BasePrinterBackend {
     };
   }
 
+  public setOEMCameraStreamUrlForTest(streamUrl: string): boolean {
+    return this.updateOEMCameraStreamUrl(streamUrl);
+  }
+
   protected supportsNewAPI(): boolean {
     return false;
   }
@@ -257,5 +261,36 @@ describe('BasePrinterBackend', () => {
 
     expect(changedKeys).toEqual([]);
     expect(featureUpdatedListener).not.toHaveBeenCalled();
+  });
+
+  it('treats the runtime OEM camera stream as the camera availability source of truth', async () => {
+    const backend = createBackend();
+    const featureUpdatedListener = jest.fn();
+    await backend.initialize();
+
+    backend.on('feature-updated', featureUpdatedListener);
+
+    expect(backend.isFeatureAvailable('camera')).toBe(false);
+    expect(backend.setOEMCameraStreamUrlForTest('http://192.168.1.10:8080/?action=stream')).toBe(true);
+    expect(backend.isFeatureAvailable('camera')).toBe(true);
+    expect(backend.getBackendStatus().features.camera.oemStreamUrl).toBe(
+      'http://192.168.1.10:8080/?action=stream'
+    );
+    expect(featureUpdatedListener).toHaveBeenCalledTimes(1);
+  });
+
+  it('normalizes blank enabled custom camera settings to disabled', async () => {
+    const backend = createBackend();
+    await backend.initialize();
+
+    const changedKeys = backend.refreshPerPrinterSettings({
+      customCameraEnabled: true,
+      customCameraUrl: '   ',
+      customLedsEnabled: false,
+      forceLegacyMode: false,
+    });
+
+    expect(changedKeys).toEqual([]);
+    expect(backend.isFeatureAvailable('camera')).toBe(false);
   });
 });

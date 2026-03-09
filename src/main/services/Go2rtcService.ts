@@ -38,7 +38,7 @@ interface ManagedStream {
   /** Source URL (RTSP or MJPEG) */
   sourceUrl: string;
   /** Original source type */
-  sourceType: 'builtin' | 'custom';
+  sourceType: 'oem' | 'custom';
   /** Original stream type */
   streamType: 'mjpeg' | 'rtsp';
   /** Timestamp when stream was added */
@@ -139,7 +139,7 @@ export class Go2rtcService extends EventEmitter {
   public async addStream(
     contextId: string,
     sourceUrl: string,
-    sourceType: 'builtin' | 'custom',
+    sourceType: 'oem' | 'custom',
     streamType: 'mjpeg' | 'rtsp'
   ): Promise<void> {
     if (!this.isRunning()) {

@@ -24,19 +24,15 @@
  */
 
 import { logVerbose } from '@shared/logging.js';
-import type { CameraSourceType } from '@shared/types/camera/index.js';
 import { Go2rtcCameraStreamConfig, ResolvedCameraConfig } from '@shared/types/camera/index.js';
 import { IpcMainInvokeEvent, ipcMain } from 'electron';
 import { getPrinterBackendManager } from '../managers/PrinterBackendManager.js';
 import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
+import { resolveAndEnsureCameraStream } from '../services/CameraStreamCoordinator.js';
 import { Go2rtcService, getGo2rtcService } from '../services/Go2rtcService.js';
 import { getCameraUserConfig, resolveCameraConfig } from '../utils/camera-utils.js';
 
 const CAMERA_IPC_LOG_NAMESPACE = 'CameraIPCHandler';
-
-function isGo2rtcSourceType(sourceType: CameraSourceType): sourceType is 'builtin' | 'custom' {
-  return sourceType === 'builtin' || sourceType === 'custom';
-}
 
 /**
  * Camera IPC handler class using go2rtc for unified streaming.
@@ -125,23 +121,22 @@ export class CameraIPCHandler {
           typeof contextId === 'string' && contextId.length > 0 ? contextId : this.getActiveContextId();
         this.logDebug(`[camera:get-stream-config] Getting stream config for context: ${targetContextId}`);
 
-        const streamConfig = this.go2rtcService.getStreamConfig(targetContextId);
-
-        if (!streamConfig) {
-          this.logDebug(`[camera:get-stream-config] No stream found for context: ${targetContextId}`);
+        const ensuredStream = await this.ensureCameraStreamForContext(targetContextId);
+        if (!ensuredStream) {
+          this.logDebug(`[camera:get-stream-config] No camera stream available for context: ${targetContextId}`);
           return null;
         }
 
-        this.logDebug(`[camera:get-stream-config] Returning stream config:`, streamConfig);
+        this.logDebug(`[camera:get-stream-config] Returning stream config:`, ensuredStream.streamConfig);
 
         return {
-          wsUrl: streamConfig.wsUrl,
-          sourceType: streamConfig.sourceType,
-          streamType: streamConfig.streamType,
-          mode: streamConfig.mode,
-          isAvailable: streamConfig.isAvailable,
-          streamName: streamConfig.streamName,
-          apiPort: streamConfig.apiPort,
+          wsUrl: ensuredStream.streamConfig.wsUrl,
+          sourceType: ensuredStream.streamConfig.sourceType,
+          streamType: ensuredStream.streamConfig.streamType,
+          mode: ensuredStream.streamConfig.mode,
+          isAvailable: ensuredStream.streamConfig.isAvailable,
+          streamName: ensuredStream.streamConfig.streamName,
+          apiPort: ensuredStream.streamConfig.apiPort,
         };
       }
     );
@@ -202,28 +197,7 @@ export class CameraIPCHandler {
       this.logDebug(`Context ${contextId} not found`);
       return;
     }
-
-    const config = await this.getCurrentCameraConfigForContext(contextId);
-
-    if (config && config.isAvailable && config.streamUrl && config.streamType) {
-      this.logDebug(`Camera config updated for ${contextId}: ${config.sourceType} - ${config.streamUrl}`);
-
-      try {
-        if (!isGo2rtcSourceType(config.sourceType)) {
-          this.logDebug(`Camera source type ${config.sourceType} not supported for streaming`);
-          await this.go2rtcService.removeStream(contextId);
-          return;
-        }
-
-        await this.go2rtcService.addStream(contextId, config.streamUrl, config.sourceType, config.streamType);
-        this.logDebug(`go2rtc stream setup for context ${contextId}`);
-      } catch (error) {
-        console.warn(`[CameraIPC] Failed to setup go2rtc stream for context ${contextId}:`, error);
-      }
-    } else {
-      this.logDebug(`No camera available for context ${contextId}, removing stream`);
-      await this.go2rtcService.removeStream(contextId);
-    }
+    await this.ensureCameraStreamForContext(contextId);
   }
 
   /**
@@ -286,30 +260,7 @@ export class CameraIPCHandler {
       return;
     }
 
-    const config = await this.getCurrentCameraConfigForContext(contextId);
-
-    if (config && config.isAvailable && config.streamUrl && config.streamType) {
-      this.logDebug(
-        `Setting camera stream for context ${contextId}: ${config.streamUrl} (${config.sourceType}, ${config.streamType})`
-      );
-
-      try {
-        if (!isGo2rtcSourceType(config.sourceType)) {
-          this.logDebug(`Camera source type ${config.sourceType} not supported for streaming`);
-          await this.go2rtcService.removeStream(contextId);
-          return;
-        }
-
-        await this.go2rtcService.addStream(contextId, config.streamUrl, config.sourceType, config.streamType);
-        this.logDebug(`go2rtc stream setup for context ${contextId}`);
-      } catch (error) {
-        console.warn(`Failed to setup go2rtc stream for context ${contextId}:`, error);
-        // Non-fatal - will retry on next connection attempt
-      }
-    } else {
-      this.logDebug(`No camera available for context ${contextId}`);
-      await this.go2rtcService.removeStream(contextId);
-    }
+    await this.ensureCameraStreamForContext(contextId);
   }
 
   /**
@@ -320,6 +271,46 @@ export class CameraIPCHandler {
     this.logDebug('Clearing camera stream due to printer disconnection');
     const targetContextId = contextId || this.getActiveContextId();
     await this.go2rtcService.removeStream(targetContextId);
+  }
+
+  private async ensureCameraStreamForContext(contextId: string) {
+    const context = this.contextManager.getContext(contextId);
+    if (!context) {
+      this.logDebug(`No context found for camera stream reconciliation: ${contextId}`);
+      await this.go2rtcService.removeStream(contextId);
+      return null;
+    }
+
+    const backendManager = getPrinterBackendManager();
+    const backend = backendManager.getBackendForContext(contextId);
+    if (!backend) {
+      this.logDebug(`No backend found for camera stream reconciliation: ${contextId}`);
+      await this.go2rtcService.removeStream(contextId);
+      return null;
+    }
+
+    try {
+      const ensuredStream = await resolveAndEnsureCameraStream({
+        contextId,
+        printerIpAddress: context.printerDetails.IPAddress,
+        printerFeatures: backend.getBackendStatus().features,
+        userConfig: getCameraUserConfig(contextId),
+        go2rtcService: this.go2rtcService,
+      });
+
+      if (!ensuredStream) {
+        this.logDebug(`No camera available for context ${contextId}`);
+        return null;
+      }
+
+      this.logDebug(
+        `Camera stream ready for ${contextId}: ${ensuredStream.cameraConfig.sourceType} - ${ensuredStream.cameraConfig.streamUrl}`
+      );
+      return ensuredStream;
+    } catch (error) {
+      console.warn(`[CameraIPC] Failed to setup go2rtc stream for context ${contextId}:`, error);
+      return null;
+    }
   }
 
   /**

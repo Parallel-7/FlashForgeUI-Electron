@@ -33,7 +33,7 @@ export class Adventurer5MBackend extends DualAPIBackend {
   protected getChildBaseFeatures(): PrinterFeatureSet {
     return {
       camera: {
-        builtin: false,
+        oemStreamUrl: '',
         customUrl: null,
         customEnabled: false,
       },

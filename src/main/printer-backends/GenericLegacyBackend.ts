@@ -57,7 +57,7 @@ export class GenericLegacyBackend extends BasePrinterBackend {
   protected getBaseFeatures(): PrinterFeatureSet {
     return {
       camera: {
-        builtin: false,
+        oemStreamUrl: '',
         customUrl: null,
         customEnabled: false,
       },
