@@ -72,7 +72,7 @@
     }
   },
   "dependencies": {
-    "@ghosttypes/ff-api": "^1.1.0",
+    "@ghosttypes/ff-api": "^1.2.0",
     "@parallel-7/slicer-meta": "1.1.0-20251121155836",
     "electron-log": "^5.4.3",
     "electron-updater": "^6.8.3",
