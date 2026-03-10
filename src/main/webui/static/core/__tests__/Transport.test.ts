@@ -1,4 +1,8 @@
 /**
+ * @jest-environment jsdom
+ */
+
+/**
  * @fileoverview Jest coverage for the WebUI transport layer.
  *
  * Exercises HTTP request helpers, auth header generation, WebSocket lifecycle
@@ -8,10 +12,6 @@
 /**
  * @fileoverview JSDOM tests for the WebUI Transport layer covering fetch requests,
  * websocket lifecycle, reconnection, and auth-aware command dispatch.
- */
-
-/**
- * @jest-environment jsdom
  */
 
 const mockShowToast = jest.fn();

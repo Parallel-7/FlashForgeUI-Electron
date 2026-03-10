@@ -1,4 +1,8 @@
 /**
+ * @jest-environment jsdom
+ */
+
+/**
  * @fileoverview Jest coverage for WebUI printer context switching.
  *
  * Tests context list loading, active-context persistence, selector wiring, and
@@ -8,10 +12,6 @@
 /**
  * @fileoverview JSDOM tests for WebUI printer context switching, including API calls,
  * layout persistence, and active-context state updates.
- */
-
-/**
- * @jest-environment jsdom
  */
 
 const mockApiRequest = jest.fn();

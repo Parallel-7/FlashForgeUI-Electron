@@ -1,4 +1,8 @@
 /**
+ * @jest-environment jsdom
+ */
+
+/**
  * @fileoverview Jest coverage for shared WebUI Lucide icon helpers.
  *
  * Tests icon-name normalization, selective hydration from the global Lucide
@@ -8,10 +12,6 @@
 /**
  * @fileoverview JSDOM tests for shared WebUI icon helpers that translate data-lucide
  * markup into hydrated Lucide SVG icons.
- */
-
-/**
- * @jest-environment jsdom
  */
 
 import { hydrateLucideIcons, initializeLucideIcons, toPascalCase } from '../icons.js';

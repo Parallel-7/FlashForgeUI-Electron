@@ -1,4 +1,8 @@
 /**
+ * @jest-environment jsdom
+ */
+
+/**
  * @fileoverview Jest coverage for the WebUI app bootstrap module.
  *
  * Verifies the startup sequence in `app.js`, including authenticated and
@@ -8,10 +12,6 @@
 /**
  * @fileoverview JSDOM tests for the built WebUI app bootstrap flow, including
  * auth gating, initial data fetches, and context-switch side effects.
- */
-
-/**
- * @jest-environment jsdom
  */
 
 const mockGetCurrentSettings = jest.fn().mockReturnValue({

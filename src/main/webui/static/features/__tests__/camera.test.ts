@@ -1,4 +1,8 @@
 /**
+ * @jest-environment jsdom
+ */
+
+/**
  * @fileoverview Jest coverage for the WebUI camera feature helpers.
  *
  * Verifies `camera.js` builds `video-rtc` playback from camera proxy config,
@@ -8,10 +12,6 @@
 /**
  * @fileoverview JSDOM tests for WebUI camera initialization, proxy-config handling,
  * and fallback UI states when streams are unavailable.
- */
-
-/**
- * @jest-environment jsdom
  */
 
 const mockApiRequest = jest.fn();

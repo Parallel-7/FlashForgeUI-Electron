@@ -1,4 +1,8 @@
 /**
+ * @jest-environment jsdom
+ */
+
+/**
  * @fileoverview Jest coverage for the WebUI Spoolman feature module.
  *
  * Exercises config loading, active spool refresh, search fallback behavior,
@@ -7,10 +11,6 @@
 /**
  * @fileoverview JSDOM tests for WebUI Spoolman helpers covering config refresh,
  * active-spool updates, and panel state synchronization.
- */
-
-/**
- * @jest-environment jsdom
  */
 
 const mockApiRequest = jest.fn();

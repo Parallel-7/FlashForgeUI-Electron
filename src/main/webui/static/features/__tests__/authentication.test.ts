@@ -1,4 +1,8 @@
 /**
+ * @jest-environment jsdom
+ */
+
+/**
  * @fileoverview Jest coverage for the WebUI authentication feature module.
  *
  * Covers login token persistence, auth-status fallback behavior, login/logout
@@ -8,10 +12,6 @@
 /**
  * @fileoverview JSDOM tests for WebUI authentication helpers, including login state,
  * token persistence, and post-login bootstrap behavior.
- */
-
-/**
- * @jest-environment jsdom
  */
 
 const mockApiRequest = jest.fn();
