@@ -1,5 +1,7 @@
 # External Integrations
 
+**Last Updated:** 2026-03-11 17:36 ET (America/New_York)
+
 This document covers camera streaming, Spoolman filament tracking, and notification systems.
 
 ---
@@ -10,13 +12,13 @@ This document covers camera streaming, Spoolman filament tracking, and notificat
 
 - `Go2rtcBinaryManager` handles the go2rtc binary lifecycle (download, update, start/stop). The binary is stored in the userData directory and automatically managed.
 
-- `PortAllocator` manages stream port allocation (1984 for go2rtc API, WebSocket for WebRTC/MSE). Do not manually allocate or bypass the allocator.
+- Ports are hardcoded in `Go2rtcBinaryManager`: **1984** for the go2rtc API, **8555** for WebRTC. These are fixed values and do not require dynamic allocation.
 
 - go2rtc handles all protocol conversion internally: RTSP/MJPEG sources are converted to WebRTC, MSE, or MJPEG fallback for browser consumption. This eliminates the canvas rotation bug from JSMpeg and reduces latency to ~500ms.
 
 - Renderer-side components (`src/renderer/src/ui/components/camera-preview`) and WebUI (`src/main/webui/static/features/camera.ts`) consume go2rtc streams via `video-rtc.js` (WebRTC) or native `<video>` elements.
 
-### Go2rtcService (`src/services/Go2rtcService.ts`)
+### Go2rtcService (`src/main/services/Go2rtcService.ts`)
 
 - Unified streaming for all camera types (builtin RTSP, custom MJPEG/RTSP)
 - Protocol-agnostic: go2rtc handles RTSP → WebRTC/MSE/MJPEG conversion
@@ -25,13 +27,29 @@ This document covers camera streaming, Spoolman filament tracking, and notificat
 - No ffmpeg dependency for basic streaming (go2rtc includes native RTSP support)
 - Status monitoring and stream info API
 
-### Go2rtcBinaryManager (`src/services/Go2rtcBinaryManager.ts`)
+### Go2rtcBinaryManager (`src/main/services/Go2rtcBinaryManager.ts`)
 
 - Downloads platform-specific go2rtc binary on first use
 - Stores binary in userData/go2rtc/
 - Checks for updates on startup (optional, version-pinned by default)
 - Manages binary process lifecycle (start/stop/restart)
 - Configures go2rtc with streams from active printer contexts
+
+### CameraStreamCoordinator (`src/main/services/CameraStreamCoordinator.ts`)
+
+- Provides shared camera stream reconciliation helpers for desktop IPC and WebUI routes
+- Main entry point: `resolveAndEnsureCameraStream()` - resolves camera config and ensures go2rtc stream exists
+- Combines camera configuration resolution with go2rtc stream management
+- Handles stream cleanup when cameras become unavailable
+- Returns `EnsuredCameraStream` with resolved config and stream configuration
+
+### camera-utils (`src/main/utils/camera-utils.ts`)
+
+- Priority-based camera resolution: custom camera > OEM camera > none
+- MJPEG and RTSP stream type detection via URL protocol parsing
+- URL validation with detailed error messages (protocol, hostname, format)
+- Context-aware camera configuration retrieval (per-printer or global settings)
+- Proxy URL formatting for go2rtc WebSocket and MJPEG endpoints
 
 ### Legacy Camera Services (Deprecated)
 
@@ -55,12 +73,12 @@ Do not use these legacy services for new code.
 
 - Renderer dialogs: `src/renderer/src/ui/spoolman-dialog`, `src/renderer/src/ui/spoolman-offline-dialog`, and spool badges/components embedded in both the main gridstack dashboard and component dialogs. Maintain `spoolman-changed` events so everything rehydrates correctly.
 
-### SpoolmanService (`src/services/SpoolmanService.ts`)
+### SpoolmanService (`src/main/services/SpoolmanService.ts`)
 
 - REST API client (10s timeout)
 - Operations: ping, getSpool, searchSpools, useFilament
 
-### SpoolmanIntegrationService (`src/services/SpoolmanIntegrationService.ts`)
+### SpoolmanIntegrationService (`src/main/services/SpoolmanIntegrationService.ts`)
 
 - Single source of truth for active spool selections
 - Per-printer persistence in printer_details.json
@@ -74,19 +92,30 @@ Do not use these legacy services for new code.
 - Submit to Spoolman API
 - Per-context tracker instances
 
+### MultiContextSpoolmanTracker (`src/main/services/MultiContextSpoolmanTracker.ts`)
+
+- Manages per-context SpoolmanUsageTracker instances for all connected printers
+- Maps context IDs to individual SpoolmanUsageTracker instances
+- Listens to PrinterContextManager events for context lifecycle (creation/removal)
+- Creates trackers when print state monitors are ready for each context
+- Handles automatic cleanup when contexts are removed
+- Works in both GUI and headless modes (no mode-specific checks)
+- Forwards events from individual trackers to global listeners
+- Singleton pattern with global instance via `getMultiContextSpoolmanTracker()`
+
 ---
 
 ## Notifications & External Integrations
 
-- Desktop notifications flow through `services/notifications/NotificationService` + `PrinterNotificationCoordinator`.
+- Desktop notifications flow through `src/main/services/notifications/NotificationService` + `PrinterNotificationCoordinator`.
 
 - `MultiContextNotificationCoordinator` ensures every context gets its own coordinator regardless of which tab is active.
 
-- Discord integration (`src/services/discord/DiscordNotificationService.ts`) mirrors printer events to webhook embeds with rate limiting and per-context timers. Config keys: `DiscordSync`, `WebhookUrl`, `DiscordUpdateIntervalMinutes`.
+- Discord integration (`src/main/services/discord/DiscordNotificationService.ts`) mirrors printer events to webhook embeds with rate limiting and per-context timers. Config keys: `DiscordSync`, `WebhookUrl`, `DiscordUpdateIntervalMinutes`.
 
 - Web push notifications are specced in `ai_specs/webui-push-notifications.md`. Implementations should add `WebPushService`, subscription managers, and WebUI UI/worker updates without regressing desktop/Discord flows.
 
-### NotificationService (`src/services/notifications/NotificationService.ts`)
+### NotificationService (`src/main/services/notifications/NotificationService.ts`)
 
 - Desktop notification wrapper
 - Platform compatibility detection
@@ -101,7 +130,7 @@ Do not use these legacy services for new code.
 - Independent state per context
 - Notification types: completion, cooling, errors, material station
 
-### DiscordNotificationService (`src/services/discord/DiscordNotificationService.ts`)
+### DiscordNotificationService (`src/main/services/discord/DiscordNotificationService.ts`)
 
 - Webhook integration
 - Timer-based updates (configurable interval, default 5min)
@@ -125,11 +154,12 @@ Do not use these legacy services for new code.
 ## Key File Locations
 
 **Camera, Notifications & Ports**
-- `src/main/services/Go2rtcService.ts`, `Go2rtcBinaryManager.ts`, `src/main/utils/PortAllocator.ts`
+- `src/main/services/Go2rtcService.ts`, `Go2rtcBinaryManager.ts`, `CameraStreamCoordinator.ts`
+- `src/main/utils/camera-utils.ts`
 - `src/main/ipc/camera-ipc-handler.ts`, `src/main/webui/server/routes/camera-routes.ts`
 - `src/main/services/notifications/*`, `src/main/services/discord/DiscordNotificationService.ts`
 
 **Spoolman & Filament**
-- `src/main/services/SpoolmanIntegrationService.ts`, `SpoolmanService.ts`, `SpoolmanUsageTracker.ts`, `SpoolmanHealthMonitor.ts`
+- `src/main/services/SpoolmanIntegrationService.ts`, `SpoolmanService.ts`, `SpoolmanUsageTracker.ts`, `SpoolmanHealthMonitor.ts`, `MultiContextSpoolmanTracker.ts`
 - `src/main/ipc/handlers/spoolman-handlers.ts`, `src/renderer/src/ui/spoolman-dialog/*`, `src/renderer/src/ui/spoolman-offline-dialog/*`
 - `src/main/webui/server/routes/spoolman-routes.ts`, `src/main/webui/static/features/spoolman.ts`

@@ -3,6 +3,7 @@
   "include": ["src/renderer/src/**/*", "src/shared/**/*"],
   "compilerOptions": {
     "composite": true,
+    "tsBuildInfoFile": ".cache/tsbuildinfo/tsconfig.web.tsbuildinfo",
     "baseUrl": ".",
     "paths": {
       "@renderer/*": ["./src/renderer/src/*"],

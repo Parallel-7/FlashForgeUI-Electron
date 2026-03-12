@@ -1,15 +1,26 @@
 # Theme System & CSS Variables
 
+**Last Updated:** 2026-03-11 17:36 ET (America/New_York)
+
 **CRITICAL**: FlashForgeUI uses a unified theme system. NEVER hardcode colors in CSS or inline styles. All fragmented CSS is being progressively consolidated into the centralized theme system.
 
 ---
 
 ## Core Theme Files
 
-- **`src/utils/CSSVariables.ts`** - Main injection utility that reads theme config and injects computed CSS variables into all BrowserWindows. Handles both RoundedUI variables and full theme palette injection.
-- **`src/utils/themeColorUtils.ts`** - Pure computation utilities for deriving theme colors. Contains color manipulation functions (`lightenColor`, `darkenColor`, `hexToRgba`, `getLuminance`, `getContrastingTextColor`) and the central `computeThemePalette()` function that generates all derived variables.
-- **`src/index.css`** - Root CSS file with `:root` variable declarations. Contains fallback values and legacy compatibility variables. All new CSS should reference computed variables, not define hardcoded values.
-- **`src/types/config.ts`** - Defines `ThemeColors` interface (5 user-configurable base colors) and `DEFAULT_THEME`.
+- **`src/main/utils/CSSVariables.ts`** - Main injection utility that reads theme config and injects computed CSS variables into all BrowserWindows. Handles both RoundedUI variables and full theme palette injection.
+- **`src/shared/themeColorUtils.ts`** - Pure computation utilities for deriving theme colors. Contains color manipulation functions (`lightenColor`, `darkenColor`, `hexToRgba`, `getLuminance`, `getContrastingTextColor`) and the central `computeThemePalette()` function that generates all derived variables.
+- **`src/renderer/src/index.css`** - Root CSS file with `:root` variable declarations. Contains fallback values and legacy compatibility variables. All new CSS should reference computed variables, not define hardcoded values.
+- **`src/shared/types/config.ts`** - Defines `ThemeColors` interface (5 user-configurable base colors) and `DEFAULT_THEME`.
+- **`src/main/utils/RoundedUICompatibility.ts`** - Platform compatibility checks for Rounded UI. Blocks Rounded UI on macOS (traffic light conflicts with custom title bar) and Windows 11 (native rounded chrome clashes with custom implementation). Use `isRoundedUISupported()` before enabling Rounded UI features.
+- **`src/renderer/src/ui/shared/theme-utils.ts`** - Dialog theme utilities. Exports `applyDialogTheme()` function used by ALL dialog renderers to apply theme colors dynamically. This is the standard pattern for theme application in dialogs.
+
+---
+
+## Supporting Files
+
+- **`scripts/css-scanner-whitelist.json`** - Whitelist configuration for the hardcoded CSS scanner (`scripts/detect-hardcoded-css.go`). Contains global patterns (like `transparent`, `white`) and file-specific exemptions for legitimate hardcoded colors (color pickers, filament spool representations, accessibility overrides).
+- **`src/main/webui/static/features/layout-theme.ts`** - WebUI client-side theme management. Handles theme profile CRUD operations, theme application to the WebUI DOM, and profile selection UI. Provides `loadWebUITheme()`, `applyWebUITheme()`, and profile management functions.
 
 ---
 
@@ -53,6 +64,9 @@ Automatically derived in `computeThemePalette()`:
 - `--scrollbar-thumb-color` - Primary ± 8-12% based on luminance
 - `--scrollbar-thumb-hover-color` - Primary ± 14-20% based on luminance
 - `--scrollbar-thumb-active-color` - Primary ± 18-28% based on luminance
+
+**Scrollbar Visibility** (config-driven):
+- `--scrollbar-display` - Set to `none` when `HideScrollbars` config is enabled, `initial` otherwise. Apply to scrollbar elements to respect user preference.
 
 **RoundedUI Variables** (when RoundedUI is enabled):
 - `--ui-padding`, `--ui-border-radius`, `--ui-background`, `--ui-border`, `--ui-box-shadow`
@@ -121,9 +135,9 @@ These colors are **not** derived from theme and maintain fixed values:
 ## Adding New Theme Variables
 
 If you need a new computed color:
-1. Add computation logic to `computeThemePalette()` in `themeColorUtils.ts`
-2. Add the new property to `ComputedThemePalette` interface
-3. Inject it in `injectUIStyleVariables()` in `CSSVariables.ts` (line ~36-73)
+1. Add computation logic to `computeThemePalette()` in `src/shared/themeColorUtils.ts`
+2. Add the new property to `ComputedThemePalette` interface in the same file
+3. Inject it in `injectUIStyleVariables()` in `src/main/utils/CSSVariables.ts` within the `:root` CSS block
 4. Document it in this section
 
 **Example:**
@@ -210,7 +224,23 @@ The theme system automatically handles light/dark themes through **luminance-awa
 - **Text colors** use WCAG contrast calculations via `getContrastingTextColor()` (returns `#111111` for light backgrounds, `#ffffff` for dark)
 - **Scrollbar colors** derive intelligently from primary color luminance
 
-**Test all UI changes with both light and dark themes** to ensure proper contrast and visibility. Use Settings → Desktop Theme to switch between built-in themes (Dark Blue, Dark Purple, Light themes, etc.).
+**Test all UI changes with both light and dark themes** to ensure proper contrast and visibility. Use Settings → Desktop Theme to switch between built-in profiles.
+
+### Built-in Theme Profiles
+
+The system includes 8 built-in theme profiles (defined in `SYSTEM_THEME_PROFILES`):
+
+**Dark Themes:**
+- **Fluidd** - Klipper-style dark blue theme
+- **Mainsail** - Red accent on dark gray
+- **Solarized Dark** - Classic Solarized color palette
+- **Monokai** - Popular editor syntax theme
+
+**Light Themes:**
+- **Aurora Light** - Clean blue on white
+- **Glacial Prism** - Icy blue tones on pure white
+- **Sandstone Dawn** - Warm terracotta accents
+- **Sage Studio** - Natural green tones
 
 ---
 

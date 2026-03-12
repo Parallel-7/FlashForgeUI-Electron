@@ -9,7 +9,8 @@
       "!**/*.html",
       "!.claude/settings.local.json",
       "!.pi/**",
-      "!test-results/**"
+      "!test-results/**",
+      "!tests/fixtures/**"
     ]
   },
   "formatter": {

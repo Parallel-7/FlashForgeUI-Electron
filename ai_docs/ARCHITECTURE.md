@@ -1,6 +1,6 @@
 # FlashForgeUI-Electron Architecture Overview
 
-**Last Updated:** 2025-12-29
+**Last Updated:** 2026-03-11
 
 This document provides a high-level architectural overview of FlashForgeUI-Electron. For detailed information on specific systems, see the specialized reference documents listed at the end.
 
@@ -75,6 +75,7 @@ app.setAppUserModelId('com.ghosttypes.flashforgeui');
 - **`HeadlessManager`** – orchestrates `--headless` boot, WebUI startup, polling, and graceful shutdown
 - **`LoadingManager`** – modal loading overlays surfaced via IPC (main window + dialogs)
 - **`WindowManager`** / **`WindowFactory`** – renderer/window lifecycle coordination (main window + dialogs)
+- **`CalibrationManager`** – printer calibration data management and workflow coordination
 
 ---
 
@@ -93,8 +94,9 @@ app.setAppUserModelId('com.ghosttypes.flashforgeui');
 
 ### Camera & Streaming
 
-- `CameraProxyService`, `RtspStreamService`, `PortAllocator`
-- `ThumbnailCacheService`, `ThumbnailRequestQueue`
+- `Go2rtcService` - unified camera streaming using go2rtc (WebRTC/MSE/MJPEG)
+- `Go2rtcBinaryManager` - go2rtc binary lifecycle management (ports hardcoded: 1984 API, 8555 WebRTC)
+- `CameraStreamCoordinator` - shared camera stream reconciliation helpers
 
 ### Notifications
 
@@ -110,6 +112,10 @@ app.setAppUserModelId('com.ghosttypes.flashforgeui');
 
 - `PrinterDataTransformer`, `PrintStateMonitor`, `EnvironmentDetectionService`
 - `AutoUpdateService`, `LogService`, `StaticFileManager`
+- `ThumbnailCacheService` - Persistent file-based cache for printer job thumbnails
+- `ThumbnailRequestQueue` - Backend-aware thumbnail request queue
+- `DebugLogService` - Debug logging service
+- `ContextServiceInitializer` - Per-context service initialization coordinator
 
 ---
 
@@ -139,11 +145,13 @@ BasePrinterBackend (abstract)
 
 ### Backend Selection Logic
 
+Backend selection uses `detectPrinterModelType()` from `src/main/utils/PrinterUtils.ts` with `includes()` on lowercase model strings:
+
 ```typescript
-Adventurer5MBackend     → model.startsWith('Adventurer 5M') && !includes('Pro')
-Adventurer5MProBackend  → model.startsWith('Adventurer 5M Pro')
-AD5XBackend            → model.startsWith('AD5X')
-GenericLegacyBackend   → All others (fallback)
+Adventurer5MProBackend → typeNameLower.includes('5m pro')
+Adventurer5MBackend    → typeNameLower.includes('5m')
+AD5XBackend           → typeNameLower.includes('ad5x')
+GenericLegacyBackend  → All others (fallback)
 ```
 
 ---
@@ -227,9 +235,24 @@ See [IPC_COMMUNICATION.md](./IPC_COMMUNICATION.md) for details.
 
 ### Utilities & Types
 
-- `src/main/utils/PortAllocator.ts` – per-context camera proxy ports (8181–8191 range)
-- `src/main/utils/HeadlessArguments.ts`, `HeadlessDetection.ts`, `HeadlessLogger.ts`, `RoundedUICompatibility.ts`, `CSSVariables.ts`, `time|camera|error|extraction.utils.ts`, `EventEmitter.ts`
+- `src/main/utils/camera-utils.ts` – camera URL building, stream resolution helpers
+- `src/main/utils/SecureStorage.ts` – secure credential storage
+- `src/main/utils/PrinterUtils.ts` – `detectPrinterModelType()`, `detectPrinterFamily()`, backend selection helpers
+- `src/main/utils/validation.utils.ts` – input validation helpers
+- `src/main/utils/HeadlessArguments.ts`, `HeadlessDetection.ts`, `HeadlessLogger.ts`, `RoundedUICompatibility.ts`, `CSSVariables.ts`, `error.utils.ts`, `extraction.utils.ts`, `EventEmitter.ts`
+- `src/shared/utils/time.utils.ts` – time formatting and duration utilities
+- `src/main/types/go2rtc.types.ts` – go2rtc service type definitions
 - `src/shared/types/` – contexts, polling, config, printers, spoolman, discord, camera, printer backend operations, IPC
+
+### WebUI Routes
+
+- `src/main/webui/server/routes/camera-routes.ts` – camera streaming endpoints
+- `src/main/webui/server/routes/calibration-routes.ts` – printer calibration data endpoints
+- `src/main/webui/server/routes/debug-routes.ts` – debug and diagnostics endpoints
+- `src/main/webui/server/routes/theme-routes.ts` – theme management endpoints
+- `src/main/webui/server/routes/filtration-routes.ts` – filtration system control endpoints
+- `src/main/webui/server/routes/printer-control-routes.ts` – printer control commands
+- `src/main/webui/server/routes/context-routes.ts`, `job-routes.ts`, `printer-status-routes.ts`, `spoolman-routes.ts`, `temperature-routes.ts`, `route-helpers.ts`
 
 ---
 

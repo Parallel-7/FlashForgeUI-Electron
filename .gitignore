@@ -92,6 +92,9 @@ public
 tmp/
 temp/
 
+# Playwright test artifacts
+test-results/
+
 # Editor directories and files
 .vscode/
 .idea/

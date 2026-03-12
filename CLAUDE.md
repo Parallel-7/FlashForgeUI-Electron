@@ -102,7 +102,7 @@ For detailed architectural information, see the comprehensive reference document
 
 12. **WebUI cache regressions**: built WebUI assets must remain version-stamped and served with no-cache headers. The browser Playwright suite exists specifically to catch stale asset mixes, icon hydration mismatches, and camera bootstrap regressions before release.
 
-13. **Desktop E2E boundaries**: use `e2e-electron/desktop-smoke.spec.ts` for live `%APPDATA%` smoke coverage and `e2e-electron/desktop-emulator.spec.ts` for isolated emulator-backed lifecycle coverage. On Windows, prefer the dedicated `package.json` scripts over ad hoc Playwright grep invocations.
+13. **Desktop E2E boundaries**: use `tests/e2e/electron/desktop-smoke.spec.ts` for live `%APPDATA%` smoke coverage and `tests/e2e/electron/desktop-emulator.spec.ts` for isolated emulator-backed lifecycle coverage. On Windows, prefer the dedicated `package.json` scripts over ad hoc Playwright grep invocations.
 
 ---
 
@@ -164,9 +164,10 @@ For detailed architectural information, see the comprehensive reference document
 ### Testing & Automation
 
 - `src/**/__tests__/*` - Jest coverage for managers, services, calibration, WebUI server/routes, WebUI static helpers, and build utilities
-- `e2e/webui-smoke.spec.ts`, `e2e/webui-auth.spec.ts`, `e2e/helpers/webui-fixture-server.ts` - browser Playwright coverage for the built WebUI
-- `e2e-electron/desktop-smoke.spec.ts` - live desktop smoke test against the local FlashForgeUI profile
-- `e2e-electron/desktop-emulator.spec.ts`, `e2e-electron/helpers/emulator-harness.ts` - emulator-backed Electron lifecycle coverage across modern and legacy printers
+- `tests/e2e/browser/webui-smoke.spec.ts`, `tests/e2e/browser/webui-auth.spec.ts`, `tests/e2e/browser/helpers/webui-fixture-server.ts` - browser Playwright coverage for the built WebUI
+- `tests/e2e/electron/desktop-smoke.spec.ts` - live desktop smoke test against the local FlashForgeUI profile
+- `tests/e2e/electron/desktop-emulator.spec.ts`, `tests/e2e/electron/helpers/emulator-harness.ts` - emulator-backed Electron lifecycle coverage across modern and legacy printers
+- `tests/fixtures/calibration/` - synthetic calibration fixture data (not referenced by automated tests; used for manual local testing)
 - `scripts/run-playwright-electron-live.cjs`, `scripts/run-playwright-electron-emulator.cjs` - entry points for the Electron Playwright suites
 - `package.json` - canonical place for the Electron slice scripts (`test:e2e:electron:emulator`, `:legacy`, `:legacy-multi`, `:modern-multi`, `:smoke`, `:live`)
 
