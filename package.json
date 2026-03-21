@@ -68,8 +68,10 @@
   },
   "pnpm": {
     "overrides": {
-      "tar": "7.5.10",
-      "lodash": "4.17.23"
+      "tar": "7.5.12",
+      "lodash": "4.17.23",
+      "fast-xml-parser": "5.5.8",
+      "flatted": "3.4.2"
     }
   },
   "dependencies": {
