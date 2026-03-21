@@ -47,7 +47,9 @@
   "license": "MIT",
   "overrides": {
     "js-yaml": "4.1.1",
-    "tar": "7.5.10"
+    "tar": "7.5.12",
+    "fast-xml-parser": "5.5.8",
+    "flatted": "3.4.2"
   },
   "dependencies": {
     "@cycjimmy/jsmpeg-player": "^6.1.2",
