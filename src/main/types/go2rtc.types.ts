@@ -180,6 +180,18 @@ export interface CameraStreamConfig {
 }
 
 /**
+ * Snapshot image captured from a go2rtc-managed stream
+ */
+export interface Go2rtcSnapshot {
+  /** Binary image bytes */
+  bytes: Uint8Array;
+  /** MIME type returned by go2rtc */
+  contentType: string;
+  /** Safe ASCII filename for webhook attachments */
+  filename: string;
+}
+
+/**
  * Events emitted by Go2rtcService
  */
 export interface Go2rtcServiceEvents {

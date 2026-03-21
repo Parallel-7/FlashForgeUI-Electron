@@ -46,6 +46,7 @@ import {
   type PrinterContext,
   type PrinterContextManager,
 } from '../../managers/PrinterContextManager.js';
+import { getGo2rtcService } from '../Go2rtcService.js';
 import type { PrintStateMonitor } from '../PrintStateMonitor.js';
 import type { TemperatureMonitoringService } from '../TemperatureMonitoringService.js';
 
@@ -55,12 +56,18 @@ import type { TemperatureMonitoringService } from '../TemperatureMonitoringServi
  */
 type DiscordPrinterState = 'idle' | 'printing' | 'paused' | 'unknown';
 
+interface DiscordWebhookRequest {
+  readonly payload: DiscordWebhookPayload;
+  readonly contextId?: string;
+}
+
 /**
  * Discord notification service for multi-printer webhook updates
  */
 export class DiscordNotificationService extends EventEmitter {
   private readonly configManager: ConfigManager;
   private readonly contextManager: PrinterContextManager;
+  private go2rtcService: Pick<ReturnType<typeof getGo2rtcService>, 'captureSnapshot'> | null = null;
   private readonly handleConfigUpdatedBound: () => void;
   private readonly handleContextRemovedBound: (event: ContextRemovedEvent) => void;
 
@@ -231,6 +238,7 @@ export class DiscordNotificationService extends EventEmitter {
 
     return {
       enabled: config.DiscordSync,
+      includeCameraSnapshots: config.DiscordIncludeCameraSnapshots,
       webhookUrl: config.WebhookUrl,
       updateIntervalMinutes: config.DiscordUpdateIntervalMinutes,
     };
@@ -246,6 +254,7 @@ export class DiscordNotificationService extends EventEmitter {
     // Check if Discord-specific settings changed
     const configChanged =
       this.currentConfig.enabled !== newConfig.enabled ||
+      this.currentConfig.includeCameraSnapshots !== newConfig.includeCameraSnapshots ||
       this.currentConfig.webhookUrl !== newConfig.webhookUrl ||
       this.currentConfig.updateIntervalMinutes !== newConfig.updateIntervalMinutes;
 
@@ -379,6 +388,41 @@ export class DiscordNotificationService extends EventEmitter {
   }
 
   /**
+   * Send the latest cached status for a context immediately.
+   * Used by hardware E2E coverage to exercise the real webhook path without waiting for the timer.
+   */
+  public async sendCurrentStatusNow(contextId: string): Promise<void> {
+    this.assertWebhookEnabled();
+
+    const context = this.contextManager.getContext(contextId);
+    if (!context) {
+      throw new Error(`Context not found: ${contextId}`);
+    }
+
+    const status = this.cachedStatuses.get(contextId);
+    if (!status) {
+      throw new Error(`No cached printer status available for context: ${contextId}`);
+    }
+
+    await this.sendStatusNotification(contextId, status, context);
+    this.emit('notification-sent', { contextId, type: 'manual-status' });
+  }
+
+  /**
+   * Send a print-complete notification immediately and surface failures to the caller.
+   * Used by hardware E2E coverage to verify event-driven payloads without manipulating the printer.
+   */
+  public async sendPrintCompleteNow(
+    contextId: string,
+    fileName: string,
+    durationSeconds?: number
+  ): Promise<void> {
+    this.assertWebhookEnabled();
+    await this.sendPrintCompleteNotification(contextId, fileName, durationSeconds);
+    this.emit('notification-sent', { contextId, type: 'print-complete' });
+  }
+
+  /**
    * Check for state transitions and send event-driven notifications
    */
   private checkStateTransition(contextId: string, status: PrinterStatus): void {
@@ -465,12 +509,7 @@ export class DiscordNotificationService extends EventEmitter {
         }
       }
 
-      const embed = this.createStatusEmbed(status, context);
-      const payload: DiscordWebhookPayload = {
-        embeds: [embed],
-      };
-
-      await this.sendWebhook(payload);
+      await this.sendStatusNotification(contextId, status, context);
 
       console.log(`[DiscordNotificationService] Sent status update for ${contextId}`);
       this.emit('notification-sent', { contextId, type: 'status' });
@@ -485,6 +524,10 @@ export class DiscordNotificationService extends EventEmitter {
    * Send idle transition notification
    */
   private async sendIdleNotification(contextId: string, status: PrinterStatus): Promise<void> {
+    if (!this.currentConfig.enabled || !this.currentConfig.webhookUrl) {
+      return;
+    }
+
     try {
       const context = this.contextManager.getContext(contextId);
       if (!context) {
@@ -496,7 +539,7 @@ export class DiscordNotificationService extends EventEmitter {
         embeds: [embed],
       };
 
-      await this.sendWebhook(payload);
+      await this.sendWebhook({ payload, contextId });
 
       console.log(`[DiscordNotificationService] Sent idle transition notification for ${contextId}`);
       this.emit('notification-sent', { contextId, type: 'idle-transition' });
@@ -520,29 +563,7 @@ export class DiscordNotificationService extends EventEmitter {
     }
 
     try {
-      const embed: DiscordEmbed = {
-        title: '✅ Print Complete!',
-        color: 0x00ff00, // Green
-        timestamp: new Date().toISOString(),
-        fields: [
-          {
-            name: 'File',
-            value: fileName,
-            inline: false,
-          },
-          {
-            name: 'Total Time',
-            value: durationSeconds ? this.formatDuration(durationSeconds) : 'Unknown',
-            inline: true,
-          },
-        ],
-      };
-
-      const payload: DiscordWebhookPayload = {
-        embeds: [embed],
-      };
-
-      await this.sendWebhook(payload);
+      await this.sendPrintCompleteNotification(contextId, fileName, durationSeconds);
 
       console.log(`[DiscordNotificationService] Sent print complete notification for ${contextId}`);
       this.emit('notification-sent', { contextId, type: 'print-complete' });
@@ -579,7 +600,7 @@ export class DiscordNotificationService extends EventEmitter {
         embeds: [embed],
       };
 
-      await this.sendWebhook(payload);
+      await this.sendWebhook({ payload, contextId });
 
       console.log(`[DiscordNotificationService] Sent printer cooled notification for ${contextId}`);
       this.emit('notification-sent', { contextId, type: 'printer-cooled' });
@@ -785,19 +806,29 @@ export class DiscordNotificationService extends EventEmitter {
    * Send webhook payload to Discord
    * Uses native fetch API with timeout
    */
-  private async sendWebhook(payload: DiscordWebhookPayload): Promise<void> {
+  private async sendWebhook(request: DiscordWebhookRequest): Promise<void> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     try {
-      const response = await fetch(this.currentConfig.webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
+      const snapshot = await this.resolveSnapshotAttachment(request.contextId);
+      const response = await fetch(
+        this.currentConfig.webhookUrl,
+        snapshot
+          ? {
+              method: 'POST',
+              body: this.createMultipartBody(request.payload, snapshot),
+              signal: controller.signal,
+            }
+          : {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(request.payload),
+              signal: controller.signal,
+            }
+      );
 
       if (!response.ok) {
         throw new Error(`Discord webhook returned ${response.status}: ${response.statusText}`);
@@ -807,6 +838,98 @@ export class DiscordNotificationService extends EventEmitter {
     } finally {
       clearTimeout(timeoutId);
     }
+  }
+
+  private async resolveSnapshotAttachment(
+    contextId?: string
+  ): Promise<{ bytes: Uint8Array; contentType: string; filename: string } | null> {
+    if (!this.currentConfig.includeCameraSnapshots || !contextId) {
+      return null;
+    }
+
+    return this.getSnapshotService().captureSnapshot(contextId);
+  }
+
+  private createMultipartBody(
+    payload: DiscordWebhookPayload,
+    snapshot: { bytes: Uint8Array; contentType: string; filename: string }
+  ): FormData {
+    const formData = new FormData();
+    const payloadWithImage: DiscordWebhookPayload = {
+      embeds: payload.embeds.map((embed, index) =>
+        index === 0
+          ? {
+              ...embed,
+              image: {
+                url: `attachment://${snapshot.filename}`,
+              },
+            }
+          : embed
+      ),
+    };
+
+    formData.append('payload_json', JSON.stringify(payloadWithImage));
+    formData.append('files[0]', new Blob([snapshot.bytes], { type: snapshot.contentType }), snapshot.filename);
+
+    return formData;
+  }
+
+  private getSnapshotService(): Pick<ReturnType<typeof getGo2rtcService>, 'captureSnapshot'> {
+    if (!this.go2rtcService) {
+      this.go2rtcService = getGo2rtcService();
+    }
+
+    return this.go2rtcService;
+  }
+
+  private assertWebhookEnabled(): void {
+    if (!this.currentConfig.enabled || !this.currentConfig.webhookUrl) {
+      throw new Error('Discord webhook notifications are disabled');
+    }
+  }
+
+  private async sendStatusNotification(
+    contextId: string,
+    status: PrinterStatus,
+    context: PrinterContext
+  ): Promise<void> {
+    const embed = this.createStatusEmbed(status, context);
+    const payload: DiscordWebhookPayload = {
+      embeds: [embed],
+    };
+
+    await this.sendWebhook({ payload, contextId });
+  }
+
+  private async sendPrintCompleteNotification(
+    contextId: string,
+    fileName: string,
+    durationSeconds?: number
+  ): Promise<void> {
+    const embed: DiscordEmbed = {
+      title: '\u2705 Print Complete!',
+      color: 0x00ff00,
+      timestamp: new Date().toISOString(),
+      fields: [
+        {
+          name: 'File',
+          value: fileName,
+          inline: false,
+        },
+        {
+          name: 'Total Time',
+          value: durationSeconds ? this.formatDuration(durationSeconds) : 'Unknown',
+          inline: true,
+        },
+      ],
+    };
+
+    await this.sendWebhook({
+      payload: {
+        embeds: [embed],
+      },
+      contextId,
+    });
   }
 }
 

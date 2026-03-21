@@ -21,6 +21,7 @@
 import { EventEmitter } from 'node:events';
 import type {
   CameraStreamConfig,
+  Go2rtcSnapshot,
   Go2rtcServiceStatus,
   Go2rtcStreamInfo,
   Go2rtcStreamsResponse,
@@ -348,6 +349,57 @@ export class Go2rtcService extends EventEmitter {
 
     const apiUrl = this.binaryManager.getApiUrl();
     return `${apiUrl}/api/frame.jpeg?src=${encodeURIComponent(stream.streamName)}`;
+  }
+
+  /**
+   * Capture a single JPEG frame from an active stream.
+   */
+  public async captureSnapshot(contextId: string, timeoutMs: number = 5000): Promise<Go2rtcSnapshot | null> {
+    if (!this.isRunning()) {
+      return null;
+    }
+
+    const snapshotUrl = this.getStreamMjpegUrl(contextId);
+    if (!snapshotUrl) {
+      return null;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(snapshotUrl, {
+        headers: {
+          Accept: 'image/jpeg,image/png',
+        },
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        console.warn(`[Go2rtcService] Failed to capture snapshot for ${contextId}: ${response.status}`);
+        return null;
+      }
+
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (bytes.byteLength === 0) {
+        console.warn(`[Go2rtcService] Snapshot for ${contextId} returned no data`);
+        return null;
+      }
+
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      const extension = contentType.toLowerCase().includes('png') ? 'png' : 'jpg';
+
+      return {
+        bytes,
+        contentType,
+        filename: `${this.contextToStreamName(contextId)}-snapshot.${extension}`,
+      };
+    } catch (error) {
+      console.warn(`[Go2rtcService] Failed to capture snapshot for ${contextId}:`, error);
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   /**

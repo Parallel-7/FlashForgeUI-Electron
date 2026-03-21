@@ -27,18 +27,30 @@ export interface DiscordEmbedField {
 }
 
 /**
+ * Discord embed image structure
+ */
+export interface DiscordEmbedImage {
+  /** Image URL or attachment reference */
+  readonly url: string;
+}
+
+/**
  * Discord embed structure
  * Matches Discord webhook embed API specification
  */
 export interface DiscordEmbed {
   /** Embed title */
   readonly title: string;
+  /** Optional embed description */
+  readonly description?: string;
   /** Embed color (integer representation of hex color) */
   readonly color: number;
   /** ISO 8601 timestamp */
   readonly timestamp: string;
   /** Array of embed fields */
   readonly fields: DiscordEmbedField[];
+  /** Optional image shown within the embed */
+  readonly image?: DiscordEmbedImage;
 }
 
 /**
@@ -57,6 +69,8 @@ export interface DiscordWebhookPayload {
 export interface DiscordServiceConfig {
   /** Whether Discord sync is enabled */
   readonly enabled: boolean;
+  /** Whether Discord messages should include camera snapshots when available */
+  readonly includeCameraSnapshots: boolean;
   /** Discord webhook URL */
   readonly webhookUrl: string;
   /** Update interval in minutes */

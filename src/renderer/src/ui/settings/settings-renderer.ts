@@ -101,6 +101,7 @@ const INPUT_TO_CONFIG_MAP: Record<string, SettingsConfigKey> = {
   'debug-mode': 'DebugMode',
   'debug-network-logging': 'DebugNetworkLogging',
   'webhook-url': 'WebhookUrl',
+  'discord-include-camera-snapshots': 'DiscordIncludeCameraSnapshots',
   'custom-camera': 'CustomCamera',
   'custom-camera-url': 'CustomCameraUrl',
   'custom-leds': 'CustomLeds',

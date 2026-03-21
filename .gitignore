@@ -126,3 +126,8 @@ resources/bin/
 detail_response_example.json
 debug_logs/*
 .genkit/
+
+# Temporary test/development artifacts
+.tmp-ff-api/
+hook_debug_log.txt
+__pycache__/

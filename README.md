@@ -30,7 +30,7 @@
 | --- | --- |
 | **[Download Stable Release](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/latest)** | Production-ready stable build |
 | **[Download Alpha Release](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/tag/v1.0.4-alpha.3)** | Latest features and improvements |
-| **[User Guide](https://github.com/Parallel-7/FlashForgeUI-Electron/tree/main/docs)** | Documentation and setup instructions |
+| **[User Guide](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki)** | Documentation and setup instructions |
 
 </div>
 

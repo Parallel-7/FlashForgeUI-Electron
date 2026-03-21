@@ -34,6 +34,7 @@ import { registerComponentDialogHandlers } from './component-dialog-handlers.js'
 import { registerConnectionHandlers } from './connection-handlers.js';
 import { registerControlHandlers } from './control-handlers.js';
 import { registerDialogHandlers } from './dialog-handlers.js';
+import { registerE2EHandlers } from './e2e-handlers.js';
 import { registerJobHandlers } from './job-handlers.js';
 import { registerMaterialHandlers } from './material-handlers.js';
 import { registerPaletteHandlers } from './palette-handlers.js';
@@ -66,6 +67,7 @@ export function registerAllIpcHandlers(managers: AppManagers): void {
   registerBackendHandlers(backendManager, windowManager);
   registerJobHandlers(backendManager, windowManager);
   registerDialogHandlers(configManager, windowManager);
+  registerE2EHandlers();
   registerCalibrationHandlers();
   registerMaterialHandlers(backendManager);
   registerControlHandlers(backendManager);

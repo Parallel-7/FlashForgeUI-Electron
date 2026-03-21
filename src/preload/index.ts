@@ -633,6 +633,8 @@ const electronAPI: ElectronAPI = {
       'spoolman:set-active-spool',
       'spoolman:get-status',
       'debug:get-state',
+      'e2e:discord:send-current-status',
+      'e2e:discord:send-print-complete',
     ];
 
     if (validInvokeChannels.includes(channel)) {

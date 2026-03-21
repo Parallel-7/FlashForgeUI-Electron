@@ -15,6 +15,7 @@ import { DiscordNotificationService } from '../DiscordNotificationService.js';
 
 type MockDiscordConfig = {
   DiscordSync: boolean;
+  DiscordIncludeCameraSnapshots: boolean;
   WebhookUrl: string;
   DiscordUpdateIntervalMinutes: number;
 };
@@ -26,6 +27,7 @@ class MockConfigManager extends EventEmitter {
     super();
     this.config = {
       DiscordSync: true,
+      DiscordIncludeCameraSnapshots: false,
       WebhookUrl: 'https://discord.example/webhook',
       DiscordUpdateIntervalMinutes: 5,
       ...overrides,
@@ -192,6 +194,75 @@ describe('DiscordNotificationService', () => {
     await jest.advanceTimersByTimeAsync(5 * 60 * 1000 + 1_500);
 
     expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    service.dispose();
+  });
+
+  it('uploads multipart webhook bodies when snapshots are enabled for periodic updates', async () => {
+    const fetchMock = global.fetch as jest.MockedFunction<typeof fetch>;
+    const service = new DiscordNotificationService(
+      new MockConfigManager({
+        DiscordIncludeCameraSnapshots: true,
+      }) as any,
+      new MockContextManager([createContext('ctx-1')]) as any
+    );
+
+    Object.defineProperty(service, 'go2rtcService', {
+      configurable: true,
+      value: {
+        captureSnapshot: jest.fn(async () => ({
+          bytes: new Uint8Array([1, 2, 3]),
+          contentType: 'image/jpeg',
+          filename: 'printer_ctx-1-snapshot.jpg',
+        })),
+      },
+    });
+
+    service.initialize();
+    service.registerContext('ctx-1');
+    service.updatePrinterStatus('ctx-1', createStatus('cube-1.gx'));
+
+    await jest.advanceTimersByTimeAsync(5 * 60 * 1000 + 100);
+
+    const [, requestInit] = fetchMock.mock.calls[0];
+    expect(requestInit?.body).toBeInstanceOf(FormData);
+
+    const body = requestInit?.body as FormData;
+    const payload = JSON.parse(String(body.get('payload_json')));
+
+    expect(payload.embeds[0].image?.url).toBe('attachment://printer_ctx-1-snapshot.jpg');
+    expect(body.get('files[0]')).not.toBeNull();
+
+    service.dispose();
+  });
+
+  it('falls back to JSON webhook bodies when snapshots are unavailable', async () => {
+    const fetchMock = global.fetch as jest.MockedFunction<typeof fetch>;
+    const service = new DiscordNotificationService(
+      new MockConfigManager({
+        DiscordIncludeCameraSnapshots: true,
+      }) as any,
+      new MockContextManager([createContext('ctx-1')]) as any
+    );
+
+    Object.defineProperty(service, 'go2rtcService', {
+      configurable: true,
+      value: {
+        captureSnapshot: jest.fn(async () => null),
+      },
+    });
+
+    service.initialize();
+    await service.notifyPrintComplete('ctx-1', 'cube-1.gx', 3600);
+
+    const [, requestInit] = fetchMock.mock.calls[0];
+    expect(requestInit?.body).not.toBeInstanceOf(FormData);
+    expect(requestInit?.headers).toEqual({
+      'Content-Type': 'application/json',
+    });
+
+    const payload = JSON.parse(String(requestInit?.body));
+    expect(payload.embeds[0].image).toBeUndefined();
 
     service.dispose();
   });

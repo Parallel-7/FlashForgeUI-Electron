@@ -52,6 +52,7 @@
     "test:e2e:electron:emulator:legacy-multi": "node scripts/run-playwright-electron-emulator.cjs --grep=A3.*A4.*both",
     "test:e2e:electron:emulator:modern-multi": "node scripts/run-playwright-electron-emulator.cjs --grep=separate.*contexts",
     "test:e2e:electron:emulator:smoke": "node scripts/run-playwright-electron-emulator.cjs tests/e2e/electron/desktop-smoke.spec.ts",
+    "test:e2e:electron:hardware": "node scripts/run-playwright-electron-hardware.cjs",
     "test:e2e:electron:live": "node scripts/run-playwright-electron-live.cjs",
     "full-check": "npm run type-check && npm run lint",
     "audit:dead-code": "ts-node --esm scripts/audit-dead-code.ts"

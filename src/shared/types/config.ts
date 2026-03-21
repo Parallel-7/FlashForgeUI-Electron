@@ -76,6 +76,7 @@ export type ThemeProfileOperationPayload =
 
 export interface AppConfig {
   readonly DiscordSync: boolean;
+  readonly DiscordIncludeCameraSnapshots: boolean;
   readonly AlwaysOnTop: boolean;
   readonly AlertWhenComplete: boolean;
   readonly AlertWhenCooled: boolean;
@@ -114,6 +115,7 @@ export interface AppConfig {
  */
 export interface MutableAppConfig {
   DiscordSync: boolean;
+  DiscordIncludeCameraSnapshots: boolean;
   AlwaysOnTop: boolean;
   AlertWhenComplete: boolean;
   AlertWhenCooled: boolean;
@@ -257,6 +259,7 @@ export const SYSTEM_THEME_PROFILES: readonly ThemeProfile[] = [
  */
 export const DEFAULT_CONFIG: AppConfig = {
   DiscordSync: false,
+  DiscordIncludeCameraSnapshots: false,
   AlwaysOnTop: false,
   AlertWhenComplete: true,
   AlertWhenCooled: true,

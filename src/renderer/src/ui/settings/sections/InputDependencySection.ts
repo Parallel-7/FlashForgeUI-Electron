@@ -52,6 +52,7 @@ export class InputDependencySection {
 
     const discordEnabled = this.inputs.get('discord-sync')?.checked || false;
     this.setInputEnabled('webhook-url', discordEnabled);
+    this.setInputEnabled('discord-include-camera-snapshots', discordEnabled);
     this.setInputEnabled('discord-update-interval', discordEnabled);
 
     if (!autoDownloadSupported) {
