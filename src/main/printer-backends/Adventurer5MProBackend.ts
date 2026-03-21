@@ -34,6 +34,7 @@ export class Adventurer5MProBackend extends DualAPIBackend {
     return {
       camera: {
         oemStreamUrl: '',
+        fallbackStreamUrl: '',
         customUrl: null,
         customEnabled: false,
       },

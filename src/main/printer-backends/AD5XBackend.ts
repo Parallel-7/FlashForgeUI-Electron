@@ -48,6 +48,7 @@ export class AD5XBackend extends DualAPIBackend {
     return {
       camera: {
         oemStreamUrl: '',
+        fallbackStreamUrl: '',
         customUrl: null,
         customEnabled: false,
       },

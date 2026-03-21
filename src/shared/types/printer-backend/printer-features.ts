@@ -34,6 +34,7 @@ export type PrinterFeatureType =
  */
 export interface CameraFeature {
   readonly oemStreamUrl: string;
+  readonly fallbackStreamUrl: string;
   readonly customUrl: string | null;
   readonly customEnabled: boolean;
 }

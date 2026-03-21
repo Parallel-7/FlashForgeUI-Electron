@@ -8,8 +8,8 @@
 
 import { CameraStatusResponse, StandardAPIResponse } from '@shared/types/web-api.types.js';
 import type { Response, Router } from 'express';
-import { getGo2rtcService } from '../../../services/Go2rtcService.js';
 import { resolveAndEnsureCameraStream } from '../../../services/CameraStreamCoordinator.js';
+import { getGo2rtcService } from '../../../services/Go2rtcService.js';
 import { getCameraUserConfig, resolveCameraConfig } from '../../../utils/camera-utils.js';
 import { toAppError } from '../../../utils/error.utils.js';
 import type { AuthenticatedRequest } from '../auth-middleware.js';
@@ -38,7 +38,7 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
         cameraConfig.isAvailable &&
         !!cameraConfig.streamUrl &&
         !!cameraConfig.streamType &&
-        (cameraConfig.sourceType === 'oem' || cameraConfig.sourceType === 'custom') &&
+        cameraConfig.sourceType !== 'none' &&
         go2rtcService.hasMatchingStream(
           contextResult.contextId,
           cameraConfig.streamUrl,

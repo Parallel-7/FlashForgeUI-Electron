@@ -26,6 +26,7 @@ class TestBackend extends BasePrinterBackend {
     return {
       camera: {
         oemStreamUrl: '',
+        fallbackStreamUrl: '',
         customUrl: null,
         customEnabled: false,
       },
@@ -164,6 +165,10 @@ class TestBackend extends BasePrinterBackend {
     return this.updateOEMCameraStreamUrl(streamUrl);
   }
 
+  public setFallbackCameraStreamUrlForTest(streamUrl: string): boolean {
+    return this.updateFallbackCameraStreamUrl(streamUrl);
+  }
+
   protected supportsNewAPI(): boolean {
     return false;
   }
@@ -273,9 +278,7 @@ describe('BasePrinterBackend', () => {
     expect(backend.isFeatureAvailable('camera')).toBe(false);
     expect(backend.setOEMCameraStreamUrlForTest('http://192.168.1.10:8080/?action=stream')).toBe(true);
     expect(backend.isFeatureAvailable('camera')).toBe(true);
-    expect(backend.getBackendStatus().features.camera.oemStreamUrl).toBe(
-      'http://192.168.1.10:8080/?action=stream'
-    );
+    expect(backend.getBackendStatus().features.camera.oemStreamUrl).toBe('http://192.168.1.10:8080/?action=stream');
     expect(featureUpdatedListener).toHaveBeenCalledTimes(1);
   });
 
@@ -292,5 +295,21 @@ describe('BasePrinterBackend', () => {
 
     expect(changedKeys).toEqual([]);
     expect(backend.isFeatureAvailable('camera')).toBe(false);
+  });
+
+  it('treats an intelligent fallback camera stream as an available camera source', async () => {
+    const backend = createBackend();
+    const featureUpdatedListener = jest.fn();
+    await backend.initialize();
+
+    backend.on('feature-updated', featureUpdatedListener);
+
+    expect(backend.isFeatureAvailable('camera')).toBe(false);
+    expect(backend.setFallbackCameraStreamUrlForTest('http://192.168.1.10:8080/?action=stream')).toBe(true);
+    expect(backend.isFeatureAvailable('camera')).toBe(true);
+    expect(backend.getBackendStatus().features.camera.fallbackStreamUrl).toBe(
+      'http://192.168.1.10:8080/?action=stream'
+    );
+    expect(featureUpdatedListener).toHaveBeenCalledTimes(1);
   });
 });

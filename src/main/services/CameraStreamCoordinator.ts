@@ -5,8 +5,8 @@
 import type { CameraSourceType, CameraUserConfig, ResolvedCameraConfig } from '@shared/types/camera/index.js';
 import type { PrinterFeatureSet } from '@shared/types/printer-backend/index.js';
 import type { CameraStreamConfig } from '../types/go2rtc.types.js';
-import type { Go2rtcService } from './Go2rtcService.js';
 import { resolveCameraConfig } from '../utils/camera-utils.js';
+import type { Go2rtcService } from './Go2rtcService.js';
 
 export interface CameraStreamResolutionParams {
   readonly contextId: string;
@@ -21,8 +21,8 @@ export interface EnsuredCameraStream {
   readonly streamConfig: CameraStreamConfig;
 }
 
-function isGo2rtcSourceType(sourceType: CameraSourceType): sourceType is 'oem' | 'custom' {
-  return sourceType === 'oem' || sourceType === 'custom';
+function isGo2rtcSourceType(sourceType: CameraSourceType): sourceType is 'oem' | 'custom' | 'intelligent-fallback' {
+  return sourceType === 'oem' || sourceType === 'custom' || sourceType === 'intelligent-fallback';
 }
 
 export async function resolveAndEnsureCameraStream(

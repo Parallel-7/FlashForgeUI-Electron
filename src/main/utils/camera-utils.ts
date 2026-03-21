@@ -5,7 +5,7 @@
  * URL validation, and human-readable status messaging.
  *
  * Key Features:
- * - Priority-based camera resolution: custom camera > OEM camera > none
+ * - Priority-based camera resolution: custom camera > OEM camera > intelligent fallback > none
  * - MJPEG and RTSP stream type detection and validation
  * - Context-aware camera configuration (per-printer or global settings)
  * - Settings normalization for stale custom-camera configurations
@@ -16,7 +16,8 @@
  * Resolution Priority:
  * 1. Custom camera (if enabled): Uses explicit user-provided URL only
  * 2. OEM camera: Uses the runtime stream URL reported by the printer
- * 3. No camera: Returns unavailable status with reason
+ * 3. Intelligent fallback: Uses the known OEM MJPEG endpoint when firmware omits the URL
+ * 4. No camera: Returns unavailable status with reason
  *
  * Stream Types Supported:
  * - MJPEG (Motion JPEG over HTTP/HTTPS)
@@ -146,7 +147,17 @@ export function resolveCameraConfig(params: CameraUrlResolutionParams): Resolved
     };
   }
 
-  // Priority 3: No camera available
+  // Priority 3: Check intelligent fallback camera URL
+  if (printerFeatures.camera.fallbackStreamUrl.trim() !== '') {
+    return {
+      sourceType: 'intelligent-fallback',
+      streamType: 'mjpeg',
+      streamUrl: printerFeatures.camera.fallbackStreamUrl,
+      isAvailable: true,
+    };
+  }
+
+  // Priority 4: No camera available
   return {
     sourceType: 'none',
     streamUrl: null,

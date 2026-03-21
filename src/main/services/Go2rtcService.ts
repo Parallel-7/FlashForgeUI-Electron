@@ -21,8 +21,8 @@
 import { EventEmitter } from 'node:events';
 import type {
   CameraStreamConfig,
-  Go2rtcSnapshot,
   Go2rtcServiceStatus,
+  Go2rtcSnapshot,
   Go2rtcStreamInfo,
   Go2rtcStreamsResponse,
 } from '../types/go2rtc.types.js';
@@ -39,7 +39,7 @@ interface ManagedStream {
   /** Source URL (RTSP or MJPEG) */
   sourceUrl: string;
   /** Original source type */
-  sourceType: 'oem' | 'custom';
+  sourceType: 'oem' | 'custom' | 'intelligent-fallback';
   /** Original stream type */
   streamType: 'mjpeg' | 'rtsp';
   /** Timestamp when stream was added */
@@ -187,15 +187,11 @@ export class Go2rtcService extends EventEmitter {
   public hasMatchingStream(
     contextId: string,
     sourceUrl: string,
-    sourceType: 'oem' | 'custom',
+    sourceType: 'oem' | 'custom' | 'intelligent-fallback',
     streamType: 'mjpeg' | 'rtsp'
   ): boolean {
     const stream = this.streams.get(contextId);
-    return (
-      stream?.sourceUrl === sourceUrl &&
-      stream.sourceType === sourceType &&
-      stream.streamType === streamType
-    );
+    return stream?.sourceUrl === sourceUrl && stream.sourceType === sourceType && stream.streamType === streamType;
   }
 
   /**
@@ -204,7 +200,7 @@ export class Go2rtcService extends EventEmitter {
   public async addStream(
     contextId: string,
     sourceUrl: string,
-    sourceType: 'oem' | 'custom',
+    sourceType: 'oem' | 'custom' | 'intelligent-fallback',
     streamType: 'mjpeg' | 'rtsp'
   ): Promise<void> {
     if (!this.isRunning()) {

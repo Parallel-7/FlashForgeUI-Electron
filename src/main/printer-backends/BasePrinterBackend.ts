@@ -40,6 +40,7 @@ import {
   PrinterModelType,
   StatusResult,
 } from '@shared/types/printer-backend/index.js';
+import { normalizeCustomCameraSettings } from '@shared/utils/printerSettingsDefaults.js';
 import { EventEmitter } from 'events';
 import {
   canOverrideFeature,
@@ -48,7 +49,6 @@ import {
   getModelDisplayName,
   supportsDualAPI,
 } from '../utils/PrinterUtils.js';
-import { normalizeCustomCameraSettings } from '@shared/utils/printerSettingsDefaults.js';
 
 type PerPrinterFeatureSettings = Pick<
   BackendInitOptions['printerDetails'],
@@ -80,6 +80,7 @@ export abstract class BasePrinterBackend extends EventEmitter {
   protected customLedsEnabled: boolean;
   protected forceLegacyMode: boolean;
   protected oemCameraStreamUrl: string = '';
+  protected fallbackCameraStreamUrl: string = '';
 
   constructor(options: BackendInitOptions) {
     super();
@@ -161,6 +162,18 @@ export abstract class BasePrinterBackend extends EventEmitter {
 
     this.oemCameraStreamUrl = nextOEMCameraStreamUrl;
     this.rebuildFeatureSet(true, ['oemCameraStreamUrl']);
+    return true;
+  }
+
+  protected updateFallbackCameraStreamUrl(streamUrl: string | null | undefined): boolean {
+    const nextFallbackCameraStreamUrl = typeof streamUrl === 'string' ? streamUrl.trim() : '';
+
+    if (this.fallbackCameraStreamUrl === nextFallbackCameraStreamUrl) {
+      return false;
+    }
+
+    this.fallbackCameraStreamUrl = nextFallbackCameraStreamUrl;
+    this.rebuildFeatureSet(true, ['fallbackCameraStreamUrl']);
     return true;
   }
 
@@ -251,6 +264,7 @@ export abstract class BasePrinterBackend extends EventEmitter {
     return {
       camera: {
         oemStreamUrl: baseFeatures.camera.oemStreamUrl || this.oemCameraStreamUrl,
+        fallbackStreamUrl: baseFeatures.camera.fallbackStreamUrl || this.fallbackCameraStreamUrl,
         customUrl: settingsOverrides.customCameraEnabled ? String(settingsOverrides.customCameraUrl) : null,
         customEnabled: Boolean(settingsOverrides.customCameraEnabled),
       },
@@ -326,6 +340,7 @@ export abstract class BasePrinterBackend extends EventEmitter {
       case 'camera':
         return (
           this.features.camera.oemStreamUrl.trim() !== '' ||
+          this.features.camera.fallbackStreamUrl.trim() !== '' ||
           (this.features.camera.customEnabled &&
             this.features.camera.customUrl !== null &&
             this.features.camera.customUrl.trim() !== '')

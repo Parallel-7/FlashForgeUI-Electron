@@ -167,7 +167,7 @@ export interface CameraProxyConfigResponse extends ApiResponse {
   /** Original stream type (before go2rtc conversion) */
   streamType?: 'mjpeg' | 'rtsp';
   /** Original source type */
-  sourceType?: 'oem' | 'custom';
+  sourceType?: 'oem' | 'custom' | 'intelligent-fallback';
   /** Stream name in go2rtc */
   streamName?: string;
   /** go2rtc API port */

@@ -54,6 +54,7 @@ describe('camera-routes', () => {
             features: {
               camera: {
                 oemStreamUrl: 'http://192.168.1.25:8080/?action=stream',
+                fallbackStreamUrl: '',
                 customEnabled: true,
                 customUrl: null,
               },
@@ -170,6 +171,7 @@ describe('camera-routes', () => {
             features: {
               camera: {
                 oemStreamUrl: '',
+                fallbackStreamUrl: '',
                 customEnabled: false,
                 customUrl: null,
               },
@@ -195,6 +197,64 @@ describe('camera-routes', () => {
     expect(body).toEqual({
       success: false,
       error: 'Camera not available for this printer',
+    });
+  });
+
+  it('returns proxy config for an intelligently detected OEM fallback stream', async () => {
+    contextManager.getContext.mockReturnValue({
+      id: 'context-1',
+      printerDetails: {
+        IPAddress: '192.168.1.25',
+        customCameraEnabled: false,
+        customCameraUrl: '',
+        showCameraFps: false,
+      },
+    });
+    const deps = createDependencies({
+      backendManager: {
+        isBackendReady: jest.fn().mockReturnValue(true),
+        getBackendForContext: jest.fn().mockReturnValue({
+          getBackendStatus: jest.fn().mockReturnValue({
+            features: {
+              camera: {
+                oemStreamUrl: '',
+                fallbackStreamUrl: 'http://192.168.1.25:8080/?action=stream',
+                customEnabled: false,
+                customUrl: null,
+              },
+            },
+          }),
+        }),
+        isFeatureAvailable: jest.fn().mockReturnValue(true),
+      },
+    });
+    const server = await startTestServer((app) => {
+      const router = express.Router();
+      registerCameraRoutes(router, deps);
+      app.use('/api', router);
+    });
+
+    const response = await fetch(`${server.baseUrl}/api/camera/proxy-config?contextId=context-1`);
+    const body = await response.json();
+
+    await server.close();
+
+    expect(response.status).toBe(200);
+    expect(go2rtcService.addStream).toHaveBeenCalledWith(
+      'context-1',
+      'http://192.168.1.25:8080/?action=stream',
+      'intelligent-fallback',
+      'mjpeg'
+    );
+    expect(body).toEqual({
+      success: true,
+      wsUrl: expect.stringContaining('/api/ws?src=context-1-camera'),
+      streamType: 'mjpeg',
+      sourceType: 'intelligent-fallback',
+      streamName: 'context-1-camera',
+      apiPort: 1984,
+      mode: 'webrtc,mse,mjpeg',
+      showCameraFps: true,
     });
   });
 });

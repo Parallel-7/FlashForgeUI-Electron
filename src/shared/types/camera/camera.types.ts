@@ -17,7 +17,8 @@
  * Camera Source Priority:
  * 1. Custom camera URL (if enabled in user config)
  * 2. OEM printer camera (if reported by the printer)
- * 3. None (camera unavailable with reason tracking)
+ * 3. Intelligent fallback (known OEM MJPEG endpoint when firmware omits the URL)
+ * 4. None (camera unavailable with reason tracking)
  *
  * @module types/camera/camera.types
  */
@@ -27,7 +28,7 @@ import { PrinterFeatureSet } from '../printer-backend/index.js';
 /**
  * Camera source types
  */
-export type CameraSourceType = 'oem' | 'custom' | 'none';
+export type CameraSourceType = 'oem' | 'custom' | 'intelligent-fallback' | 'none';
 
 /**
  * Camera stream protocol types

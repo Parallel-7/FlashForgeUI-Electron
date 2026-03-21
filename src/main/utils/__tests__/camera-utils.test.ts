@@ -33,6 +33,7 @@ function createFeatures(overrides: Partial<PrinterFeatureSet['camera']> = {}): P
   return {
     camera: {
       oemStreamUrl: '',
+      fallbackStreamUrl: '',
       customEnabled: false,
       customUrl: null,
       ...overrides,
@@ -155,6 +156,26 @@ describe('camera-utils', () => {
     });
     expect(oem).toEqual({
       sourceType: 'oem',
+      streamType: 'mjpeg',
+      streamUrl: 'http://192.168.1.25:8080/?action=stream',
+      isAvailable: true,
+    });
+  });
+
+  it('uses the intelligent fallback stream when OEM firmware does not report a camera URL', () => {
+    const result = resolveCameraConfig({
+      printerIpAddress: '192.168.1.25',
+      printerFeatures: createFeatures({
+        fallbackStreamUrl: 'http://192.168.1.25:8080/?action=stream',
+      }),
+      userConfig: {
+        customCameraEnabled: false,
+        customCameraUrl: null,
+      },
+    });
+
+    expect(result).toEqual({
+      sourceType: 'intelligent-fallback',
       streamType: 'mjpeg',
       streamUrl: 'http://192.168.1.25:8080/?action=stream',
       isAvailable: true,

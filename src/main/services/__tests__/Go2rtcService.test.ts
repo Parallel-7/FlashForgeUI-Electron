@@ -68,4 +68,14 @@ describe('Go2rtcService', () => {
     expect(mockBinaryManager.start).toHaveBeenCalledTimes(2);
     expect(global.fetch).toHaveBeenCalledTimes(2);
   });
+
+  it('accepts intelligently detected fallback streams as managed go2rtc sources', async () => {
+    const service = Go2rtcService.getInstance();
+
+    await service.addStream('context-1', 'http://192.168.1.25:8080/?action=stream', 'intelligent-fallback', 'mjpeg');
+
+    expect(
+      service.hasMatchingStream('context-1', 'http://192.168.1.25:8080/?action=stream', 'intelligent-fallback', 'mjpeg')
+    ).toBe(true);
+  });
 });
