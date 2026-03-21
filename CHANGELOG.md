@@ -7,7 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.4-alpha.4] - 2026-03-21
+
 ### Added
+- Calibration Assistant with SSH/SCP transport, Klipper config parsing, bed mesh and input shaper analysis engines, report rendering, API routes, desktop dialog flows, and shared calibration types (874f9de, 40e0c1c)
+- OEM camera auto-detection from printer-reported stream URLs plus intelligent fallback probing of `http://<printer-ip>:8080/?action=stream` when firmware omits the URL (f4a62ed, 7d585d5)
+- Camera snapshots in Discord notifications for supported camera sources (89267c3)
 - Browser Playwright coverage for the built WebUI, including asset-versioning, auth, WebSocket login, and context-switching flows backed by a fixture server (d967df9)
 - Playwright Electron smoke coverage with a live desktop runner for launch, auto-connect, and connected-UI verification against the local FlashForgeUI profile (5a5f62d)
 - Emulator-backed Electron Playwright coverage for direct and discovery connections across 5M Pro, 5M, AD5X, Adventurer 3, and Adventurer 4, plus multi-printer discovery flows (dc58252, c9c0348)
@@ -18,11 +23,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Refactor backend selection to use per-printer legacy mode settings instead of a global legacy override, including settings/UI plumbing for 5M-series fallback coverage (7bf2db9)
 - Normalize build, lint, TypeScript, Babel, Vite, and packaging configuration to support the expanded Jest and Playwright test surface cleanly (ca99951)
 - Harden connection establishment and printer detail flows for emulator-backed direct/discovery testing, including port-aware connections and saved-printer seeding paths (dc58252)
+- Refactor calibration SSH/SCP flow and config path handling for the desktop calibration workflow (40e0c1c)
+- Extract `ContextServiceInitializer` and unify Discord timer setup across printer contexts (4b2e798)
+- Upgrade `@ghosttypes/ff-api` through the current published releases to align runtime discovery and camera support (3d57598, 0eb66a2, 7d585d5)
 
 ### Fixed
 - Align runtime discovery integration with the current `@ghosttypes/ff-api` discovery API and keep printer tab connection state synchronized in the renderer (6de2a87)
 - Prevent stale desktop-hosted WebUI asset mixes by serving no-cache static assets and build-stamped local module URLs (5d7e7e5, ca99951)
 - Restore deterministic desktop test selection on Windows by adding explicit Electron emulator script entry points instead of relying on fragile ad hoc Playwright grep invocations (c9c0348)
+- Restore go2rtc stream matching after OEM camera auto-detection changes (64b17af)
+- Correct time and ETA reporting in the WebUI and Discord notifications (6135d60)
+
+### Security
+- Bump the `tar` override to 7.5.10 to patch GHSA-qffp-2rhf-9h96 (d8afc32)
 
 ## [1.0.4-alpha.3] - 2025-12-09
 
@@ -818,3 +831,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - README.md - Added download link to v1.0.0 release and feature comparison table (fcd8750)
+
+[Unreleased]: https://github.com/Parallel-7/FlashForgeUI-Electron/compare/v1.0.4-alpha.4...alpha
+[1.0.4-alpha.4]: https://github.com/Parallel-7/FlashForgeUI-Electron/compare/v1.0.4-alpha.3...v1.0.4-alpha.4
+[1.0.4-alpha.3]: https://github.com/Parallel-7/FlashForgeUI-Electron/compare/v1.0.4-alpha.2...v1.0.4-alpha.3

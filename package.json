@@ -1,7 +1,7 @@
 {
   "name": "FlashForgeUI",
   "productName": "FlashForgeUI",
-  "version": "1.0.4-alpha.3",
+  "version": "1.0.4-alpha.4",
   "packageManager": "pnpm@10.23.0",
   "description": "Monitoring and Control software for FlashForge printers",
   "main": "out/main/index.js",
