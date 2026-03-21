@@ -1,12 +1,14 @@
 # WebUI and Headless Mode
 
+**Last Updated:** 2026-03-11 17:36 ET
+
 This document covers headless mode operations and the WebUI server architecture.
 
 ---
 
 ## Headless Mode & WebUI Operations
 
-- CLI flags are parsed in `src/utils/HeadlessArguments.ts` and validated via `validateHeadlessConfig`. Supported modes: `--last-used`, `--all-saved-printers`, or `--printers="<ip>:<type>:<checkcode,...>"`. Extra flags include `--webui-port`, `--webui-password`, and camera overrides.
+- CLI flags are parsed in `src/main/utils/HeadlessArguments.ts` and validated via `validateHeadlessConfig`. Supported modes: `--last-used`, `--all-saved-printers`, or `--printers="<ip>:<type>:<checkcode,...>"`. Extra flags include `--webui-port`, `--webui-password`, and camera overrides.
 
 - `HeadlessManager.initialize()` (invoked from `src/index.ts`) forces `WebUIEnabled`, applies overrides, connects printers (respecting discovery + saved printers), starts the WebUI server, launches polling/camera proxies, and sets up graceful shutdown.
 
@@ -28,6 +30,13 @@ This document covers headless mode operations and the WebUI server architecture.
 - `--all-saved-printers`: Connect to all saved
 - `--printers="<ip>:<type>:<checkcode>"`: Explicit specs
 
+### Debug Flags
+
+- `--debug`: Enables debug logging for this session
+- `--debug-network`: Enables network-specific debug logging
+
+These flags work in both headless and desktop modes.
+
 ### Overrides
 
 - `--webui-port=<port>` (default 3000)
@@ -43,7 +52,7 @@ This document covers headless mode operations and the WebUI server architecture.
 
 ```
 applyConfigOverrides() → connectPrinters() → startWebUI()
-→ setupEventForwarding() → startPolling() → initializeCameraProxies()
+→ setupEventForwarding() → startPolling() → initializeCameraStreams()
 → setupSignalHandlers()
 ```
 
@@ -51,7 +60,7 @@ applyConfigOverrides() → connectPrinters() → startWebUI()
 
 ```
 SIGINT/SIGTERM → shutdown() → Stop polling → Disconnect printers
-→ Close cameras → Stop WebUI → process.exit(0)
+→ go2rtcService.shutdown() → Stop WebUI → process.exit(0)
 ```
 
 ---
@@ -71,7 +80,7 @@ SIGINT/SIGTERM → shutdown() → Stop polling → Disconnect printers
 
 - Password validation
 - JWT-style token generation (HMAC-SHA256)
-- Session management (24h persistent, 1h temporary)
+- Session management (24h for "remember me" sessions, 1h for temporary sessions; controlled by `rememberMe` flag during login)
 - Token revocation on logout
 - Multi-tab support
 
@@ -80,7 +89,7 @@ SIGINT/SIGTERM → shutdown() → Stop polling → Disconnect printers
 - Real-time bidirectional communication
 - Token-based authentication
 - Ping/pong keep-alive (30s)
-- Message types: STATUS_UPDATE, SPOOLMAN_UPDATE, COMMAND_RESULT
+- Message types: AUTH_SUCCESS, STATUS_UPDATE, SPOOLMAN_UPDATE, COMMAND_RESULT, ERROR, PONG
 - Broadcasting to all clients or per-token
 
 ---
@@ -97,6 +106,8 @@ SIGINT/SIGTERM → shutdown() → Stop polling → Disconnect printers
 - context-routes.ts: Contexts (list, switch)
 - theme-routes.ts: Theme defaults
 - spoolman-routes.ts: Spoolman operations
+- calibration-routes.ts: Calibration settings, workspace analysis, history, reports, SSH helpers
+- debug-routes.ts: Debug log access (`/api/debug/logs`, `/api/debug/status`, etc.)
 
 ---
 
@@ -123,7 +134,10 @@ class AppState {
 ### Transport (`src/webui/static/core/Transport.ts`)
 
 - `apiRequest<T>()`: REST with auth headers
+- `apiRequestWithMetadata<T>()`: REST with auth headers, returns status/ok along with data
+- `buildAuthHeaders()`: Helper for auth header construction
 - `connectWebSocket()`: WS with reconnection (exponential backoff)
+- `disconnectWebSocket()`: Explicit WebSocket disconnection
 - `sendCommand()`: WebSocket commands
 - Event callbacks: onStatusUpdate, onSpoolmanUpdate, onConnectionChange
 

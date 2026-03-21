@@ -3,8 +3,8 @@
  * and timing-attack resistance in password/HMAC comparisons.
  */
 
-import { AuthManager, getAuthManager } from '../AuthManager';
 import { getConfigManager } from '../../../managers/ConfigManager';
+import { AuthManager, getAuthManager } from '../AuthManager';
 
 // Mock ConfigManager
 jest.mock('../../../managers/ConfigManager', () => ({
@@ -63,14 +63,14 @@ describe('AuthManager', () => {
     });
 
     it('should return failure when auth is disabled but validateLogin called (edge case)', async () => {
-       mockConfig.WebUIPasswordRequired = false;
-       const result = await authManager.validateLogin({
-         password: 'any',
-         rememberMe: false,
-       });
+      mockConfig.WebUIPasswordRequired = false;
+      const result = await authManager.validateLogin({
+        password: 'any',
+        rememberMe: false,
+      });
 
-       expect(result.success).toBe(false);
-       expect(result.message).toContain('disabled');
+      expect(result.success).toBe(false);
+      expect(result.message).toContain('disabled');
     });
 
     it('should handle undefined password gracefully', async () => {
@@ -166,7 +166,7 @@ describe('AuthManager', () => {
       const signature = parts[1];
 
       // Tamper with signature
-      const tamperedSignature = signature.replace(/[a-f0-9]/, (c) => c === 'a' ? 'b' : 'a');
+      const tamperedSignature = signature.replace(/[a-f0-9]/, (c) => (c === 'a' ? 'b' : 'a'));
       const tamperedToken = `${payload}.${tamperedSignature}`;
 
       const validation = authManager.validateToken(tamperedToken);

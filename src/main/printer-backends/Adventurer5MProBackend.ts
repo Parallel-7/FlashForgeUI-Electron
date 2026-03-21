@@ -33,7 +33,8 @@ export class Adventurer5MProBackend extends DualAPIBackend {
   protected getChildBaseFeatures(): PrinterFeatureSet {
     return {
       camera: {
-        builtin: true,
+        oemStreamUrl: '',
+        fallbackStreamUrl: '',
         customUrl: null,
         customEnabled: false,
       },

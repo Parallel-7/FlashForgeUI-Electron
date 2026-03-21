@@ -96,6 +96,77 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   private notificationState: NotificationState;
   private currentSettings: NotificationSettings;
   private contextId: string | null = null;
+  private readonly handlePollingDataUpdated = (data: PollingData): void => {
+    void this.handlePollingDataUpdate(data);
+  };
+  private readonly handlePollingStatusUpdated = (status: PrinterStatus): void => {
+    void this.handlePrinterStatusUpdate(status);
+  };
+  private readonly handleConnectionChanged = (event: { connected: boolean }): void => {
+    this.handleConnectionChange(event.connected);
+  };
+  private readonly handlePrintStartedEvent = (event: {
+    contextId: string;
+    jobName: string;
+    status: PrinterStatus;
+    timestamp: Date;
+  }): void => {
+    if (event.contextId === this.contextId) {
+      void this.handlePrintStarted(event);
+    }
+  };
+  private readonly handlePrintCompletedEventBound = (event: {
+    contextId: string;
+    jobName: string;
+    status: PrinterStatus;
+    completedAt: Date;
+  }): void => {
+    if (event.contextId === this.contextId) {
+      void this.handlePrintCompletedEvent(event);
+    }
+  };
+  private readonly handlePrintCancelledEvent = (event: {
+    contextId: string;
+    jobName: string | null;
+    status: PrinterStatus;
+    timestamp: Date;
+  }): void => {
+    if (event.contextId === this.contextId) {
+      void this.handlePrintCancelled(event);
+    }
+  };
+  private readonly handlePrintErrorEvent = (event: {
+    contextId: string;
+    jobName: string | null;
+    status: PrinterStatus;
+    timestamp: Date;
+  }): void => {
+    if (event.contextId === this.contextId) {
+      void this.handlePrintError(event);
+    }
+  };
+  private readonly handlePrinterCooledEvent = (event: PrinterCooledEvent): void => {
+    void this.handlePrinterCooled(event);
+  };
+  private readonly handleConfigUpdated = (): void => {
+    const newConfig = this.configManager.getConfig();
+    const newSettings = extractNotificationSettings(newConfig);
+
+    if (this.hasSettingsChanged(newSettings)) {
+      const previousSettings = this.currentSettings;
+      this.currentSettings = newSettings;
+
+      this.emit('settings-updated', {
+        previousSettings,
+        currentSettings: newSettings,
+      });
+
+      console.log('Notification settings updated:', newSettings);
+    }
+  };
+  private readonly handleNotificationSent = (event: NotificationEventPayloads['notification-sent']): void => {
+    this.emit('notification-triggered', event);
+  };
 
   constructor(notificationService?: NotificationService, configManager?: ConfigManager) {
     super();
@@ -171,20 +242,9 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   private setupPollingServiceListeners(): void {
     if (!this.pollingService) return;
 
-    // Listen for data updates
-    this.pollingService.on('data-updated', (data: PollingData) => {
-      void this.handlePollingDataUpdate(data);
-    });
-
-    // Listen for status updates
-    this.pollingService.on('status-updated', (status: PrinterStatus) => {
-      void this.handlePrinterStatusUpdate(status);
-    });
-
-    // Listen for connection changes
-    this.pollingService.on('connection-changed', (event: { connected: boolean }) => {
-      this.handleConnectionChange(event.connected);
-    });
+    this.pollingService.on('data-updated', this.handlePollingDataUpdated);
+    this.pollingService.on('status-updated', this.handlePollingStatusUpdated);
+    this.pollingService.on('connection-changed', this.handleConnectionChanged);
   }
 
   /**
@@ -193,9 +253,9 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   private removePollingServiceListeners(): void {
     if (!this.pollingService) return;
 
-    this.pollingService.removeAllListeners('data-updated');
-    this.pollingService.removeAllListeners('status-updated');
-    this.pollingService.removeAllListeners('connection-changed');
+    this.pollingService.off('data-updated', this.handlePollingDataUpdated);
+    this.pollingService.off('status-updated', this.handlePollingStatusUpdated);
+    this.pollingService.off('connection-changed', this.handleConnectionChanged);
   }
 
   /**
@@ -204,33 +264,10 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   private setupPrintStateMonitorListeners(): void {
     if (!this.printStateMonitor) return;
 
-    // Listen for print started to reset notification flags
-    this.printStateMonitor.on('print-started', (event) => {
-      if (event.contextId === this.contextId) {
-        void this.handlePrintStarted(event);
-      }
-    });
-
-    // Listen for print completed to send notification
-    this.printStateMonitor.on('print-completed', (event) => {
-      if (event.contextId === this.contextId) {
-        void this.handlePrintCompletedEvent(event);
-      }
-    });
-
-    // Listen for print cancelled to reset state
-    this.printStateMonitor.on('print-cancelled', (event) => {
-      if (event.contextId === this.contextId) {
-        void this.handlePrintCancelled(event);
-      }
-    });
-
-    // Listen for print error to reset state
-    this.printStateMonitor.on('print-error', (event) => {
-      if (event.contextId === this.contextId) {
-        void this.handlePrintError(event);
-      }
-    });
+    this.printStateMonitor.on('print-started', this.handlePrintStartedEvent);
+    this.printStateMonitor.on('print-completed', this.handlePrintCompletedEventBound);
+    this.printStateMonitor.on('print-cancelled', this.handlePrintCancelledEvent);
+    this.printStateMonitor.on('print-error', this.handlePrintErrorEvent);
   }
 
   /**
@@ -239,10 +276,10 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   private removePrintStateMonitorListeners(): void {
     if (!this.printStateMonitor) return;
 
-    this.printStateMonitor.removeAllListeners('print-started');
-    this.printStateMonitor.removeAllListeners('print-completed');
-    this.printStateMonitor.removeAllListeners('print-cancelled');
-    this.printStateMonitor.removeAllListeners('print-error');
+    this.printStateMonitor.off('print-started', this.handlePrintStartedEvent);
+    this.printStateMonitor.off('print-completed', this.handlePrintCompletedEventBound);
+    this.printStateMonitor.off('print-cancelled', this.handlePrintCancelledEvent);
+    this.printStateMonitor.off('print-error', this.handlePrintErrorEvent);
   }
 
   /**
@@ -251,10 +288,7 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   private setupTemperatureMonitorListeners(): void {
     if (!this.temperatureMonitor) return;
 
-    // Listen for printer-cooled events
-    this.temperatureMonitor.on('printer-cooled', (event: PrinterCooledEvent) => {
-      void this.handlePrinterCooled(event);
-    });
+    this.temperatureMonitor.on('printer-cooled', this.handlePrinterCooledEvent);
   }
 
   /**
@@ -263,38 +297,21 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
   private removeTemperatureMonitorListeners(): void {
     if (!this.temperatureMonitor) return;
 
-    this.temperatureMonitor.removeAllListeners('printer-cooled');
+    this.temperatureMonitor.off('printer-cooled', this.handlePrinterCooledEvent);
   }
 
   /**
    * Setup configuration change listener
    */
   private setupConfigurationListener(): void {
-    this.configManager.on('configUpdated', (_event) => {
-      const newConfig = this.configManager.getConfig();
-      const newSettings = extractNotificationSettings(newConfig);
-
-      if (this.hasSettingsChanged(newSettings)) {
-        const previousSettings = this.currentSettings;
-        this.currentSettings = newSettings;
-
-        this.emit('settings-updated', {
-          previousSettings,
-          currentSettings: newSettings,
-        });
-
-        console.log('Notification settings updated:', newSettings);
-      }
-    });
+    this.configManager.on('configUpdated', this.handleConfigUpdated);
   }
 
   /**
    * Setup notification service event listener
    */
   private setupNotificationServiceListener(): void {
-    this.notificationService.on('notification-sent', (event) => {
-      this.emit('notification-triggered', event);
-    });
+    this.notificationService.on('notification-sent', this.handleNotificationSent);
   }
 
   /**
@@ -643,6 +660,8 @@ export class PrinterNotificationCoordinator extends EventEmitter<CoordinatorEven
 
     // Remove all event listeners
     this.removeAllListeners();
+    this.configManager.off('configUpdated', this.handleConfigUpdated);
+    this.notificationService.off('notification-sent', this.handleNotificationSent);
 
     // Clear references
     this.pollingService = null;

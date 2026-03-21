@@ -286,4 +286,10 @@ export const WINDOW_SIZES = {
     minWidth: createWindowMinWidth(640),
     minHeight: createWindowMinHeight(610),
   },
+  CALIBRATION_DIALOG: {
+    width: createWindowWidth(1180),
+    height: createWindowHeight(860),
+    minWidth: createWindowMinWidth(980),
+    minHeight: createWindowMinHeight(720),
+  },
 } as const;

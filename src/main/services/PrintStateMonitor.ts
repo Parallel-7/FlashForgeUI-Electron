@@ -117,6 +117,12 @@ interface PrintStateMonitorState {
 export class PrintStateMonitor extends EventEmitter<PrintStateEventMap> {
   private readonly contextId: string;
   private pollingService: PrinterPollingService | null = null;
+  private readonly handlePollingDataUpdated = (data: PollingData): void => {
+    void this.handlePollingDataUpdate(data);
+  };
+  private readonly handleStatusUpdated = (status: PrinterStatus): void => {
+    void this.handlePrinterStatusUpdate(status);
+  };
 
   private state: PrintStateMonitorState = {
     currentState: null,
@@ -156,15 +162,8 @@ export class PrintStateMonitor extends EventEmitter<PrintStateEventMap> {
   private setupPollingServiceListeners(): void {
     if (!this.pollingService) return;
 
-    // Listen for data updates
-    this.pollingService.on('data-updated', (data: PollingData) => {
-      void this.handlePollingDataUpdate(data);
-    });
-
-    // Listen for status updates
-    this.pollingService.on('status-updated', (status: PrinterStatus) => {
-      void this.handlePrinterStatusUpdate(status);
-    });
+    this.pollingService.on('data-updated', this.handlePollingDataUpdated);
+    this.pollingService.on('status-updated', this.handleStatusUpdated);
   }
 
   /**
@@ -173,8 +172,8 @@ export class PrintStateMonitor extends EventEmitter<PrintStateEventMap> {
   private removePollingServiceListeners(): void {
     if (!this.pollingService) return;
 
-    this.pollingService.removeAllListeners('data-updated');
-    this.pollingService.removeAllListeners('status-updated');
+    this.pollingService.off('data-updated', this.handlePollingDataUpdated);
+    this.pollingService.off('status-updated', this.handleStatusUpdated);
   }
 
   // ============================================================================

@@ -48,7 +48,11 @@ for (const target of configTargets) {
   totalUpdated += runForConfig(tsconfigPath);
 }
 
-console.log(totalUpdated > 0 ? `Updated ${totalUpdated} files across ${configTargets.length} config(s)` : 'All module specifiers already have explicit extensions.');
+console.log(
+  totalUpdated > 0
+    ? `Updated ${totalUpdated} files across ${configTargets.length} config(s)`
+    : 'All module specifiers already have explicit extensions.'
+);
 
 function runForConfig(tsconfigPath: string): number {
   const configFile = ts.readConfigFile(tsconfigPath, ts.sys.readFile);
@@ -63,7 +67,7 @@ function runForConfig(tsconfigPath: string): number {
     ts.sys,
     path.dirname(tsconfigPath),
     undefined,
-    tsconfigPath,
+    tsconfigPath
   );
   const program = ts.createProgram(parsedConfig.fileNames, parsedConfig.options);
   let updatedFiles = 0;
@@ -118,7 +122,7 @@ function maybeQueueReplacement(
   sourceFile: ts.SourceFile,
   literal: StringLiteralLike,
   replacements: Replacement[],
-  parsedConfig: ts.ParsedCommandLine,
+  parsedConfig: ts.ParsedCommandLine
 ): void {
   const specifierText = literal.text;
   if (!specifierText.startsWith('./') && !specifierText.startsWith('../')) {
@@ -137,11 +141,7 @@ function maybeQueueReplacement(
   }
 
   const literalText = literal.getText(sourceFile);
-  const quote = literalText.startsWith('`')
-    ? '`'
-    : literalText.startsWith('"')
-      ? '"'
-      : '\'';
+  const quote = literalText.startsWith('`') ? '`' : literalText.startsWith('"') ? '"' : "'";
   replacements.push({
     start: literal.getStart(sourceFile),
     end: literal.getEnd(),

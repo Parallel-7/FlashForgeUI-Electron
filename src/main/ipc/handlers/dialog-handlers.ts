@@ -26,9 +26,9 @@ import type { ConfigManager } from '../../managers/ConfigManager.js';
 import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManager.js';
 import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
+import { getDebugLogService } from '../../services/DebugLogService.js';
 import { getGo2rtcService } from '../../services/Go2rtcService.js';
 import { getLogService } from '../../services/LogService.js';
-import { getDebugLogService } from '../../services/DebugLogService.js';
 import { getModelDisplayName } from '../../utils/PrinterUtils.js';
 import { getRoundedUISupportInfo } from '../../utils/RoundedUICompatibility.js';
 import { getWebUIManager } from '../../webui/server/WebUIManager.js';
@@ -40,6 +40,7 @@ import type { AppConfig, ThemeColors } from '@shared/types/config.js';
 import { sanitizeTheme } from '@shared/types/config.js';
 import {
   createAboutDialog,
+  createCalibrationDialog,
   createInputDialog,
   createJobPickerWindow,
   createJobUploaderWindow,
@@ -239,6 +240,10 @@ export function registerDialogHandlers(configManager: ConfigManager, windowManag
     createAboutDialog();
   });
 
+  ipcMain.on('open-calibration-dialog', () => {
+    createCalibrationDialog();
+  });
+
   ipcMain.handle('about-dialog:get-info', async (): Promise<AboutDialogInfo> => {
     const version = app.getVersion();
     const prereleasePattern = /(alpha|beta|rc)/i;
@@ -361,6 +366,18 @@ export function registerDialogHandlers(configManager: ConfigManager, windowManag
       const go2rtcService = getGo2rtcService();
       const serviceStatus = go2rtcService.getServiceStatus();
 
+      const apiPort = (() => {
+        try {
+          const parsed = new URL(serviceStatus.apiUrl);
+          if (parsed.port) {
+            return Number(parsed.port);
+          }
+        } catch {
+          // Ignore URL parsing issues and fall back to binary manager
+        }
+        return go2rtcService.getApiPort();
+      })();
+
       // Get network interfaces for WebUI URL
       const networkInterfaces = os.networkInterfaces();
       let localIP = 'localhost';
@@ -383,10 +400,10 @@ export function registerDialogHandlers(configManager: ConfigManager, windowManag
         webuiClients: webUIStatus.clientCount,
         webuiUrl: webUIStatus.isRunning ? `http://${localIP}:${webUIStatus.port}` : 'None',
         cameraStatus: serviceStatus.isRunning,
-        cameraPort: serviceStatus.apiPort,
-        cameraClients: serviceStatus.streamCount,
-        cameraStreaming: serviceStatus.streamCount > 0,
-        cameraUrl: serviceStatus.isRunning ? `http://${localIP}:${serviceStatus.apiPort}` : 'None',
+        cameraPort: apiPort,
+        cameraClients: serviceStatus.activeStreams,
+        cameraStreaming: serviceStatus.activeStreams > 0,
+        cameraUrl: serviceStatus.isRunning ? `http://${localIP}:${apiPort}` : 'None',
         appUptime: process.uptime(),
         memoryUsage: process.memoryUsage().heapUsed,
       };

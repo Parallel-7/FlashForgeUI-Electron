@@ -21,12 +21,12 @@
 import { EventEmitter } from 'node:events';
 import type {
   CameraStreamConfig,
-  Go2rtcServiceEvents,
   Go2rtcServiceStatus,
+  Go2rtcSnapshot,
   Go2rtcStreamInfo,
   Go2rtcStreamsResponse,
 } from '../types/go2rtc.types.js';
-import { getGo2rtcBinaryManager, Go2rtcBinaryManager } from './Go2rtcBinaryManager.js';
+import { Go2rtcBinaryManager, getGo2rtcBinaryManager } from './Go2rtcBinaryManager.js';
 
 /**
  * Internal stream configuration
@@ -39,7 +39,7 @@ interface ManagedStream {
   /** Source URL (RTSP or MJPEG) */
   sourceUrl: string;
   /** Original source type */
-  sourceType: 'builtin' | 'custom';
+  sourceType: 'oem' | 'custom' | 'intelligent-fallback';
   /** Original stream type */
   streamType: 'mjpeg' | 'rtsp';
   /** Timestamp when stream was added */
@@ -86,6 +86,46 @@ export class Go2rtcService extends EventEmitter {
   }
 
   /**
+   * Register or update a stream with the running go2rtc process.
+   */
+  private async registerStreamWithGo2rtc(streamName: string, sourceUrl: string): Promise<void> {
+    const apiUrl = this.binaryManager.getApiUrl();
+    const response = await fetch(
+      `${apiUrl}/api/streams?name=${encodeURIComponent(streamName)}&src=${encodeURIComponent(sourceUrl)}`,
+      { method: 'PUT' }
+    );
+
+    if (!response.ok) {
+      const text = await response.text();
+      throw new Error(`Failed to add stream: ${response.status} ${text}`);
+    }
+  }
+
+  /**
+   * Re-register managed streams after a go2rtc restart so existing contexts keep working.
+   */
+  private async restoreManagedStreams(): Promise<void> {
+    const managedStreams = Array.from(this.streams.values());
+
+    if (managedStreams.length === 0) {
+      return;
+    }
+
+    console.log(`[Go2rtcService] Restoring ${managedStreams.length} managed stream(s)...`);
+
+    for (const stream of managedStreams) {
+      try {
+        await this.registerStreamWithGo2rtc(stream.streamName, stream.sourceUrl);
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`[Go2rtcService] Failed to restore stream ${stream.streamName}:`, errorMessage);
+        this.streams.delete(stream.contextId);
+        this.emit('stream-error', stream.contextId, error instanceof Error ? error : new Error(errorMessage));
+      }
+    }
+  }
+
+  /**
    * Get the singleton instance
    */
   public static getInstance(): Go2rtcService {
@@ -99,15 +139,22 @@ export class Go2rtcService extends EventEmitter {
    * Initialize the service by starting go2rtc
    */
   public async initialize(): Promise<void> {
-    if (this.initialized) {
-      console.log('[Go2rtcService] Already initialized');
+    const wasRunning = this.binaryManager.isRunning();
+
+    if (this.initialized && wasRunning) {
       return;
     }
 
     try {
-      console.log('[Go2rtcService] Initializing...');
+      if (this.initialized && !wasRunning) {
+        console.warn('[Go2rtcService] go2rtc is not running, restarting managed service...');
+      } else {
+        console.log('[Go2rtcService] Initializing...');
+      }
+
       await this.binaryManager.start();
       this.initialized = true;
+      await this.restoreManagedStreams();
       this.lastError = null;
       this.emit('service-ready');
       console.log('[Go2rtcService] Initialized successfully');
@@ -135,16 +182,33 @@ export class Go2rtcService extends EventEmitter {
   }
 
   /**
+   * Check whether the managed stream already matches the requested source.
+   */
+  public hasMatchingStream(
+    contextId: string,
+    sourceUrl: string,
+    sourceType: 'oem' | 'custom' | 'intelligent-fallback',
+    streamType: 'mjpeg' | 'rtsp'
+  ): boolean {
+    const stream = this.streams.get(contextId);
+    return stream?.sourceUrl === sourceUrl && stream.sourceType === sourceType && stream.streamType === streamType;
+  }
+
+  /**
    * Add a camera stream for a printer context
    */
   public async addStream(
     contextId: string,
     sourceUrl: string,
-    sourceType: 'builtin' | 'custom',
+    sourceType: 'oem' | 'custom' | 'intelligent-fallback',
     streamType: 'mjpeg' | 'rtsp'
   ): Promise<void> {
     if (!this.isRunning()) {
       await this.initialize();
+    }
+
+    if (this.hasMatchingStream(contextId, sourceUrl, sourceType, streamType)) {
+      return;
     }
 
     // Remove existing stream if any
@@ -161,19 +225,7 @@ export class Go2rtcService extends EventEmitter {
     console.log(`[Go2rtcService] Adding stream: ${streamName} -> ${sourceUrl}`);
 
     try {
-      // Add stream to go2rtc via REST API
-      // API format: PUT /api/streams?name=<stream_name>&src=<source_url>
-      // Both parameters go in query string, no body needed
-      const apiUrl = this.binaryManager.getApiUrl();
-      const response = await fetch(
-        `${apiUrl}/api/streams?name=${encodeURIComponent(streamName)}&src=${encodeURIComponent(sourceUrl)}`,
-        { method: 'PUT' }
-      );
-
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Failed to add stream: ${response.status} ${text}`);
-      }
+      await this.registerStreamWithGo2rtc(streamName, sourceUrl);
 
       // Store stream info
       const managedStream: ManagedStream = {
@@ -293,6 +345,57 @@ export class Go2rtcService extends EventEmitter {
 
     const apiUrl = this.binaryManager.getApiUrl();
     return `${apiUrl}/api/frame.jpeg?src=${encodeURIComponent(stream.streamName)}`;
+  }
+
+  /**
+   * Capture a single JPEG frame from an active stream.
+   */
+  public async captureSnapshot(contextId: string, timeoutMs: number = 5000): Promise<Go2rtcSnapshot | null> {
+    if (!this.isRunning()) {
+      return null;
+    }
+
+    const snapshotUrl = this.getStreamMjpegUrl(contextId);
+    if (!snapshotUrl) {
+      return null;
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+    try {
+      const response = await fetch(snapshotUrl, {
+        headers: {
+          Accept: 'image/jpeg,image/png',
+        },
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        console.warn(`[Go2rtcService] Failed to capture snapshot for ${contextId}: ${response.status}`);
+        return null;
+      }
+
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (bytes.byteLength === 0) {
+        console.warn(`[Go2rtcService] Snapshot for ${contextId} returned no data`);
+        return null;
+      }
+
+      const contentType = response.headers.get('content-type') || 'image/jpeg';
+      const extension = contentType.toLowerCase().includes('png') ? 'png' : 'jpg';
+
+      return {
+        bytes,
+        contentType,
+        filename: `${this.contextToStreamName(contextId)}-snapshot.${extension}`,
+      };
+    } catch (error) {
+      console.warn(`[Go2rtcService] Failed to capture snapshot for ${contextId}:`, error);
+      return null;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   /**

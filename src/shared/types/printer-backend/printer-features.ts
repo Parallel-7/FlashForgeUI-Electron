@@ -33,7 +33,8 @@ export type PrinterFeatureType =
  * Camera feature configuration
  */
 export interface CameraFeature {
-  readonly builtin: boolean;
+  readonly oemStreamUrl: string;
+  readonly fallbackStreamUrl: string;
   readonly customUrl: string | null;
   readonly customEnabled: boolean;
 }
@@ -128,7 +129,7 @@ export interface FeatureOverrideSettings {
   readonly customCameraEnabled: boolean;
   readonly customCameraUrl: string;
   readonly customLEDControlEnabled: boolean;
-  readonly ForceLegacyAPI: boolean;
+  readonly forceLegacyMode: boolean;
 }
 
 /**

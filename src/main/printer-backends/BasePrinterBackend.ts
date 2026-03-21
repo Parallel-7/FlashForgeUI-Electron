@@ -8,7 +8,6 @@
  * - Status monitoring and data retrieval
  * - Event emission for backend state changes
  * - Per-printer settings integration (camera, LEDs, legacy mode)
- * - Feature override mechanism for UI-driven capability changes
  *
  * Key exports:
  * - BasePrinterBackend abstract class: Foundation for all backend implementations
@@ -41,8 +40,8 @@ import {
   PrinterModelType,
   StatusResult,
 } from '@shared/types/printer-backend/index.js';
+import { normalizeCustomCameraSettings } from '@shared/utils/printerSettingsDefaults.js';
 import { EventEmitter } from 'events';
-import { getConfigManager } from '../managers/ConfigManager.js';
 import {
   canOverrideFeature,
   getFeatureOverrideSettingsKey,
@@ -50,6 +49,11 @@ import {
   getModelDisplayName,
   supportsDualAPI,
 } from '../utils/PrinterUtils.js';
+
+type PerPrinterFeatureSettings = Pick<
+  BackendInitOptions['printerDetails'],
+  'customCameraEnabled' | 'customCameraUrl' | 'customLedsEnabled' | 'forceLegacyMode'
+>;
 
 /**
  * Abstract base class for all printer backends
@@ -64,19 +68,19 @@ export abstract class BasePrinterBackend extends EventEmitter {
 
   protected primaryClient: FiveMClient | FlashForgeClient;
   protected secondaryClient: FlashForgeClient | null = null;
-  protected readonly configManager = getConfigManager();
 
   private initialized = false;
   private connected = false;
   private features: PrinterFeatureSet | null = null;
   private lastStatusUpdate = new Date();
-  private featureOverrides: Record<string, unknown> = {};
 
   // Per-printer settings
-  protected readonly customCameraEnabled: boolean;
-  protected readonly customCameraUrl: string;
-  protected readonly customLedsEnabled: boolean;
-  protected readonly forceLegacyMode: boolean;
+  protected customCameraEnabled: boolean;
+  protected customCameraUrl: string;
+  protected customLedsEnabled: boolean;
+  protected forceLegacyMode: boolean;
+  protected oemCameraStreamUrl: string = '';
+  protected fallbackCameraStreamUrl: string = '';
 
   constructor(options: BackendInitOptions) {
     super();
@@ -95,76 +99,82 @@ export abstract class BasePrinterBackend extends EventEmitter {
 
     this.primaryClient = options.primaryClient;
     this.secondaryClient = options.secondaryClient || null;
-
-    this.setupEventHandlers();
-    this.loadFeatureOverrides();
   }
 
-  /**
-   * Setup event handlers for configuration changes
-   */
-  private setupEventHandlers(): void {
-    // Monitor configuration changes that affect features
-    this.configManager.on('configUpdated', (event: { changedKeys: string[] }) => {
-      this.handleConfigUpdate(event.changedKeys);
-    });
-
-    // Monitor specific settings that affect features
-    this.configManager.on('config:CustomCamera', () => {
-      this.updateFeatureOverrides();
-    });
-
-    this.configManager.on('config:CustomCameraUrl', () => {
-      this.updateFeatureOverrides();
-    });
-
-    this.configManager.on('config:CustomLeds', () => {
-      this.updateFeatureOverrides();
-    });
-
-    this.configManager.on('config:ForceLegacyAPI', () => {
-      this.updateFeatureOverrides();
-    });
-  }
-
-  /**
-   * Load current feature overrides from configuration
-   */
-  private loadFeatureOverrides(): void {
-    this.featureOverrides = {
-      customCameraEnabled: this.configManager.get('CustomCamera') || false,
-      customCameraUrl: this.configManager.get('CustomCameraUrl') || '',
-      customLEDControl: this.configManager.get('CustomLeds') || false,
-      ForceLegacyAPI: this.configManager.get('ForceLegacyAPI') || false,
-    };
-  }
-
-  /**
-   * Handle configuration updates that affect features
-   */
-  private handleConfigUpdate(changedKeys: string[]): void {
-    const featureKeys = ['CustomCamera', 'CustomCameraUrl', 'CustomLeds', 'ForceLegacyAPI'];
-    const hasFeatureChanges = changedKeys.some((key) => featureKeys.includes(key));
-
-    if (hasFeatureChanges) {
-      this.updateFeatureOverrides();
-    }
-  }
-
-  /**
-   * Update feature overrides and refresh feature set
-   */
-  private updateFeatureOverrides(): void {
-    this.loadFeatureOverrides();
-
-    // Refresh feature set with new overrides
+  private rebuildFeatureSet(emitUpdateEvent = false, changedKeys: readonly string[] = []): void {
     this.features = this.buildFeatureSet();
 
-    // Emit event for UI updates
+    if (!emitUpdateEvent) {
+      return;
+    }
+
     this.emitEvent('feature-updated', {
       features: this.features,
-      overrides: this.featureOverrides,
+      changedKeys,
     });
+  }
+
+  public refreshPerPrinterSettings(settings: PerPrinterFeatureSettings): readonly string[] {
+    const changedKeys: string[] = [];
+    const normalizedCameraSettings = normalizeCustomCameraSettings({
+      customCameraEnabled: settings.customCameraEnabled ?? false,
+      customCameraUrl: settings.customCameraUrl ?? '',
+    });
+    const nextCustomCameraEnabled = normalizedCameraSettings.customCameraEnabled ?? false;
+    const nextCustomCameraUrl = normalizedCameraSettings.customCameraUrl ?? '';
+    const nextCustomLedsEnabled = settings.customLedsEnabled ?? false;
+    const nextForceLegacyMode = settings.forceLegacyMode ?? false;
+
+    if (this.customCameraEnabled !== nextCustomCameraEnabled) {
+      this.customCameraEnabled = nextCustomCameraEnabled;
+      changedKeys.push('customCameraEnabled');
+    }
+
+    if (this.customCameraUrl !== nextCustomCameraUrl) {
+      this.customCameraUrl = nextCustomCameraUrl;
+      changedKeys.push('customCameraUrl');
+    }
+
+    if (this.customLedsEnabled !== nextCustomLedsEnabled) {
+      this.customLedsEnabled = nextCustomLedsEnabled;
+      changedKeys.push('customLedsEnabled');
+    }
+
+    if (this.forceLegacyMode !== nextForceLegacyMode) {
+      this.forceLegacyMode = nextForceLegacyMode;
+      changedKeys.push('forceLegacyMode');
+    }
+
+    if (changedKeys.length === 0) {
+      return changedKeys;
+    }
+
+    this.rebuildFeatureSet(true, changedKeys);
+    return changedKeys;
+  }
+
+  protected updateOEMCameraStreamUrl(streamUrl: string | null | undefined): boolean {
+    const nextOEMCameraStreamUrl = typeof streamUrl === 'string' ? streamUrl.trim() : '';
+
+    if (this.oemCameraStreamUrl === nextOEMCameraStreamUrl) {
+      return false;
+    }
+
+    this.oemCameraStreamUrl = nextOEMCameraStreamUrl;
+    this.rebuildFeatureSet(true, ['oemCameraStreamUrl']);
+    return true;
+  }
+
+  protected updateFallbackCameraStreamUrl(streamUrl: string | null | undefined): boolean {
+    const nextFallbackCameraStreamUrl = typeof streamUrl === 'string' ? streamUrl.trim() : '';
+
+    if (this.fallbackCameraStreamUrl === nextFallbackCameraStreamUrl) {
+      return false;
+    }
+
+    this.fallbackCameraStreamUrl = nextFallbackCameraStreamUrl;
+    this.rebuildFeatureSet(true, ['fallbackCameraStreamUrl']);
+    return true;
   }
 
   /**
@@ -201,7 +211,7 @@ export abstract class BasePrinterBackend extends EventEmitter {
       }
 
       // Build feature set
-      this.features = this.buildFeatureSet();
+      this.rebuildFeatureSet();
 
       // Perform backend-specific initialization
       await this.initializeBackend();
@@ -253,7 +263,8 @@ export abstract class BasePrinterBackend extends EventEmitter {
 
     return {
       camera: {
-        builtin: baseFeatures.camera.builtin,
+        oemStreamUrl: baseFeatures.camera.oemStreamUrl || this.oemCameraStreamUrl,
+        fallbackStreamUrl: baseFeatures.camera.fallbackStreamUrl || this.fallbackCameraStreamUrl,
         customUrl: settingsOverrides.customCameraEnabled ? String(settingsOverrides.customCameraUrl) : null,
         customEnabled: Boolean(settingsOverrides.customCameraEnabled),
       },
@@ -305,11 +316,15 @@ export abstract class BasePrinterBackend extends EventEmitter {
    * NOTE: Per-printer settings are now stored in printer_details.json, not config.json
    */
   private getSettingsOverrides(): Record<string, unknown> {
-    return {
+    const normalizedCameraSettings = normalizeCustomCameraSettings({
       customCameraEnabled: this.customCameraEnabled,
       customCameraUrl: this.customCameraUrl,
+    });
+    return {
+      customCameraEnabled: normalizedCameraSettings.customCameraEnabled ?? false,
+      customCameraUrl: normalizedCameraSettings.customCameraUrl ?? '',
       customLEDControl: this.customLedsEnabled,
-      ForceLegacyAPI: this.forceLegacyMode,
+      forceLegacyMode: this.forceLegacyMode,
     };
   }
 
@@ -323,7 +338,13 @@ export abstract class BasePrinterBackend extends EventEmitter {
 
     switch (feature) {
       case 'camera':
-        return this.features.camera.builtin || this.features.camera.customEnabled;
+        return (
+          this.features.camera.oemStreamUrl.trim() !== '' ||
+          this.features.camera.fallbackStreamUrl.trim() !== '' ||
+          (this.features.camera.customEnabled &&
+            this.features.camera.customUrl !== null &&
+            this.features.camera.customUrl.trim() !== '')
+        );
       case 'led-control':
         // 5M Pro has builtin LEDs detected via HTTP API
         if (this.features.ledControl.builtin) return true;

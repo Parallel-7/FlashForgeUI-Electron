@@ -406,6 +406,7 @@ const validSendChannels = [
   'connect-button-clicked',
   'open-settings-window',
   'open-status-dialog',
+  'open-calibration-dialog',
   'open-about-dialog',
   'open-printer-selection',
   'open-job-uploader',
@@ -632,6 +633,8 @@ const electronAPI: ElectronAPI = {
       'spoolman:set-active-spool',
       'spoolman:get-status',
       'debug:get-state',
+      'e2e:discord:send-current-status',
+      'e2e:discord:send-print-complete',
     ];
 
     if (validInvokeChannels.includes(channel)) {

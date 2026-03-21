@@ -31,8 +31,8 @@ import type {
 } from '@shared/types/polling.js';
 import { createEmptyPollingData, DEFAULT_POLLING_CONFIG } from '@shared/types/polling.js';
 import { EventEmitter } from '../utils/EventEmitter.js';
-import { printerDataTransformer } from './PrinterDataTransformer.js';
 import { getDebugLogService } from './DebugLogService.js';
+import { printerDataTransformer } from './PrinterDataTransformer.js';
 
 const POLLING_LOG_NAMESPACE = 'PrinterPollingService';
 

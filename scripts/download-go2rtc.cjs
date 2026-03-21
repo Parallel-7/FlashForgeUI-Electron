@@ -23,33 +23,33 @@ const PLATFORMS = {
   'darwin-arm64': {
     filename: 'go2rtc_mac_arm64.zip',
     binary: 'go2rtc',
-    isZip: true
+    isZip: true,
   },
   'darwin-x64': {
     filename: 'go2rtc_mac_amd64.zip',
     binary: 'go2rtc',
-    isZip: true
+    isZip: true,
   },
   'linux-arm64': {
     filename: 'go2rtc_linux_arm64',
     binary: 'go2rtc',
-    isZip: false
+    isZip: false,
   },
   'linux-x64': {
     filename: 'go2rtc_linux_amd64',
     binary: 'go2rtc',
-    isZip: false
+    isZip: false,
   },
   'win32-arm64': {
     filename: 'go2rtc_win_arm64.zip',
     binary: 'go2rtc.exe',
-    isZip: true
+    isZip: true,
   },
   'win32-x64': {
     filename: 'go2rtc_win64.zip',
     binary: 'go2rtc.exe',
-    isZip: true
-  }
+    isZip: true,
+  },
 };
 
 /**
@@ -60,24 +60,26 @@ function httpsGetWithRedirects(url, maxRedirects = 5) {
     const makeRequest = (currentUrl, redirectsLeft) => {
       const protocol = currentUrl.startsWith('https') ? https : http;
 
-      protocol.get(currentUrl, { headers: { 'User-Agent': 'FlashForgeUI-Downloader' } }, (response) => {
-        // Handle redirects
-        if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
-          if (redirectsLeft <= 0) {
-            reject(new Error('Too many redirects'));
+      protocol
+        .get(currentUrl, { headers: { 'User-Agent': 'FlashForgeUI-Downloader' } }, (response) => {
+          // Handle redirects
+          if (response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+            if (redirectsLeft <= 0) {
+              reject(new Error('Too many redirects'));
+              return;
+            }
+            makeRequest(response.headers.location, redirectsLeft - 1);
             return;
           }
-          makeRequest(response.headers.location, redirectsLeft - 1);
-          return;
-        }
 
-        if (response.statusCode !== 200) {
-          reject(new Error(`HTTP ${response.statusCode} for ${currentUrl}`));
-          return;
-        }
+          if (response.statusCode !== 200) {
+            reject(new Error(`HTTP ${response.statusCode} for ${currentUrl}`));
+            return;
+          }
 
-        resolve(response);
-      }).on('error', reject);
+          resolve(response);
+        })
+        .on('error', reject);
     };
 
     makeRequest(url, maxRedirects);
@@ -129,7 +131,7 @@ function extractZip(zipPath, destDir) {
   if (process.platform === 'win32') {
     // Use PowerShell on Windows
     execSync(`powershell -command "Expand-Archive -Path '${zipPath}' -DestinationPath '${destDir}' -Force"`, {
-      stdio: 'inherit'
+      stdio: 'inherit',
     });
   } else {
     // Use unzip on Unix

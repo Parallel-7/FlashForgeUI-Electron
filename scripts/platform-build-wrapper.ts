@@ -171,7 +171,9 @@ async function main(): Promise<void> {
 
   if (!platform) {
     const supported = Object.keys(PLATFORM_CONFIG).join('|');
-    logError(`Missing or invalid platform argument. Usage: node -r ts-node/register scripts/platform-build-wrapper.ts --platform <${supported}> [--ci]`);
+    logError(
+      `Missing or invalid platform argument. Usage: node -r ts-node/register scripts/platform-build-wrapper.ts --platform <${supported}> [--ci]`
+    );
     process.exit(1);
     return;
   }

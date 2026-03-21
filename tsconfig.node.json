@@ -7,20 +7,13 @@
     "src/shared/**/*",
     "src/renderer/src/ui/settings/types/**/*"
   ],
-  "exclude": [
-    "**/__tests__/**",
-    "**/*.test.ts",
-    "**/*.spec.ts"
-  ],
+  "exclude": ["**/__tests__/**", "**/*.test.ts", "**/*.spec.ts"],
   "compilerOptions": {
     "composite": true,
+    "tsBuildInfoFile": ".cache/tsbuildinfo/tsconfig.node.tsbuildinfo",
     "paths": {
-      "@shared/*": [
-        "./src/shared/*"
-      ],
-      "@renderer/*": [
-        "./src/renderer/src/*"
-      ]
+      "@shared/*": ["./src/shared/*"],
+      "@renderer/*": ["./src/renderer/src/*"]
     }
   }
 }

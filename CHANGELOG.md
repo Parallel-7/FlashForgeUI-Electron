@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Browser Playwright coverage for the built WebUI, including asset-versioning, auth, WebSocket login, and context-switching flows backed by a fixture server (d967df9)
+- Playwright Electron smoke coverage with a live desktop runner for launch, auto-connect, and connected-UI verification against the local FlashForgeUI profile (5a5f62d)
+- Emulator-backed Electron Playwright coverage for direct and discovery connections across 5M Pro, 5M, AD5X, Adventurer 3, and Adventurer 4, plus multi-printer discovery flows (dc58252, c9c0348)
+- Expanded source-level Jest coverage for managers, services, WebUI server/routes, WebUI static client modules, camera utilities, printer settings defaults, and the WebUI asset copy script (5d7e7e5)
+- Dedicated Electron emulator slice scripts for legacy, legacy-multi, modern-multi, smoke, and live test execution on Windows-friendly command lines (c9c0348)
+
+### Changed
+- Refactor backend selection to use per-printer legacy mode settings instead of a global legacy override, including settings/UI plumbing for 5M-series fallback coverage (7bf2db9)
+- Normalize build, lint, TypeScript, Babel, Vite, and packaging configuration to support the expanded Jest and Playwright test surface cleanly (ca99951)
+- Harden connection establishment and printer detail flows for emulator-backed direct/discovery testing, including port-aware connections and saved-printer seeding paths (dc58252)
+
+### Fixed
+- Align runtime discovery integration with the current `@ghosttypes/ff-api` discovery API and keep printer tab connection state synchronized in the renderer (6de2a87)
+- Prevent stale desktop-hosted WebUI asset mixes by serving no-cache static assets and build-stamped local module URLs (5d7e7e5, ca99951)
+- Restore deterministic desktop test selection on Windows by adding explicit Electron emulator script entry points instead of relying on fragile ad hoc Playwright grep invocations (c9c0348)
+
 ## [1.0.4-alpha.3] - 2025-12-09
 
 ### Added

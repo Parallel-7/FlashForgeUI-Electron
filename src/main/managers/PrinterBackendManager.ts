@@ -50,7 +50,6 @@ import { Adventurer5MProBackend } from '../printer-backends/Adventurer5MProBacke
 import { BasePrinterBackend } from '../printer-backends/BasePrinterBackend.js';
 import { GenericLegacyBackend } from '../printer-backends/GenericLegacyBackend.js';
 import { detectPrinterModelType, getModelDisplayName } from '../utils/PrinterUtils.js';
-import { getConfigManager } from './ConfigManager.js';
 import { getLoadingManager } from './LoadingManager.js';
 import { getPrinterContextManager } from './PrinterContextManager.js';
 
@@ -67,7 +66,6 @@ interface BackendInitializationOptions {
   readonly printerDetails: PrinterDetails;
   readonly primaryClient: FiveMClient | FlashForgeClient;
   readonly secondaryClient?: FlashForgeClient;
-  readonly ForceLegacyAPI?: boolean;
 }
 
 /**
@@ -87,7 +85,6 @@ interface BackendInitializationResult {
 export class PrinterBackendManager extends EventEmitter {
   private static instance: PrinterBackendManagerInstance | null = null;
 
-  private readonly configManager = getConfigManager();
   private readonly loadingManager = getLoadingManager();
   private readonly contextManager = getPrinterContextManager();
 
@@ -112,12 +109,11 @@ export class PrinterBackendManager extends EventEmitter {
   }
 
   /**
-   * Setup event handlers for configuration changes
+   * Setup event handlers for context and loading updates
    */
   private setupEventHandlers(): void {
-    // Monitor configuration changes that affect backend features
-    this.configManager.on('configUpdated', (event: { changedKeys: string[] }) => {
-      this.handleConfigurationChange(event.changedKeys);
+    this.contextManager.on('context-updated', (contextId: string) => {
+      this.handleContextUpdate(contextId);
     });
 
     // Monitor loading manager for UI coordination
@@ -126,27 +122,29 @@ export class PrinterBackendManager extends EventEmitter {
     });
   }
 
-  /**
-   * Handle configuration changes that affect backend features
-   */
-  private handleConfigurationChange(changedKeys: string[]): void {
-    const featureKeys = ['CustomCamera', 'CustomCameraUrl', 'CustomLeds', 'ForceLegacyAPI'];
-    const hasFeatureChanges = changedKeys.some((key) => featureKeys.includes(key));
-
-    if (hasFeatureChanges) {
-      const activeContextId = this.contextManager.getActiveContextId();
-      if (activeContextId) {
-        const backend = this.contextBackends.get(activeContextId);
-        if (backend) {
-          console.log('Configuration changes detected, backend features may be affected');
-          this.emit('backend-features-changed', {
-            backend,
-            contextId: activeContextId,
-            changedKeys,
-          });
-        }
-      }
+  private handleContextUpdate(contextId: string): void {
+    const context = this.contextManager.getContext(contextId);
+    if (!context) {
+      return;
     }
+
+    this.contextPrinterDetails.set(contextId, context.printerDetails);
+
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
+      return;
+    }
+
+    const changedKeys = backend.refreshPerPrinterSettings(context.printerDetails);
+    if (changedKeys.length === 0) {
+      return;
+    }
+
+    this.emit('backend-features-changed', {
+      backend,
+      contextId,
+      changedKeys,
+    });
   }
 
   /**
@@ -209,8 +207,8 @@ export class PrinterBackendManager extends EventEmitter {
       // Detect printer model from details
       let modelType = detectPrinterModelType(options.printerDetails.printerModel);
 
-      // Override to generic legacy if ForceLegacyAPI is enabled
-      if (options.ForceLegacyAPI) {
+      // Override to generic legacy if per-printer legacy mode is enabled
+      if (options.printerDetails.forceLegacyMode) {
         console.log('Force legacy mode enabled - using GenericLegacyBackend regardless of printer type');
         modelType = 'generic-legacy';
       }
@@ -783,14 +781,10 @@ export class PrinterBackendManager extends EventEmitter {
     try {
       console.log(`PrinterBackendManager: Connection established for context ${contextId}, initializing backend...`);
 
-      // Check if ForceLegacyAPI mode is enabled
-      const ForceLegacyAPI = this.configManager.get('ForceLegacyAPI') || false;
-
       const initResult = await this.initializeBackend(contextId, {
         printerDetails,
         primaryClient,
         secondaryClient,
-        ForceLegacyAPI,
       });
 
       if (initResult.success) {

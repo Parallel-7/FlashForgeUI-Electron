@@ -295,4 +295,4 @@ function registerThemeListener(api: SingleColorConfirmDialogAPI): void {
 window.addEventListener('unload', cleanup);
 
 // Export for module
-export { };
+export {};

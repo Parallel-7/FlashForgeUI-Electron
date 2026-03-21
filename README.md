@@ -30,7 +30,7 @@
 | --- | --- |
 | **[Download Stable Release](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/latest)** | Production-ready stable build |
 | **[Download Alpha Release](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/tag/v1.0.4-alpha.3)** | Latest features and improvements |
-| **[User Guide](https://github.com/Parallel-7/FlashForgeUI-Electron/tree/main/docs)** | Documentation and setup instructions |
+| **[User Guide](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki)** | Documentation and setup instructions |
 
 </div>
 
@@ -80,7 +80,7 @@
 | **Job Information** | Very Limited | Full |
 | **Job Time & ETA** | No | Yes |
 | **G&M Code Control** | Yes | Yes |
-| **Camera Preview** | Setup Required | Built-in |
+| **Camera Preview** | Setup Required | Auto-detected OEM or custom |
 | **Material Station** | No | Yes (AD5X) |
 | **Filtration Control** | No | Yes (AD5M Pro) |
 
@@ -115,7 +115,7 @@
 
 <div align="center">
 
-| Printer Model | Support Status | Testing Status | API Type | Material Station | Built-in Camera |
+| Printer Model | Support Status | Testing Status | API Type | Material Station | Factory Camera Included |
 | --- | --- | --- | --- | --- | --- |
 | **AD5X** | Full | Tested | HTTP + TCP | Yes (4 slots) | No |
 | **Adventurer 5M Pro** | Full | Tested | HTTP + TCP | No | Yes |
@@ -143,8 +143,8 @@
 | **Job Control** | Yes | Yes | Yes | Yes |
 | **Model Preview** | Yes (M662, slow) | Yes (fast) | Yes (fast) | Yes (fast) |
 | **Thumbnail Cache** | Yes | Yes | Yes | Yes |
-| **Built-in Camera** | No | No | Yes (RTSP) | No |
-| **Custom Camera** | Yes | Yes | Yes | Yes |
+| **OEM Camera Auto-Detection** | No | Yes | Yes | Yes |
+| **Custom Camera URL** | Yes | Yes | Yes | Yes |
 | **LED Control** | G-code | G-code | Built-in + G-code | G-code (custom) |
 | **Filtration Control** | No | No | Yes | No |
 | **Material Station** | No | No | No | Yes (4 slots) |

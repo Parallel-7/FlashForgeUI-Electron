@@ -27,6 +27,7 @@
  * - Windows: %APPDATA%/Electron/
  */
 
+import path from 'node:path';
 import { app } from 'electron';
 
 // Set app name BEFORE any singletons are created
@@ -37,6 +38,13 @@ app.setName('FlashForgeUI');
 // Set AppUserModelId to match electron-builder appId for proper notification routing
 // This works across all platforms (Windows uses it for Action Center, macOS for notification attribution)
 app.setAppUserModelId('com.ghosttypes.flashforgeui');
+
+// Optional override for deterministic E2E/user-data isolation.
+// No effect unless FFUI_USER_DATA_DIR is explicitly set.
+const userDataOverride = process.env.FFUI_USER_DATA_DIR?.trim();
+if (userDataOverride) {
+  app.setPath('userData', path.resolve(userDataOverride));
+}
 
 console.log('[Bootstrap] App name set to "FlashForgeUI"');
 console.log(`[Bootstrap] userData path: ${app.getPath('userData')}`);

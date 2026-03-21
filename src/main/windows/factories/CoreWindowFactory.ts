@@ -230,3 +230,42 @@ export const createAboutDialog = (): void => {
   setupDevTools(aboutDialog);
   windowManager.setAboutDialogWindow(aboutDialog);
 };
+
+/**
+ * Create the calibration assistant dialog window.
+ * Provides access to bed leveling and input shaper tooling.
+ */
+export const createCalibrationDialog = (): void => {
+  const windowManager = getWindowManager();
+
+  if (windowManager.hasCalibrationDialogWindow()) {
+    const existingWindow = windowManager.getCalibrationDialogWindow();
+    if (focusExistingWindow(existingWindow)) {
+      return;
+    }
+  }
+
+  const mainWindow = windowManager.getMainWindow();
+  if (!validateParentWindow(mainWindow, 'calibration dialog')) {
+    return;
+  }
+
+  const dimensions = getWindowDimensions('CALIBRATION_DIALOG');
+  const preloadPath = createUIPreloadPath('calibration-dialog');
+  const uiOptions = getUIWindowOptions();
+
+  const calibrationDialog = createModalWindow(mainWindow, dimensions, preloadPath, {
+    resizable: true,
+    frame: false,
+    transparent: uiOptions.transparent,
+  });
+
+  void loadWindowHTML(calibrationDialog, 'calibration-dialog');
+
+  setupWindowLifecycle(calibrationDialog, () => {
+    windowManager.setCalibrationDialogWindow(null);
+  });
+
+  setupDevTools(calibrationDialog);
+  windowManager.setCalibrationDialogWindow(calibrationDialog);
+};

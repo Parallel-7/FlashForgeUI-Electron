@@ -42,7 +42,7 @@ export function createSecurityMiddleware() {
       "connect-src 'self' ws: wss: http: https:", // http/https needed for HLS playlist construction if applicable
       "media-src 'self' blob: data:",
       "object-src 'none'", // Block <object>, <embed>, <applet>
-      "base-uri 'self'",   // Restrict <base> tag
+      "base-uri 'self'", // Restrict <base> tag
     ];
 
     res.setHeader('Content-Security-Policy', cspDirectives.join('; '));

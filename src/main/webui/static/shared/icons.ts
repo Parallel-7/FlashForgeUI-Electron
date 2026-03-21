@@ -74,5 +74,5 @@ export function hydrateLucideIcons(iconNames: string[], root: Document | Element
 }
 
 export function initializeLucideIcons(): void {
-  hydrateLucideIcons(['settings', 'lock', 'package', 'search', 'circle'], document);
+  hydrateLucideIcons(['settings', 'lock', 'package', 'search', 'circle', 'plus'], document);
 }

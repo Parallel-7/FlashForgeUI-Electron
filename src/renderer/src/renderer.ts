@@ -282,6 +282,15 @@ async function initializePrinterTabs(): Promise<void> {
         editModeController.setActiveSerial(activeContextSerial);
 
         if (printerTabsComponent) {
+          // Context switch payload carries the latest context state (including status).
+          // Apply it so tabs reflect connected/disconnected transitions immediately.
+          printerTabsComponent.updateTab(event.contextId, {
+            name: event.contextInfo.name,
+            ip: event.contextInfo.ip,
+            model: event.contextInfo.model,
+            status: event.contextInfo.status,
+            isActive: event.contextInfo.isActive,
+          });
           printerTabsComponent.setActiveTab(event.contextId);
         }
 
@@ -584,6 +593,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       'printer',
       'settings',
       'bar-chart-3',
+      'ruler',
       'grid-3x3',
       'pin',
       'info',

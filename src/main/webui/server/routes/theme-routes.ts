@@ -6,10 +6,7 @@ import { sanitizeTheme } from '@shared/types/config.js';
 import { StandardAPIResponse } from '@shared/types/web-api.types.js';
 import type { Response, Router } from 'express';
 import { toAppError } from '../../../utils/error.utils.js';
-import {
-  createValidationError,
-  ThemeProfileOperationSchema,
-} from '../../schemas/web-api.schemas.js';
+import { createValidationError, ThemeProfileOperationSchema } from '../../schemas/web-api.schemas.js';
 import type { AuthenticatedRequest } from '../auth-middleware.js';
 import type { RouteDependencies } from './route-helpers.js';
 

@@ -144,5 +144,9 @@
       "C:\\Users\\Cope\\Documents\\GitHub\\ff-5mp-api-ts"
     ]
   },
-  "spinnerTipsEnabled": true
+  "spinnerTipsEnabled": true,
+  "enabledMcpjsonServers": [
+    "neurograph"
+  ],
+  "enableAllProjectMcpServers": true
 }

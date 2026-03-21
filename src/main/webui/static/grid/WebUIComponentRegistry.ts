@@ -231,20 +231,24 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
         <div class="panel-header">Job Details</div>
         <div class="panel-content">
           <div class="detail-row">
-            <span>Filament Usage:</span>
-            <span id="job-filament-usage">--</span>
-          </div>
-          <div class="detail-row">
             <span>Layer:</span>
             <span id="layer-info">-- / --</span>
           </div>
           <div class="detail-row">
-            <span>Time Remaining:</span>
+            <span>Job time:</span>
+            <span id="elapsed-time">--:--</span>
+          </div>
+          <div class="detail-row">
+            <span>Eta:</span>
             <span id="time-remaining">--:--</span>
           </div>
           <div class="detail-row">
-            <span>Elapsed:</span>
-            <span id="elapsed-time">--:--</span>
+            <span>Weight:</span>
+            <span id="job-weight">--</span>
+          </div>
+          <div class="detail-row">
+            <span>Length:</span>
+            <span id="job-length">--</span>
           </div>
         </div>
       </div>

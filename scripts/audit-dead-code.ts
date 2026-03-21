@@ -2,11 +2,11 @@
  * @fileoverview Dead code auditor that discovers entrypoints dynamically and reports unused files/exports.
  */
 
-import path from 'node:path';
 import { existsSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
+import path from 'node:path';
 import { globSync } from 'glob';
-import { Project, SyntaxKind, type SourceFile, Node } from 'ts-morph';
+import { Node, Project, type SourceFile, SyntaxKind } from 'ts-morph';
 
 type CliOptions = {
   json: boolean;
@@ -41,14 +41,8 @@ type AnalysisResult = {
 };
 
 const PROJECT_ROOT = process.cwd();
-const TS_CONFIGS = [
-  path.resolve(PROJECT_ROOT, 'tsconfig.node.json'),
-  path.resolve(PROJECT_ROOT, 'tsconfig.web.json'),
-];
-const WEBUI_TSCONFIG = path.resolve(
-  PROJECT_ROOT,
-  'src/main/webui/static/tsconfig.json',
-);
+const TS_CONFIGS = [path.resolve(PROJECT_ROOT, 'tsconfig.node.json'), path.resolve(PROJECT_ROOT, 'tsconfig.web.json')];
+const WEBUI_TSCONFIG = path.resolve(PROJECT_ROOT, 'src/main/webui/static/tsconfig.json');
 
 if (existsSync(WEBUI_TSCONFIG)) {
   TS_CONFIGS.push(WEBUI_TSCONFIG);
@@ -65,9 +59,7 @@ const SCRIPT_GLOBS = [
 
 const SCRIPT_ENTRY_IGNORE = ['**/node_modules/**'];
 
-const HTML_ROOTS = [
-  path.join(PROJECT_ROOT, 'src/main/webui/static/**/*.html'),
-];
+const HTML_ROOTS = [path.join(PROJECT_ROOT, 'src/main/webui/static/**/*.html')];
 
 const TEST_GLOB_PATTERNS = [
   'src/**/*.test.{ts,tsx,cts,mts}',
@@ -79,17 +71,7 @@ const TEST_GLOB_PATTERNS = [
 
 const TEST_GLOB_IGNORE = ['**/node_modules/**', '**/out/**', '**/dist/**'];
 
-const SUPPORTED_EXTENSIONS = [
-  '',
-  '.ts',
-  '.tsx',
-  '.mts',
-  '.cts',
-  '.js',
-  '.jsx',
-  '.mjs',
-  '.cjs',
-];
+const SUPPORTED_EXTENSIONS = ['', '.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs'];
 
 const EXIT_SUCCESS = 0;
 const EXIT_FAILURE = 1;
@@ -110,7 +92,10 @@ async function main(): Promise<void> {
 
   const project = createProject();
   const graph = buildDependencyGraph(project);
-  const reachable = evaluateReachability(graph, entrypoints.map((entry) => entry.path));
+  const reachable = evaluateReachability(
+    graph,
+    entrypoints.map((entry) => entry.path)
+  );
   const unusedFiles = findUnusedFiles(graph, reachable);
   const unusedExports = findUnusedExports(graph, reachable, new Set(unusedFiles.map((item) => item.file)));
 
@@ -433,7 +418,7 @@ function shouldSkipFile(sourceFile: SourceFile): boolean {
 function collectDependencies(
   sourceFile: SourceFile,
   availableFiles: Set<string>,
-  importUsage: Map<string, Set<string>>,
+  importUsage: Map<string, Set<string>>
 ): Set<string> {
   const dependencies = new Set<string>();
 
@@ -456,11 +441,7 @@ function collectDependencies(
       continue;
     }
 
-    const manual = resolveRelativeModule(
-      sourceFile,
-      importDecl.getModuleSpecifierValue(),
-      availableFiles,
-    );
+    const manual = resolveRelativeModule(sourceFile, importDecl.getModuleSpecifierValue(), availableFiles);
 
     if (manual) {
       addDependency(manual);
@@ -501,7 +482,7 @@ const NAMESPACE_USAGE_KEY = '__namespace__';
 function recordImportUsage(
   targetPath: string,
   importDecl: import('ts-morph').ImportDeclaration,
-  usageMap: Map<string, Set<string>>,
+  usageMap: Map<string, Set<string>>
 ): void {
   if (importDecl.isTypeOnly()) {
     return;
@@ -532,11 +513,7 @@ function recordImportUsage(
   }
 }
 
-function resolveDynamicDependencies(
-  node: Node,
-  sourceFile: SourceFile,
-  availableFiles: Set<string>,
-): Set<string> {
+function resolveDynamicDependencies(node: Node, sourceFile: SourceFile, availableFiles: Set<string>): Set<string> {
   const found = new Set<string>();
 
   node.forEachDescendant((descendant) => {
@@ -571,11 +548,7 @@ function resolveDynamicDependencies(
   return found;
 }
 
-function resolveRelativeModule(
-  sourceFile: SourceFile,
-  specifier: string,
-  availableFiles: Set<string>,
-): string | null {
+function resolveRelativeModule(sourceFile: SourceFile, specifier: string, availableFiles: Set<string>): string | null {
   const candidates: string[] = [];
 
   if (specifier.startsWith('.') || specifier.startsWith('/')) {
@@ -651,22 +624,14 @@ function buildPathAliases(configPaths: string[]): Map<string, string[]> {
       }
 
       for (const [aliasKey, targetValues] of Object.entries(pathsConfig)) {
-        const aliasPrefix = aliasKey.endsWith('*')
-          ? aliasKey.slice(0, -1)
-          : aliasKey;
+        const aliasPrefix = aliasKey.endsWith('*') ? aliasKey.slice(0, -1) : aliasKey;
 
-        const targets = Array.isArray(targetValues)
-          ? targetValues
-          : [targetValues];
+        const targets = Array.isArray(targetValues) ? targetValues : [targetValues];
 
         const resolvedTargets = targets.map((targetPath) => {
-          const normalizedTarget = targetPath.endsWith('*')
-            ? targetPath.slice(0, -1)
-            : targetPath;
+          const normalizedTarget = targetPath.endsWith('*') ? targetPath.slice(0, -1) : targetPath;
 
-          return normalizePath(
-            path.resolve(path.dirname(configPath), normalizedTarget),
-          );
+          return normalizePath(path.resolve(path.dirname(configPath), normalizedTarget));
         });
 
         const existing = aliasMap.get(aliasPrefix) ?? [];
@@ -674,7 +639,7 @@ function buildPathAliases(configPaths: string[]): Map<string, string[]> {
       }
     } catch (error) {
       console.warn(
-        `Failed to parse tsconfig for path aliases (${configPath}): ${error instanceof Error ? error.message : String(error)}`,
+        `Failed to parse tsconfig for path aliases (${configPath}): ${error instanceof Error ? error.message : String(error)}`
       );
     }
   }
@@ -685,7 +650,7 @@ function buildPathAliases(configPaths: string[]): Map<string, string[]> {
 function resolveRendererUiModule(
   sourceFile: SourceFile,
   specifier: string,
-  availableFiles: Set<string>,
+  availableFiles: Set<string>
 ): string | null {
   if (!specifier.startsWith('./ui/') && !specifier.startsWith('../ui/')) {
     return null;
@@ -787,11 +752,7 @@ function findUnusedFiles(graph: Graph, reachable: Set<string>): UnusedFile[] {
   return unused.sort((a, b) => a.file.localeCompare(b.file));
 }
 
-function findUnusedExports(
-  graph: Graph,
-  reachable: Set<string>,
-  unusedFileSet: Set<string>,
-): UnusedExport[] {
+function findUnusedExports(graph: Graph, reachable: Set<string>, unusedFileSet: Set<string>): UnusedExport[] {
   const unused: UnusedExport[] = [];
 
   for (const filePath of reachable) {
@@ -812,9 +773,7 @@ function findUnusedExports(
 
     const exportedDeclarations = sourceFile.getExportedDeclarations();
     for (const [exportName, declarations] of exportedDeclarations.entries()) {
-      const runtimeDeclarations = declarations.filter((declaration) =>
-        isRuntimeDeclaration(declaration),
-      );
+      const runtimeDeclarations = declarations.filter((declaration) => isRuntimeDeclaration(declaration));
 
       if (runtimeDeclarations.length === 0) {
         continue;
@@ -848,7 +807,7 @@ function findUnusedExports(
   }
 
   return unused.sort((a, b) =>
-    a.file === b.file ? a.exportName.localeCompare(b.exportName) : a.file.localeCompare(b.file),
+    a.file === b.file ? a.exportName.localeCompare(b.exportName) : a.file.localeCompare(b.file)
   );
 }
 
@@ -880,9 +839,7 @@ function isDeclarationReferenced(declaration: Node): boolean {
 function printResult(result: AnalysisResult): void {
   console.log('Entrypoints discovered:');
   for (const entry of result.entrypoints) {
-    console.log(
-      `  - ${relativeToRoot(entry.path)} (${entry.reasons.join(', ')})`,
-    );
+    console.log(`  - ${relativeToRoot(entry.path)} (${entry.reasons.join(', ')})`);
   }
 
   console.log('');
@@ -894,9 +851,7 @@ function printResult(result: AnalysisResult): void {
   console.log('');
   console.log(`Unused exports: ${result.unusedExports.length}`);
   for (const unused of result.unusedExports) {
-    console.log(
-      `  • ${relativeToRoot(unused.file)} :: ${unused.exportName} (${unused.kind})`,
-    );
+    console.log(`  • ${relativeToRoot(unused.file)} :: ${unused.exportName} (${unused.kind})`);
   }
 }
 

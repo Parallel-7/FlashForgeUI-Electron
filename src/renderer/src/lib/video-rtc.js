@@ -1,4 +1,16 @@
 /**
+ * @fileoverview Vendored `VideoRTC` custom element for desktop renderer camera playback.
+ *
+ * Mirrors the WebUI static `video-rtc.js` implementation so Electron-hosted UI
+ * surfaces can reuse the same go2rtc-backed playback logic for WebRTC, MSE,
+ * HLS, MP4, and MJPEG streams.
+ */
+/**
+ * @fileoverview Vendored go2rtc VideoRTC custom element used by the desktop renderer
+ * for browser-side WebRTC, MSE, and MJPEG playback.
+ */
+
+/**
  * VideoRTC v1.6.0 - Video player for go2rtc streaming application.
  *
  * All modern web technologies are supported in almost any browser except Apple Safari.

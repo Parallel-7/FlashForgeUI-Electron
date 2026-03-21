@@ -155,7 +155,7 @@ export class ConfigManager extends EventEmitter {
 
     // Find all changed keys
     const changedKeys: Array<keyof AppConfig> = [];
-    for (const key of Object.keys(DEFAULT_CONFIG) as Array<keyof AppConfig>) {
+    for (const key of Object.keys(DEFAULT_CONFIG) as Array<Extract<keyof AppConfig, string>>) {
       if (this.currentConfig[key] !== sanitizedConfig[key]) {
         changedKeys.push(key);
       }
@@ -277,7 +277,7 @@ export class ConfigManager extends EventEmitter {
       return true;
     }
 
-    for (const key of Object.keys(DEFAULT_CONFIG) as Array<keyof AppConfig>) {
+    for (const key of Object.keys(DEFAULT_CONFIG) as Array<Extract<keyof AppConfig, string>>) {
       if (!Object.prototype.hasOwnProperty.call(loadedData, key)) {
         return true;
       }
@@ -463,7 +463,8 @@ export class ConfigManager extends EventEmitter {
 
     // Emit specific events for each changed key
     changedKeys.forEach((key) => {
-      this.emit(`config:${key}`, this.currentConfig[key], previousConfig[key]);
+      const configKey = key as Extract<keyof AppConfig, string>;
+      this.emit(`config:${configKey}`, this.currentConfig[configKey], previousConfig[configKey]);
     });
   }
 

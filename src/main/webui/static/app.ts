@@ -112,6 +112,8 @@ export interface PrinterStatus {
   thumbnailData?: string | null; // Base64 encoded thumbnail
   cumulativeFilament?: number; // Total lifetime filament usage in meters
   cumulativePrintTime?: number; // Total lifetime print time in minutes
+  formattedEta?: string; // Firmware ETA string (e.g. "04:48" = 4h48m remaining)
+  elapsedTimeSeconds?: number; // Precise elapsed seconds for HH:MM:SS display
 }
 
 export interface PrinterFeatures {
@@ -165,7 +167,7 @@ export interface CameraProxyConfigResponse extends ApiResponse {
   /** Original stream type (before go2rtc conversion) */
   streamType?: 'mjpeg' | 'rtsp';
   /** Original source type */
-  sourceType?: 'builtin' | 'custom';
+  sourceType?: 'oem' | 'custom' | 'intelligent-fallback';
   /** Stream name in go2rtc */
   streamName?: string;
   /** go2rtc API port */

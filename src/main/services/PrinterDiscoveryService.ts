@@ -7,7 +7,7 @@
  * - Discovery timeout and interval configuration
  * - Discovered printer data normalization
  * - Discovery state management (in-progress tracking)
- * - Integration with ff-api's FlashForgePrinterDiscovery
+ * - Integration with ff-api's PrinterDiscovery
  *
  * Key exports:
  * - PrinterDiscoveryService class: Network discovery coordinator
@@ -18,7 +18,7 @@
  * during the printer connection workflow to present available printers to the user.
  */
 
-import { FlashForgePrinter, FlashForgePrinterDiscovery } from '@ghosttypes/ff-api';
+import { type DiscoveredPrinter as FFDiscoveredPrinter, PrinterDiscovery } from '@ghosttypes/ff-api';
 import { DiscoveredPrinter } from '@shared/types/printer.js';
 import { EventEmitter } from 'events';
 
@@ -60,13 +60,19 @@ export class PrinterDiscoveryService extends EventEmitter {
     this.emit('discovery-started');
 
     try {
-      const discovery = new FlashForgePrinterDiscovery();
-      const rawPrinters = await discovery.discoverPrintersAsync(timeout, interval, retries);
+      const discovery = new PrinterDiscovery();
+      const rawPrinters = await discovery.discover({
+        timeout,
+        idleTimeout: interval,
+        maxRetries: retries,
+      });
 
-      const discoveredPrinters: DiscoveredPrinter[] = rawPrinters.map((printer: FlashForgePrinter) => ({
+      const discoveredPrinters: DiscoveredPrinter[] = rawPrinters.map((printer: FFDiscoveredPrinter) => ({
         name: printer.name || 'Unknown Printer',
-        ipAddress: printer.ipAddress.toString(),
-        serialNumber: printer.serialNumber,
+        ipAddress: printer.ipAddress,
+        serialNumber: printer.serialNumber || '',
+        commandPort: printer.commandPort,
+        eventPort: printer.eventPort,
         model: 'Unknown', // Will be determined during connection
         status: 'Discovered',
       }));
@@ -90,21 +96,23 @@ export class PrinterDiscoveryService extends EventEmitter {
     this.emit('single-scan-started', ipAddress);
 
     try {
-      const discovery = new FlashForgePrinterDiscovery();
-
-      // Use discover with specific IP range
-      const rawPrinters = await discovery.discoverPrintersAsync(5000, 1000, 1);
+      const discovery = new PrinterDiscovery();
+      const rawPrinters = await discovery.discover({
+        timeout: 5000,
+        idleTimeout: 1000,
+        maxRetries: 1,
+      });
 
       // Filter for the specific IP
-      const matchingPrinter = rawPrinters.find(
-        (printer: FlashForgePrinter) => printer.ipAddress.toString() === ipAddress
-      );
+      const matchingPrinter = rawPrinters.find((printer: FFDiscoveredPrinter) => printer.ipAddress === ipAddress);
 
       if (matchingPrinter) {
         const discoveredPrinter: DiscoveredPrinter = {
           name: matchingPrinter.name || 'Unknown Printer',
-          ipAddress: matchingPrinter.ipAddress.toString(),
-          serialNumber: matchingPrinter.serialNumber,
+          ipAddress: matchingPrinter.ipAddress,
+          serialNumber: matchingPrinter.serialNumber || '',
+          commandPort: matchingPrinter.commandPort,
+          eventPort: matchingPrinter.eventPort,
           model: 'Unknown',
           status: 'Discovered',
         };

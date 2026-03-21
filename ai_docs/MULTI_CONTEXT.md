@@ -1,5 +1,7 @@
 # Multi-Context Architecture
 
+**Last Updated:** 2026-03-11
+
 This document explains the multi-printer context system that enables simultaneous connections to multiple printers.
 
 ---
@@ -10,13 +12,13 @@ This document explains the multi-printer context system that enables simultaneou
 
 2. **Backend wiring**: `PrinterBackendManager` instantiates the correct backend (Legacy, Adventurer5M, Adventurer5M Pro, AD5X) per context, exposes capability flags, and registers printer-specific helpers (material station ops, gcode routing, etc.).
 
-3. **Polling cadence**: `MultiContextPollingCoordinator` spins up a `PrinterPollingService` per context. Active contexts poll every 3 s; inactive ones slow to 30 s but still push cached data instantly on tab switch. `MainProcessPollingCoordinator` remains for legacy single-printer paths.
+3. **Polling cadence**: `MultiContextPollingCoordinator` spins up a `PrinterPollingService` per context. All contexts (active and inactive) poll every 3 seconds to prevent TCP keep-alive failures; cached data is pushed instantly on tab switch. `MainProcessPollingCoordinator` remains for legacy single-printer paths.
 
 4. **Derived monitors**: `MultiContextPrintStateMonitor`, `MultiContextTemperatureMonitor`, `MultiContextSpoolmanTracker`, and `MultiContextNotificationCoordinator` listen for new/remove events to wire per-context instances (print monitors, cooling monitors, spool usage trackers, notification coordinators). Services expect untouched `polling-update` payloads.
 
-5. **Integrations**: Camera services (`CameraProxyService`, `RtspStreamService`) use `PortAllocator` to reserve unique MJPEG/RTSP ports per context. Discord + desktop notifications, Spoolman usage updates, and eventual web push flows (`ai_specs/webui-push-notifications.md`) hang off the same events.
+5. **Integrations**: `Go2rtcService` provides unified camera streaming (WebRTC/MSE/MJPEG) via the bundled go2rtc binary, with `Go2rtcBinaryManager` handling binary lifecycle. Ports 1984 (API) and 8555 (WebRTC) are hardcoded, not allocated per context. Discord + desktop notifications, Spoolman usage updates, and eventual web push flows (`ai_specs/webui-push-notifications.md`) hang off the same events.
 
-6. **Cleanup**: When `PrinterContextManager` emits `context-removed`, every coordinator disposes listeners, closes sockets/servers, releases camera ports, and removes spoolman usage trackers/Discord timers to prevent leaks.
+6. **Cleanup**: When `PrinterContextManager` emits `context-removed`, every coordinator disposes listeners, closes sockets/servers, removes go2rtc streams, and removes spoolman usage trackers/Discord timers to prevent leaks.
 
 ---
 
@@ -48,7 +50,7 @@ emit('context-removed')
 All Coordinators Cleanup:
   - Stop polling
   - Dispose monitors
-  - Release camera ports
+  - Remove go2rtc streams
   - Remove trackers
   - Cleanup notifications
 ```
@@ -71,6 +73,7 @@ MultiContextPollingCoordinator (singleton)
 3. **MultiContextTemperatureMonitor**: Temperature monitoring
 4. **MultiContextSpoolmanTracker**: Filament usage tracking
 5. **MultiContextNotificationCoordinator**: Notification orchestration
+6. **ContextServiceInitializer**: Initializes the polling, monitor, and notification coordinator stack together for a connected context (used by both GUI and headless paths)
 
 ---
 
@@ -79,7 +82,7 @@ MultiContextPollingCoordinator (singleton)
 ### Frequency Strategy
 
 - **Active Context**: 3 seconds
-- **Inactive Contexts**: 3 seconds (prevents TCP keep-alive failures)
+- **Inactive Contexts**: 3 seconds (prevents TCP keep-alive failures - connections drop if not polled regularly)
 - **Instant Switch**: Cached data emitted immediately on context switch
 
 ### Data Distribution
@@ -132,7 +135,7 @@ interface PrinterContext {
   connectionState: ContextConnectionState;
   pollingService: PrinterPollingService | null;
   notificationCoordinator: PrinterNotificationCoordinator | null;
-  cameraProxyPort: number | null; // 8181-8191
+  cameraProxyPort: number | null; // Legacy/unused with Go2rtcService
   isActive: boolean;
   createdAt: Date;
   lastActivity: Date;
@@ -156,7 +159,7 @@ interface PrinterContext {
 - `context-created`: { contextId, contextInfo }
 - `context-removed`: { contextId, contextInfo }
 - `context-switched`: { fromId, toId, contextInfo }
-- `context-updated`: { contextId }
+- `context-updated`: { contextId } - Emitted when printer details are updated (used by PrinterBackendManager, camera-ipc-handler)
 
 **Event Consumers**:
 - MultiContextPollingCoordinator
@@ -164,5 +167,5 @@ interface PrinterContext {
 - MultiContextTemperatureMonitor
 - MultiContextSpoolmanTracker
 - MultiContextNotificationCoordinator
-- Camera services
+- Go2rtcService (via camera-ipc-handler)
 - WebUI

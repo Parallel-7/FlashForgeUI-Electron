@@ -12,7 +12,14 @@ import type { PrinterStatus } from '../app.js';
 import { state } from '../core/AppState.js';
 import { isSpoolmanAvailableForCurrentContext } from '../features/layout-theme.js';
 import { $, hideElement, setTextContent, showElement } from '../shared/dom.js';
-import { formatETA, formatLifetimeFilament, formatLifetimePrintTime, formatTime } from '../shared/formatting.js';
+import {
+  formatElapsedSeconds,
+  formatETA,
+  formatETAFromString,
+  formatLifetimeFilament,
+  formatLifetimePrintTime,
+  formatTime,
+} from '../shared/formatting.js';
 
 export function updateConnectionStatus(connected: boolean): void {
   const indicator = $('connection-indicator');
@@ -76,30 +83,35 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
       setTextContent('layer-info', '-- / --');
     }
 
-    if (status.timeElapsed !== undefined && !isNaN(status.timeElapsed)) {
+    // Elapsed — prefer seconds precision
+    if (status.elapsedTimeSeconds !== undefined && !isNaN(status.elapsedTimeSeconds)) {
+      setTextContent('elapsed-time', formatElapsedSeconds(status.elapsedTimeSeconds));
+    } else if (status.timeElapsed !== undefined && !isNaN(status.timeElapsed)) {
       setTextContent('elapsed-time', formatTime(status.timeElapsed));
     } else {
       setTextContent('elapsed-time', '--:--');
     }
 
-    if (status.timeRemaining !== undefined && !isNaN(status.timeRemaining)) {
+    // ETA — prefer firmware string
+    if (status.formattedEta && status.formattedEta !== '--:--') {
+      setTextContent('time-remaining', formatETAFromString(status.formattedEta));
+    } else if (status.timeRemaining !== undefined && !isNaN(status.timeRemaining)) {
       setTextContent('time-remaining', formatETA(status.timeRemaining));
     } else {
       setTextContent('time-remaining', '--:--');
     }
 
-    let lengthText = '';
-    let weightText = '';
-
+    // Weight and length as separate fields
+    if (status.estimatedWeight !== undefined && !isNaN(status.estimatedWeight)) {
+      setTextContent('job-weight', `${Math.round(status.estimatedWeight)}g`);
+    } else {
+      setTextContent('job-weight', '--');
+    }
     if (status.estimatedLength !== undefined && !isNaN(status.estimatedLength)) {
-      lengthText = `${status.estimatedLength.toFixed(2)} m`;
+      setTextContent('job-length', `${status.estimatedLength.toFixed(1)}m`);
+    } else {
+      setTextContent('job-length', '--');
     }
-
-    if (lengthText && status.estimatedWeight !== undefined && !isNaN(status.estimatedWeight)) {
-      weightText = ` • ${status.estimatedWeight.toFixed(2)} g`;
-    }
-
-    setTextContent('job-filament-usage', lengthText + weightText || '--');
     updateModelPreview(status.thumbnailData);
   } else {
     setTextContent('current-job', 'No active job');
@@ -111,7 +123,8 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
     setTextContent('layer-info', '-- / --');
     setTextContent('elapsed-time', '--:--');
     setTextContent('time-remaining', '--:--');
-    setTextContent('job-filament-usage', '--');
+    setTextContent('job-weight', '--');
+    setTextContent('job-length', '--');
     updateModelPreview(null);
   }
 

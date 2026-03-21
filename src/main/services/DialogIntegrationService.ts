@@ -235,6 +235,8 @@ export class DialogIntegrationService extends EventEmitter {
     const model = typeof printerData.model === 'string' ? printerData.model : undefined;
     const status = typeof printerData.status === 'string' ? printerData.status : undefined;
     const firmwareVersion = typeof printerData.firmwareVersion === 'string' ? printerData.firmwareVersion : undefined;
+    const commandPort = typeof printerData.commandPort === 'number' ? printerData.commandPort : undefined;
+    const eventPort = typeof printerData.eventPort === 'number' ? printerData.eventPort : undefined;
 
     return {
       name,
@@ -243,6 +245,8 @@ export class DialogIntegrationService extends EventEmitter {
       model,
       status,
       firmwareVersion,
+      commandPort,
+      eventPort,
     };
   }
 
@@ -371,6 +375,8 @@ export class DialogIntegrationService extends EventEmitter {
         model: printer.model,
         status: 'Available',
         firmwareVersion: undefined,
+        commandPort: printer.commandPort,
+        eventPort: printer.eventPort,
       }));
 
       // Send discovered printer data

@@ -253,9 +253,9 @@ export const getConnectionErrorMessage = (error: unknown): string => {
 export const shouldPromptForCheckCode = (
   is5MFamily: boolean,
   savedCheckCode?: string,
-  ForceLegacyAPI: boolean = false
+  forceLegacyMode: boolean = false
 ): boolean => {
-  if (ForceLegacyAPI) {
+  if (forceLegacyMode) {
     return false; // Legacy API mode doesn't need check codes
   }
 

@@ -7,8 +7,8 @@
  * and event-driven immediate notifications.
  *
  * Key Features:
- * - Multi-context support: Independent timers and state tracking per printer
- * - Hybrid update mode: Timer-based intervals + event-driven state changes
+ * - Multi-context support: Shared periodic timer and per-printer state tracking
+ * - Hybrid update mode: Global timer-based intervals + event-driven state changes
  * - Rate limiting: Sequential message sending with configurable delays
  * - 1:1 embed structure: Matches original JavaScript implementation exactly
  * - Idle transition detection: Sends notification when transitioning to idle state
@@ -16,7 +16,7 @@
  * - Error handling: Network failures don't crash the service
  *
  * Architecture:
- * - Per-context update timers (Map<contextId, timer>)
+ * - Single global periodic update timer
  * - Per-context state tracking for idle transition detection
  * - Integration with PrinterContextManager for multi-printer iteration
  * - Integration with ConfigManager for settings and change detection
@@ -37,6 +37,7 @@ import type {
   DiscordServiceConfig,
   DiscordWebhookPayload,
 } from '@shared/types/discord.js';
+import type { ContextRemovedEvent } from '@shared/types/PrinterContext.js';
 import type { PrinterState, PrinterStatus } from '@shared/types/polling.js';
 import { EventEmitter } from 'events';
 import { type ConfigManager, getConfigManager } from '../../managers/ConfigManager.js';
@@ -45,6 +46,9 @@ import {
   type PrinterContext,
   type PrinterContextManager,
 } from '../../managers/PrinterContextManager.js';
+import { getGo2rtcService } from '../Go2rtcService.js';
+import type { PrintStateMonitor } from '../PrintStateMonitor.js';
+import type { TemperatureMonitoringService } from '../TemperatureMonitoringService.js';
 
 /**
  * Printer state for Discord notifications
@@ -52,23 +56,43 @@ import {
  */
 type DiscordPrinterState = 'idle' | 'printing' | 'paused' | 'unknown';
 
+interface DiscordWebhookRequest {
+  readonly payload: DiscordWebhookPayload;
+  readonly contextId?: string;
+}
+
 /**
  * Discord notification service for multi-printer webhook updates
  */
 export class DiscordNotificationService extends EventEmitter {
   private readonly configManager: ConfigManager;
   private readonly contextManager: PrinterContextManager;
+  private go2rtcService: Pick<ReturnType<typeof getGo2rtcService>, 'captureSnapshot'> | null = null;
+  private readonly handleConfigUpdatedBound: () => void;
+  private readonly handleContextRemovedBound: (event: ContextRemovedEvent) => void;
 
   // Per-context state tracking
-  private readonly updateTimers = new Map<string, NodeJS.Timeout>();
   private readonly lastPrinterState = new Map<string, DiscordPrinterState>();
   private readonly cachedStatuses = new Map<string, PrinterStatus>();
+  private readonly monitorListeners = new Map<
+    string,
+    {
+      stateMonitor: PrintStateMonitor;
+      printCompletedListener: (event: { contextId: string; jobName: string; status: PrinterStatus }) => void;
+      temperatureMonitor?: TemperatureMonitoringService;
+      printerCooledListener?: (event: { contextId: string }) => void;
+    }
+  >();
 
   // Rate limiting
   private readonly RATE_LIMIT_DELAY_MS = 1000; // 1 second between multi-printer messages
 
   // Service state
   private isInitialized = false;
+  private periodicUpdateTimer: NodeJS.Timeout | null = null;
+  private periodicUpdateIntervalMs: number | null = null;
+  private isPeriodicUpdateInProgress = false;
+  private shouldRunPeriodicUpdateAgain = false;
   private currentConfig: DiscordServiceConfig;
 
   constructor(configManager?: ConfigManager, contextManager?: PrinterContextManager) {
@@ -79,6 +103,12 @@ export class DiscordNotificationService extends EventEmitter {
 
     // Initialize config
     this.currentConfig = this.extractDiscordConfig();
+    this.handleConfigUpdatedBound = () => {
+      this.handleConfigUpdate();
+    };
+    this.handleContextRemovedBound = (event: ContextRemovedEvent) => {
+      this.unregisterContext(event.contextId);
+    };
   }
 
   // ============================================================================
@@ -96,14 +126,11 @@ export class DiscordNotificationService extends EventEmitter {
     }
 
     // Listen for config changes
-    this.configManager.on('configUpdated', () => {
-      this.handleConfigUpdate();
-    });
+    this.configManager.on('configUpdated', this.handleConfigUpdatedBound);
+    this.contextManager.on('context-removed', this.handleContextRemovedBound);
 
     // Start timers if Discord sync is enabled
-    if (this.currentConfig.enabled && this.currentConfig.webhookUrl) {
-      this.startAllTimers();
-    }
+    this.reconcilePeriodicTimer({ sendImmediateUpdate: true });
 
     this.isInitialized = true;
     console.log('[DiscordNotificationService] Initialized');
@@ -111,30 +138,66 @@ export class DiscordNotificationService extends EventEmitter {
 
   /**
    * Register a printer context for Discord notifications
-   * Starts update timer for this context
+   * Reconciles the shared periodic timer when contexts change
    */
   public registerContext(contextId: string): void {
     console.log(`[DiscordNotificationService] Registering context ${contextId}`);
 
+    if (this.lastPrinterState.has(contextId)) {
+      console.log(`[DiscordNotificationService] Context ${contextId} already registered`);
+      return;
+    }
+
     // Initialize state tracking
     this.lastPrinterState.set(contextId, 'unknown');
 
-    // Start timer if Discord sync enabled
-    if (this.currentConfig.enabled && this.currentConfig.webhookUrl) {
-      this.startTimerForContext(contextId);
-    }
+    this.reconcilePeriodicTimer();
   }
 
   /**
    * Unregister a printer context
-   * Stops timer and cleans up state
+   * Cleans up state and stops the shared timer when no contexts remain
    */
   public unregisterContext(contextId: string): void {
     console.log(`[DiscordNotificationService] Unregistering context ${contextId}`);
 
-    this.stopTimerForContext(contextId);
+    this.detachContextMonitors(contextId);
     this.lastPrinterState.delete(contextId);
     this.cachedStatuses.delete(contextId);
+    this.reconcilePeriodicTimer();
+  }
+
+  /**
+   * Attach event-driven monitor listeners for a context
+   */
+  public attachContextMonitors(
+    contextId: string,
+    stateMonitor: PrintStateMonitor,
+    temperatureMonitor?: TemperatureMonitoringService
+  ): void {
+    this.detachContextMonitors(contextId);
+
+    const printCompletedListener = (event: { contextId: string; jobName: string; status: PrinterStatus }): void => {
+      const duration = event.status.currentJob?.progress.elapsedTimeSeconds;
+      void this.notifyPrintComplete(event.contextId, event.jobName, duration);
+    };
+
+    stateMonitor.on('print-completed', printCompletedListener);
+
+    let printerCooledListener: ((event: { contextId: string }) => void) | undefined;
+    if (temperatureMonitor) {
+      printerCooledListener = (event: { contextId: string }): void => {
+        void this.notifyPrinterCooled(event.contextId);
+      };
+      temperatureMonitor.on('printer-cooled', printerCooledListener);
+    }
+
+    this.monitorListeners.set(contextId, {
+      stateMonitor,
+      printCompletedListener,
+      temperatureMonitor,
+      printerCooledListener,
+    });
   }
 
   /**
@@ -143,16 +206,20 @@ export class DiscordNotificationService extends EventEmitter {
   public dispose(): void {
     console.log('[DiscordNotificationService] Disposing...');
 
-    // Stop all timers
-    for (const contextId of this.updateTimers.keys()) {
-      this.stopTimerForContext(contextId);
-    }
+    this.stopPeriodicTimer();
 
     // Clear state
+    for (const contextId of this.monitorListeners.keys()) {
+      this.detachContextMonitors(contextId);
+    }
     this.lastPrinterState.clear();
     this.cachedStatuses.clear();
+    this.shouldRunPeriodicUpdateAgain = false;
+    this.isPeriodicUpdateInProgress = false;
 
     // Remove listeners
+    this.configManager.off('configUpdated', this.handleConfigUpdatedBound);
+    this.contextManager.off('context-removed', this.handleContextRemovedBound);
     this.removeAllListeners();
 
     this.isInitialized = false;
@@ -171,6 +238,7 @@ export class DiscordNotificationService extends EventEmitter {
 
     return {
       enabled: config.DiscordSync,
+      includeCameraSnapshots: config.DiscordIncludeCameraSnapshots,
       webhookUrl: config.WebhookUrl,
       updateIntervalMinutes: config.DiscordUpdateIntervalMinutes,
     };
@@ -186,6 +254,7 @@ export class DiscordNotificationService extends EventEmitter {
     // Check if Discord-specific settings changed
     const configChanged =
       this.currentConfig.enabled !== newConfig.enabled ||
+      this.currentConfig.includeCameraSnapshots !== newConfig.includeCameraSnapshots ||
       this.currentConfig.webhookUrl !== newConfig.webhookUrl ||
       this.currentConfig.updateIntervalMinutes !== newConfig.updateIntervalMinutes;
 
@@ -195,16 +264,10 @@ export class DiscordNotificationService extends EventEmitter {
 
     console.log('[DiscordNotificationService] Config changed, restarting timers');
 
-    // Stop all existing timers
-    this.stopAllTimers();
-
     // Update config
     this.currentConfig = newConfig;
 
-    // Restart timers if enabled
-    if (newConfig.enabled && newConfig.webhookUrl) {
-      this.startAllTimers();
-    }
+    this.reconcilePeriodicTimer({ sendImmediateUpdate: true });
   }
 
   // ============================================================================
@@ -214,74 +277,99 @@ export class DiscordNotificationService extends EventEmitter {
   /**
    * Start update timer for a specific context
    */
-  private startTimerForContext(contextId: string): void {
-    // Stop existing timer if any
-    this.stopTimerForContext(contextId);
+  private reconcilePeriodicTimer(options?: { sendImmediateUpdate?: boolean }): void {
+    const shouldRunTimer = this.shouldRunPeriodicTimer();
+    if (!shouldRunTimer) {
+      this.stopPeriodicTimer();
+      return;
+    }
 
     const intervalMs = this.currentConfig.updateIntervalMinutes * 60 * 1000;
+    const timerNeedsRestart = this.periodicUpdateTimer === null || this.periodicUpdateIntervalMs !== intervalMs;
+    if (!timerNeedsRestart) {
+      if (options?.sendImmediateUpdate) {
+        void this.runPeriodicStatusUpdates();
+      }
+      return;
+    }
 
-    // Create new timer
-    const timer = setInterval(() => {
-      void this.sendStatusUpdatesForAllContexts();
+    this.stopPeriodicTimer();
+    this.startPeriodicTimer(intervalMs, options?.sendImmediateUpdate === true);
+  }
+
+  /**
+   * Determine whether the periodic timer should be running
+   */
+  private shouldRunPeriodicTimer(): boolean {
+    return this.currentConfig.enabled && Boolean(this.currentConfig.webhookUrl) && this.lastPrinterState.size > 0;
+  }
+
+  /**
+   * Start the single periodic update timer
+   */
+  private startPeriodicTimer(intervalMs: number, sendImmediateUpdate: boolean): void {
+    if (sendImmediateUpdate) {
+      void this.runPeriodicStatusUpdates();
+    }
+
+    this.periodicUpdateTimer = setInterval(() => {
+      void this.runPeriodicStatusUpdates();
     }, intervalMs);
-
-    this.updateTimers.set(contextId, timer);
+    this.periodicUpdateIntervalMs = intervalMs;
 
     console.log(
-      `[DiscordNotificationService] Started timer for context ${contextId} (${this.currentConfig.updateIntervalMinutes} min interval)`
+      `[DiscordNotificationService] Started global timer (${this.currentConfig.updateIntervalMinutes} min interval)`
     );
   }
 
   /**
-   * Stop update timer for a specific context
+   * Stop the single periodic update timer
    */
-  private stopTimerForContext(contextId: string): void {
-    const timer = this.updateTimers.get(contextId);
-
-    if (timer) {
-      clearInterval(timer);
-      this.updateTimers.delete(contextId);
-      console.log(`[DiscordNotificationService] Stopped timer for context ${contextId}`);
+  private stopPeriodicTimer(): void {
+    if (this.periodicUpdateTimer) {
+      clearInterval(this.periodicUpdateTimer);
+      this.periodicUpdateTimer = null;
+      this.periodicUpdateIntervalMs = null;
+      console.log('[DiscordNotificationService] Stopped global timer');
     }
   }
 
   /**
-   * Start timers for all registered contexts
+   * Run periodic status updates without overlapping executions
    */
-  private startAllTimers(): void {
-    const contexts = this.contextManager.getAllContexts();
+  private async runPeriodicStatusUpdates(): Promise<void> {
+    if (this.isPeriodicUpdateInProgress) {
+      this.shouldRunPeriodicUpdateAgain = true;
+      return;
+    }
 
-    // Only need one global timer that fires for all contexts
-    // We'll use a synthetic "global" timer key
-    if (contexts.length > 0) {
-      const intervalMs = this.currentConfig.updateIntervalMinutes * 60 * 1000;
+    this.isPeriodicUpdateInProgress = true;
 
-      // Send initial update
-      void this.sendStatusUpdatesForAllContexts();
-
-      // Create recurring timer
-      const timer = setInterval(() => {
-        void this.sendStatusUpdatesForAllContexts();
-      }, intervalMs);
-
-      this.updateTimers.set('__global__', timer);
-
-      console.log(
-        `[DiscordNotificationService] Started global timer (${this.currentConfig.updateIntervalMinutes} min interval)`
-      );
+    try {
+      do {
+        this.shouldRunPeriodicUpdateAgain = false;
+        await this.sendStatusUpdatesForAllContexts();
+      } while (this.shouldRunPeriodicUpdateAgain && this.shouldRunPeriodicTimer());
+    } finally {
+      this.isPeriodicUpdateInProgress = false;
     }
   }
 
   /**
-   * Stop all update timers
+   * Remove monitor listeners for a specific context
    */
-  private stopAllTimers(): void {
-    for (const [contextId, timer] of this.updateTimers) {
-      clearInterval(timer);
-      console.log(`[DiscordNotificationService] Stopped timer for ${contextId}`);
+  private detachContextMonitors(contextId: string): void {
+    const listeners = this.monitorListeners.get(contextId);
+    if (!listeners) {
+      return;
     }
 
-    this.updateTimers.clear();
+    listeners.stateMonitor.off('print-completed', listeners.printCompletedListener);
+    if (listeners.temperatureMonitor && listeners.printerCooledListener) {
+      listeners.temperatureMonitor.off('printer-cooled', listeners.printerCooledListener);
+    }
+
+    this.monitorListeners.delete(contextId);
   }
 
   // ============================================================================
@@ -297,6 +385,41 @@ export class DiscordNotificationService extends EventEmitter {
 
     // Check for state transitions
     this.checkStateTransition(contextId, status);
+  }
+
+  /**
+   * Send the latest cached status for a context immediately.
+   * Used by hardware E2E coverage to exercise the real webhook path without waiting for the timer.
+   */
+  public async sendCurrentStatusNow(contextId: string): Promise<void> {
+    this.assertWebhookEnabled();
+
+    const context = this.contextManager.getContext(contextId);
+    if (!context) {
+      throw new Error(`Context not found: ${contextId}`);
+    }
+
+    const status = this.cachedStatuses.get(contextId);
+    if (!status) {
+      throw new Error(`No cached printer status available for context: ${contextId}`);
+    }
+
+    await this.sendStatusNotification(contextId, status, context);
+    this.emit('notification-sent', { contextId, type: 'manual-status' });
+  }
+
+  /**
+   * Send a print-complete notification immediately and surface failures to the caller.
+   * Used by hardware E2E coverage to verify event-driven payloads without manipulating the printer.
+   */
+  public async sendPrintCompleteNow(
+    contextId: string,
+    fileName: string,
+    durationSeconds?: number
+  ): Promise<void> {
+    this.assertWebhookEnabled();
+    await this.sendPrintCompleteNotification(contextId, fileName, durationSeconds);
+    this.emit('notification-sent', { contextId, type: 'print-complete' });
   }
 
   /**
@@ -386,12 +509,7 @@ export class DiscordNotificationService extends EventEmitter {
         }
       }
 
-      const embed = this.createStatusEmbed(status, context);
-      const payload: DiscordWebhookPayload = {
-        embeds: [embed],
-      };
-
-      await this.sendWebhook(payload);
+      await this.sendStatusNotification(contextId, status, context);
 
       console.log(`[DiscordNotificationService] Sent status update for ${contextId}`);
       this.emit('notification-sent', { contextId, type: 'status' });
@@ -406,6 +524,10 @@ export class DiscordNotificationService extends EventEmitter {
    * Send idle transition notification
    */
   private async sendIdleNotification(contextId: string, status: PrinterStatus): Promise<void> {
+    if (!this.currentConfig.enabled || !this.currentConfig.webhookUrl) {
+      return;
+    }
+
     try {
       const context = this.contextManager.getContext(contextId);
       if (!context) {
@@ -417,7 +539,7 @@ export class DiscordNotificationService extends EventEmitter {
         embeds: [embed],
       };
 
-      await this.sendWebhook(payload);
+      await this.sendWebhook({ payload, contextId });
 
       console.log(`[DiscordNotificationService] Sent idle transition notification for ${contextId}`);
       this.emit('notification-sent', { contextId, type: 'idle-transition' });
@@ -441,29 +563,7 @@ export class DiscordNotificationService extends EventEmitter {
     }
 
     try {
-      const embed: DiscordEmbed = {
-        title: '✅ Print Complete!',
-        color: 0x00ff00, // Green
-        timestamp: new Date().toISOString(),
-        fields: [
-          {
-            name: 'File',
-            value: fileName,
-            inline: false,
-          },
-          {
-            name: 'Total Time',
-            value: durationSeconds ? this.formatDuration(durationSeconds) : 'Unknown',
-            inline: true,
-          },
-        ],
-      };
-
-      const payload: DiscordWebhookPayload = {
-        embeds: [embed],
-      };
-
-      await this.sendWebhook(payload);
+      await this.sendPrintCompleteNotification(contextId, fileName, durationSeconds);
 
       console.log(`[DiscordNotificationService] Sent print complete notification for ${contextId}`);
       this.emit('notification-sent', { contextId, type: 'print-complete' });
@@ -500,7 +600,7 @@ export class DiscordNotificationService extends EventEmitter {
         embeds: [embed],
       };
 
-      await this.sendWebhook(payload);
+      await this.sendWebhook({ payload, contextId });
 
       console.log(`[DiscordNotificationService] Sent printer cooled notification for ${contextId}`);
       this.emit('notification-sent', { contextId, type: 'printer-cooled' });
@@ -564,24 +664,37 @@ export class DiscordNotificationService extends EventEmitter {
         inline: false,
       });
 
-      // Print time (elapsed)
-      if (status.currentJob.progress.elapsedTime !== undefined) {
+      // Print time (elapsed) — use elapsedTimeSeconds (seconds) for formatDuration
+      if (status.currentJob.progress.elapsedTimeSeconds !== undefined) {
         fields.push({
           name: 'Print Time',
-          value: this.formatDuration(status.currentJob.progress.elapsedTime),
+          value: this.formatDuration(status.currentJob.progress.elapsedTimeSeconds),
           inline: true,
         });
       }
 
-      // ETA (estimated time remaining)
-      if (status.currentJob.progress.timeRemaining !== undefined && status.currentJob.progress.timeRemaining !== null) {
-        const etaDate = new Date(Date.now() + status.currentJob.progress.timeRemaining * 1000);
-        const formattedETA = etaDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        fields.push({
-          name: 'ETA',
-          value: formattedETA,
-          inline: true,
-        });
+      // ETA — prefer formattedEta (firmware), fall back to timeRemaining (minutes)
+      {
+        const { formattedEta, timeRemaining } = status.currentJob.progress;
+        let etaDate: Date | null = null;
+        if (formattedEta && formattedEta !== '--:--') {
+          const [h, m] = formattedEta.split(':').map(Number);
+          etaDate = new Date(Date.now() + (h * 60 + m) * 60_000);
+        } else if (timeRemaining != null) {
+          etaDate = new Date(Date.now() + timeRemaining * 60_000); // timeRemaining is minutes
+        }
+        if (etaDate) {
+          const formattedETA = etaDate.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+          });
+          fields.push({
+            name: 'ETA',
+            value: formattedETA,
+            inline: true,
+          });
+        }
       }
 
       // Layer info
@@ -693,19 +806,29 @@ export class DiscordNotificationService extends EventEmitter {
    * Send webhook payload to Discord
    * Uses native fetch API with timeout
    */
-  private async sendWebhook(payload: DiscordWebhookPayload): Promise<void> {
+  private async sendWebhook(request: DiscordWebhookRequest): Promise<void> {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
 
     try {
-      const response = await fetch(this.currentConfig.webhookUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload),
-        signal: controller.signal,
-      });
+      const snapshot = await this.resolveSnapshotAttachment(request.contextId);
+      const response = await fetch(
+        this.currentConfig.webhookUrl,
+        snapshot
+          ? {
+              method: 'POST',
+              body: this.createMultipartBody(request.payload, snapshot),
+              signal: controller.signal,
+            }
+          : {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(request.payload),
+              signal: controller.signal,
+            }
+      );
 
       if (!response.ok) {
         throw new Error(`Discord webhook returned ${response.status}: ${response.statusText}`);
@@ -715,6 +838,98 @@ export class DiscordNotificationService extends EventEmitter {
     } finally {
       clearTimeout(timeoutId);
     }
+  }
+
+  private async resolveSnapshotAttachment(
+    contextId?: string
+  ): Promise<{ bytes: Uint8Array; contentType: string; filename: string } | null> {
+    if (!this.currentConfig.includeCameraSnapshots || !contextId) {
+      return null;
+    }
+
+    return this.getSnapshotService().captureSnapshot(contextId);
+  }
+
+  private createMultipartBody(
+    payload: DiscordWebhookPayload,
+    snapshot: { bytes: Uint8Array; contentType: string; filename: string }
+  ): FormData {
+    const formData = new FormData();
+    const payloadWithImage: DiscordWebhookPayload = {
+      embeds: payload.embeds.map((embed, index) =>
+        index === 0
+          ? {
+              ...embed,
+              image: {
+                url: `attachment://${snapshot.filename}`,
+              },
+            }
+          : embed
+      ),
+    };
+
+    formData.append('payload_json', JSON.stringify(payloadWithImage));
+    formData.append('files[0]', new Blob([snapshot.bytes], { type: snapshot.contentType }), snapshot.filename);
+
+    return formData;
+  }
+
+  private getSnapshotService(): Pick<ReturnType<typeof getGo2rtcService>, 'captureSnapshot'> {
+    if (!this.go2rtcService) {
+      this.go2rtcService = getGo2rtcService();
+    }
+
+    return this.go2rtcService;
+  }
+
+  private assertWebhookEnabled(): void {
+    if (!this.currentConfig.enabled || !this.currentConfig.webhookUrl) {
+      throw new Error('Discord webhook notifications are disabled');
+    }
+  }
+
+  private async sendStatusNotification(
+    contextId: string,
+    status: PrinterStatus,
+    context: PrinterContext
+  ): Promise<void> {
+    const embed = this.createStatusEmbed(status, context);
+    const payload: DiscordWebhookPayload = {
+      embeds: [embed],
+    };
+
+    await this.sendWebhook({ payload, contextId });
+  }
+
+  private async sendPrintCompleteNotification(
+    contextId: string,
+    fileName: string,
+    durationSeconds?: number
+  ): Promise<void> {
+    const embed: DiscordEmbed = {
+      title: '\u2705 Print Complete!',
+      color: 0x00ff00,
+      timestamp: new Date().toISOString(),
+      fields: [
+        {
+          name: 'File',
+          value: fileName,
+          inline: false,
+        },
+        {
+          name: 'Total Time',
+          value: durationSeconds ? this.formatDuration(durationSeconds) : 'Unknown',
+          inline: true,
+        },
+      ],
+    };
+
+    await this.sendWebhook({
+      payload: {
+        embeds: [embed],
+      },
+      contextId,
+    });
   }
 }
 

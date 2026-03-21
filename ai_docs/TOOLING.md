@@ -1,10 +1,14 @@
 # Development Tooling Reference
 
+**Last Updated:** 2026-03-11 17:37 ET (America/New_York)
+
 This document covers all development tools, commands, and utilities available in the FlashForgeUI-Electron project.
 
 ---
 
 ## Code Search MCP Tools
+
+> **Note:** These tools require specific MCP server configuration and may not be available in all environments. If unavailable, use built-in `Grep`/`Glob` tools instead.
 
 **IMPORTANT**: Always prefer `code-search-mcp` tools over built-in search tools for comprehensive codebase exploration. These tools are significantly faster and more powerful than built-in alternatives.
 
@@ -76,18 +80,54 @@ Available MCP search tools:
 
 ---
 
+## Development Commands
+
+| Command | Purpose | Notes |
+| --- | --- | --- |
+| `pnpm dev` | Start development server | Builds WebUI + starts electron-vite dev mode with hot reload |
+| `pnpm dev:clean` | Clean + dev | Clears output directories before starting dev server |
+| `pnpm start` | Preview built application | Runs `electron-vite preview` to test the production build |
+| `pnpm clean` | Remove build artifacts | Deletes `out/`, `dist/`, and `NVIDIA Corporation` directories |
+
+---
+
+## Testing Commands
+
+| Command | Purpose | Notes |
+| --- | --- | --- |
+| `pnpm test` | Run Jest tests | Unit tests across `src/` directory |
+| `pnpm test:all` | Run Jest + e2e tests | Combines Jest and Playwright browser tests |
+| `pnpm test:watch` | Jest watch mode | Re-runs tests on file changes |
+| `pnpm test:coverage` | Jest with coverage | Generates coverage report |
+| `pnpm test:e2e` | Playwright browser tests | Builds WebUI first, then runs browser-based tests |
+| `pnpm test:e2e:electron` | Electron Playwright tests | Full build required; runs desktop Playwright suite |
+| `pnpm test:e2e:electron:emulator` | Emulator-backed Electron tests | Uses emulated printer connections |
+| `pnpm test:e2e:electron:emulator:legacy` | Legacy Adventurer tests | Emulator tests for Adventurer-series printers |
+| `pnpm test:e2e:electron:emulator:legacy-multi` | Legacy multi-printer tests | Multi-printer emulator tests with legacy printers |
+| `pnpm test:e2e:electron:emulator:modern-multi` | Modern multi-printer tests | Multi-printer emulator tests with modern printers |
+| `pnpm test:e2e:electron:emulator:smoke` | Smoke test against emulator | Quick emulator validation |
+| `pnpm test:e2e:electron:live` | Live desktop smoke test | Tests against live `%APPDATA%` FlashForgeUI profile |
+
+---
+
 ## Quality & Tooling Commands
 
 | Command | Purpose | Notes |
 | --- | --- | --- |
 | `pnpm type-check` | `tsc --noEmit` for main process + shared types | Required before concluding substantial TypeScript changes |
-| `pnpm lint` | Biome lint check across `src/**` | Run after code changes to catch issues |
-| `pnpm lint:fix` | Biome check with auto-fix (`biome check --write src`) | Fixes formatting + lint issues automatically |
-| `pnpm format` | Biome formatter only (`biome format --write src`) | For formatting-only updates |
-| `pnpm check` | Biome check with write (`biome check --write src`) | Combined lint + format with auto-fix |
-| `pnpm ci` | Biome CI mode (`biome ci src`) | Strict checking for CI/CD pipelines, fails on any issues |
+| `pnpm lint` | Biome lint check (scope per biome.json) | Run after code changes to catch issues |
+| `pnpm lint:fix` | Biome check with auto-fix (`biome check --write .`) | Fixes formatting + lint issues automatically |
+| `pnpm format` | Biome formatter only (`biome format --write .`) | For formatting-only updates |
+| `pnpm check` | Biome check with write (`biome check --write .`) | Combined lint + format with auto-fix |
+| `pnpm ci` | Biome CI mode (`biome ci .`) | Strict checking for CI/CD pipelines, fails on any issues |
+| `pnpm full-check` | Combined type-check + lint | Convenience script for complete static analysis |
 | `pnpm docs:check` | Go script scanning for missing `@fileoverview` blocks | Ensures all TypeScript files have documentation headers |
-| `pnpm specs:list -- --type active\|completed` | Lists AI spec Markdown files (top-level or archive) | Defaults to active specs; pass `--type completed` for `ai_specs/archive` |
+| `pnpm docs:combine` | Generate `fileoverview-report.md` from source files | Extracts and aggregates all `@fileoverview` blocks |
+| `pnpm docs:clean` | Remove fileoverview artifacts | Deletes `fileoverview-report.md` and `fileoverview-collection.json` |
+| `pnpm specs:list -- --type active\|completed` | Lists AI spec Markdown files (top-level or archive) | Defaults to active specs; `--type completed` requires `ai_specs/archive` directory |
+| `pnpm find:console` | Find console API usage patterns | Pass `-- --level=debug` etc. to filter by severity |
+| `pnpm find:lucide` | Find Lucide icon usage | Shows every file touching Lucide icons |
+| `pnpm find:window` | Find window API usage patterns | Scans for window-related API calls |
 | `pnpm audit:dead-code` | Custom dead code analyzer using ts-morph | Discovers entrypoints dynamically and reports unused files/exports |
 | `pnpm build` | Build main + renderer + WebUI using electron-vite | Full build of all processes; only when user asks or when structural build impacts occur |
 | `pnpm build:webui` | Build WebUI static files only (TypeScript compilation) | Compiles WebUI TypeScript and copies assets to output |
@@ -127,7 +167,7 @@ Do not say you are done with something despite not having run one/any of these c
 
 ## Fileoverview Inventory
 
-- `fileoverview-report.md` (repo root) aggregates every `@fileoverview` block across `src/**/*.ts`. Use it to understand module responsibilities quickly before editing; it lists ~230 entries with filenames plus their summaries.
+- `fileoverview-report.md` (repo root) aggregates every `@fileoverview` block across `src/**/*.ts`. **This file is GENERATED** via `pnpm docs:combine` and may not exist until created. Use it to understand module responsibilities quickly before editing; it lists ~230 entries with filenames plus their summaries.
 - `pnpm find:console` surfaces `console.<level>` calls (pass `-- --level=debug` etc.) so you can strip leftover logs before packaging or focus on specific severities quickly.
 - `pnpm find:lucide` shows every file touching Lucide icons, making it simple to prune unused imports or confirm icon hydration paths.
 - Run `pnpm docs:check` to ensure new/updated files keep their `@fileoverview` headers synchronized with this inventory.

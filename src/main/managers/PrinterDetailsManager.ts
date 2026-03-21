@@ -30,6 +30,7 @@ import {
   StoredPrinterDetails,
   ValidatedPrinterDetails,
 } from '@shared/types/printer.js';
+import { normalizeCustomCameraSettings } from '@shared/utils/printerSettingsDefaults.js';
 import { app } from 'electron';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -110,6 +111,12 @@ export class PrinterDetailsManager {
     if ('webUIEnabled' in detailsObj && typeof detailsObj.webUIEnabled !== 'boolean') {
       return false;
     }
+    if ('commandPort' in detailsObj && !this.isValidOptionalPort(detailsObj.commandPort)) {
+      return false;
+    }
+    if ('httpPort' in detailsObj && !this.isValidOptionalPort(detailsObj.httpPort)) {
+      return false;
+    }
     if ('activeSpoolData' in detailsObj) {
       // activeSpoolData can be null or an object with specific shape
       if (detailsObj.activeSpoolData !== null && typeof detailsObj.activeSpoolData !== 'object') {
@@ -118,6 +125,16 @@ export class PrinterDetailsManager {
     }
 
     return true;
+  }
+
+  private isValidOptionalPort(value: unknown): boolean {
+    if (value === undefined) {
+      return true;
+    }
+    if (typeof value !== 'number' || !Number.isInteger(value)) {
+      return false;
+    }
+    return value > 0 && value <= 65535;
   }
 
   /**
@@ -161,7 +178,8 @@ export class PrinterDetailsManager {
     }
 
     // Validate lastUsedPrinterSerial exists in printers if not null
-    if (lastUsedPrinterSerial && !(lastUsedPrinterSerial in printersObj)) {
+    const lastUsedSerial = lastUsedPrinterSerial as string | null;
+    if (lastUsedSerial && !(lastUsedSerial in printersObj)) {
       return false;
     }
 
@@ -222,7 +240,7 @@ export class PrinterDetailsManager {
     const modelType = oldData.modelType || detectPrinterModelType(oldData.printerModel);
 
     const storedDetails: StoredPrinterDetails = {
-      ...oldData,
+      ...normalizeCustomCameraSettings(oldData),
       modelType,
       lastConnected: new Date().toISOString(),
     };
@@ -269,7 +287,21 @@ export class PrinterDetailsManager {
 
       // Validate new format
       if (this.validateMultiPrinterConfig(parsedData)) {
-        this.currentConfig = parsedData;
+        let needsResave = false;
+        const normalizedPrinters: MultiPrinterConfig['printers'] = {};
+
+        for (const [serialNumber, printerData] of Object.entries(parsedData.printers)) {
+          const normalizedPrinterData = normalizeCustomCameraSettings(printerData);
+          if (JSON.stringify(printerData) !== JSON.stringify(normalizedPrinterData)) {
+            needsResave = true;
+          }
+          normalizedPrinters[serialNumber] = normalizedPrinterData;
+        }
+
+        this.currentConfig = {
+          ...parsedData,
+          printers: normalizedPrinters,
+        };
 
         // Validate lastUsedPrinterSerial integrity
         if (
@@ -285,6 +317,12 @@ export class PrinterDetailsManager {
 
         const printerCount = Object.keys(this.currentConfig.printers).length;
         console.log(`Loaded multi-printer configuration with ${printerCount} saved printers`);
+
+        if (needsResave) {
+          void this.saveConfigToFile().catch((error) => {
+            console.warn('Failed to save normalized printer configuration:', error);
+          });
+        }
       } else {
         console.warn('Invalid printer configuration found - starting fresh');
         this.currentConfig = {
@@ -382,20 +420,22 @@ export class PrinterDetailsManager {
     contextId?: string,
     options?: { updateLastUsed?: boolean }
   ): Promise<void> {
+    const normalizedDetails = normalizeCustomCameraSettings(details);
+
     console.log('[PrinterDetailsManager] savePrinter called with:', {
-      details,
+      details: normalizedDetails,
       contextId,
-      hasCustomCamera: 'customCameraEnabled' in details,
-      customCameraEnabled: details.customCameraEnabled,
-      customCameraUrl: details.customCameraUrl,
+      hasCustomCamera: 'customCameraEnabled' in normalizedDetails,
+      customCameraEnabled: normalizedDetails.customCameraEnabled,
+      customCameraUrl: normalizedDetails.customCameraUrl,
     });
 
-    if (!this.validatePrinterDetails(details)) {
-      console.error('[PrinterDetailsManager] Validation failed for printer details:', details);
+    if (!this.validatePrinterDetails(normalizedDetails)) {
+      console.error('[PrinterDetailsManager] Validation failed for printer details:', normalizedDetails);
       throw new Error('Invalid printer details provided');
     }
 
-    const storedDetails = this.toStoredPrinterDetails(details);
+    const storedDetails = this.toStoredPrinterDetails(normalizedDetails);
     console.log('[PrinterDetailsManager] Stored details after conversion:', storedDetails);
 
     const shouldUpdateLastUsed = options?.updateLastUsed ?? true;
@@ -404,19 +444,26 @@ export class PrinterDetailsManager {
       ...this.currentConfig,
       printers: {
         ...this.currentConfig.printers,
-        [details.SerialNumber]: storedDetails,
+        [normalizedDetails.SerialNumber]: storedDetails,
       },
-      lastUsedPrinterSerial: shouldUpdateLastUsed ? details.SerialNumber : this.currentConfig.lastUsedPrinterSerial,
+      lastUsedPrinterSerial: shouldUpdateLastUsed
+        ? normalizedDetails.SerialNumber
+        : this.currentConfig.lastUsedPrinterSerial,
     };
 
-    console.log('[PrinterDetailsManager] Updated config in memory:', this.currentConfig.printers[details.SerialNumber]);
+    console.log(
+      '[PrinterDetailsManager] Updated config in memory:',
+      this.currentConfig.printers[normalizedDetails.SerialNumber]
+    );
 
     // If contextId provided, track context-specific last used
     if (contextId) {
-      this.contextLastUsed.set(contextId, details.SerialNumber);
-      console.log(`Saved printer for context ${contextId}: ${details.Name} (${details.SerialNumber})`);
+      this.contextLastUsed.set(contextId, normalizedDetails.SerialNumber);
+      console.log(
+        `Saved printer for context ${contextId}: ${normalizedDetails.Name} (${normalizedDetails.SerialNumber})`
+      );
     } else {
-      console.log(`Saved printer: ${details.Name} (${details.SerialNumber})`);
+      console.log(`Saved printer: ${normalizedDetails.Name} (${normalizedDetails.SerialNumber})`);
     }
 
     await this.saveConfigToFile();

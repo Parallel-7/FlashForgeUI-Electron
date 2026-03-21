@@ -245,10 +245,4 @@ export interface BackendFactoryOptions {
   };
   readonly primaryClient: FiveMClient | FlashForgeClient;
   readonly secondaryClient?: FlashForgeClient;
-  readonly featureOverrides?: {
-    readonly customCameraEnabled: boolean;
-    readonly customCameraUrl: string;
-    readonly customLEDControlEnabled: boolean;
-    readonly ForceLegacyAPI: boolean;
-  };
 }

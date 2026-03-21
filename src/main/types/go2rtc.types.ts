@@ -166,7 +166,7 @@ export interface CameraStreamConfig {
   /** WebSocket URL for stream negotiation (e.g., ws://localhost:1984/api/ws?src=printer_1) */
   wsUrl: string;
   /** Original source type */
-  sourceType: 'builtin' | 'custom';
+  sourceType: 'oem' | 'custom' | 'intelligent-fallback';
   /** Original stream type (before go2rtc conversion) */
   streamType: 'mjpeg' | 'rtsp';
   /** Preferred playback modes */
@@ -177,6 +177,18 @@ export interface CameraStreamConfig {
   streamName: string;
   /** API port for additional endpoints */
   apiPort: number;
+}
+
+/**
+ * Snapshot image captured from a go2rtc-managed stream
+ */
+export interface Go2rtcSnapshot {
+  /** Binary image bytes */
+  bytes: Uint8Array;
+  /** MIME type returned by go2rtc */
+  contentType: string;
+  /** Safe ASCII filename for webhook attachments */
+  filename: string;
 }
 
 /**

@@ -44,6 +44,10 @@ import { SpoolmanUsageTracker } from './SpoolmanUsageTracker.js';
  */
 export class MultiContextSpoolmanTracker extends EventEmitter {
   private readonly trackers = new Map<string, SpoolmanUsageTracker>();
+  private readonly contextManager = getPrinterContextManager();
+  private readonly handleContextRemovedBound = (event: { contextId: string }): void => {
+    this.removeTrackerForContext(event.contextId);
+  };
   private isInitialized = false;
 
   constructor() {
@@ -60,13 +64,7 @@ export class MultiContextSpoolmanTracker extends EventEmitter {
       return;
     }
 
-    const contextManager = getPrinterContextManager();
-
-    // Listen for context removal to cleanup trackers
-    contextManager.on('context-removed', (event: unknown) => {
-      const removeEvent = event as { contextId: string };
-      this.removeTrackerForContext(removeEvent.contextId);
-    });
+    this.contextManager.on('context-removed', this.handleContextRemovedBound);
 
     this.isInitialized = true;
     console.log('[MultiContextSpoolmanTracker] Initialized');
@@ -201,6 +199,9 @@ export class MultiContextSpoolmanTracker extends EventEmitter {
     // Remove all event listeners
     this.removeAllListeners();
 
+    if (this.isInitialized) {
+      this.contextManager.off('context-removed', this.handleContextRemovedBound);
+    }
     this.isInitialized = false;
     console.log('[MultiContextSpoolmanTracker] Disposed');
   }

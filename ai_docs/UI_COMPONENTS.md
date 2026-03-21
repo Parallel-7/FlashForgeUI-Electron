@@ -1,5 +1,7 @@
 # UI Components and Renderer Architecture
 
+**Last Updated:** 2026-03-11
+
 This document covers the renderer process, component system, settings dialog, and UI patterns.
 
 ---
@@ -51,16 +53,27 @@ The settings dialog uses a modular, section-based architecture for improved main
 
 **Initialization Order**:
 ```
-1. CSS & Icon Loading
-2. Component System Import (ComponentManager, GridStack)
+1. CSS & Icon Loading (Lucide icons)
+2. Debug State Initialization (initializeDebugState)
 3. Platform Detection & Theme Application
-4. Printer Tabs Initialization
-5. GridStack System (controller, persistence, edit mode)
-6. Shortcut System
+4. Legacy UI Controller Setup (LegacyUiController)
+5. Shortcut System Initialization
+6. Placeholder UI Setup
 7. Polling Listeners (polling-update IPC)
-8. State Tracking (printer state, backend events)
-9. Renderer Ready Signal
+8. Printer Tabs Initialization
+9. State Tracking (printer state, backend events)
+10. Renderer Ready Signal
 ```
+
+**Key Controllers**:
+- `RendererGridController`: Manages GridStack integration and component lifecycle
+- `LegacyUiController`: Handles legacy UI updates and compatibility
+- `ShortcutButtonController`: Manages top-bar shortcuts and dialog wiring
+
+**Per-Printer State Tracking**:
+- `printerSerialMap`: Maps context IDs to printer serial numbers
+- `activeContextId` / `activeContextSerial`: Track current active context
+- Layout and shortcut persistence via `loadLayoutForSerial` / `saveLayoutForSerial`
 
 ---
 
@@ -81,11 +94,17 @@ abstract class BaseComponent {
   abstract readonly componentId: string;
   abstract readonly templateHTML: string;
   abstract update(data: ComponentUpdateData): void;
-  abstract setupEventListeners(): Promise<void>;
+  protected abstract setupEventListeners(): Promise<void>;
 }
 ```
 
-### 11 Registered Components
+### Component Registry
+
+Component definitions are centrally defined in `src/shared/component-definitions.ts` and shared between Main process (Palette window) and Renderer process (Grid UI).
+
+### 11 Registered Components (GridStack Dashboard)
+
+These components are registered in `COMPONENT_REGISTRY_DATA` for use in the GridStack dashboard:
 
 - camera-preview (main)
 - controls-grid (main)
@@ -95,9 +114,18 @@ abstract class BaseComponent {
 - temperature-controls (status-bar)
 - filtration-controls (status-bar)
 - additional-info (status-bar)
-- spoolman-tracker (status-bar)
+- spoolman-tracker (main) - directory: `spoolman/`
+- ifs-station (main) - IFS Material Station for AD5X printers
 - log-panel (utility)
-- job-info (main)
+
+### Additional Exported Components (Non-Grid)
+
+These components are exported from the component system but are not in the GridStack registry:
+
+- job-info (main) - Job information display component
+- printer-tabs (multi-printer) - Tab system for printer context switching
+
+**Total: 13 Exported Components**
 
 ---
 
@@ -122,13 +150,31 @@ export const gridStackManager = new GridStackManager('.grid-stack');
 - **Storage**: localStorage with per-printer keys
 - `saveLayout(serial, layout)`: Persist
 - `loadLayout(serial)`: Restore with defaults
-- **Keys**: `gridstack_layout_<serial>`, `gridstack_layout_global`
+- **Keys**: `gridstack-layout-<serial>`, `gridstack-layout`
 
 ### EditModeController (`src/ui/gridstack/EditModeController.ts`)
 
 - **Toggle**: CTRL+E
 - **Features**: Drag/resize handles, remove buttons, palette integration
 - **State**: Edit mode disabled when no printer connected
+
+### ComponentRegistry (`src/ui/gridstack/ComponentRegistry.ts`)
+
+- **Purpose**: Central component metadata lookup for GridStack widgets
+- **Functions**: `getComponentDefinition(id)`, `getAllComponents()`
+- **Source**: Imports definitions from `src/shared/component-definitions.ts`
+
+### Defaults (`src/ui/gridstack/defaults.ts`)
+
+- **Purpose**: Default layout configurations for GridStack dashboard
+- **Exports**: `DEFAULT_GRID_OPTIONS`, `DEFAULT_WIDGETS`, `DEFAULT_LAYOUT`
+- **Helpers**: `getDefaultLayout()`, `isValidLayout()`, `mergeWithDefaults()`
+- **Grid**: 12-column grid, 80px cell height, 8px margins
+
+### Types (`src/ui/gridstack/types.ts`)
+
+- **Purpose**: TypeScript type definitions for GridStack integration
+- **Key Types**: `GridStackWidgetConfig`, `LayoutConfig`, `GridOptions`, `ComponentDefinition`
 
 ---
 
@@ -195,6 +241,18 @@ Polling updates forwarded
 - `src/renderer/src/renderer.ts`, `src/renderer/src/gridController.ts`, `src/renderer/src/shortcutButtons.ts`, `src/renderer/src/perPrinterStorage.ts`, `src/renderer/src/logging.ts`
 - `src/renderer/src/ui/components/**` (ComponentManager, printer tabs, job info, etc.) + `src/renderer/src/ui/gridstack/**` for layout/palette logic
 - `src/renderer/src/ui/component-dialog/**` – component dialog renderer + preload mirrors
+- `src/renderer/src/ui/legacy/LegacyUiController.ts` – legacy UI compatibility layer
+
+**GridStack System**
+- `src/renderer/src/ui/gridstack/GridStackManager.ts` – grid initialization and widget management
+- `src/renderer/src/ui/gridstack/LayoutPersistence.ts` – layout save/load with localStorage
+- `src/renderer/src/ui/gridstack/EditModeController.ts` – edit mode toggle and UI
+- `src/renderer/src/ui/gridstack/ComponentRegistry.ts` – component metadata lookup
+- `src/renderer/src/ui/gridstack/defaults.ts` – default layout configurations
+- `src/renderer/src/ui/gridstack/types.ts` – TypeScript type definitions
+
+**Shared Definitions**
+- `src/shared/component-definitions.ts` – central component registry shared between Main and Renderer
 
 **Settings Dialog**
 - `src/renderer/src/ui/settings/settings-renderer.ts` – main orchestrator for dual settings management (global + per-printer)

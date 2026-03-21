@@ -16,7 +16,7 @@
  *
  * Settings Categories:
  * - Global Settings: WebUI, Discord, alerts, Spoolman, debug mode
- * - Per-Printer Settings: Custom camera, custom LEDs, force legacy mode
+ * - Per-Printer Settings: Custom RTSP/HTTP camera, custom LEDs, force legacy mode
  *
  * UI State Management:
  * - Dynamic enable/disable of dependent fields
@@ -74,11 +74,18 @@ const resolveAutoUpdateAPI = (): IAutoUpdateAPI | undefined => {
   return window.api?.dialog?.autoUpdate as IAutoUpdateAPI | undefined;
 };
 
+type PerPrinterSettingsConfigKey =
+  | 'CustomCamera'
+  | 'CustomCameraUrl'
+  | 'CustomLeds'
+  | 'ForceLegacyMode'
+  | 'ShowCameraFPS';
+type SettingsConfigKey = keyof AppConfig | 'ForceLegacyMode';
+
 /**
- * Mapping from HTML input IDs to AppConfig property names
- * This ensures exact compatibility with legacy config format
+ * Mapping from HTML input IDs to config/per-printer setting keys.
  */
-const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
+const INPUT_TO_CONFIG_MAP: Record<string, SettingsConfigKey> = {
   'web-ui': 'WebUIEnabled',
   'web-ui-port': 'WebUIPort',
   'web-ui-password': 'WebUIPassword',
@@ -94,10 +101,11 @@ const INPUT_TO_CONFIG_MAP: Record<string, keyof AppConfig> = {
   'debug-mode': 'DebugMode',
   'debug-network-logging': 'DebugNetworkLogging',
   'webhook-url': 'WebhookUrl',
+  'discord-include-camera-snapshots': 'DiscordIncludeCameraSnapshots',
   'custom-camera': 'CustomCamera',
   'custom-camera-url': 'CustomCameraUrl',
   'custom-leds': 'CustomLeds',
-  'force-legacy-api': 'ForceLegacyAPI',
+  'force-legacy-api': 'ForceLegacyMode',
   'discord-update-interval': 'DiscordUpdateIntervalMinutes',
   'rounded-ui': 'RoundedUI',
   'hide-scrollbars': 'HideScrollbars',
@@ -582,19 +590,19 @@ class SettingsRenderer {
   /**
    * Check if a config key is a per-printer setting
    */
-  private isPerPrinterSetting(configKey: keyof AppConfig): boolean {
-    return ['CustomCamera', 'CustomCameraUrl', 'CustomLeds', 'ForceLegacyAPI', 'ShowCameraFPS'].includes(configKey);
+  private isPerPrinterSetting(configKey: SettingsConfigKey): configKey is PerPrinterSettingsConfigKey {
+    return ['CustomCamera', 'CustomCameraUrl', 'CustomLeds', 'ForceLegacyMode', 'ShowCameraFPS'].includes(configKey);
   }
 
   /**
    * Convert AppConfig key to per-printer settings key
    */
-  private configKeyToPerPrinterKey(configKey: keyof AppConfig): string {
+  private configKeyToPerPrinterKey(configKey: PerPrinterSettingsConfigKey): string {
     const map: Record<string, string> = {
       CustomCamera: 'customCameraEnabled',
       CustomCameraUrl: 'customCameraUrl',
       CustomLeds: 'customLedsEnabled',
-      ForceLegacyAPI: 'forceLegacyMode',
+      ForceLegacyMode: 'forceLegacyMode',
       ShowCameraFPS: 'showCameraFps',
     };
     return map[configKey] || configKey;

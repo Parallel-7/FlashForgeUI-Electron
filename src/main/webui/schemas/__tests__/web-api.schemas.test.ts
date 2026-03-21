@@ -1,4 +1,14 @@
+/**
+ * @fileoverview Tests for WebUI Zod schemas that validate job-start payloads
+ * and theme profile operations.
+ */
 
+/**
+ * @fileoverview Jest coverage for WebUI Zod schemas.
+ *
+ * Validates request parsing and constraint enforcement for WebUI job-start and
+ * theme-profile API payloads before they reach route handlers.
+ */
 import { JobStartRequestSchema, ThemeProfileOperationSchema } from '../web-api.schemas';
 
 describe('JobStartRequestSchema', () => {
@@ -134,14 +144,7 @@ describe('ThemeProfileOperationSchema', () => {
   });
 
   it('should reject names with invalid characters', () => {
-    const invalidInputs = [
-      'Profile<script>',
-      'Profile/../',
-      'Profile"',
-      "Profile'",
-      'Profile;',
-      'Profile&',
-    ];
+    const invalidInputs = ['Profile<script>', 'Profile/../', 'Profile"', "Profile'", 'Profile;', 'Profile&'];
 
     invalidInputs.forEach((name) => {
       const invalid = {

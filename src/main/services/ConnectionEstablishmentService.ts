@@ -23,6 +23,21 @@ import { DiscoveredPrinter, ExtendedPrinterInfo, TemporaryConnectionResult } fro
 import { EventEmitter } from 'events';
 import { detectPrinterFamily, getConnectionErrorMessage } from '../utils/PrinterUtils.js';
 
+type PortAwareFlashForgeClientConstructor = new (
+  hostname: string,
+  options?: { port?: number }
+) => FlashForgeClient;
+
+type PortAwareFiveMClientConstructor = new (
+  ipAddress: string,
+  serialNumber: string,
+  checkCode: string,
+  options?: {
+    httpPort?: number;
+    tcpPort?: number;
+  }
+) => FiveMClient;
+
 // Connection clients interface for dual API support
 interface ConnectionClients {
   primaryClient: FiveMClient | FlashForgeClient;
@@ -38,6 +53,29 @@ export class ConnectionEstablishmentService extends EventEmitter {
 
   private constructor() {
     super();
+  }
+
+  private createLegacyClient(printer: Pick<DiscoveredPrinter, 'ipAddress' | 'commandPort'>): FlashForgeClient {
+    const legacyCtor = FlashForgeClient as unknown as PortAwareFlashForgeClientConstructor;
+    if (printer.commandPort !== undefined) {
+      return new legacyCtor(printer.ipAddress, { port: printer.commandPort });
+    }
+    return new legacyCtor(printer.ipAddress);
+  }
+
+  private createFiveMClient(printer: DiscoveredPrinter, checkCode: string): FiveMClient {
+    const modernCtor = FiveMClient as unknown as PortAwareFiveMClientConstructor;
+    const options =
+      printer.commandPort !== undefined || printer.eventPort !== undefined
+        ? {
+            httpPort: printer.eventPort,
+            tcpPort: printer.commandPort,
+          }
+        : undefined;
+    if (options) {
+      return new modernCtor(printer.ipAddress, printer.serialNumber, checkCode, options);
+    }
+    return new modernCtor(printer.ipAddress, printer.serialNumber, checkCode);
   }
 
   /**
@@ -59,7 +97,7 @@ export class ConnectionEstablishmentService extends EventEmitter {
 
     try {
       // Always use legacy API for type detection
-      const tempClient = new FlashForgeClient(printer.ipAddress);
+      const tempClient = this.createLegacyClient(printer);
       const connected = await tempClient.initControl();
 
       if (!connected) {
@@ -141,12 +179,12 @@ export class ConnectionEstablishmentService extends EventEmitter {
     typeName: string,
     is5MFamily: boolean,
     checkCode: string,
-    ForceLegacyAPI: boolean
+    forceLegacyMode: boolean
   ): Promise<ConnectionClients | null> {
     this.emit('final-connection-started', { printer, typeName });
 
     try {
-      if (is5MFamily && !ForceLegacyAPI) {
+      if (is5MFamily && !forceLegacyMode) {
         return await this.establishDualAPIConnection(printer, checkCode);
       } else {
         return await this.establishLegacyConnection(printer);
@@ -177,7 +215,7 @@ export class ConnectionEstablishmentService extends EventEmitter {
     }
 
     // Primary client: FiveMClient for new API operations
-    const primaryClient = new FiveMClient(printer.ipAddress, printer.serialNumber, checkCode);
+    const primaryClient = this.createFiveMClient(printer, checkCode);
 
     try {
       console.log('Initializing FiveMClient...');
@@ -201,7 +239,7 @@ export class ConnectionEstablishmentService extends EventEmitter {
 
       // Secondary client: FlashForgeClient for legacy API operations (G-code commands)
       console.log('Initializing secondary FlashForgeClient...');
-      const secondaryClient = new FlashForgeClient(printer.ipAddress);
+      const secondaryClient = this.createLegacyClient(printer);
       const legacyConnected = await secondaryClient.initControl();
       if (!legacyConnected) {
         console.error('Secondary FlashForgeClient initialization failed');
@@ -259,7 +297,7 @@ export class ConnectionEstablishmentService extends EventEmitter {
       };
     } else {
       // Create new legacy connection
-      const primaryClient = new FlashForgeClient(printer.ipAddress);
+      const primaryClient = this.createLegacyClient(printer);
       const connected = await primaryClient.initControl();
 
       if (!connected) {
