@@ -1,0 +1,162 @@
+/**
+ * @fileoverview Model Preview Component Styles
+ *
+ * Modern, professional 3D model thumbnail display optimized for grid layouts.
+ * Features enhanced visual styling and responsive behavior for various sizes.
+ *
+ * Key features:
+ * - Modern panel header matching unified design language
+ * - Flexible sizing that adapts to grid item dimensions
+ * - Enhanced image presentation with smooth transitions
+ * - Professional placeholder styling
+ * - Full accessibility and reduced motion support
+ */
+
+.component-model-preview {
+  border-top: 1px solid var(--border-color-light);
+  display: flex;
+  flex-direction: column;
+  flex: 1; /* Allow model panel to grow and take remaining space */
+  min-height: 0; /* Remove fixed minimum - let grid control sizing */
+  overflow: hidden;
+  background: transparent;
+}
+
+/* Panel header styling - modern and consistent */
+.component-model-preview .panel-header {
+  background: var(--surface-muted);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color-light);
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  color: var(--text-color);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Panel content area with proper flex layout */
+.component-model-preview .panel-content {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: transparent;
+  overflow: hidden;
+  padding: 16px;
+  min-height: 0;
+}
+
+/* Model preview container */
+.component-model-preview #model-preview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+/* Image styling - Enhanced with modern presentation */
+.component-model-preview #model-preview img {
+  object-fit: contain;
+  background-color: transparent;
+  border-radius: 8px;
+  transition:
+    transform var(--transition-normal),
+    box-shadow var(--transition-normal);
+  box-shadow: var(--shadow-sm);
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* Hover effect for images - Subtle and professional */
+.component-model-preview #model-preview img:hover {
+  transform: scale(1.03);
+  box-shadow: var(--shadow-md);
+}
+
+/* Placeholder text styling - Enhanced readability */
+.component-model-preview .preview-placeholder {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+  color: var(--text-color-muted);
+  text-align: center;
+}
+
+.component-model-preview .preview-placeholder-text {
+  font-style: italic;
+  opacity: 0.7;
+  font-size: 14px;
+  line-height: 1.6;
+  padding: 20px;
+}
+
+.component-model-preview .preview-placeholder-text p {
+  margin: 6px 0;
+}
+
+.component-model-preview .preview-placeholder-text strong {
+  color: var(--text-color-secondary);
+  font-weight: 600;
+  font-style: normal;
+}
+
+/* State-based styling - Enhanced visibility */
+.component-model-preview.loading .preview-placeholder-text {
+  opacity: 0.5;
+  color: var(--accent-color);
+}
+
+.component-model-preview.error .preview-placeholder-text {
+  color: var(--error-color);
+  opacity: 0.9;
+}
+
+.component-model-preview.has-thumbnail .preview-placeholder {
+  display: none;
+}
+
+/* Responsive design considerations */
+@media (max-width: 768px) {
+  .component-model-preview {
+    min-height: 100px;
+  }
+
+  .component-model-preview .model-panel-header {
+    padding: var(--ui-padding, 6px);
+    font-size: 0.8em;
+  }
+
+  .component-model-preview .model-panel-content {
+    padding: var(--ui-padding, 6px);
+  }
+
+  /* Image size constraints handled via JavaScript - no CSS overrides needed */
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .component-model-preview .model-panel-header {
+    border-bottom-color: var(--theme-text);
+  }
+
+  .component-model-preview #model-preview img {
+    border: 1px solid var(--text-color);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .component-model-preview #model-preview img {
+    transition: none;
+  }
+
+  .component-model-preview #model-preview img:hover {
+    transform: none;
+  }
+}

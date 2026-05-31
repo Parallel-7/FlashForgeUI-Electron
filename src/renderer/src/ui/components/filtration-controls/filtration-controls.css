@@ -1,0 +1,251 @@
+/**
+ * Filtration Controls Component Styles
+ * Modern, professional filtration control interface
+ * Unified design language matching all other components
+ */
+
+.filtration-controls-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.filtration-controls-container .panel-header {
+  background: var(--surface-muted);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color-light);
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  color: var(--text-color);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-sm);
+}
+
+.filtration-controls-container .panel-content {
+  padding: 10px 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: auto;
+}
+
+/* Filtration Status Row Layout - Compact and efficient */
+.filtration-controls-container .filtration-status-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--card-bg);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 3%, transparent),
+    var(--shadow-sm);
+  transition: all var(--transition-normal);
+  min-height: 36px;
+  width: 100%;
+  backdrop-filter: blur(8px);
+}
+
+.filtration-controls-container .filtration-status-row:hover {
+  border-color: var(--border-color-light);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 6%, transparent),
+    var(--shadow-md);
+  background: var(--card-bg-hover);
+  transform: translateY(-1px);
+}
+
+/* Filtration Labels - Readable typography */
+.filtration-controls-container .filtration-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-color-secondary);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+/* Filtration Values - Readable and clear */
+.filtration-controls-container .filtration-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-color);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  letter-spacing: 0.2px;
+  text-align: right;
+  flex-grow: 1;
+  margin-left: 8px;
+  transition:
+    color var(--transition-normal),
+    text-shadow var(--transition-normal);
+}
+
+/* Subtle interaction feedback */
+.filtration-controls-container .filtration-value:hover {
+  color: var(--accent-color);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--accent-color) 30%, transparent);
+}
+
+/* TVOC Level Color Indicators with Enhanced Visibility */
+.filtration-controls-container #tvoc-level-display.tvoc-low {
+  color: var(--success-color);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--success-color) 30%, transparent);
+}
+
+.filtration-controls-container #tvoc-level-display.tvoc-medium {
+  color: var(--warning-color);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--warning-color) 30%, transparent);
+}
+
+.filtration-controls-container #tvoc-level-display.tvoc-high {
+  color: var(--error-color);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--error-color) 30%, transparent);
+}
+
+/* Filtration Button Container */
+.filtration-controls-container .filtration-controls-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 2px;
+  width: 100%;
+  align-items: stretch;
+}
+
+/* Modern Filtration Button Design - Compact */
+.filtration-controls-container .filtration-control-btn {
+  background: var(--accent-color);
+  color: var(--accent-text-color);
+  border: 1px solid var(--border-color-light);
+  padding: 6px 10px;
+  border-radius: 5px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  transition: all var(--transition-fast);
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent);
+  min-width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  width: 100%;
+  backdrop-filter: blur(8px);
+}
+
+.filtration-controls-container .filtration-control-btn:hover:not(:disabled) {
+  background: var(--button-hover);
+  transform: translateY(-2px);
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent);
+  border-color: var(--border-color-light);
+}
+
+.filtration-controls-container .filtration-control-btn:active:not(:disabled) {
+  transform: translateY(0);
+  background: var(--button-hover);
+  box-shadow: inset 0 2px 4px color-mix(in srgb, var(--theme-background) 30%, black);
+}
+
+/* Active Filtration Mode Styling - Enhanced */
+.filtration-controls-container .filtration-control-btn.active {
+  background: var(--success-color);
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent),
+    0 0 16px color-mix(in srgb, var(--success-color) 30%, transparent);
+  color: var(--accent-text-color);
+  border-color: var(--success-color);
+}
+
+.filtration-controls-container .filtration-control-btn.active:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--success-color) 85%, white);
+  transform: translateY(-2px);
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent),
+    0 0 20px color-mix(in srgb, var(--success-color) 40%, transparent);
+}
+
+.filtration-controls-container .filtration-control-btn.active:active:not(:disabled) {
+  transform: translateY(0);
+  background: color-mix(in srgb, var(--success-color) 75%, black);
+  box-shadow: inset 0 2px 4px color-mix(in srgb, var(--theme-background) 30%, black);
+}
+
+/* "None" Button Variant - Red when active */
+.filtration-controls-container .filtration-control-btn#btn-no-filtration.active {
+  background: var(--error-color);
+  box-shadow:
+    var(--shadow-sm),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent),
+    0 0 16px color-mix(in srgb, var(--error-color) 30%, transparent);
+  color: var(--button-text-color);
+  border-color: var(--error-color);
+}
+
+.filtration-controls-container .filtration-control-btn#btn-no-filtration.active:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--error-color) 85%, white);
+  transform: translateY(-2px);
+  box-shadow:
+    var(--shadow-md),
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 20%, transparent),
+    0 0 20px color-mix(in srgb, var(--error-color) 40%, transparent);
+}
+
+/* Disabled Button States */
+.filtration-controls-container .filtration-control-btn:disabled,
+.filtration-controls-container .filtration-control-btn.disabled {
+  background: var(--surface-muted);
+  color: var(--text-color-muted);
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--theme-background) 30%, black);
+  border: 1px solid var(--border-color);
+}
+
+.filtration-controls-container .filtration-control-btn:disabled:hover,
+.filtration-controls-container .filtration-control-btn.disabled:hover {
+  background: var(--surface-muted);
+  transform: none;
+  box-shadow: inset 0 1px 2px color-mix(in srgb, var(--theme-background) 30%, black);
+}
+
+/* Hide filtration section when unavailable */
+.filtration-controls-container.filtration-unavailable {
+  display: none;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .filtration-controls-container {
+    padding: 12px 8px;
+    gap: 8px;
+    min-width: 180px;
+  }
+
+  .filtration-controls-container .filtration-status-row {
+    padding: 10px 12px;
+  }
+
+  .filtration-controls-container .filtration-control-btn {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+}

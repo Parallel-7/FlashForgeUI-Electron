@@ -38,6 +38,8 @@ jspm_packages/
 # TypeScript build / cache
 *.tsbuildinfo
 lib/
+# But allow lib/ directories inside src/ (e.g., video-rtc.js)
+!src/**/lib/
 
 # Optional npm cache directory
 .npm
@@ -90,6 +92,9 @@ public
 tmp/
 temp/
 
+# Playwright test artifacts
+test-results/
+
 # Editor directories and files
 .vscode/
 .idea/
@@ -109,6 +114,9 @@ Thumbs.db
 # Electron dist
 out/
 
+# go2rtc binaries (downloaded at build time via postinstall)
+resources/bin/
+
 
 # AI Agent Files
 .kiro/
@@ -117,3 +125,10 @@ out/
 *.py
 detail_response_example.json
 debug_logs/*
+.genkit/
+
+# Temporary test/development artifacts
+.tmp-ff-api/
+hook_debug_log.txt
+__pycache__/
+.pi/session-memory.json

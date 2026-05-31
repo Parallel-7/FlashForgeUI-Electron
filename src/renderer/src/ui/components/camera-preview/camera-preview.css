@@ -1,0 +1,314 @@
+/**
+ * Camera Preview with Integrated Job Info Component Styles
+ *
+ * This CSS creates a seamless visual unit that fills the left side properly,
+ * combining camera functionality with real-time job progress information.
+ * The camera stream takes most of the space with job info integrated at the bottom.
+ */
+
+/* Main component container - fills entire left side */
+.component-camera-preview {
+  flex: 1;
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background-color: var(--darker-bg);
+}
+
+/* Camera stream area - takes ALL available space above job info */
+.component-camera-preview .camera-stream-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-height: 0; /* Allow it to shrink if needed */
+  position: relative; /* Positioning context for FPS overlay */
+}
+
+.component-camera-preview .camera-view {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+  background-color: var(--darker-bg);
+  min-height: 0;
+}
+
+.component-camera-preview .camera-view img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.component-camera-preview .no-camera {
+  position: absolute;
+  color: var(--text-color-muted);
+  font-style: italic;
+  left: 0;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1;
+}
+
+/* FPS overlay badge */
+.component-camera-preview .fps-overlay {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: color-mix(in srgb, var(--theme-background) 80%, transparent);
+  color: var(--theme-text);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: monospace;
+  z-index: 10;
+  pointer-events: none;
+  backdrop-filter: blur(4px);
+  border: 1px solid var(--border-color-light);
+  text-shadow: 0 1px 2px color-mix(in srgb, var(--theme-background) 50%, black);
+}
+
+/* Integrated job info overlay at bottom - Enhanced modern design */
+.component-camera-preview .job-info-overlay {
+  flex: 0 0 auto;
+  background: var(--surface-muted);
+  padding: 12px 14px;
+  border-top: 1px solid var(--border-color-light);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 -2px 10px color-mix(in srgb, var(--theme-background) 30%, black);
+}
+
+/* Job and progress row styling - Enhanced typography */
+.component-camera-preview .job-row,
+.component-camera-preview .progress-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--text-color);
+  font-size: 14px;
+  margin-bottom: 4px;
+}
+
+.component-camera-preview .job-row span:first-child,
+.component-camera-preview .progress-row span:first-child {
+  font-weight: 600;
+  color: var(--text-color);
+  letter-spacing: 0.3px;
+}
+
+.component-camera-preview .job-row span:last-child,
+.component-camera-preview .progress-row span:last-child {
+  color: var(--accent-color);
+  font-weight: 700;
+  text-shadow: 0 0 8px color-mix(in srgb, var(--accent-color) 30%, transparent);
+}
+
+/* Progress bar styling - Modern and smooth */
+.component-camera-preview progress {
+  width: 100%;
+  height: 8px;
+  border: none;
+  border-radius: 6px;
+  background-color: color-mix(in srgb, var(--theme-background) 40%, black);
+  margin: 6px 0;
+  overflow: hidden;
+  box-shadow: inset 0 1px 3px color-mix(in srgb, var(--theme-background) 40%, black);
+}
+
+/* Progress bar value styling with state-based colors */
+.component-camera-preview progress::-webkit-progress-bar {
+  background-color: color-mix(in srgb, var(--theme-background) 40%, black);
+  border-radius: 6px;
+}
+
+.component-camera-preview progress::-webkit-progress-value {
+  background: var(--accent-color);
+  border-radius: 6px;
+  transition: background var(--transition-normal);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent-color) 50%, transparent);
+}
+
+.component-camera-preview progress::-moz-progress-bar {
+  background: var(--accent-color);
+  border-radius: 6px;
+  transition: background var(--transition-normal);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--accent-color) 50%, transparent);
+}
+
+/* Progress bar state styling - printing state */
+.component-camera-preview progress.printing::-webkit-progress-value {
+  background: var(--success-color);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--success-color) 60%, transparent);
+}
+
+.component-camera-preview progress.printing::-moz-progress-bar {
+  background: var(--success-color);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--success-color) 60%, transparent);
+}
+
+/* Progress bar state styling - paused state */
+.component-camera-preview progress.paused::-webkit-progress-value {
+  background: var(--warning-color);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--warning-color) 60%, transparent);
+}
+
+.component-camera-preview progress.paused::-moz-progress-bar {
+  background: var(--warning-color);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--warning-color) 60%, transparent);
+}
+
+/* Progress bar state styling - completed state */
+.component-camera-preview progress.completed::-webkit-progress-value {
+  background: var(--success-color);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--success-color) 60%, transparent);
+}
+
+.component-camera-preview progress.completed::-moz-progress-bar {
+  background: var(--success-color);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--success-color) 60%, transparent);
+}
+
+/* Progress bar state styling - error state */
+.component-camera-preview progress.error::-webkit-progress-value {
+  background: var(--error-color);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--error-color) 60%, transparent);
+}
+
+.component-camera-preview progress.error::-moz-progress-bar {
+  background: var(--error-color);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--error-color) 60%, transparent);
+}
+
+/* Camera controls styling - Modern and polished */
+.component-camera-preview .camera-controls {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.component-camera-preview .camera-controls button {
+  background: var(--accent-color);
+  color: var(--accent-text-color);
+  border: 1px solid var(--border-color-light);
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all var(--transition-fast);
+  box-shadow: var(--shadow-sm);
+}
+
+.component-camera-preview .camera-controls button:hover {
+  background: var(--button-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.component-camera-preview .camera-controls button:active {
+  transform: translateY(0);
+  box-shadow: inset 0 2px 4px color-mix(in srgb, var(--theme-background) 30%, black);
+}
+
+.component-camera-preview .camera-controls button:disabled {
+  background: var(--surface-muted);
+  color: var(--text-color-muted);
+  cursor: not-allowed;
+  opacity: 0.5;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Camera state indicators */
+.component-camera-preview.state-disabled .camera-view {
+  background-color: var(--darker-bg);
+}
+
+.component-camera-preview.state-loading .no-camera::after {
+  content: " (Loading...)";
+  color: var(--accent-color);
+}
+
+.component-camera-preview.state-streaming .no-camera {
+  display: none;
+}
+
+.component-camera-preview.state-error .no-camera {
+  color: var(--error-color);
+}
+
+.component-camera-preview.state-error .camera-view {
+  border: 2px solid var(--error-color);
+}
+
+/* Responsive design for smaller screens */
+@media (max-width: 768px) {
+  .component-camera-preview .camera-view {
+    min-height: 150px;
+  }
+
+  .component-camera-preview .job-info-overlay {
+    padding: var(--ui-padding, 8px);
+    gap: 6px;
+  }
+
+  .component-camera-preview .job-row,
+  .component-camera-preview .progress-row {
+    font-size: 0.8em;
+  }
+
+  .component-camera-preview .camera-controls button {
+    padding: 4px 8px;
+    font-size: 0.8em;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .component-camera-preview progress::-webkit-progress-value {
+    background: var(--theme-primary);
+  }
+
+  .component-camera-preview progress::-moz-progress-bar {
+    background: var(--theme-primary);
+  }
+
+  .component-camera-preview .camera-controls button {
+    border: 1px solid var(--text-color);
+  }
+
+  .component-camera-preview .job-info-overlay {
+    border-top: 2px solid var(--text-color);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  .component-camera-preview progress::-webkit-progress-value {
+    transition: none;
+  }
+
+  .component-camera-preview progress::-moz-progress-bar {
+    transition: none;
+  }
+
+  .component-camera-preview .camera-controls button {
+    transition: none;
+  }
+
+  .component-camera-preview .camera-controls button:hover {
+    transform: none;
+  }
+}

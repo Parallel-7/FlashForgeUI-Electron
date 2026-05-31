@@ -25,11 +25,16 @@ jobs:
       - name: Checkout FlashForgeUI
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.23.0
+
       - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          cache: 'pnpm'
 
       - name: Configure GitHub Packages Authentication
         shell: bash
@@ -41,12 +46,19 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Run npm ci
+      - name: Install dependencies
         shell: bash
         run: |
-          npm ci
+          pnpm install --frozen-lockfile
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download go2rtc binaries
+        shell: bash
+        run: |
+          echo "Downloading go2rtc binaries for all platforms..."
+          node scripts/download-go2rtc.cjs
+          echo "go2rtc binaries ready for bundling"
 
       - name: Set Application Version
         shell: bash
@@ -58,18 +70,18 @@ jobs:
             VERSION="${VERSION}.0.0"
           fi
           echo "Setting version to: $VERSION"
-          npm version "$VERSION" --no-git-tag-version --allow-same-version
+          pnpm version "$VERSION" --no-git-tag-version --allow-same-version
 
       - name: Build application with electron-builder
         shell: bash
         run: |
           # Use platform-specific build commands
           if [[ "$RUNNER_OS" == "Linux" ]]; then
-            npm run build:ci:linux
+            pnpm run build:ci:linux
           elif [[ "$RUNNER_OS" == "Windows" ]]; then
-            npm run build:ci:win
+            pnpm run build:ci:win
           elif [[ "$RUNNER_OS" == "macOS" ]]; then
-            npm run build:ci:mac
+            pnpm run build:ci:mac
           fi
 
       - name: Upload Build Artifacts
@@ -85,7 +97,7 @@ jobs:
             dist/**/*.dmg
             dist/**/*.AppImage
             dist/**/*.nupkg
-            dist/latest*.yml
+            dist/*.yml
             !dist/**/elevate.exe
             !dist/win-unpacked/**
           if-no-files-found: warn
@@ -98,6 +110,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Download all build artifacts
         uses: actions/download-artifact@v4
@@ -115,7 +129,7 @@ jobs:
         shell: bash
         run: |
           mkdir release_assets
-          find artifacts/ -type f \( -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*Setup*.exe" -o -name "FlashForgeUI*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.nupkg" -o -name "latest*.yml" \) | grep -v "elevate.exe" | while IFS= read -r file; do
+          find artifacts/ -type f \( -name "*.zip" -o -name "*.deb" -o -name "*.rpm" -o -name "*Setup*.exe" -o -name "FlashForgeUI*.exe" -o -name "*.dmg" -o -name "*.AppImage" -o -name "*.nupkg" -o -name "*.yml" \) | grep -v "elevate.exe" | while IFS= read -r file; do
             filename=$(basename "$file")
             cp "$file" "release_assets/$filename"
             echo "Copied $file to release_assets/$filename"
@@ -141,14 +155,69 @@ jobs:
             RELEASE_TYPE_BADGE=" (Pre-release)"
           fi
 
+          PRERELEASE_NOTICE=""
+          if [[ "$IS_PRERELEASE" == "true" ]]; then
+            PRERELEASE_NOTICE="This is an alpha pre-release build intended for testing before the next stable desktop release."
+          fi
+
+          VERSION_TAG="v${VERSION}"
+          PREVIOUS_TAG=$(git tag -l 'v*' --sort=-version:refname | grep -vx "${VERSION_TAG}" | head -n 1)
+          CHANGELOG_URL="https://github.com/${{ github.repository }}/blob/${VERSION_TAG}/CHANGELOG.md"
+          README_URL="https://github.com/${{ github.repository }}"
+          COMPARE_URL=""
+
+          if [[ -n "$PREVIOUS_TAG" ]]; then
+            COMPARE_URL="https://github.com/${{ github.repository }}/compare/${PREVIOUS_TAG}...${VERSION_TAG}"
+          fi
+
+          CHANGELOG_SECTION=$(VERSION="$VERSION" python3 <<'PY'
+          from pathlib import Path
+          import os
+          import re
+
+          version = os.environ["VERSION"]
+          text = Path("CHANGELOG.md").read_text(encoding="utf-8")
+          pattern = rf"^## \[{re.escape(version)}\] - [^\n]*\n(.*?)(?=^## \[|\Z)"
+          match = re.search(pattern, text, re.MULTILINE | re.DOTALL)
+          if match:
+              print(match.group(1).strip())
+          PY
+          )
+
+          if [[ -z "$(printf '%s' "$CHANGELOG_SECTION" | tr -d '[:space:]')" ]]; then
+            CHANGELOG_SECTION="- See the [CHANGELOG](${CHANGELOG_URL}) for the detailed release notes."
+          fi
+
           cat > RELEASE_NOTES.md << EOF
           # FlashForgeUI v${VERSION}${RELEASE_TYPE_BADGE}
 
-          Placeholder release text
+          Desktop monitoring and control app for FlashForge printers.
+
+          ${PRERELEASE_NOTICE}
+
+          ## Changes
+
+          ${CHANGELOG_SECTION}
+
+          ## Downloads
+
+          Download the installer or archive for your platform from the assets attached to this release.
+
+          ## More Information
+
+          - [README](${README_URL}) for setup and usage
+          - [CHANGELOG](${CHANGELOG_URL}) for the full release history
 
           EOF
-          
-          echo "VERSION_TAG=v${VERSION}" >> $GITHUB_ENV
+
+          if [[ -n "$COMPARE_URL" ]]; then
+            cat >> RELEASE_NOTES.md << EOF
+          - [Compare changes since ${PREVIOUS_TAG}](${COMPARE_URL})
+
+          EOF
+          fi
+
+          echo "VERSION_TAG=${VERSION_TAG}" >> $GITHUB_ENV
           echo "RELEASE_NAME=FlashForgeUI v${VERSION}${RELEASE_TYPE_BADGE}" >> $GITHUB_ENV
           echo "RELEASE_NOTES_PATH=RELEASE_NOTES.md" >> $GITHUB_ENV
 

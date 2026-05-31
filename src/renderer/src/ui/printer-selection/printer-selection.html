@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Select a Printer</title>
+    <link rel="stylesheet" href="printer-selection.css" />
+    
+    
+</head>
+<body>
+<div class="dialog-container dialog-container--full">
+    <!-- Header -->
+    <div class="dialog-header">
+        <div class="dialog-title" id="dialog-title">Select a Printer</div>
+        <button class="dialog-close" id="btn-close" aria-label="Close">
+            <i data-lucide="x" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <!-- Content: Table -->
+    <div class="dialog-content">
+        <div class="table-container">
+            <table id="printer-table">
+                <thead id="table-header">
+                <tr id="header-row">
+                    <!-- Headers will be populated by TypeScript based on mode -->
+                </tr>
+                </thead>
+                <tbody>
+                <!-- Rows will be populated by TypeScript -->
+                <tr class="loading-row">
+                    <td colspan="5">Scanning...</td> <!-- Increased colspan for max columns -->
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="no-printers-message" class="message-overlay" style="display: none;">
+            No printers found. Ensure LAN mode is enabled.
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="dialog-footer">
+        <span class="instructions" id="footer-instructions">Double-click a printer to select</span>
+        <button class="dialog-button cancel" id="btn-cancel">Cancel</button>
+    </div>
+</div>
+
+
+  <script type="module" src="./printer-selection-renderer.ts"></script>
+</body>
+</html>

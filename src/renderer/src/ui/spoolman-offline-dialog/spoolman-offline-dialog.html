@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Spoolman Connection Required</title>
+  <link rel="stylesheet" href="spoolman-offline-dialog.css">
+  
+  
+</head>
+<body>
+  <div class="dialog-container dialog-container--full">
+    <div class="dialog-header">
+      <div class="dialog-title">Spoolman Offline</div>
+      <button class="dialog-close" id="dialog-close" aria-label="Close">
+        <i data-lucide="x" aria-hidden="true"></i>
+      </button>
+    </div>
+
+    <div class="dialog-content">
+      <div class="warning-content">
+        <div class="warning-icon">
+          <i data-lucide="server-off" aria-hidden="true"></i>
+        </div>
+        <div class="warning-message">
+          <p class="primary-message">Unable to reach your Spoolman server.</p>
+          <p class="detail-message">
+            Start Spoolman, ensure the configured URL is reachable, then retry the connection.
+          </p>
+        </div>
+      </div>
+
+      <p id="status-message" class="status-message" role="status"></p>
+
+      <div class="dialog-buttons">
+        <button class="dialog-button secondary" id="dialog-cancel">Close</button>
+        <button class="dialog-button primary" id="retry-button">
+          <i data-lucide="refresh-ccw" aria-hidden="true"></i>
+          Retry Connection
+        </button>
+      </div>
+    </div>
+  </div>
+
+  
+  <script type="module" src="./spoolman-offline-dialog-renderer.ts"></script>
+</body>
+</html>

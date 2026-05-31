@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>Material Information</title>
+    <link rel="stylesheet" href="material-info-dialog.css">
+    
+    
+</head>
+<body>
+    <div class="dialog-container dialog-container--full">
+        <!-- Dialog Header -->
+        <div class="dialog-header">
+            <div class="dialog-title">Material Information</div>
+            <button id="btn-close" class="dialog-close" aria-label="Close">
+                <i data-lucide="x" aria-hidden="true"></i>
+            </button>
+        </div>
+        
+        <!-- Dialog Content -->
+        <div class="dialog-content">
+            <div class="file-header">
+                <h3 id="file-name">Loading...</h3>
+                            <div class="file-stats" id="file-stats">
+                                <span id="total-weight"></span>
+                            </div>            </div>
+            
+            <div class="materials-container" id="materials-container">
+                <!-- Material spools will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    
+  <script type="module" src="./material-info-dialog-renderer.ts"></script>
+</body>
+</html> 

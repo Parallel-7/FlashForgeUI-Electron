@@ -1,0 +1,447 @@
+/**
+ * @fileoverview IFS Material Station Component Styles
+ *
+ * Styling for the IFS (Intelligent Filament System) material station component
+ * with responsive layouts for different grid cell sizes. Supports horizontal,
+ * vertical, square, and compact layout modes.
+ *
+ * Layout Modes:
+ * - horizontal: Wide container, slots in a single row
+ * - vertical: Tall container, slots stacked vertically
+ * - square: Equal dimensions, 2x2 grid
+ * - compact: Minimal size, condensed display
+ */
+
+/* ============================================================================
+   BASE COMPONENT STYLES
+   ============================================================================ */
+
+/* Ensure the component container fills its parent */
+.component-ifs-station {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.ifs-component {
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 12px;
+  background: var(--card-bg);
+  border-radius: 8px;
+  position: relative;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.ifs-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  gap: 8px;
+}
+
+/* ============================================================================
+   UNAVAILABLE STATE (non-AD5X printers)
+   ============================================================================ */
+
+.ifs-unavailable {
+  text-align: center;
+}
+
+.ifs-icon {
+  width: 48px;
+  height: 48px;
+  opacity: 0.4;
+  color: var(--text-color-muted);
+}
+
+.ifs-message {
+  color: var(--text-color-muted);
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+  text-align: center;
+  max-width: 200px;
+}
+
+/* ============================================================================
+   DISCONNECTED STATE
+   ============================================================================ */
+
+.ifs-disconnected {
+  text-align: center;
+}
+
+.ifs-disconnected .ifs-icon {
+  color: var(--theme-warning, #ff9800);
+  opacity: 0.7;
+}
+
+/* ============================================================================
+   ACTIVE STATE
+   ============================================================================ */
+
+.ifs-active {
+  gap: 8px;
+  padding: 4px;
+}
+
+.ifs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.ifs-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.ifs-active-indicator {
+  font-size: 11px;
+  color: var(--theme-primary);
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.ifs-active-indicator.visible {
+  opacity: 1;
+}
+
+/* ============================================================================
+   SLOTS CONTAINER - BASE STYLES
+   ============================================================================ */
+
+.ifs-slots-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  gap: 8px;
+  width: 100%;
+  height: 100%;
+  flex: 1;
+  min-height: 0;
+}
+
+/* ============================================================================
+   INDIVIDUAL SLOT STYLES
+   ============================================================================ */
+
+.ifs-slot {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px;
+  background: var(--surface-elevated, var(--theme-surface));
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ifs-slot:hover {
+  background: color-mix(in srgb, var(--surface-elevated, var(--theme-surface)) 90%, var(--theme-primary));
+  border-color: var(--border-color-light, var(--border-color));
+}
+
+.ifs-slot.active {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 8px color-mix(in srgb, var(--theme-primary) 30%, transparent);
+}
+
+.ifs-slot.empty {
+  opacity: 0.6;
+}
+
+/* ============================================================================
+   SPOOL VISUAL
+   ============================================================================ */
+
+.ifs-spool {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: var(--surface-muted);
+  border: 3px solid color-mix(in srgb, var(--theme-text) 15%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow:
+    inset 0 2px 4px color-mix(in srgb, var(--theme-background) 30%, black),
+    0 1px 2px color-mix(in srgb, var(--theme-background) 20%, black);
+  transition: transform 0.2s ease, background-color 0.2s ease;
+}
+
+.ifs-slot:hover .ifs-spool {
+  transform: scale(1.05);
+}
+
+.ifs-slot.active .ifs-spool {
+  border-color: var(--theme-primary);
+}
+
+.ifs-spool-center {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--theme-background) 40%, black);
+  border: 1.5px solid color-mix(in srgb, var(--theme-text) 20%, transparent);
+}
+
+/* ============================================================================
+   SLOT INFO
+   ============================================================================ */
+
+.ifs-slot-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  width: 100%;
+}
+
+.ifs-slot-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-color);
+  white-space: nowrap;
+}
+
+.ifs-slot-material {
+  font-size: 9px;
+  color: var(--text-color-muted);
+  padding: 2px 6px;
+  background: var(--surface-muted);
+  border-radius: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.ifs-slot.has-material .ifs-slot-material {
+  background: color-mix(in srgb, var(--theme-primary) 15%, transparent);
+  color: var(--theme-primary);
+}
+
+.ifs-slot.empty .ifs-slot-material {
+  font-style: italic;
+}
+
+/* ============================================================================
+   LAYOUT: HORIZONTAL (wide container)
+   ============================================================================ */
+
+.ifs-component.layout-horizontal {
+  padding: 8px;
+}
+
+.ifs-component.layout-horizontal .ifs-header {
+  display: none;
+}
+
+.ifs-component.layout-horizontal .ifs-slots-container {
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 1fr;
+}
+
+.ifs-component.layout-horizontal .ifs-slot {
+  flex-direction: column;
+  padding: 4px;
+  gap: 2px;
+}
+
+/* Dynamic spool sizing - scales with available height */
+.ifs-component.layout-horizontal .ifs-spool {
+  width: auto;
+  height: 50%;
+  max-height: 44px;
+  min-height: 20px;
+  aspect-ratio: 1;
+  flex-shrink: 1;
+}
+
+.ifs-component.layout-horizontal .ifs-spool-center {
+  width: 30%;
+  height: 30%;
+  min-width: 6px;
+  min-height: 6px;
+}
+
+.ifs-component.layout-horizontal .ifs-slot-info {
+  gap: 1px;
+  min-height: 0;
+}
+
+.ifs-component.layout-horizontal .ifs-slot-label {
+  font-size: 9px;
+}
+
+.ifs-component.layout-horizontal .ifs-slot-material {
+  font-size: 8px;
+  padding: 1px 4px;
+}
+
+/* ============================================================================
+   LAYOUT: VERTICAL (tall container)
+   ============================================================================ */
+
+.ifs-component.layout-vertical .ifs-slots-container {
+  grid-template-columns: 1fr;
+  grid-template-rows: repeat(4, 1fr);
+}
+
+.ifs-component.layout-vertical .ifs-slot {
+  flex-direction: row;
+  justify-content: flex-start;
+  padding: 6px 12px;
+  gap: 10px;
+}
+
+.ifs-component.layout-vertical .ifs-slot-info {
+  align-items: flex-start;
+  flex: 1;
+}
+
+.ifs-component.layout-vertical .ifs-spool {
+  width: 36px;
+  height: 36px;
+}
+
+.ifs-component.layout-vertical .ifs-spool-center {
+  width: 10px;
+  height: 10px;
+}
+
+.ifs-component.layout-vertical .ifs-slot-label {
+  font-size: 11px;
+}
+
+.ifs-component.layout-vertical .ifs-slot-material {
+  font-size: 10px;
+}
+
+/* ============================================================================
+   LAYOUT: SQUARE (2x2 grid - default)
+   ============================================================================ */
+
+.ifs-component.layout-square .ifs-slots-container {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+}
+
+/* ============================================================================
+   LAYOUT: COMPACT (small container)
+   ============================================================================ */
+
+.ifs-component.layout-compact {
+  padding: 6px;
+}
+
+.ifs-component.layout-compact .ifs-header {
+  display: none;
+}
+
+.ifs-component.layout-compact .ifs-slots-container {
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 1fr;
+  gap: 4px;
+}
+
+.ifs-component.layout-compact .ifs-slot {
+  padding: 4px;
+  gap: 2px;
+}
+
+.ifs-component.layout-compact .ifs-spool {
+  width: 24px;
+  height: 24px;
+  border-width: 2px;
+}
+
+.ifs-component.layout-compact .ifs-spool-center {
+  width: 6px;
+  height: 6px;
+  border-width: 1px;
+}
+
+.ifs-component.layout-compact .ifs-slot-info {
+  display: none;
+}
+
+/* Show slot number as overlay in compact mode */
+.ifs-component.layout-compact .ifs-slot::after {
+  content: attr(data-slot);
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 8px;
+  color: var(--text-color-muted);
+  font-weight: 600;
+}
+
+.ifs-component.layout-compact .ifs-slot {
+  position: relative;
+}
+
+/* ============================================================================
+   UNAVAILABLE/DISCONNECTED STATES - SIZE ADJUSTMENTS
+   ============================================================================ */
+
+.ifs-component.layout-compact .ifs-unavailable .ifs-icon,
+.ifs-component.layout-compact .ifs-disconnected .ifs-icon {
+  width: 32px;
+  height: 32px;
+}
+
+.ifs-component.layout-compact .ifs-message {
+  font-size: 11px;
+}
+
+/* ============================================================================
+   ANIMATIONS
+   ============================================================================ */
+
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 8px color-mix(in srgb, var(--theme-primary) 30%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 12px color-mix(in srgb, var(--theme-primary) 50%, transparent);
+  }
+}
+
+.ifs-slot.active {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Disable animation when prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .ifs-slot.active {
+    animation: none;
+  }
+}

@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: blob:;
+        connect-src 'self';
+        font-src 'self';
+        object-src 'none';
+        base-uri 'self';
+        form-action 'self';
+    ">
+  <title>Auto-Connect Options</title>
+  <link rel="stylesheet" href="auto-connect-choice.css" />
+  
+</head>
+<body>
+<div class="dialog-container dialog-container--full">
+    <div class="dialog-header">
+        <h2>Connection Options</h2>
+        <p class="dialog-description">No printers found during auto-connect. Choose an alternative connection method</p>
+    </div>
+    
+    <div class="dialog-content">
+        <div class="message">
+            <div id="last-used-info" class="last-used-info" style="display: none;">
+                <span>Last used printer: <strong id="last-used-name">-</strong></span>
+            </div>
+        </div>
+
+        <div class="options-container">
+            <button class="option-button primary" id="btn-connect-last-used" style="display: none;">
+                <div class="option-icon">
+                    <i data-lucide="link-2" aria-hidden="true"></i>
+                </div>
+                <div class="option-content">
+                    <div class="option-title">Connect to Last Used Printer</div>
+                    <div class="option-description">Quick connection to <span id="quick-printer-name">-</span></div>
+                </div>
+            </button>
+
+            <button class="option-button" id="btn-show-saved-printers" style="display: none;">
+                <div class="option-icon">
+                    <i data-lucide="check" aria-hidden="true"></i>
+                </div>
+                <div class="option-content">
+                    <div class="option-title">Show All Saved Printers</div>
+                    <div class="option-description">Choose from <span id="saved-count">0</span> saved printer(s)</div>
+                </div>
+            </button>
+
+            <button class="option-button" id="btn-manual-ip">
+                <div class="option-icon">
+                    <i data-lucide="globe" aria-hidden="true"></i>
+                </div>
+                <div class="option-content">
+                    <div class="option-title">Enter IP Manually</div>
+                    <div class="option-description">Connect directly to a specific IP address</div>
+                </div>
+            </button>
+
+            <button class="option-button cancel" id="btn-cancel">
+                <div class="option-icon">
+                    <i data-lucide="x" aria-hidden="true"></i>
+                </div>
+                <div class="option-content">
+                    <div class="option-title">Cancel</div>
+                    <div class="option-description">Skip auto-connect</div>
+                </div>
+            </button>
+        </div>
+    </div>
+</div>
+
+
+
+  <script type="module" src="./auto-connect-choice-renderer.ts"></script>
+</body>
+</html>
