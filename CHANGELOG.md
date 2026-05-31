@@ -7,19 +7,50 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Job uploader now surfaces translated slicer warnings and the estimated first-layer time when previewing a sliced file (f2c8933)
+## [1.0.4] - 2026-05-31
 
-### Changed
-- Upgrade Electron from 35.7.5 to 39.8.10; the four-major-version jump required no source changes (type-check, build, lint, and the full Jest suite pass unchanged) (4a9d494)
-- Streamline the README into a concise, table-driven overview and align the tech badges with current dependency versions (ade8cbb)
+The 1.0.4 stable release consolidates the 1.0.4-alpha cycle: a major new Calibration Assistant, a complete camera-streaming rework on go2rtc, a full security hardening pass, and a modern testing and tooling foundation.
 
-### Removed
-- Stale `security-audit-2026-02-14.md` snapshot, superseded by the Dependabot remediation (a0cce37)
+### Calibration Assistant
+- New Calibration Assistant connects to your printer over SSH/SCP, parses Klipper configuration, and runs bed-mesh and input-shaper analysis with rendered reports &mdash; all from a dedicated desktop dialog (874f9de, 40e0c1c)
+
+### go2rtc Camera Streaming
+- Replaced the legacy RTSP/JSMpeg stack with the go2rtc streaming gateway for low-latency WebRTC/MSE/MJPEG playback on both desktop and WebUI, with managed binary lifecycle and automatic stream configuration (462f35a, b3ebb4f)
+- Auto-detect OEM cameras from printer-reported stream URLs, with intelligent fallback probing of `http://<printer-ip>:8080/?action=stream` when firmware omits the URL (f4a62ed, 7d585d5, 64b17af)
+- Retired CameraProxyService, RtspStreamService, PortAllocator, and JSMpeg canvas rendering (462f35a)
+
+### Notifications
+- Discord notifications can now include a camera snapshot of the print (89267c3)
+- Corrected time and ETA reporting across the WebUI and Discord alerts (6135d60)
+
+### Material Station (IFS)
+- The IFS material station is now a first-class GridStack component with responsive layouts (1x4, 4x1, 2x2, compact) and dynamic spool sizing, replacing the old dialog (e14e058)
+
+### Theme Profiles & UI
+- Create, rename, and delete custom theme profiles on both Desktop and WebUI (67b6971, 24f765d)
+- Resizable UI components with updated default sizes (5931146)
+
+### Debug Logging
+- New file-based debug logging system with session management, log rotation, and network-specific logs for connection troubleshooting (be53b98)
+- `--debug` / `--debug-network` CLI flags for desktop and headless, a Settings toggle with a nested network option, and WebUI endpoints to list/download logs (be53b98)
+
+### Per-Printer Legacy Mode
+- Legacy API mode is now a per-printer setting instead of a global override, with full settings/UI plumbing for 5M-series fallback (7bf2db9)
+
+### Testing & Reliability
+- Browser Playwright coverage for the built WebUI &mdash; asset versioning, auth, WebSocket login, and context switching &mdash; backed by a fixture server (d967df9)
+- Emulator-backed and live Electron Playwright coverage across 5M Pro, 5M, AD5X, Adventurer 3/4, plus multi-printer discovery, with dedicated Windows-friendly scripts (dc58252, c9c0348, 5a5f62d)
+- Greatly expanded Jest coverage across managers, services, WebUI server/routes, static client modules, and build utilities (5d7e7e5)
+- Aligned runtime discovery with the latest `@ghosttypes/ff-api` and kept printer-tab state synchronized; no-cache WebUI assets prevent stale mixes (6de2a87, 3d57598, 5d7e7e5)
 
 ### Security
-- Resolve all 67 open Dependabot alerts (23 high / 35 moderate / 9 low &rarr; 0); `pnpm audit` reports 0 vulnerabilities. Bumps Electron to 39.8.10, Vite to 7.3.x, and `ws` to 8.21.x, pins `axios` to 1.16.1, and adds/refreshes `pnpm.overrides` for `tmp`, `qs`, `ip-address`, `postcss`, `@babel/plugin-transform-modules-systemjs`, `fast-xml-parser`, `@xmldom/xmldom`, and `brace-expansion` (4a9d494)
-- Move the ineffective top-level `js-yaml` override into `pnpm.overrides` so the 4.1.1 pin actually applies, and drop the now-redundant `fast-xml-builder` and `follow-redirects` overrides (their parents already resolve patched versions) (9420edd, cb979aa)
+- Hardened the WebUI: path-traversal protection on job filenames, timing-safe auth comparison, security headers (CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy), stored-XSS prevention, PBKDF2 password hashing (210k iterations) with automatic migration, per-installation dynamic secrets, and a secured go2rtc proxy binding (3d51c6e, 6366705, e2905d6, 235a225, d98e809, 649f704, 4c7433b, 98ea4ec)
+- Resolved all 67 open Dependabot alerts (23 high / 35 moderate / 9 low &rarr; 0); `pnpm audit` reports 0 vulnerabilities (4a9d494, 9420edd, cb979aa)
+
+### Platform & Tooling
+- Upgraded Electron from 35 to 39.8.10 and migrated the project from npm to pnpm (4a9d494, 0adcdca)
+- Migrated the entire app to native ESM (c4a5d3c)
+- Job uploader now displays translated slicer warnings and the estimated first-layer time (f2c8933)
 
 ## [1.0.4-alpha.4] - 2026-03-21
 
@@ -846,6 +877,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - README.md - Added download link to v1.0.0 release and feature comparison table (fcd8750)
 
-[Unreleased]: https://github.com/Parallel-7/FlashForgeUI-Electron/compare/v1.0.4-alpha.4...alpha
+[Unreleased]: https://github.com/Parallel-7/FlashForgeUI-Electron/compare/v1.0.4...alpha
+[1.0.4]: https://github.com/Parallel-7/FlashForgeUI-Electron/compare/v1.0.4-alpha.4...v1.0.4
 [1.0.4-alpha.4]: https://github.com/Parallel-7/FlashForgeUI-Electron/compare/v1.0.4-alpha.3...v1.0.4-alpha.4
 [1.0.4-alpha.3]: https://github.com/Parallel-7/FlashForgeUI-Electron/compare/v1.0.4-alpha.2...v1.0.4-alpha.3
