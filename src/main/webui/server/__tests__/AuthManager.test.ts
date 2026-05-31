@@ -4,7 +4,7 @@
  */
 
 import { getConfigManager } from '../../../managers/ConfigManager';
-import { AuthManager, getAuthManager } from '../AuthManager';
+import { AuthManager } from '../AuthManager';
 
 // Mock ConfigManager
 jest.mock('../../../managers/ConfigManager', () => ({
@@ -96,12 +96,6 @@ describe('AuthManager', () => {
 
     it('should use existing WebUISecret if present', async () => {
       mockConfig.WebUISecret = 'existing-secret';
-      // Use a hashed password to prevent opportunistic migration from triggering 'set'
-      mockConfig.WebUIPassword = 'pbkdf2:sha512:10000:somesalt:somehash';
-      // We need to mock verifyPassword internal logic or just rely on it returning false?
-      // Wait, verifyPassword calculates hash. If I put a fake hash, verification fails.
-
-      // Easier: Let migration happen, but expect 'WebUISecret' NOT to be set.
       mockConfig.WebUIPassword = 'securepassword123';
 
       await authManager.validateLogin({

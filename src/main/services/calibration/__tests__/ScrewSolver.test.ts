@@ -6,7 +6,7 @@
  */
 
 import type { BedConfig, ScrewConfig } from '../../../../shared/types/calibration';
-import { BedCorner, DEFAULT_SCREW_CONFIG, RotationDirection } from '../../../../shared/types/calibration';
+import { BedCorner, RotationDirection } from '../../../../shared/types/calibration';
 import { Bed } from '../engine/Bed';
 import { ScrewSolver } from '../engine/ScrewSolver';
 

@@ -11,7 +11,6 @@
  */
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
-import * as http from 'http';
 import * as os from 'os';
 import * as path from 'path';
 import { getConfigManager } from '../../../managers/ConfigManager.js';
