@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Job uploader now surfaces translated slicer warnings and the estimated first-layer time when previewing a sliced file (f2c8933)
+
+### Changed
+- Upgrade Electron from 35.7.5 to 39.8.10; the four-major-version jump required no source changes (type-check, build, lint, and the full Jest suite pass unchanged) (4a9d494)
+- Streamline the README into a concise, table-driven overview and align the tech badges with current dependency versions (ade8cbb)
+
+### Removed
+- Stale `security-audit-2026-02-14.md` snapshot, superseded by the Dependabot remediation (a0cce37)
+
+### Security
+- Resolve all 67 open Dependabot alerts (23 high / 35 moderate / 9 low &rarr; 0); `pnpm audit` reports 0 vulnerabilities. Bumps Electron to 39.8.10, Vite to 7.3.x, and `ws` to 8.21.x, pins `axios` to 1.16.1, and adds/refreshes `pnpm.overrides` for `tmp`, `qs`, `ip-address`, `postcss`, `@babel/plugin-transform-modules-systemjs`, `fast-xml-parser`, `@xmldom/xmldom`, and `brace-expansion` (4a9d494)
+- Move the ineffective top-level `js-yaml` override into `pnpm.overrides` so the 4.1.1 pin actually applies, and drop the now-redundant `fast-xml-builder` and `follow-redirects` overrides (their parents already resolve patched versions) (9420edd, cb979aa)
+
 ## [1.0.4-alpha.4] - 2026-03-21
 
 ### Added
