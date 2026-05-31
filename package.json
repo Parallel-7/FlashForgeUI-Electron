@@ -63,11 +63,9 @@
     "email": "106415648+GhostTypes@users.noreply.github.com"
   },
   "license": "MIT",
-  "overrides": {
-    "js-yaml": "4.1.1"
-  },
   "pnpm": {
     "overrides": {
+      "js-yaml": "4.1.1",
       "tar": "7.5.12",
       "fast-xml-parser": "5.8.0",
       "flatted": "3.4.2",
