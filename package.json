@@ -69,16 +69,24 @@
   "pnpm": {
     "overrides": {
       "tar": "7.5.12",
-      "fast-xml-parser": "5.5.8",
+      "fast-xml-parser": "5.8.0",
+      "fast-xml-builder": "1.2.0",
       "flatted": "3.4.2",
+      "axios": "1.16.1",
+      "follow-redirects": "1.16.0",
+      "tmp": "0.2.7",
+      "qs": "6.15.2",
+      "ip-address": "10.2.0",
+      "postcss": "8.5.15",
+      "@babel/plugin-transform-modules-systemjs": "7.29.7",
       "handlebars@<4.7.9": "4.7.9",
       "brace-expansion@<1.1.13": "1.1.13",
       "brace-expansion@>=2.0.0 <2.0.3": "2.0.3",
-      "brace-expansion@>=4.0.0 <5.0.5": "5.0.5",
+      "brace-expansion@>=4.0.0 <5.0.6": "5.0.6",
       "picomatch@<2.3.2": "2.3.2",
       "picomatch@>=4.0.0 <4.0.4": "4.0.4",
       "path-to-regexp@>=8.0.0 <8.4.0": "8.4.2",
-      "@xmldom/xmldom@<0.8.12": "0.8.12",
+      "@xmldom/xmldom@<0.8.13": "0.8.13",
       "lodash@<=4.17.23": "4.18.1"
     }
   },
@@ -94,7 +102,7 @@
     "pdf-lib": "^1.17.1",
     "pngjs": "^7.0.0",
     "ssh2": "^1.17.0",
-    "ws": "^8.19.0",
+    "ws": "^8.21.0",
     "zod": "^4.3.6"
   },
   "devDependencies": {
@@ -111,7 +119,7 @@
     "@types/ws": "^8.18.1",
     "babel-jest": "^29.7.0",
     "concurrently": "^9.2.1",
-    "electron": "^35.7.5",
+    "electron": "^39.8.10",
     "electron-builder": "^26.8.1",
     "electron-vite": "^4.0.1",
     "identity-obj-proxy": "^3.0.0",
@@ -123,7 +131,7 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3",
-    "vite": "^7.3.1"
+    "vite": "^7.3.2"
   },
   "type": "module"
 }
