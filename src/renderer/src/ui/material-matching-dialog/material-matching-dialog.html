@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Material Matching</title>
+  <link rel="stylesheet" href="material-matching-dialog.css">
+  
+  
+</head>
+<body>
+  <div class="dialog-container dialog-container--full">
+    <div class="dialog-header with-description">
+      <h2 class="dialog-title">Match Print Materials to IFS Slots</h2>
+      <p class="dialog-description">Match each material used in your print to the corresponding IFS slot. Materials must be the same type (e.g., PLA to PLA).</p>
+      <button class="dialog-close" id="btn-close" title="Close" aria-label="Close">
+        <i data-lucide="x" aria-hidden="true"></i>
+      </button>
+    </div>
+    
+    <div class="dialog-content">
+      <div class="matching-container">
+        <!-- Print requirements section -->
+        <div class="requirements-section">
+          <h3>Print Requirements</h3>
+          <div id="print-requirements" class="requirement-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+        
+        <!-- IFS slots section -->
+        <div class="ifs-section">
+          <h3>Available IFS Slots</h3>
+          <div id="ifs-slots" class="slot-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+        
+        <!-- Mappings section -->
+        <div class="mappings-section">
+          <h3>Material Mappings</h3>
+          <div id="material-mappings" class="mapping-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </div>
+      
+      <div id="error-message" class="error-message" style="display: none;"></div>
+      <div id="warning-message" class="warning-message" style="display: none;"></div>
+    </div>
+    
+    <div class="dialog-footer">
+      <button class="dialog-button cancel" id="btn-cancel">Cancel</button>
+      <button class="dialog-button primary" id="btn-confirm" disabled>Start Print</button>
+    </div>
+  </div>
+  
+  
+  <script type="module" src="./material-matching-dialog-renderer.ts"></script>
+</body>
+</html>

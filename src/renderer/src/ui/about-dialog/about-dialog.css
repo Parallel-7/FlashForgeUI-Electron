@@ -1,0 +1,140 @@
+/**
+ * About dialog specific styling layered on top of the shared rounded dialog template.
+ */
+@import url("../shared/rounded-dialog-template.css");
+
+.about-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+  text-align: center;
+}
+
+.about-app-icon {
+  width: 96px;
+  height: 96px;
+  border-radius: 22px;
+  background: transparent;
+  padding: 12px;
+  box-shadow: var(--shadow-lg);
+}
+
+.about-app-name {
+  font-size: 1.6rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.version-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.version-badge {
+  font-size: 0.95rem;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--success-color) 20%, transparent);
+  color: var(--success-color);
+  border: 1px solid color-mix(in srgb, var(--success-color) 40%, transparent);
+}
+
+.version-badge.beta {
+  background: color-mix(in srgb, var(--warning-color) 18%, transparent);
+  border-color: color-mix(in srgb, var(--warning-color) 50%, transparent);
+  color: var(--warning-color);
+}
+
+.release-label {
+  font-size: 0.9rem;
+  color: var(--text-color);
+}
+
+.developer-credit {
+  font-size: 1rem;
+  color: var(--text-color);
+  margin: 0;
+}
+
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.info-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--surface-muted);
+  border: 1px solid color-mix(in srgb, var(--theme-text) 8%, transparent);
+}
+
+.info-card i {
+  width: 24px;
+  height: 24px;
+  color: inherit;
+}
+
+.info-card .label {
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.link-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid color-mix(in srgb, var(--theme-text) 10%, transparent);
+  background: color-mix(in srgb, var(--theme-text) 3%, transparent);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 0.2s ease,
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.link-card:hover {
+  border-color: var(--theme-primary);
+  background: color-mix(in srgb, var(--theme-primary) 10%, transparent);
+  transform: translateY(-1px);
+}
+
+.link-card i {
+  width: 26px;
+  height: 26px;
+  color: var(--theme-text);
+}
+
+.link-card .link-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.link-card .link-title {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.link-card .link-description {
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--theme-text) 70%, transparent);
+}
+
+.dialog-footer {
+  justify-content: center;
+}

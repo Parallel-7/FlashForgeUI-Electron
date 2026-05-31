@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: blob:;
+        connect-src 'self';
+        font-src 'self';
+        object-src 'none';
+        base-uri 'self';
+        form-action 'self';
+    ">
+    <title>Connect to Printer</title>
+    <link rel="stylesheet" href="connect-choice-dialog.css">
+    
+</head>
+<body>
+    <div class="dialog-container dialog-container--full">
+        <div class="dialog-header with-description">
+            <h2>Connect to Printer</h2>
+            <p class="dialog-description">Choose how you want to connect to your FlashForge printer</p>
+        </div>
+        
+        <div class="dialog-content">
+            <div class="choice-options">
+                <button id="btn-enter-ip" class="choice-button">
+                    <div class="choice-icon">
+                        <i data-lucide="globe" aria-hidden="true"></i>
+                    </div>
+                    <div class="choice-content">
+                        <h3>Enter IP Address</h3>
+                        <p>Manually enter your printer's IP address for direct connection</p>
+                    </div>
+                </button>
+
+                <button id="btn-scan-network" class="choice-button">
+                    <div class="choice-icon">
+                        <i data-lucide="wifi" aria-hidden="true"></i>
+                    </div>
+                    <div class="choice-content">
+                        <h3>Scan Network</h3>
+                        <p>Automatically discover printers on your local network</p>
+                    </div>
+                </button>
+            </div>
+        </div>
+        
+        <div class="dialog-actions compact">
+            <button id="btn-cancel" class="btn-secondary">Cancel</button>
+        </div>
+    </div>
+
+    
+    
+    <script type="module" src="./connect-choice-dialog-renderer.ts"></script>
+</body>
+</html>

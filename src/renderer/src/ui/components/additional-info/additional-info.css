@@ -1,0 +1,179 @@
+/**
+ * Additional Info Component Styles
+ * Modern, professional printer information display with clean typography and intuitive layout
+ * Unified design language matching all other components
+ */
+
+.additional-info-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  background: transparent;
+}
+
+.additional-info-container .panel-header {
+  background: var(--surface-muted);
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border-color-light);
+  flex-shrink: 0;
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  color: var(--text-color);
+  backdrop-filter: blur(8px);
+  box-shadow: var(--shadow-sm);
+}
+
+.additional-info-container .panel-content {
+  padding: 10px 8px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 6px;
+  font-family: "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  overflow: auto;
+}
+
+/* Info Display Row Layout - Compact and efficient */
+.additional-info-container .info-display-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: var(--card-bg);
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 3%, transparent),
+    var(--shadow-sm);
+  transition: all var(--transition-normal);
+  min-height: 36px;
+  width: 100%;
+  backdrop-filter: blur(8px);
+}
+
+.additional-info-container .info-display-row:hover {
+  border-color: var(--border-color-light);
+  box-shadow:
+    inset 0 1px 0 color-mix(in srgb, var(--theme-text) 6%, transparent),
+    var(--shadow-md);
+  background: var(--card-bg-hover);
+  transform: translateY(-1px);
+}
+
+/* Info Labels - Readable typography */
+.additional-info-container .info-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-color);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  min-width: 70px;
+  flex-shrink: 0;
+}
+
+/* Info Values - Readable and clear */
+.additional-info-container .info-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+  letter-spacing: 0.2px;
+  text-align: right;
+  flex-grow: 1;
+  margin-left: 8px;
+  transition:
+    color var(--transition-normal),
+    text-shadow var(--transition-normal);
+}
+
+/* Subtle interaction feedback */
+.additional-info-container .info-value:hover {
+  color: var(--accent-color);
+  text-shadow: 0 0 12px color-mix(in srgb, var(--accent-color) 30%, transparent);
+}
+
+/* Settings unavailable state - modern dimmed appearance */
+.additional-info-container.settings-unavailable {
+  opacity: 0.5;
+}
+
+.additional-info-container.settings-unavailable .info-display-row {
+  background: var(--surface-muted);
+  border-color: var(--border-color);
+  color: var(--text-color-muted);
+}
+
+.additional-info-container.settings-unavailable .info-value {
+  color: var(--text-color-secondary);
+}
+
+/* Nozzle size indicators with enhanced visibility */
+.additional-info-container.nozzle-size-0-4 #nozzle-size-display {
+  color: var(--success-color);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--success-color) 30%, transparent);
+}
+
+.additional-info-container.nozzle-size-0-6 #nozzle-size-display {
+  color: var(--warning-color);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--warning-color) 30%, transparent);
+}
+
+.additional-info-container.nozzle-size-other #nozzle-size-display {
+  color: var(--accent-color);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent-color) 30%, transparent);
+}
+
+/* Speed offset indicators with enhanced visibility */
+.additional-info-container.speed-offset-normal #speed-offset-display {
+  color: var(--success-color);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--success-color) 30%, transparent);
+}
+
+.additional-info-container.speed-offset-fast #speed-offset-display {
+  color: var(--warning-color);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--warning-color) 30%, transparent);
+}
+
+.additional-info-container.speed-offset-slow #speed-offset-display {
+  color: var(--error-color);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--error-color) 30%, transparent);
+}
+
+/* Z-axis offset indicators with enhanced visibility */
+.additional-info-container.z-offset-zero #z-offset-display {
+  color: var(--success-color);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--success-color) 30%, transparent);
+}
+
+.additional-info-container.z-offset-positive #z-offset-display {
+  color: var(--warning-color);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--warning-color) 30%, transparent);
+}
+
+.additional-info-container.z-offset-negative #z-offset-display {
+  color: var(--accent-color);
+  text-shadow: 0 0 10px color-mix(in srgb, var(--accent-color) 30%, transparent);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .additional-info-container {
+    padding: 12px 8px;
+    gap: 8px;
+    min-width: 180px;
+  }
+
+  .additional-info-container .info-display-row {
+    padding: 10px 12px;
+    font-size: 12px;
+  }
+
+  .additional-info-container .info-value {
+    font-size: 14px;
+    min-width: 50px;
+  }
+}

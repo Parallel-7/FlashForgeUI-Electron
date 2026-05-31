@@ -1,0 +1,23 @@
+/**
+ * @fileoverview Base Component System Exports
+ *
+ * This file exports all the core components of the UI component system,
+ * providing a clean public API for importing components, types, and managers
+ * throughout the application.
+ */
+
+// Base component class
+export { BaseComponent } from './component.js';
+
+// Type definitions
+export type {
+  ComponentConfig,
+  ComponentEventHandler,
+  ComponentState,
+  ComponentUpdateData,
+  IComponent,
+  IComponentManager,
+} from './types.js';
+
+// Enums
+export { ComponentEvents } from './types.js';

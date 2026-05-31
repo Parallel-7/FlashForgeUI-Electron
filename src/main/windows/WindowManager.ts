@@ -1,0 +1,461 @@
+/**
+ * @fileoverview WindowManager provides centralized management of all BrowserWindow instances
+ * in the application.
+ *
+ * This singleton service manages the lifecycle and state of all application windows, providing
+ * type-safe access to window references while preventing common errors like accessing destroyed
+ * windows or creating duplicate window instances. The manager uses a Map-based storage system
+ * with an enum-based window type system to ensure compile-time type safety and runtime validation.
+ * All window factory modules use WindowManager to register, retrieve, and cleanup window references,
+ * ensuring consistent state management across the entire application.
+ *
+ * Key Features:
+ * - Singleton pattern ensuring single source of truth for window state
+ * - Type-safe window reference storage using Map with WindowType enum keys
+ * - Automatic destroyed window detection in hasWindow() checks
+ * - Convenience methods for all window types with type-safe return values
+ * - Bulk operations for closing multiple windows (closeAll, closeAllExceptMain)
+ * - Active window enumeration filtering out destroyed windows
+ * - Null-safe access patterns preventing undefined errors
+ *
+ * Core Responsibilities:
+ * - Store and retrieve BrowserWindow references by type with null safety
+ * - Validate window existence and destroyed state before returning references
+ * - Provide convenience methods for common window types (main, settings, status, dialogs)
+ * - Support bulk operations for window management (close all, get active)
+ * - Initialize all window type slots as null to ensure consistent state
+ * - Clear window references on window close events via factory lifecycle handlers
+ *
+ * Window Type Enumeration:
+ * The WindowType enum defines all possible window types in the application:
+ * - MAIN: Main application window
+ * - SETTINGS: Settings configuration window
+ * - STATUS: Printer status display window
+ * - LOG_DIALOG: Application log viewer
+ * - INPUT_DIALOG: Text input dialog
+ * - JOB_UPLOADER: File upload interface
+ * - PRINTER_SELECTION: Printer management window
+ * - JOB_PICKER: File selection from printer
+ * - SEND_COMMANDS: Direct command interface
+ * - IFS_DIALOG: Material station display
+ * - MATERIAL_INFO_DIALOG: Material slot information
+ * - MATERIAL_MATCHING_DIALOG: Material configuration
+ * - SINGLE_COLOR_CONFIRMATION_DIALOG: Print validation
+ * - AUTO_CONNECT_CHOICE_DIALOG: Saved printer selection
+ * - CONNECT_CHOICE_DIALOG: Connection method selection
+ *
+ * Usage Pattern:
+ * ```typescript
+ * const windowManager = getWindowManager();
+ *
+ * // Set window reference (usually in factory)
+ * windowManager.setSettingsWindow(settingsWindow);
+ *
+ * // Check if window exists and is not destroyed
+ * if (windowManager.hasSettingsWindow()) {
+ *   const window = windowManager.getSettingsWindow();
+ *   window?.focus();
+ * }
+ *
+ * // Clear reference (usually in lifecycle handler)
+ * windowManager.setSettingsWindow(null);
+ * ```
+ *
+ * Convenience Methods:
+ * Each window type has three convenience methods:
+ * - get{Type}Window(): Returns BrowserWindow | null
+ * - set{Type}Window(window): Sets window reference
+ * - has{Type}Window(): Returns boolean (true if window exists and not destroyed)
+ *
+ * Bulk Operations:
+ * - getActiveWindows(): Returns array of all non-destroyed windows
+ * - closeAllExceptMain(): Closes all windows except main window
+ * - closeAll(): Closes all windows including main window
+ *
+ * @exports WindowType - Enum of all window types in the application
+ * @exports WindowManager - Main window management class (not directly exported, use getWindowManager)
+ * @exports getWindowManager - Singleton instance accessor function
+ */
+import { BrowserWindow } from 'electron';
+
+export enum WindowType {
+  MAIN = 'main',
+  SETTINGS = 'settings',
+  STATUS = 'status',
+  LOG_DIALOG = 'logDialog',
+  INPUT_DIALOG = 'inputDialog',
+  JOB_UPLOADER = 'jobUploader',
+  PRINTER_SELECTION = 'printerSelection',
+  JOB_PICKER = 'jobPicker',
+  SEND_COMMANDS = 'sendCommands',
+  MATERIAL_INFO_DIALOG = 'materialInfoDialog',
+  MATERIAL_MATCHING_DIALOG = 'materialMatchingDialog',
+  SINGLE_COLOR_CONFIRMATION_DIALOG = 'singleColorConfirmationDialog',
+  AUTO_CONNECT_CHOICE_DIALOG = 'autoConnectChoiceDialog',
+  CONNECT_CHOICE_DIALOG = 'connectChoiceDialog',
+  PALETTE = 'palette',
+  SHORTCUT_CONFIG_DIALOG = 'shortcutConfigDialog',
+  COMPONENT_DIALOG = 'componentDialog',
+  UPDATE_DIALOG = 'updateDialog',
+  ABOUT_DIALOG = 'aboutDialog',
+  CALIBRATION_DIALOG = 'calibrationDialog',
+}
+
+class WindowManager {
+  private static instance: WindowManager;
+  private readonly windows: Map<WindowType, BrowserWindow | null> = new Map();
+
+  private constructor() {
+    // Initialize all window slots as null
+    Object.values(WindowType).forEach((type) => {
+      this.windows.set(type, null);
+    });
+  }
+
+  public static getInstance(): WindowManager {
+    if (!WindowManager.instance) {
+      WindowManager.instance = new WindowManager();
+    }
+    return WindowManager.instance;
+  }
+
+  /**
+   * Get a window reference by type
+   * @param type - The window type to retrieve
+   * @returns The BrowserWindow instance or null if not set
+   */
+  public getWindow(type: WindowType): BrowserWindow | null {
+    return this.windows.get(type) || null;
+  }
+
+  /**
+   * Set a window reference by type
+   * @param type - The window type to set
+   * @param window - The BrowserWindow instance or null to clear
+   */
+  public setWindow(type: WindowType, window: BrowserWindow | null): void {
+    this.windows.set(type, window);
+  }
+
+  /**
+   * Clear a window reference by type
+   * @param type - The window type to clear
+   */
+  public clearWindow(type: WindowType): void {
+    this.windows.set(type, null);
+  }
+
+  /**
+   * Check if a window of the specified type exists and is not destroyed
+   * @param type - The window type to check
+   * @returns True if window exists and is not destroyed
+   */
+  public hasWindow(type: WindowType): boolean {
+    const window = this.windows.get(type);
+    return window !== null && window !== undefined && !window.isDestroyed();
+  }
+
+  // Convenience methods for main window access
+  public getMainWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.MAIN);
+  }
+
+  public setMainWindow(window: BrowserWindow): void {
+    this.setWindow(WindowType.MAIN, window);
+  }
+
+  public hasMainWindow(): boolean {
+    return this.hasWindow(WindowType.MAIN);
+  }
+
+  // Convenience methods for settings window access
+  public getSettingsWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.SETTINGS);
+  }
+
+  public setSettingsWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.SETTINGS, window);
+  }
+
+  public hasSettingsWindow(): boolean {
+    return this.hasWindow(WindowType.SETTINGS);
+  }
+
+  // Convenience methods for status window access
+  public getStatusWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.STATUS);
+  }
+
+  public setStatusWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.STATUS, window);
+  }
+
+  public hasStatusWindow(): boolean {
+    return this.hasWindow(WindowType.STATUS);
+  }
+
+  // Convenience methods for log dialog access
+  public getLogDialog(): BrowserWindow | null {
+    return this.getWindow(WindowType.LOG_DIALOG);
+  }
+
+  public setLogDialog(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.LOG_DIALOG, window);
+  }
+
+  public hasLogDialog(): boolean {
+    return this.hasWindow(WindowType.LOG_DIALOG);
+  }
+
+  // Convenience methods for about dialog access
+  public getAboutDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.ABOUT_DIALOG);
+  }
+
+  public setAboutDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.ABOUT_DIALOG, window);
+  }
+
+  public hasAboutDialogWindow(): boolean {
+    return this.hasWindow(WindowType.ABOUT_DIALOG);
+  }
+
+  // Convenience methods for input dialog access
+  public getInputDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.INPUT_DIALOG);
+  }
+
+  public setInputDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.INPUT_DIALOG, window);
+  }
+
+  public hasInputDialogWindow(): boolean {
+    return this.hasWindow(WindowType.INPUT_DIALOG);
+  }
+
+  // Convenience methods for job uploader access
+  public getJobUploaderWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.JOB_UPLOADER);
+  }
+
+  public setJobUploaderWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.JOB_UPLOADER, window);
+  }
+
+  public hasJobUploaderWindow(): boolean {
+    return this.hasWindow(WindowType.JOB_UPLOADER);
+  }
+
+  // Convenience methods for printer selection access
+  public getPrinterSelectionWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.PRINTER_SELECTION);
+  }
+
+  public setPrinterSelectionWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.PRINTER_SELECTION, window);
+  }
+
+  public hasPrinterSelectionWindow(): boolean {
+    return this.hasWindow(WindowType.PRINTER_SELECTION);
+  }
+
+  // Convenience methods for job picker access
+  public getJobPickerWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.JOB_PICKER);
+  }
+
+  public setJobPickerWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.JOB_PICKER, window);
+  }
+
+  public hasJobPickerWindow(): boolean {
+    return this.hasWindow(WindowType.JOB_PICKER);
+  }
+
+  // Convenience methods for send commands access
+  public getSendCommandsWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.SEND_COMMANDS);
+  }
+
+  public setSendCommandsWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.SEND_COMMANDS, window);
+  }
+
+  public hasSendCommandsWindow(): boolean {
+    return this.hasWindow(WindowType.SEND_COMMANDS);
+  }
+
+  // Convenience methods for material info dialog access
+  public getMaterialInfoDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.MATERIAL_INFO_DIALOG);
+  }
+
+  public setMaterialInfoDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.MATERIAL_INFO_DIALOG, window);
+  }
+
+  public hasMaterialInfoDialogWindow(): boolean {
+    return this.hasWindow(WindowType.MATERIAL_INFO_DIALOG);
+  }
+
+  // Convenience methods for material matching dialog access
+  public getMaterialMatchingDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.MATERIAL_MATCHING_DIALOG);
+  }
+
+  public setMaterialMatchingDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.MATERIAL_MATCHING_DIALOG, window);
+  }
+
+  public hasMaterialMatchingDialogWindow(): boolean {
+    return this.hasWindow(WindowType.MATERIAL_MATCHING_DIALOG);
+  }
+
+  // Convenience methods for single color confirmation dialog access
+  public getSingleColorConfirmationDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.SINGLE_COLOR_CONFIRMATION_DIALOG);
+  }
+
+  public setSingleColorConfirmationDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.SINGLE_COLOR_CONFIRMATION_DIALOG, window);
+  }
+
+  public hasSingleColorConfirmationDialogWindow(): boolean {
+    return this.hasWindow(WindowType.SINGLE_COLOR_CONFIRMATION_DIALOG);
+  }
+
+  // Convenience methods for auto-connect choice dialog access
+  public getAutoConnectChoiceDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.AUTO_CONNECT_CHOICE_DIALOG);
+  }
+
+  public setAutoConnectChoiceDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.AUTO_CONNECT_CHOICE_DIALOG, window);
+  }
+
+  public hasAutoConnectChoiceDialogWindow(): boolean {
+    return this.hasWindow(WindowType.AUTO_CONNECT_CHOICE_DIALOG);
+  }
+
+  // Convenience methods for connect choice dialog access
+  public getConnectChoiceDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.CONNECT_CHOICE_DIALOG);
+  }
+
+  public setConnectChoiceDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.CONNECT_CHOICE_DIALOG, window);
+  }
+
+  public hasConnectChoiceDialogWindow(): boolean {
+    return this.hasWindow(WindowType.CONNECT_CHOICE_DIALOG);
+  }
+
+  // Convenience methods for palette window access
+  public getPaletteWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.PALETTE);
+  }
+
+  public setPaletteWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.PALETTE, window);
+  }
+
+  public hasPaletteWindow(): boolean {
+    return this.hasWindow(WindowType.PALETTE);
+  }
+
+  // Convenience methods for shortcut config dialog access
+  public getShortcutConfigDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.SHORTCUT_CONFIG_DIALOG);
+  }
+
+  public setShortcutConfigDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.SHORTCUT_CONFIG_DIALOG, window);
+  }
+
+  public hasShortcutConfigDialogWindow(): boolean {
+    return this.hasWindow(WindowType.SHORTCUT_CONFIG_DIALOG);
+  }
+
+  // Convenience methods for component dialog access
+  public getComponentDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.COMPONENT_DIALOG);
+  }
+
+  public setComponentDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.COMPONENT_DIALOG, window);
+  }
+
+  public hasComponentDialogWindow(): boolean {
+    return this.hasWindow(WindowType.COMPONENT_DIALOG);
+  }
+
+  // Convenience methods for update dialog access
+  public getUpdateDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.UPDATE_DIALOG);
+  }
+
+  public setUpdateDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.UPDATE_DIALOG, window);
+  }
+
+  public hasUpdateDialogWindow(): boolean {
+    return this.hasWindow(WindowType.UPDATE_DIALOG);
+  }
+
+  // Convenience methods for calibration dialog access
+  public getCalibrationDialogWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.CALIBRATION_DIALOG);
+  }
+
+  public setCalibrationDialogWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.CALIBRATION_DIALOG, window);
+  }
+
+  public hasCalibrationDialogWindow(): boolean {
+    return this.hasWindow(WindowType.CALIBRATION_DIALOG);
+  }
+
+  /**
+   * Get all active windows (non-null and not destroyed)
+   * @returns Array of active BrowserWindow instances
+   */
+  public getActiveWindows(): BrowserWindow[] {
+    const activeWindows: BrowserWindow[] = [];
+
+    this.windows.forEach((window) => {
+      if (window && !window.isDestroyed()) {
+        activeWindows.push(window);
+      }
+    });
+
+    return activeWindows;
+  }
+
+  /**
+   * Close all windows except the main window
+   */
+  public closeAllExceptMain(): void {
+    this.windows.forEach((window, type) => {
+      if (type !== WindowType.MAIN && window && !window.isDestroyed()) {
+        window.close();
+      }
+    });
+  }
+
+  /**
+   * Close all windows
+   */
+  public closeAll(): void {
+    this.windows.forEach((window) => {
+      if (window && !window.isDestroyed()) {
+        window.close();
+      }
+    });
+  }
+}
+
+/**
+ * Get the singleton WindowManager instance
+ * @returns The WindowManager singleton instance
+ */
+export const getWindowManager = (): WindowManager => WindowManager.getInstance();

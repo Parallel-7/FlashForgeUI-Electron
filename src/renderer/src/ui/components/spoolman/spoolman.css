@@ -1,0 +1,157 @@
+/**
+ * @fileoverview Spoolman Component Styles
+ *
+ * Styling for the Spoolman filament tracker component with three distinct states:
+ * disabled, no spool selected, and active spool display. Includes color-coded
+ * spool visualization and responsive layout.
+ */
+
+.spoolman-component {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: var(--card-bg);
+  border-radius: 8px;
+  position: relative;
+}
+
+.spoolman-state {
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+/* ============================================================================
+   DISABLED STATE
+   ============================================================================ */
+
+.spoolman-disabled {
+  text-align: center;
+}
+
+.spoolman-icon {
+  font-size: 48px;
+  margin-bottom: 12px;
+  opacity: 0.5;
+}
+
+.spoolman-message {
+  color: var(--text-color-muted);
+  font-size: 13px;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ============================================================================
+   NO SPOOL STATE
+   ============================================================================ */
+
+.btn-set-spool {
+  padding: 12px 24px;
+  background: var(--accent-color);
+  color: var(--accent-text-color);
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.btn-set-spool:hover {
+  background: var(--button-hover);
+}
+
+.btn-set-spool:active {
+  transform: translateY(1px);
+}
+
+.spoolman-hint {
+  color: var(--text-color-muted);
+  font-size: 12px;
+  margin-top: 12px;
+}
+
+/* ============================================================================
+   ACTIVE SPOOL STATE
+   ============================================================================ */
+
+.spoolman-active {
+  position: relative;
+  gap: 8px;
+}
+
+.btn-settings {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: color-mix(in srgb, var(--theme-text) 10%, transparent);
+  border: none;
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+  opacity: 0.7;
+}
+
+.btn-settings:hover {
+  background: color-mix(in srgb, var(--theme-text) 20%, transparent);
+  opacity: 1;
+}
+
+/* Spool visual (circular, matching IFS dialog) */
+.spool-visual {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: var(--surface-muted);
+  border: 4px solid color-mix(in srgb, var(--theme-text) 20%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  box-shadow:
+    inset 0 4px 8px color-mix(in srgb, var(--theme-background) 40%, black),
+    var(--shadow-sm);
+  transition: transform 0.2s ease;
+}
+
+.spool-visual:hover {
+  transform: scale(1.05);
+}
+
+.spool-center {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: color-mix(in srgb, var(--theme-background) 30%, black);
+  border: 2px solid color-mix(in srgb, var(--theme-text) 20%, transparent);
+}
+
+/* Spool text */
+.spool-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color);
+  text-align: center;
+  margin-bottom: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spool-info {
+  font-size: 12px;
+  color: var(--text-color-muted);
+  text-align: center;
+}
