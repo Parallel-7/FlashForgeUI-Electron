@@ -5,7 +5,7 @@
  * @module main/services/calibration/__tests__/FFTProcessor.test
  */
 
-import { DEFAULT_FFT_OPTIONS, FFTProcessor } from '../shaper/FFTProcessor';
+import { FFTProcessor } from '../shaper/FFTProcessor';
 
 describe('FFTProcessor', () => {
   let processor: FFTProcessor;

@@ -10,8 +10,6 @@ import type { AnalysisResult, BedCorners, MeshData } from '../../../../../shared
 import {
   type ColorScheme,
   createColorMapper,
-  createDivergingMapper,
-  generateCSSGradient,
   getColor,
   type RGB,
   rgbToCSS,
