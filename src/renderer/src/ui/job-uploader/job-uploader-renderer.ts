@@ -23,7 +23,7 @@
 // ENHANCED: Now supports 3MF multi-color upload for AD5X printers
 
 import type { AD5XMaterialMapping } from '@ghosttypes/ff-api';
-import type { FilamentInfo, ParseResult } from '@parallel-7/slicer-meta';
+import type { FilamentInfo, ParseResult, SliceWarning } from '@parallel-7/slicer-meta';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
 import type { JobUploaderAPI, UploadCompletionResult, UploadProgress } from './job-uploader-preload.cts';
 
@@ -70,6 +70,9 @@ interface DialogElements {
   layerHeight: HTMLElement | null;
   infill: HTMLElement | null;
   layers: HTMLElement | null;
+  firstLayerTime: HTMLElement | null;
+  warningsContainer: HTMLElement | null;
+  warningsList: HTMLElement | null;
   okButton: HTMLButtonElement | null;
   cancelButton: HTMLButtonElement | null;
   closeButton: HTMLButtonElement | null;
@@ -167,6 +170,9 @@ document.addEventListener('DOMContentLoaded', (): void => {
     layerHeight: document.getElementById('meta-layer-height'),
     infill: document.getElementById('meta-infill'),
     layers: document.getElementById('meta-layers'),
+    firstLayerTime: document.getElementById('meta-first-layer-time'),
+    warningsContainer: document.getElementById('warnings-container'),
+    warningsList: document.getElementById('meta-warnings'),
     okButton: document.getElementById('btn-ok') as HTMLButtonElement,
     cancelButton: document.getElementById('btn-cancel') as HTMLButtonElement,
     closeButton: document.getElementById('btn-close') as HTMLButtonElement,
@@ -453,6 +459,46 @@ function handleCancel(api: JobUploaderAPI): void {
 }
 
 /**
+ * Format seconds into a human-readable duration string
+ */
+function formatDuration(seconds: number): string {
+  if (seconds < 60) {
+    return `${Math.round(seconds)}s`;
+  }
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const secs = Math.round(seconds % 60);
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${secs}s`;
+  }
+  return `${minutes}m ${secs}s`;
+}
+
+/**
+ * Render a single SliceWarning as an HTML string
+ */
+function renderWarning(warning: SliceWarning): string {
+  const levelClass = warning.level >= 2 ? 'level-error' : warning.level >= 1 ? 'level-warning' : 'level-info';
+  const icon = warning.level >= 2 ? '\u26A0' : '\u2139';
+  return `<div class="warning-item">
+    <span class="warning-icon ${levelClass}">${icon}</span>
+    <span class="warning-msg">${escapeHtml(warning.message || warning.msg)}</span>
+  </div>`;
+}
+
+/**
+ * Escape HTML special characters to prevent XSS
+ */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+/**
  * Populate metadata display with parsed data
  */
 function populateMetadata(elements: DialogElements, data: MetadataResult): void {
@@ -549,6 +595,24 @@ function populateMetadata(elements: DialogElements, data: MetadataResult): void 
     elements.layers.textContent = layerCount ? layerCount.toString() : '-';
   }
 
+  // First Layer Time (3MF only - from slicer-meta 1.2.0)
+  if (elements.firstLayerTime) {
+    const firstLayerSec = data.threeMf?.firstLayerTime;
+    elements.firstLayerTime.textContent = firstLayerSec != null ? formatDuration(firstLayerSec) : '-';
+  }
+
+  // Warnings (3MF only - from slicer-meta 1.2.0)
+  if (elements.warningsContainer && elements.warningsList) {
+    const warnings = data.threeMf?.warnings;
+    if (warnings && warnings.length > 0) {
+      elements.warningsContainer.style.display = '';
+      elements.warningsList.innerHTML = warnings.map(renderWarning).join('');
+    } else {
+      elements.warningsContainer.style.display = 'none';
+      elements.warningsList.textContent = '-';
+    }
+  }
+
   // Right Column: Thumbnail
   if (elements.thumbnailBox) {
     const thumbnailData = data.threeMf?.plateImage || data.file?.thumbnail;
@@ -580,6 +644,7 @@ function resetMetadata(elements: DialogElements): void {
     elements.layerHeight,
     elements.infill,
     elements.layers,
+    elements.firstLayerTime,
   ];
 
   metadataElements.forEach((element) => {
@@ -587,6 +652,14 @@ function resetMetadata(elements: DialogElements): void {
       element.textContent = '-';
     }
   });
+
+  // Reset warnings container
+  if (elements.warningsContainer) {
+    elements.warningsContainer.style.display = 'none';
+  }
+  if (elements.warningsList) {
+    elements.warningsList.textContent = '-';
+  }
 
   if (elements.thumbnailBox) {
     elements.thumbnailBox.innerHTML = '<span class="no-preview-text">No Preview</span>';

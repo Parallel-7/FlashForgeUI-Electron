@@ -125,6 +125,12 @@ For detailed architectural information, see the comprehensive reference document
 - `src/main/printer-backends/*.ts` - Legacy, Adventurer5M, Adventurer5M Pro, AD5X implementations
 - `src/main/printer-backends/ad5x/*` - material station transforms/types/utils
 
+### Model Detection (TCP-First Bootstrap, PID-Aware)
+
+- **Bootstrap order matters.** The HTTP `/detail` endpoint requires authentication (`serialNumber` + `checkCode`), so during the very first connection — before the user has supplied a check code — we cannot read the firmware-set `pid` from `/detail`. `ConnectionEstablishmentService.ts` therefore opens an unauthenticated TCP `M115` first via `tcpClient.getPrinterInfo()` and uses the resulting `TypeName` (firmware-controlled, e.g. `"FlashForge Adventurer 5M Pro"`) for backend selection in `PrinterUtils.ts` (`detectPrinterModelType` / `detectPrinterFamily`). This is correct and intentional — `TypeName` is firmware-set and not the same as the user-mutable `Name` from `/detail`.
+- **Once paired, trust the library.** After the check code is provided and `FiveMClient.initialize()` succeeds, `client.isPro` / `client.isAD5X` / `info.Pid` (from `@ghosttypes/ff-api>=1.3.1`) are derived from the firmware `pid` (35 = 5M, 36 = 5M Pro, 38 = AD5X). All later capability gating should read those flags, not re-substring-match `info.Name` — that field is user-mutable via the LCD or cloud and re-deriving capabilities from it re-introduces the bug fixed in `ff-5mp-hass#13`.
+- **Don't mutate `client.isAD5X` after the fact.** If the upstream library disagrees with what you expected, fix the library or the backend selection upstream — don't patch the flag locally.
+
 ### Renderer & Components
 
 - `src/renderer/src/renderer.ts`, `src/renderer/src/gridController.ts`, `src/renderer/src/shortcutButtons.ts`, `src/renderer/src/perPrinterStorage.ts`, `src/renderer/src/logging.ts`

@@ -131,3 +131,4 @@ debug_logs/*
 .tmp-ff-api/
 hook_debug_log.txt
 __pycache__/
+.pi/session-memory.json

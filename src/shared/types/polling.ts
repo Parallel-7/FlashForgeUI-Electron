@@ -128,7 +128,7 @@ export interface FiltrationStatus {
 export interface PrinterSettings {
   nozzleSize?: number; // mm (e.g. 0.4, 0.6) - undefined for legacy printers
   filamentType?: string; // PLA, ABS, etc - undefined for legacy printers
-  speedOffset?: number; // percentage 50-200 - undefined for legacy printers
+  speedOffset?: number; // percentage 0-1000 (AD5X reports up to 500) - undefined for legacy printers
   zAxisOffset?: number; // mm offset value - undefined for legacy printers
 }
 

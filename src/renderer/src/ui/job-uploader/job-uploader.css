@@ -359,6 +359,46 @@ input[type="checkbox"] {
   font-style: italic;
 }
 
+/* Warnings list in metadata grid */
+.warnings-list {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.warning-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-color-light);
+}
+
+.warning-item:last-child {
+  border-bottom: none;
+}
+
+.warning-icon {
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.warning-icon.level-warning {
+  color: var(--warning-color);
+}
+
+.warning-icon.level-error {
+  color: var(--error-color);
+}
+
+.warning-icon.level-info {
+  color: var(--accent-color);
+}
+
+.warning-msg {
+  color: var(--theme-text);
+  font-size: 13px;
+}
+
 /* Responsive design */
 @media (max-width: 950px) {
   .content {
