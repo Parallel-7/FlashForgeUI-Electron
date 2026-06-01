@@ -241,7 +241,7 @@ export class ShellController {
     }
 
     button.disabled = !available;
-    button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
+    button.setAttribute('aria-checked', enabled ? 'true' : 'false');
   }
 
   initialize(): void {

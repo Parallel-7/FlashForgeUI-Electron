@@ -117,7 +117,8 @@ export class EditModeController {
    */
   private emitStateChange(): void {
     const snapshot = { enabled: this.state.enabled, available: this.editingAvailable };
-    for (const listener of this.stateChangeListeners) {
+    // Iterate a copy so listeners that unsubscribe during the callback are not skipped.
+    for (const listener of [...this.stateChangeListeners]) {
       listener(snapshot);
     }
   }
