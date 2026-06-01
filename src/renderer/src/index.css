@@ -305,6 +305,16 @@ body {
   display: none;
 }
 
+.menu-item:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.menu-item:disabled:hover {
+  background-color: transparent;
+  transform: none;
+}
+
 .menu-item-content {
   display: inline-flex;
   align-items: center;

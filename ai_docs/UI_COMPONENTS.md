@@ -56,7 +56,7 @@ The settings dialog uses a modular, section-based architecture for improved main
 1. CSS & Icon Loading (Lucide icons)
 2. Debug State Initialization (initializeDebugState)
 3. Platform Detection & Theme Application
-4. Legacy UI Controller Setup (LegacyUiController)
+4. Shell Controller Setup (ShellController)
 5. Shortcut System Initialization
 6. Placeholder UI Setup
 7. Polling Listeners (polling-update IPC)
@@ -67,7 +67,7 @@ The settings dialog uses a modular, section-based architecture for improved main
 
 **Key Controllers**:
 - `RendererGridController`: Manages GridStack integration and component lifecycle
-- `LegacyUiController`: Handles legacy UI updates and compatibility
+- `ShellController`: Owns the window chrome — window controls, hamburger menu (incl. Edit Layout), and loading overlay
 - `ShortcutButtonController`: Manages top-bar shortcuts and dialog wiring
 
 **Per-Printer State Tracking**:
@@ -241,7 +241,7 @@ Polling updates forwarded
 - `src/renderer/src/renderer.ts`, `src/renderer/src/gridController.ts`, `src/renderer/src/shortcutButtons.ts`, `src/renderer/src/perPrinterStorage.ts`, `src/renderer/src/logging.ts`
 - `src/renderer/src/ui/components/**` (ComponentManager, printer tabs, job info, etc.) + `src/renderer/src/ui/gridstack/**` for layout/palette logic
 - `src/renderer/src/ui/component-dialog/**` – component dialog renderer + preload mirrors
-- `src/renderer/src/ui/legacy/LegacyUiController.ts` – legacy UI compatibility layer
+- `src/renderer/src/ui/shell/ShellController.ts` – window chrome (controls, menu, loading overlay)
 
 **GridStack System**
 - `src/renderer/src/ui/gridstack/GridStackManager.ts` – grid initialization and widget management
