@@ -116,7 +116,7 @@ const shortcutButtonController = new ShortcutButtonController({
   gridController,
 });
 
-const legacyUiController = new LegacyUiController(logMessage);
+const legacyUiController = new LegacyUiController(logMessage, () => editModeController.toggle());
 const RENDERER_LOG_NAMESPACE = 'Renderer';
 const logDebug = (message: string, ...args: unknown[]): void => {
   logVerbose(RENDERER_LOG_NAMESPACE, message, ...args);
@@ -633,6 +633,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Setup essential UI elements
   legacyUiController.initialize();
+
+  // Keep the "Edit Layout" menu item in sync with edit mode state, regardless
+  // of how it was toggled (menu, CTRL+E, layout reset, or printer disconnect).
+  editModeController.onStateChange(({ enabled, available }) => {
+    legacyUiController.setEditModeState(enabled, available);
+  });
 
   // Initialize shortcut button system
   shortcutButtonController.initialize();

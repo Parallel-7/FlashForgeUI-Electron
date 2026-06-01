@@ -211,8 +211,33 @@ export class LegacyUiController {
   private readonly menuShortcutManager: MenuShortcutManager;
   private currentLoadingState: LoadingState = { ...defaultLoadingState };
 
-  constructor(private readonly logMessage: (message: string) => void) {
+  constructor(
+    private readonly logMessage: (message: string) => void,
+    private readonly onEditLayout?: () => void
+  ) {
     this.menuShortcutManager = new MenuShortcutManager(() => this.closeMainMenu());
+  }
+
+  /**
+   * Update the "Edit Layout" menu item to reflect the current edit mode state.
+   * Edit mode is renderer-local (driven by EditModeController), so this is
+   * called from a state-change subscription rather than via IPC.
+   * @param enabled - Whether edit mode is currently active
+   * @param available - Whether edit mode can be toggled (requires an active printer)
+   */
+  setEditModeState(enabled: boolean, available: boolean): void {
+    const button = document.querySelector<HTMLButtonElement>('.menu-item[data-action="edit-layout"]');
+    if (!button) {
+      return;
+    }
+
+    const label = button.querySelector<HTMLSpanElement>('.menu-item-label');
+    if (label) {
+      label.textContent = enabled ? 'Exit Edit Mode' : 'Edit Layout';
+    }
+
+    button.disabled = !available;
+    button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
   }
 
   initialize(): void {
@@ -373,10 +398,20 @@ export class LegacyUiController {
       this.toggleMainMenu();
     });
 
+    this.applyEditLayoutShortcutLabel();
+
     const menuItems = this.mainMenuDropdown.querySelectorAll<HTMLButtonElement>('.menu-item');
     menuItems.forEach((item) => {
       item.addEventListener('click', () => {
         const action = item.getAttribute('data-action');
+
+        // Edit mode is a renderer-local toggle (EditModeController), not an IPC action.
+        if (action === 'edit-layout') {
+          this.onEditLayout?.();
+          this.closeMainMenu();
+          return;
+        }
+
         const channel = MAIN_MENU_ACTION_CHANNELS[action as MainMenuAction];
         if (channel && window.api?.send) {
           window.api.send(channel);
@@ -407,6 +442,26 @@ export class LegacyUiController {
         this.mainMenuButton?.focus();
       }
     });
+  }
+
+  /**
+   * Set the edit-layout shortcut hint label for the current platform.
+   * This item is handled by EditModeController (not MenuShortcutManager),
+   * so its hint must be localized here rather than via the shortcut manager.
+   */
+  private applyEditLayoutShortcutLabel(): void {
+    const shortcutEl = document.querySelector<HTMLSpanElement>(
+      '.menu-item-shortcut[data-shortcut-id="edit-layout"]'
+    );
+    if (!shortcutEl) {
+      return;
+    }
+
+    const isMac = window.PLATFORM === 'darwin';
+    shortcutEl.textContent = isMac ? '⌘E' : 'Ctrl+E';
+
+    const button = shortcutEl.closest<HTMLButtonElement>('.menu-item[data-action="edit-layout"]');
+    button?.setAttribute('aria-keyshortcuts', isMac ? 'Meta+E' : 'Control+E');
   }
 
   private closeMainMenu(): void {
