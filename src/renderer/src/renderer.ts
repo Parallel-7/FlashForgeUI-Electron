@@ -48,7 +48,7 @@ import { editModeController } from './ui/gridstack/EditModeController.js';
 // GridStack system imports
 import { gridStackManager } from './ui/gridstack/GridStackManager.js';
 import { layoutPersistence } from './ui/gridstack/LayoutPersistence.js';
-import { LegacyUiController } from './ui/legacy/LegacyUiController.js';
+import { ShellController } from './ui/shell/ShellController.js';
 // Shortcut system imports
 import { DEFAULT_SHORTCUT_CONFIG } from './ui/shortcuts/types.js';
 
@@ -116,7 +116,7 @@ const shortcutButtonController = new ShortcutButtonController({
   gridController,
 });
 
-const legacyUiController = new LegacyUiController(logMessage, () => editModeController.toggle());
+const shellController = new ShellController(logMessage, () => editModeController.toggle());
 const RENDERER_LOG_NAMESPACE = 'Renderer';
 const logDebug = (message: string, ...args: unknown[]): void => {
   logVerbose(RENDERER_LOG_NAMESPACE, message, ...args);
@@ -401,9 +401,8 @@ function initializePollingListeners(): void {
           console.error('Component system update failed:', error);
           logMessage(`ERROR: Component update failed: ${error}`);
 
-          // Fallback to legacy update system if components fail
-          console.warn('Falling back to legacy UI update system');
-          // Note: updateAllPanels is removed, so we'll handle this gracefully
+          // The component system is the only renderer for printer data; there is
+          // no fallback path, so surface the failure gracefully.
           handleUIError(error, 'component system failure');
         }
       }
@@ -632,12 +631,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   logDebug('IPC listeners configured for component system integration');
 
   // Setup essential UI elements
-  legacyUiController.initialize();
+  shellController.initialize();
 
   // Keep the "Edit Layout" menu item in sync with edit mode state, regardless
   // of how it was toggled (menu, CTRL+E, layout reset, or printer disconnect).
   editModeController.onStateChange(({ enabled, available }) => {
-    legacyUiController.setEditModeState(enabled, available);
+    shellController.setEditModeState(enabled, available);
   });
 
   // Initialize shortcut button system
@@ -683,7 +682,7 @@ document.addEventListener('DOMContentLoaded', async () => {
  */
 window.addEventListener('beforeunload', () => {
   logDebug('Cleaning up resources in enhanced renderer with GridStack and component system');
-  legacyUiController.dispose();
+  shellController.dispose();
 
   // Clean up GridStack system
   try {

@@ -1,10 +1,14 @@
 /**
- * @fileoverview Shell UI controller for renderer chrome and legacy menus.
+ * @fileoverview Shell controller for the renderer's window chrome.
  *
- * Manages window controls, hamburger menu (including keyboard shortcuts),
- * and the loading overlay that predates the component/GridStack system.
- * All printer-specific controls now live in dedicated components, so this
- * controller only keeps the shared chrome responsibilities.
+ * Owns the shared chrome that frames the dashboard: window controls
+ * (minimize/maximize/close + macOS traffic lights), the hamburger menu and
+ * its keyboard shortcuts, the "Edit Layout" toggle, and the loading overlay.
+ * Printer-specific controls live in dedicated components/GridStack widgets;
+ * this controller intentionally holds only the cross-cutting chrome.
+ *
+ * Key exports:
+ * - ShellController: Initializes and manages the renderer chrome
  */
 
 import { initializeUIAnimations } from '../../renderer/services/ui-updater.js';
@@ -203,7 +207,7 @@ class MenuShortcutManager {
   }
 }
 
-export class LegacyUiController {
+export class ShellController {
   private isMainMenuOpen = false;
   private mainMenuButton: HTMLButtonElement | null = null;
   private mainMenuDropdown: HTMLDivElement | null = null;
