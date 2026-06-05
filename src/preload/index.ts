@@ -83,6 +83,23 @@ interface ElectronAPI {
   connectionState: ConnectionStateAPI;
   printerSettings: PrinterSettingsAPI;
   spoolman: SpoolmanAPI;
+  material: MaterialAPI;
+}
+
+// Result of an AD5X material-slot configuration attempt
+interface ConfigureSlotResult {
+  success: boolean;
+  error?: string;
+  slot?: number;
+  material?: string | null;
+  colorName?: string;
+  colorHex?: string;
+  spoolName?: string;
+}
+
+// Material station control API interface
+interface MaterialAPI {
+  configureSlot: (slot: number, spoolId: number, contextId?: string) => Promise<ConfigureSlotResult>;
 }
 
 // Camera API interface
@@ -121,7 +138,7 @@ interface PrinterSettingsAPI {
 
 // Spoolman API interface
 interface SpoolmanAPI {
-  openSpoolSelection: () => Promise<void>;
+  openSpoolSelection: (purpose?: 'active' | 'slot-config') => Promise<void>;
   getActiveSpool: (contextId?: string) => Promise<unknown>;
   setActiveSpool: (spool: unknown, contextId?: string) => Promise<void>;
   getStatus: (
@@ -129,6 +146,7 @@ interface SpoolmanAPI {
   ) => Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
   onSpoolSelected: (callback: (spool: unknown) => void) => void;
   onSpoolUpdated?: (callback: (spool: unknown) => void) => void;
+  onSpoolPickedForSlot: (callback: (spool: unknown) => void) => EventDisposer;
 }
 
 // Input dialog options interface
@@ -483,6 +501,7 @@ const validReceiveChannels = [
   'shortcut-config:get-components-request',
   'spoolman:spool-selected',
   'spoolman:spool-updated',
+  'spoolman:spool-picked-for-slot',
   'config-updated',
   'config-loaded',
   'desktop-theme-preview',
@@ -632,6 +651,7 @@ const electronAPI: ElectronAPI = {
       'spoolman:get-active-spool',
       'spoolman:set-active-spool',
       'spoolman:get-status',
+      'material:configure-slot',
       'debug:get-state',
       'e2e:discord:send-current-status',
       'e2e:discord:send-print-complete',
@@ -798,8 +818,8 @@ const electronAPI: ElectronAPI = {
   printerSettings: printerSettingsBridge,
 
   spoolman: {
-    openSpoolSelection: async (): Promise<void> => {
-      await ipcRenderer.invoke('spoolman:open-dialog');
+    openSpoolSelection: async (purpose?: 'active' | 'slot-config'): Promise<void> => {
+      await ipcRenderer.invoke('spoolman:open-dialog', purpose);
     },
 
     getActiveSpool: async (contextId?: string): Promise<unknown> => {
@@ -834,6 +854,20 @@ const electronAPI: ElectronAPI = {
       };
       listeners.set('spoolman:spool-updated', { original: callback as IPCListener, wrapped: wrappedCallback });
       ipcRenderer.on('spoolman:spool-updated', wrappedCallback);
+    },
+
+    onSpoolPickedForSlot: (callback: (spool: unknown) => void): EventDisposer => {
+      return registerPayloadEventListener<unknown>('spoolman:spool-picked-for-slot', callback);
+    },
+  },
+
+  material: {
+    configureSlot: async (slot: number, spoolId: number, contextId?: string): Promise<ConfigureSlotResult> => {
+      const result: unknown = await ipcRenderer.invoke('material:configure-slot', { slot, spoolId, contextId });
+      if (isRecord(result) && isBoolean(result.success)) {
+        return result as unknown as ConfigureSlotResult;
+      }
+      return { success: false, error: 'Invalid response from material:configure-slot' };
     },
   },
 };

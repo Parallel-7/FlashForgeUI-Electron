@@ -105,7 +105,7 @@ interface PrinterSettingsAPI {
 
 // Spoolman API interface
 interface SpoolmanAPI {
-  openSpoolSelection(): Promise<void>;
+  openSpoolSelection(purpose?: 'active' | 'slot-config'): Promise<void>;
   getActiveSpool(contextId?: string): Promise<unknown>;
   setActiveSpool(spool: unknown, contextId?: string): Promise<void>;
   getStatus(
@@ -113,6 +113,23 @@ interface SpoolmanAPI {
   ): Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
   onSpoolSelected(callback: (spool: unknown) => void): void;
   onSpoolUpdated(callback: (spool: unknown) => void): void;
+  onSpoolPickedForSlot(callback: (spool: unknown) => void): () => void;
+}
+
+// Result of an AD5X material-slot configuration attempt
+interface ConfigureSlotResult {
+  success: boolean;
+  error?: string;
+  slot?: number;
+  material?: string | null;
+  colorName?: string;
+  colorHex?: string;
+  spoolName?: string;
+}
+
+// Material station control API interface
+interface MaterialAPI {
+  configureSlot(slot: number, spoolId: number, contextId?: string): Promise<ConfigureSlotResult>;
 }
 
 interface ConfigAPI {
@@ -228,6 +245,7 @@ interface ElectronAPI {
   connectionState: ConnectionStateAPI;
   printerSettings: PrinterSettingsAPI;
   spoolman: SpoolmanAPI;
+  material: MaterialAPI;
 }
 
 // Window controls interface for sub-windows

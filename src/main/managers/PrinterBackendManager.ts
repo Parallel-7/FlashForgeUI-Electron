@@ -714,6 +714,58 @@ export class PrinterBackendManager extends EventEmitter {
   }
 
   /**
+   * Configure an AD5X material station slot's material and color.
+   * Only available for AD5X printers with material station functionality.
+   *
+   * @param contextId - Context ID
+   * @param slot - Target slot number (1-4)
+   * @param materialName - Recognized material name (e.g. "PLA")
+   * @param hexRgb - Color hex (with or without leading '#')
+   * @returns Command result indicating whether the printer accepted the configuration
+   */
+  public async configureMaterialSlot(
+    contextId: string,
+    slot: number,
+    materialName: string,
+    hexRgb: string
+  ): Promise<CommandResult> {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
+      return {
+        success: false,
+        error: 'No backend initialized',
+        timestamp: new Date(),
+      };
+    }
+
+    if (!('configureSlot' in backend)) {
+      return {
+        success: false,
+        error: 'Current printer does not support material station slot configuration',
+        timestamp: new Date(),
+      };
+    }
+
+    try {
+      const ad5xBackend = backend as {
+        configureSlot: (slot: number, materialName: string, hexRgb: string) => Promise<boolean>;
+      };
+      const accepted = await ad5xBackend.configureSlot(slot, materialName, hexRgb);
+      return {
+        success: accepted,
+        error: accepted ? undefined : 'Printer rejected the slot configuration',
+        timestamp: new Date(),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date(),
+      };
+    }
+  }
+
+  /**
    * Get model preview image for current print job
    * Returns base64 PNG string or null if no preview available
    *

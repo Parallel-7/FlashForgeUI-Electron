@@ -340,6 +340,19 @@ export class AD5XBackend extends DualAPIBackend {
     return extractMaterialStationStatus(this.lastMachineInfo);
   }
 
+  /**
+   * Configure a material station slot's material and color.
+   * Sends the AD5X `msConfig_cmd` via the primary FiveMClient control module.
+   *
+   * @param slot - Target slot number (1-4)
+   * @param materialName - Recognized material name (e.g. "PLA")
+   * @param hexRgb - Color hex (with or without leading '#'); the '#' is stripped by ff-api
+   * @returns True if the printer accepted the configuration
+   */
+  public async configureSlot(slot: number, materialName: string, hexRgb: string): Promise<boolean> {
+    return await this.fiveMClient.control.configureSlot(slot, materialName, hexRgb);
+  }
+
   // Feature detection methods specific to AD5X
 
   protected supportsMaterialStation(): boolean {

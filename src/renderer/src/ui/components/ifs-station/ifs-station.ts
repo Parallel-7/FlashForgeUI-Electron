@@ -16,11 +16,18 @@
  * @module ui/components/ifs-station
  */
 
+import type { AppConfig } from '@shared/types/config.js';
 import type { MaterialStationStatus } from '@shared/types/polling.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
 import type { IFSLayoutMode, MaterialSlot } from './types.js';
 import './ifs-station.css';
+
+/** Minimal shape of a spool handed back from the Spoolman picker. */
+interface PickedSpool {
+  id: number;
+  name?: string;
+}
 
 /**
  * IFS Material Station component
@@ -108,6 +115,17 @@ export class IFSStationComponent extends BaseComponent {
   // ResizeObserver for responsive layout
   private resizeObserver: ResizeObserver | null = null;
 
+  // Spoolman slot-config state
+  private contextId: string | null = null;
+  private spoolmanEnabled = false;
+  private spoolmanContextEnabled = false;
+  /** Slot (1-4) awaiting a spool pick, or null when no editor flow is active. */
+  private pendingSlot: number | null = null;
+  /** Disposer for the active one-shot "spool picked" listener. */
+  private spoolPickedDisposer: (() => void) | null = null;
+  /** Currently open slot editor popover element, if any. */
+  private editorPopover: HTMLElement | null = null;
+
   /**
    * Setup event listeners and initialize the component
    */
@@ -125,9 +143,30 @@ export class IFSStationComponent extends BaseComponent {
     // Setup resize observer for responsive layout
     this.setupResizeObserver();
 
+    // Wire slot clicks to the "Set from Spoolman" editor
+    this.setupSlotInteraction();
+
     // Initial layout update
     this.updateLayout();
     this.updateView();
+  }
+
+  /**
+   * Wire click handling on the slots container so a user can open a per-slot
+   * editor offering "Set from Spoolman". Uses event delegation so it survives
+   * slot re-renders.
+   */
+  private setupSlotInteraction(): void {
+    if (!this.slotsContainer) return;
+
+    this.slotsContainer.addEventListener('click', (event) => {
+      const slotEl = (event.target as HTMLElement)?.closest('.ifs-slot') as HTMLElement | null;
+      if (!slotEl) return;
+      const slotAttr = slotEl.getAttribute('data-slot');
+      const slot = slotAttr ? Number.parseInt(slotAttr, 10) : NaN;
+      if (!Number.isInteger(slot) || slot < 1 || slot > 4) return;
+      this.openSlotEditor(slot, slotEl);
+    });
   }
 
   /**
@@ -184,10 +223,47 @@ export class IFSStationComponent extends BaseComponent {
       this.activeSlot = materialStation?.activeSlot ?? null;
       this.errorMessage = materialStation?.errorMessage ?? null;
 
+      // Track Spoolman availability for the "Set from Spoolman" affordance
+      let availabilityNeedsRefresh = false;
+      if (data.config) {
+        const config = data.config as AppConfig;
+        if (config.SpoolmanEnabled !== this.spoolmanEnabled) {
+          this.spoolmanEnabled = config.SpoolmanEnabled;
+          availabilityNeedsRefresh = true;
+        }
+      }
+      if (typeof data.contextId === 'string' && data.contextId !== this.contextId) {
+        this.contextId = data.contextId;
+        availabilityNeedsRefresh = true;
+      }
+
       this.updateState(data);
       this.updateView();
+
+      if (availabilityNeedsRefresh) {
+        void this.refreshSpoolmanAvailability();
+      }
     } catch (error) {
       console.error(`[IFSStation] Error updating component:`, error);
+    }
+  }
+
+  /**
+   * Resolve whether Spoolman is enabled for the current printer context.
+   * Mirrors the gating used by the Spoolman tracker component.
+   */
+  private async refreshSpoolmanAvailability(): Promise<void> {
+    if (!this.spoolmanEnabled || !window.api?.spoolman?.getStatus) {
+      this.spoolmanContextEnabled = false;
+      return;
+    }
+
+    try {
+      const status = await window.api.spoolman.getStatus(this.contextId || undefined);
+      this.spoolmanContextEnabled = status.enabled;
+    } catch (error) {
+      console.error('[IFSStation] Failed to resolve Spoolman status:', error);
+      this.spoolmanContextEnabled = false;
     }
   }
 
@@ -366,6 +442,137 @@ export class IFSStationComponent extends BaseComponent {
   }
 
   /**
+   * Open a small editor popover for a slot offering "Set from Spoolman".
+   * Gated on Spoolman being enabled for the current context; otherwise no-op.
+   */
+  private openSlotEditor(slot: number, slotEl: HTMLElement): void {
+    // Only AD5X printers render this component, so the remaining gate is Spoolman.
+    if (!this.spoolmanEnabled || !this.spoolmanContextEnabled) {
+      return;
+    }
+
+    // Toggle: clicking the same slot again closes the editor.
+    if (this.editorPopover && this.pendingSlot === slot) {
+      this.closeSlotEditor();
+      return;
+    }
+
+    this.closeSlotEditor();
+
+    const popover = document.createElement('div');
+    popover.className = 'ifs-slot-editor';
+    popover.innerHTML = `
+      <div class="ifs-editor-title">Slot ${slot}</div>
+      <button type="button" class="ifs-editor-action">Set from Spoolman</button>
+    `;
+
+    const actionBtn = popover.querySelector('.ifs-editor-action') as HTMLButtonElement | null;
+    actionBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      void this.startSpoolPick(slot);
+    });
+
+    slotEl.appendChild(popover);
+    this.editorPopover = popover;
+
+    // Dismiss when clicking elsewhere within the component.
+    const onOutside = (e: MouseEvent): void => {
+      if (!popover.contains(e.target as Node)) {
+        this.closeSlotEditor();
+        document.removeEventListener('click', onOutside, true);
+      }
+    };
+    // Defer so the originating click doesn't immediately dismiss it.
+    setTimeout(() => document.addEventListener('click', onOutside, true), 0);
+  }
+
+  /**
+   * Close the slot editor popover if open.
+   */
+  private closeSlotEditor(): void {
+    if (this.editorPopover) {
+      this.editorPopover.remove();
+      this.editorPopover = null;
+    }
+  }
+
+  /**
+   * Begin the Spoolman pick flow for a slot: register a one-shot listener for the
+   * chosen spool, then open the existing spool picker in slot-config mode.
+   */
+  private async startSpoolPick(slot: number): Promise<void> {
+    if (!window.api?.spoolman) return;
+
+    this.closeSlotEditor();
+    this.pendingSlot = slot;
+
+    // Replace any stale listener.
+    this.spoolPickedDisposer?.();
+    this.spoolPickedDisposer = window.api.spoolman.onSpoolPickedForSlot((spool: unknown) => {
+      // One-shot: dispose immediately so reopening the picker doesn't double-fire.
+      this.spoolPickedDisposer?.();
+      this.spoolPickedDisposer = null;
+      void this.applyPickedSpool(spool as PickedSpool);
+    });
+
+    try {
+      await window.api.spoolman.openSpoolSelection('slot-config');
+    } catch (error) {
+      console.error('[IFSStation] Failed to open spool picker:', error);
+      this.spoolPickedDisposer?.();
+      this.spoolPickedDisposer = null;
+      this.pendingSlot = null;
+    }
+  }
+
+  /**
+   * Apply the picked spool to the pending slot: snap + configure via IPC, confirm
+   * with the user, then show the result. The station refreshes via polling.
+   */
+  private async applyPickedSpool(spool: PickedSpool): Promise<void> {
+    const slot = this.pendingSlot;
+    this.pendingSlot = null;
+
+    if (slot === null || !spool || typeof spool.id !== 'number') {
+      return;
+    }
+
+    if (!window.api?.material?.configureSlot) {
+      window.api?.loading?.showError('Material control is not available', 4000);
+      return;
+    }
+
+    // Desktop confirm step before writing to the printer.
+    const spoolLabel = spool.name || `spool ${spool.id}`;
+    const confirmed = window.confirm(
+      `Set Slot ${slot} from "${spoolLabel}"?\n\n` +
+        `Its material and color will be snapped to the printer's fixed palette and applied to the slot.`
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      const result = await window.api.material.configureSlot(slot, spool.id, this.contextId || undefined);
+
+      if (!result.success) {
+        window.api?.loading?.showError(result.error || 'Failed to configure slot', 5000);
+        return;
+      }
+
+      const spoolName = result.spoolName || spool.name || `spool ${spool.id}`;
+      window.api?.loading?.showSuccess(
+        `Slot ${result.slot ?? slot} → ${result.material ?? 'material kept'} · ${result.colorName ?? ''}, from ${spoolName}`,
+        4000
+      );
+      // Station UI refreshes on the next poll cycle.
+    } catch (error) {
+      console.error('[IFSStation] Failed to apply spool to slot:', error);
+      window.api?.loading?.showError(error instanceof Error ? error.message : 'Failed to configure slot', 5000);
+    }
+  }
+
+  /**
    * Helper to find element by class name within component
    */
   private findElementByClass(className: string): HTMLElement | null {
@@ -380,5 +587,10 @@ export class IFSStationComponent extends BaseComponent {
       this.resizeObserver.disconnect();
       this.resizeObserver = null;
     }
+
+    this.spoolPickedDisposer?.();
+    this.spoolPickedDisposer = null;
+    this.closeSlotEditor();
+    this.pendingSlot = null;
   }
 }
