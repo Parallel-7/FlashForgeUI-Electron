@@ -16,17 +16,19 @@
  * @module ui/components/ifs-station
  */
 
-import type { AppConfig } from '@shared/types/config.js';
+import { IFS_COLORS, IFS_MATERIALS, nearestColor, nearestMaterial } from '@shared/ifs-palette.js';
 import type { MaterialStationStatus } from '@shared/types/polling.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
 import type { IFSLayoutMode, MaterialSlot } from './types.js';
 import './ifs-station.css';
 
-/** Minimal shape of a spool handed back from the Spoolman picker. */
+/** Shape of a spool handed back from the Spoolman picker (a subset of ActiveSpoolData). */
 interface PickedSpool {
   id: number;
   name?: string;
+  material?: string | null;
+  colorHex?: string;
 }
 
 /**
@@ -115,16 +117,20 @@ export class IFSStationComponent extends BaseComponent {
   // ResizeObserver for responsive layout
   private resizeObserver: ResizeObserver | null = null;
 
-  // Spoolman slot-config state
+  // Slot editor state
   private contextId: string | null = null;
-  private spoolmanEnabled = false;
-  private spoolmanContextEnabled = false;
-  /** Slot (1-4) awaiting a spool pick, or null when no editor flow is active. */
+  /** Slot (1-4) currently being edited, or null when the dialog is closed. */
   private pendingSlot: number | null = null;
   /** Disposer for the active one-shot "spool picked" listener. */
   private spoolPickedDisposer: (() => void) | null = null;
-  /** Currently open slot editor popover element, if any. */
-  private editorPopover: HTMLElement | null = null;
+  /** Currently open slot editor dialog (backdrop) element, if any. */
+  private dialogEl: HTMLElement | null = null;
+  /** Escape-key handler for the open dialog, if any. */
+  private dialogKeyHandler: ((e: KeyboardEvent) => void) | null = null;
+  /** Material currently selected in the open dialog. */
+  private dialogMaterial = '';
+  /** Color hex currently selected in the open dialog (with leading #), or null. */
+  private dialogColorHex: string | null = null;
 
   /**
    * Setup event listeners and initialize the component
@@ -152,9 +158,8 @@ export class IFSStationComponent extends BaseComponent {
   }
 
   /**
-   * Wire click handling on the slots container so a user can open a per-slot
-   * editor offering "Set from Spoolman". Uses event delegation so it survives
-   * slot re-renders.
+   * Wire click handling on the slots container so a user can open the per-slot
+   * editor dialog. Uses event delegation so it survives slot re-renders.
    */
   private setupSlotInteraction(): void {
     if (!this.slotsContainer) return;
@@ -165,7 +170,7 @@ export class IFSStationComponent extends BaseComponent {
       const slotAttr = slotEl.getAttribute('data-slot');
       const slot = slotAttr ? Number.parseInt(slotAttr, 10) : NaN;
       if (!Number.isInteger(slot) || slot < 1 || slot > 4) return;
-      this.openSlotEditor(slot, slotEl);
+      this.openSlotDialog(slot);
     });
   }
 
@@ -223,47 +228,16 @@ export class IFSStationComponent extends BaseComponent {
       this.activeSlot = materialStation?.activeSlot ?? null;
       this.errorMessage = materialStation?.errorMessage ?? null;
 
-      // Track Spoolman availability for the "Set from Spoolman" affordance
-      let availabilityNeedsRefresh = false;
-      if (data.config) {
-        const config = data.config as AppConfig;
-        if (config.SpoolmanEnabled !== this.spoolmanEnabled) {
-          this.spoolmanEnabled = config.SpoolmanEnabled;
-          availabilityNeedsRefresh = true;
-        }
-      }
+      // Track the active printer context for slot-config IPC calls (falls back to
+      // the active context server-side when null).
       if (typeof data.contextId === 'string' && data.contextId !== this.contextId) {
         this.contextId = data.contextId;
-        availabilityNeedsRefresh = true;
       }
 
       this.updateState(data);
       this.updateView();
-
-      if (availabilityNeedsRefresh) {
-        void this.refreshSpoolmanAvailability();
-      }
     } catch (error) {
       console.error(`[IFSStation] Error updating component:`, error);
-    }
-  }
-
-  /**
-   * Resolve whether Spoolman is enabled for the current printer context.
-   * Mirrors the gating used by the Spoolman tracker component.
-   */
-  private async refreshSpoolmanAvailability(): Promise<void> {
-    if (!this.spoolmanEnabled || !window.api?.spoolman?.getStatus) {
-      this.spoolmanContextEnabled = false;
-      return;
-    }
-
-    try {
-      const status = await window.api.spoolman.getStatus(this.contextId || undefined);
-      this.spoolmanContextEnabled = status.enabled;
-    } catch (error) {
-      console.error('[IFSStation] Failed to resolve Spoolman status:', error);
-      this.spoolmanContextEnabled = false;
     }
   }
 
@@ -442,77 +416,233 @@ export class IFSStationComponent extends BaseComponent {
   }
 
   /**
-   * Open a small editor popover for a slot offering "Set from Spoolman".
-   * Gated on Spoolman being enabled for the current context; otherwise no-op.
+   * Open the per-slot editor dialog: a modal with a material dropdown and a grid
+   * of the 24 recognized swatches. Pre-seeds from the slot's current material/
+   * color. When Spoolman is enabled it also offers a "Set from Spoolman" button
+   * that pre-fills the dialog (the user still reviews and applies).
    */
-  private openSlotEditor(slot: number, slotEl: HTMLElement): void {
-    // Only AD5X printers render this component, so the remaining gate is Spoolman.
-    if (!this.spoolmanEnabled || !this.spoolmanContextEnabled) {
+  private openSlotDialog(slot: number): void {
+    // Toggle: clicking the same slot while its dialog is open closes it.
+    if (this.dialogEl && this.pendingSlot === slot) {
+      this.closeSlotDialog();
       return;
     }
-
-    // Toggle: clicking the same slot again closes the editor.
-    if (this.editorPopover && this.pendingSlot === slot) {
-      this.closeSlotEditor();
-      return;
-    }
-
-    this.closeSlotEditor();
-
-    const popover = document.createElement('div');
-    popover.className = 'ifs-slot-editor';
-    popover.innerHTML = `
-      <div class="ifs-editor-title">Slot ${slot}</div>
-      <button type="button" class="ifs-editor-action">Set from Spoolman</button>
-    `;
-
-    const actionBtn = popover.querySelector('.ifs-editor-action') as HTMLButtonElement | null;
-    actionBtn?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      void this.startSpoolPick(slot);
-    });
-
-    slotEl.appendChild(popover);
-    this.editorPopover = popover;
-
-    // Dismiss when clicking elsewhere within the component.
-    const onOutside = (e: MouseEvent): void => {
-      if (!popover.contains(e.target as Node)) {
-        this.closeSlotEditor();
-        document.removeEventListener('click', onOutside, true);
-      }
-    };
-    // Defer so the originating click doesn't immediately dismiss it.
-    setTimeout(() => document.addEventListener('click', onOutside, true), 0);
-  }
-
-  /**
-   * Close the slot editor popover if open.
-   */
-  private closeSlotEditor(): void {
-    if (this.editorPopover) {
-      this.editorPopover.remove();
-      this.editorPopover = null;
-    }
-  }
-
-  /**
-   * Begin the Spoolman pick flow for a slot: register a one-shot listener for the
-   * chosen spool, then open the existing spool picker in slot-config mode.
-   */
-  private async startSpoolPick(slot: number): Promise<void> {
-    if (!window.api?.spoolman) return;
-
-    this.closeSlotEditor();
+    this.closeSlotDialog();
     this.pendingSlot = slot;
 
-    // Replace any stale listener.
+    // Seed selections from the slot's current material/color, snapped to the palette.
+    const current = this.slots.find((s) => s.slotId === slot && !s.isEmpty);
+    const matchedMaterial = current?.materialType ? nearestMaterial(current.materialType) : null;
+    this.dialogMaterial = matchedMaterial ?? IFS_MATERIALS[0] ?? 'PLA';
+    const matchedColor = current?.materialColor ? nearestColor(current.materialColor) : null;
+    this.dialogColorHex = matchedColor?.hex ?? null;
+
+    const backdrop = document.createElement('div');
+    backdrop.className = 'ifs-dialog-backdrop';
+
+    const dialog = document.createElement('div');
+    dialog.className = 'ifs-dialog';
+    dialog.setAttribute('role', 'dialog');
+    dialog.setAttribute('aria-modal', 'true');
+
+    const materialOptions = IFS_MATERIALS.map(
+      (m) => `<option value="${m}"${m === this.dialogMaterial ? ' selected' : ''}>${m}</option>`
+    ).join('');
+
+    const swatches = IFS_COLORS.map(
+      (c) =>
+        `<button type="button" class="ifs-swatch${c.hex === this.dialogColorHex ? ' selected' : ''}" data-hex="${c.hex}" title="${c.name}" aria-label="${c.name}" style="--swatch:${c.hex}"><span class="ifs-swatch-check">✓</span></button>`
+    ).join('');
+
+    dialog.innerHTML = `
+      <div class="ifs-dialog-header">
+        <span class="ifs-dialog-title">Configure Slot ${slot}</span>
+        <button type="button" class="ifs-dialog-close" aria-label="Close">&times;</button>
+      </div>
+      <div class="ifs-dialog-body">
+        <label class="ifs-dialog-field">
+          <span class="ifs-dialog-label">Material</span>
+          <select class="ifs-dialog-material">${materialOptions}</select>
+        </label>
+        <div class="ifs-dialog-field">
+          <span class="ifs-dialog-label">Color</span>
+          <div class="ifs-swatch-grid">${swatches}</div>
+        </div>
+        <div class="ifs-dialog-preview"></div>
+      </div>
+      <div class="ifs-dialog-footer">
+        <div class="ifs-dialog-footer-right">
+          <button type="button" class="ifs-dialog-cancel">Cancel</button>
+          <button type="button" class="ifs-dialog-apply">Apply</button>
+        </div>
+      </div>
+    `;
+
+    backdrop.appendChild(dialog);
+    document.body.appendChild(backdrop);
+    this.dialogEl = backdrop;
+
+    // Wire controls.
+    const select = dialog.querySelector('.ifs-dialog-material') as HTMLSelectElement | null;
+    select?.addEventListener('change', () => {
+      this.dialogMaterial = select.value;
+      this.updateDialogPreviewAndApply();
+    });
+
+    dialog.querySelectorAll('.ifs-swatch').forEach((el) => {
+      el.addEventListener('click', () => {
+        const hex = (el as HTMLElement).getAttribute('data-hex');
+        if (hex) this.selectDialogColor(hex);
+      });
+    });
+
+    (dialog.querySelector('.ifs-dialog-close') as HTMLElement | null)?.addEventListener('click', () =>
+      this.closeSlotDialog()
+    );
+    (dialog.querySelector('.ifs-dialog-cancel') as HTMLElement | null)?.addEventListener('click', () =>
+      this.closeSlotDialog()
+    );
+    (dialog.querySelector('.ifs-dialog-apply') as HTMLElement | null)?.addEventListener('click', () =>
+      void this.applyManualSlot(slot)
+    );
+
+    // Click on the backdrop (outside the dialog) dismisses.
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) this.closeSlotDialog();
+    });
+
+    // Escape dismisses.
+    this.dialogKeyHandler = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') this.closeSlotDialog();
+    };
+    document.addEventListener('keydown', this.dialogKeyHandler, true);
+
+    this.updateDialogPreviewAndApply();
+
+    // Resolve Spoolman availability live (config isn't pushed to components after
+    // creation), and inject the "Set from Spoolman" shortcut if it's enabled.
+    void this.maybeAddSpoolmanShortcut(slot, dialog);
+  }
+
+  /**
+   * If Spoolman is enabled and a server URL is configured, inject a "Set from
+   * Spoolman" shortcut into the open dialog's footer. Done asynchronously because
+   * Spoolman config is not delivered via polling updates.
+   *
+   * NOTE: this intentionally gates on the global Spoolman config (enabled + URL),
+   * NOT on `spoolman.getStatus()`. That status reflects active-spool *tracking*
+   * availability, which the backend disables for AD5X material-station printers —
+   * i.e. exactly the printers this slot-config feature targets. The spool picker
+   * only needs the integration enabled with a reachable server.
+   */
+  private async maybeAddSpoolmanShortcut(slot: number, dialog: HTMLElement): Promise<void> {
+    if (!window.api?.config?.get) return;
+
+    let enabled = false;
+    try {
+      const config = (await window.api.config.get()) as {
+        SpoolmanEnabled?: boolean;
+        SpoolmanServerUrl?: string;
+      } | null;
+      enabled = Boolean(config?.SpoolmanEnabled) && Boolean(config?.SpoolmanServerUrl);
+    } catch (error) {
+      console.error('[IFSStation] Spoolman config check failed:', error);
+      return;
+    }
+
+    // Bail if the dialog closed or switched slots while we awaited.
+    if (!enabled || !this.dialogEl || this.pendingSlot !== slot) return;
+
+    const footer = dialog.querySelector('.ifs-dialog-footer');
+    if (!footer || footer.querySelector('.ifs-dialog-spoolman')) return;
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'ifs-dialog-spoolman';
+    btn.textContent = 'Set from Spoolman';
+    btn.addEventListener('click', () => void this.startSpoolPick());
+    footer.insertBefore(btn, footer.firstChild);
+  }
+
+  /**
+   * Mark a swatch as selected and refresh the preview/apply state.
+   */
+  private selectDialogColor(hex: string): void {
+    this.dialogColorHex = hex;
+    if (this.dialogEl) {
+      this.dialogEl.querySelectorAll('.ifs-swatch').forEach((el) => {
+        const btn = el as HTMLElement;
+        btn.classList.toggle('selected', btn.getAttribute('data-hex') === hex);
+      });
+    }
+    this.updateDialogPreviewAndApply();
+  }
+
+  /**
+   * Update the dialog preview line and enable Apply only once a color is chosen.
+   */
+  private updateDialogPreviewAndApply(): void {
+    if (!this.dialogEl) return;
+    const preview = this.dialogEl.querySelector('.ifs-dialog-preview') as HTMLElement | null;
+    const applyBtn = this.dialogEl.querySelector('.ifs-dialog-apply') as HTMLButtonElement | null;
+    const colorName = this.dialogColorHex
+      ? (IFS_COLORS.find((c) => c.hex === this.dialogColorHex)?.name ?? this.dialogColorHex)
+      : null;
+    if (preview) {
+      preview.textContent = colorName
+        ? `Slot ${this.pendingSlot} → ${this.dialogMaterial} · ${colorName}`
+        : 'Pick a color to continue';
+    }
+    if (applyBtn) applyBtn.disabled = !this.dialogColorHex;
+  }
+
+  /**
+   * Apply the dialog's chosen material + color to the slot via the manual
+   * (Spoolman-independent) IPC path. The station refreshes on the next poll.
+   */
+  private async applyManualSlot(slot: number): Promise<void> {
+    if (!this.dialogColorHex || !this.dialogMaterial) return;
+
+    if (!window.api?.material?.setSlot) {
+      window.api?.loading?.showError('Material control is not available', 4000);
+      return;
+    }
+
+    const material = this.dialogMaterial;
+    const hex = this.dialogColorHex;
+    const colorName = IFS_COLORS.find((c) => c.hex === hex)?.name ?? hex;
+    this.closeSlotDialog();
+
+    try {
+      const result = await window.api.material.setSlot(slot, material, hex, this.contextId || undefined);
+      if (!result.success) {
+        window.api?.loading?.showError(result.error || 'Failed to configure slot', 5000);
+        return;
+      }
+      window.api?.loading?.showSuccess(`Slot ${slot} → ${material} · ${colorName}`, 4000);
+    } catch (error) {
+      console.error('[IFSStation] Failed to set slot:', error);
+      window.api?.loading?.showError(
+        error instanceof Error ? error.message : 'Failed to configure slot',
+        5000
+      );
+    }
+  }
+
+  /**
+   * Open the existing Spoolman picker (slot-config mode) and, once a spool is
+   * chosen, pre-fill the open dialog by snapping its material/color to the
+   * fixed palette. The dialog stays open so the user can review and apply.
+   */
+  private async startSpoolPick(): Promise<void> {
+    if (!window.api?.spoolman) return;
+
+    // Replace any stale listener; register a one-shot for the chosen spool.
     this.spoolPickedDisposer?.();
     this.spoolPickedDisposer = window.api.spoolman.onSpoolPickedForSlot((spool: unknown) => {
-      // One-shot: dispose immediately so reopening the picker doesn't double-fire.
       this.spoolPickedDisposer?.();
       this.spoolPickedDisposer = null;
-      void this.applyPickedSpool(spool as PickedSpool);
+      this.prefillFromSpool(spool as PickedSpool);
     });
 
     try {
@@ -521,55 +651,31 @@ export class IFSStationComponent extends BaseComponent {
       console.error('[IFSStation] Failed to open spool picker:', error);
       this.spoolPickedDisposer?.();
       this.spoolPickedDisposer = null;
-      this.pendingSlot = null;
     }
   }
 
   /**
-   * Apply the picked spool to the pending slot: snap + configure via IPC, confirm
-   * with the user, then show the result. The station refreshes via polling.
+   * Snap a picked spool's material/color to the fixed palette and pre-fill the
+   * open dialog. Material that does not resolve is left as the current choice.
    */
-  private async applyPickedSpool(spool: PickedSpool): Promise<void> {
-    const slot = this.pendingSlot;
-    this.pendingSlot = null;
+  private prefillFromSpool(spool: PickedSpool): void {
+    if (!this.dialogEl || this.pendingSlot === null || !spool) return;
 
-    if (slot === null || !spool || typeof spool.id !== 'number') {
-      return;
-    }
-
-    if (!window.api?.material?.configureSlot) {
-      window.api?.loading?.showError('Material control is not available', 4000);
-      return;
-    }
-
-    // Desktop confirm step before writing to the printer.
-    const spoolLabel = spool.name || `spool ${spool.id}`;
-    const confirmed = window.confirm(
-      `Set Slot ${slot} from "${spoolLabel}"?\n\n` +
-        `Its material and color will be snapped to the printer's fixed palette and applied to the slot.`
-    );
-    if (!confirmed) {
-      return;
-    }
-
-    try {
-      const result = await window.api.material.configureSlot(slot, spool.id, this.contextId || undefined);
-
-      if (!result.success) {
-        window.api?.loading?.showError(result.error || 'Failed to configure slot', 5000);
-        return;
+    if (spool.material) {
+      const matched = nearestMaterial(spool.material);
+      if (matched) {
+        this.dialogMaterial = matched;
+        const select = this.dialogEl.querySelector('.ifs-dialog-material') as HTMLSelectElement | null;
+        if (select) select.value = matched;
       }
-
-      const spoolName = result.spoolName || spool.name || `spool ${spool.id}`;
-      window.api?.loading?.showSuccess(
-        `Slot ${result.slot ?? slot} → ${result.material ?? 'material kept'} · ${result.colorName ?? ''}, from ${spoolName}`,
-        4000
-      );
-      // Station UI refreshes on the next poll cycle.
-    } catch (error) {
-      console.error('[IFSStation] Failed to apply spool to slot:', error);
-      window.api?.loading?.showError(error instanceof Error ? error.message : 'Failed to configure slot', 5000);
     }
+
+    if (spool.colorHex) {
+      const snapped = nearestColor(spool.colorHex);
+      if (snapped) this.selectDialogColor(snapped.hex);
+    }
+
+    this.updateDialogPreviewAndApply();
   }
 
   /**
@@ -588,9 +694,25 @@ export class IFSStationComponent extends BaseComponent {
       this.resizeObserver = null;
     }
 
+    this.closeSlotDialog();
+  }
+
+  /**
+   * Close the slot editor dialog (if open) and tear down its listeners.
+   */
+  private closeSlotDialog(): void {
+    if (this.dialogEl) {
+      this.dialogEl.remove();
+      this.dialogEl = null;
+    }
+    if (this.dialogKeyHandler) {
+      document.removeEventListener('keydown', this.dialogKeyHandler, true);
+      this.dialogKeyHandler = null;
+    }
     this.spoolPickedDisposer?.();
     this.spoolPickedDisposer = null;
-    this.closeSlotEditor();
     this.pendingSlot = null;
+    this.dialogColorHex = null;
+    this.dialogMaterial = '';
   }
 }

@@ -13,12 +13,13 @@
  * - Spoolman configuration validation and connection testing
  *
  * AD5X Detection Logic:
- * - Material station feature flag (materialStation.available === true), OR
- * - Printer model string starts with "AD5"
+ * - Firmware PID via the library (`FiveMClient.isAD5X`, derived from `/detail` pid), OR
+ * - Material station capability flag (materialStation.available === true) as a fallback
  *
  * @module services/SpoolmanIntegrationService
  */
 
+import { FiveMClient } from '@ghosttypes/ff-api';
 import type { ConfigUpdateEvent } from '@shared/types/config.js';
 import type { PrinterDetails } from '@shared/types/printer.js';
 import type { ActiveSpoolData, SpoolResponse, SpoolSearchQuery } from '@shared/types/spoolman.js';
@@ -107,16 +108,19 @@ export class SpoolmanIntegrationService extends EventEmitter {
         return false;
       }
 
-      // Check for material station feature (AD5X indicator)
-      const features = this.backendManager.getFeatures(contextId);
-      if (features?.materialStation?.available === true) {
-        return false; // AD5X with material station
+      // AD5X printers manage filament via the Intelligent Filament Station rather
+      // than a single active spool, so active-spool tracking is not offered for
+      // them. Detect AD5X authoritatively from the firmware PID surfaced by the
+      // library (FiveMClient.isAD5X, derived from the `/detail` pid), with the
+      // material-station capability as a fallback. Do NOT substring-match the
+      // user-mutable model name.
+      const client = this.backendManager.getBackendForContext(contextId)?.getPrimaryClient();
+      if (client instanceof FiveMClient && client.isAD5X) {
+        return false;
       }
 
-      // Check for AD5X model name
-      const printerModel = context.printerDetails?.printerModel || '';
-      if (printerModel.startsWith('AD5')) {
-        return false; // AD5X model
+      if (this.backendManager.getFeatures(contextId)?.materialStation?.available === true) {
+        return false;
       }
 
       return true;

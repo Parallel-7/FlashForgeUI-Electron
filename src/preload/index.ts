@@ -100,6 +100,12 @@ interface ConfigureSlotResult {
 // Material station control API interface
 interface MaterialAPI {
   configureSlot: (slot: number, spoolId: number, contextId?: string) => Promise<ConfigureSlotResult>;
+  setSlot: (
+    slot: number,
+    materialName: string,
+    colorHex: string,
+    contextId?: string
+  ) => Promise<ConfigureSlotResult>;
 }
 
 // Camera API interface
@@ -652,6 +658,7 @@ const electronAPI: ElectronAPI = {
       'spoolman:set-active-spool',
       'spoolman:get-status',
       'material:configure-slot',
+      'material:set-slot',
       'debug:get-state',
       'e2e:discord:send-current-status',
       'e2e:discord:send-print-complete',
@@ -868,6 +875,23 @@ const electronAPI: ElectronAPI = {
         return result as unknown as ConfigureSlotResult;
       }
       return { success: false, error: 'Invalid response from material:configure-slot' };
+    },
+    setSlot: async (
+      slot: number,
+      materialName: string,
+      colorHex: string,
+      contextId?: string
+    ): Promise<ConfigureSlotResult> => {
+      const result: unknown = await ipcRenderer.invoke('material:set-slot', {
+        slot,
+        materialName,
+        colorHex,
+        contextId,
+      });
+      if (isRecord(result) && isBoolean(result.success)) {
+        return result as unknown as ConfigureSlotResult;
+      }
+      return { success: false, error: 'Invalid response from material:set-slot' };
     },
   },
 };

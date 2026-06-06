@@ -12,6 +12,8 @@
  * IPC Channels:
  * - `material:configure-slot` - Snap a Spoolman spool's material/color onto the
  *   AD5X fixed palette and apply it to a slot via the printer's `msConfig_cmd`.
+ * - `material:set-slot` - Apply an explicit material + color (already chosen from
+ *   the fixed palette by the renderer) to a slot. Spoolman-independent.
  *
  * @module ipc/handlers/material-handlers
  */
@@ -51,6 +53,22 @@ interface ConfigureSlotResult {
   colorHex?: string;
   /** Source spool display name, for the confirmation message. */
   spoolName?: string;
+}
+
+/**
+ * Request payload for `material:set-slot` — an explicit, Spoolman-independent
+ * slot write. The renderer has already chosen `materialName`/`colorHex` from the
+ * fixed AD5X palette via the manual slot editor.
+ */
+interface SetSlotRequest {
+  /** Target slot number (1-4). */
+  slot: number;
+  /** Material name to write (one of the recognized AD5X materials). */
+  materialName: string;
+  /** Color hex to write (with or without leading "#"). */
+  colorHex: string;
+  /** Optional context ID; defaults to the active context. */
+  contextId?: string;
 }
 
 /**
@@ -154,6 +172,46 @@ export function registerMaterialHandlers(backendManager: PrinterBackendManager):
       };
     } catch (error) {
       console.error('[MaterialHandlers] configure-slot error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  });
+
+  // Manually set an AD5X slot's material + color (chosen from the fixed palette
+  // in the renderer's slot editor). No Spoolman dependency.
+  ipcMain.handle('material:set-slot', async (_event, request: SetSlotRequest): Promise<ConfigureSlotResult> => {
+    try {
+      const { slot, materialName, colorHex } = request;
+
+      if (!Number.isInteger(slot) || slot < 1 || slot > 4) {
+        return { success: false, error: 'Invalid slot number (expected 1-4)' };
+      }
+      if (typeof materialName !== 'string' || materialName.trim() === '') {
+        return { success: false, error: 'Material name is required' };
+      }
+      if (typeof colorHex !== 'string' || !/^#?[0-9a-fA-F]{6}$/.test(colorHex.trim())) {
+        return { success: false, error: 'A valid 6-digit hex color is required' };
+      }
+
+      const contextManager = getPrinterContextManager();
+      const contextId = request.contextId || contextManager.getActiveContextId();
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+
+      const material = materialName.trim();
+      const hex = colorHex.trim();
+      const result = await backendManager.configureMaterialSlot(contextId, slot, material, hex);
+
+      if (!result.success) {
+        return { success: false, error: result.error || 'Failed to configure slot', slot };
+      }
+
+      return { success: true, slot, material, colorHex: hex };
+    } catch (error) {
+      console.error('[MaterialHandlers] set-slot error:', error);
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',

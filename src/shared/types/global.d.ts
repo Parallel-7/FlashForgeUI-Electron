@@ -130,6 +130,12 @@ interface ConfigureSlotResult {
 // Material station control API interface
 interface MaterialAPI {
   configureSlot(slot: number, spoolId: number, contextId?: string): Promise<ConfigureSlotResult>;
+  setSlot(
+    slot: number,
+    materialName: string,
+    colorHex: string,
+    contextId?: string
+  ): Promise<ConfigureSlotResult>;
 }
 
 interface ConfigAPI {

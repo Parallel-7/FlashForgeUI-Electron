@@ -455,45 +455,232 @@
   cursor: pointer;
 }
 
-.ifs-slot-editor {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  z-index: 5;
+/* ---- Slot editor dialog (manual material/color picker) ---- */
+
+.ifs-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--theme-background, #000) 55%, transparent);
+  backdrop-filter: blur(2px);
+  animation: ifs-dialog-fade 0.12s ease-out;
+}
+
+@keyframes ifs-dialog-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.ifs-dialog {
   display: flex;
   flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  padding: 8px;
-  min-width: 140px;
-  background: var(--surface-elevated, var(--theme-surface));
+  width: 100%;
+  max-width: 380px;
+  max-height: calc(100vh - 32px);
+  overflow: hidden;
+  background: var(--surface-elevated, var(--theme-surface, var(--card-bg)));
   border: 1px solid var(--border-color);
-  border-radius: 8px;
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--theme-background) 40%, black);
+  border-radius: 12px;
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--theme-background, #000) 60%, black);
+  animation: ifs-dialog-pop 0.14s ease-out;
 }
 
-.ifs-editor-title {
+@keyframes ifs-dialog-pop {
+  from {
+    transform: translateY(8px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.ifs-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ifs-dialog-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--theme-text, var(--text-color));
+}
+
+.ifs-dialog-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  font-size: 20px;
+  line-height: 1;
+  color: var(--text-color-muted);
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.ifs-dialog-close:hover {
+  color: var(--theme-text, var(--text-color));
+  background: var(--surface-muted, color-mix(in srgb, var(--theme-text, #fff) 10%, transparent));
+}
+
+.ifs-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.ifs-dialog-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ifs-dialog-label {
   font-size: 11px;
   font-weight: 600;
-  color: var(--text-color-muted);
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  text-align: center;
+  color: var(--text-color-muted);
 }
 
-.ifs-editor-action {
+.ifs-dialog-material {
+  width: 100%;
+  padding: 8px 10px;
+  font-size: 13px;
+  color: var(--theme-text, var(--text-color));
+  background: var(--surface-muted, var(--theme-background));
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.ifs-dialog-material:focus {
+  outline: none;
+  border-color: var(--theme-primary);
+}
+
+.ifs-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+}
+
+.ifs-swatch {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  padding: 0;
+  background: var(--swatch);
+  border: 1px solid color-mix(in srgb, var(--theme-text, #fff) 18%, transparent);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.ifs-swatch:hover {
+  transform: scale(1.08);
+}
+
+.ifs-swatch.selected {
+  box-shadow: 0 0 0 2px var(--surface-elevated, var(--theme-surface)),
+    0 0 0 4px var(--theme-primary);
+}
+
+.ifs-swatch-check {
+  position: absolute;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.7);
+}
+
+.ifs-swatch.selected .ifs-swatch-check {
+  display: flex;
+}
+
+.ifs-dialog-preview {
+  font-size: 12px;
+  color: var(--text-color-muted);
+  min-height: 16px;
+}
+
+.ifs-dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.ifs-dialog-footer-right {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.ifs-dialog-footer button {
   font-size: 12px;
   font-weight: 500;
-  color: var(--theme-text, var(--text-color));
-  background: color-mix(in srgb, var(--theme-primary) 15%, transparent);
-  border: 1px solid color-mix(in srgb, var(--theme-primary) 40%, transparent);
-  border-radius: 6px;
-  padding: 6px 10px;
+  padding: 7px 14px;
+  border-radius: 7px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  transition: background 0.15s ease, opacity 0.15s ease;
 }
 
-.ifs-editor-action:hover {
-  background: color-mix(in srgb, var(--theme-primary) 28%, transparent);
+.ifs-dialog-cancel {
+  color: var(--theme-text, var(--text-color));
+  background: var(--surface-muted, transparent);
+  border: 1px solid var(--border-color);
+}
+
+.ifs-dialog-cancel:hover {
+  background: color-mix(in srgb, var(--theme-text, #fff) 10%, transparent);
+}
+
+.ifs-dialog-spoolman {
+  color: var(--theme-text, var(--text-color));
+  background: color-mix(in srgb, var(--theme-primary) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-primary) 40%, transparent);
+}
+
+.ifs-dialog-spoolman:hover {
+  background: color-mix(in srgb, var(--theme-primary) 26%, transparent);
+}
+
+.ifs-dialog-apply {
+  color: #fff;
+  background: var(--theme-primary);
+  border: 1px solid var(--theme-primary);
+}
+
+.ifs-dialog-apply:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--theme-primary) 85%, black);
+}
+
+.ifs-dialog-apply:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
