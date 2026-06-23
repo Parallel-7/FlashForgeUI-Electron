@@ -73,6 +73,8 @@ export class PrinterDiscoveryService extends EventEmitter {
         serialNumber: printer.serialNumber || '',
         commandPort: printer.commandPort,
         eventPort: printer.eventPort,
+        productId: printer.productId,
+        productType: printer.productType,
         model: 'Unknown', // Will be determined during connection
         status: 'Discovered',
       }));
@@ -113,6 +115,8 @@ export class PrinterDiscoveryService extends EventEmitter {
           serialNumber: matchingPrinter.serialNumber || '',
           commandPort: matchingPrinter.commandPort,
           eventPort: matchingPrinter.eventPort,
+          productId: matchingPrinter.productId,
+          productType: matchingPrinter.productType,
           model: 'Unknown',
           status: 'Discovered',
         };

@@ -50,6 +50,23 @@ import { PrinterClientType, PrinterFamilyInfo } from '@shared/types/printer.js';
 import { PrinterModelType } from '@shared/types/printer-backend/index.js';
 
 /**
+ * Canonical USB Product IDs (discovery packet offset 0x88 / firmware `/detail`
+ * pid field / FlashForge update-checker keys) for "new API" printers — those
+ * that speak the HTTP 8898 + check-code protocol.
+ *
+ * This is the authoritative, user-immutable model discriminator. Prefer it over
+ * the printer name, which the user can freely rename. `productType` (0x5A02)
+ * only identifies the 5M *family* and cannot tell these models apart.
+ */
+export const NEW_API_PRODUCT_IDS: Readonly<Record<number, PrinterModelType>> = {
+  0x0023: 'adventurer-5m',
+  0x0024: 'adventurer-5m-pro',
+  0x0026: 'ad5x',
+  0x0028: 'creator-5',
+  0x0029: 'creator-5-pro',
+};
+
+/**
  * Detect specific printer model type from typeName
  * Returns detailed model information for backend selection
  */
@@ -67,10 +84,48 @@ export const detectPrinterModelType = (typeName: string): PrinterModelType => {
     return 'adventurer-5m';
   } else if (typeNameLower.includes('ad5x')) {
     return 'ad5x';
+  } else if (typeNameLower.includes('creator 5 pro')) {
+    return 'creator-5-pro';
+  } else if (typeNameLower.includes('creator 5')) {
+    return 'creator-5';
   }
 
   // Default to generic legacy for all other printers
   return 'generic-legacy';
+};
+
+/**
+ * Detect the model type preferring the authoritative USB product ID, falling
+ * back to the (user-mutable) typeName only when no product ID is available
+ * (e.g. manual IP connections that never went through UDP discovery).
+ */
+export const detectPrinterModelTypeFromId = (
+  productId: number | undefined,
+  typeName: string
+): PrinterModelType => {
+  if (productId !== undefined && productId in NEW_API_PRODUCT_IDS) {
+    return NEW_API_PRODUCT_IDS[productId];
+  }
+  return detectPrinterModelType(typeName);
+};
+
+/**
+ * Detect printer family preferring the authoritative USB product ID, falling
+ * back to the typeName when no product ID is available. Any printer in
+ * {@link NEW_API_PRODUCT_IDS} is a new-API printer that requires a check code.
+ */
+export const detectPrinterFamilyFromId = (
+  productId: number | undefined,
+  typeName: string
+): PrinterFamilyInfo => {
+  if (productId !== undefined && productId in NEW_API_PRODUCT_IDS) {
+    return {
+      is5MFamily: true,
+      requiresCheckCode: true,
+      familyName: getModelDisplayName(NEW_API_PRODUCT_IDS[productId]),
+    };
+  }
+  return detectPrinterFamily(typeName);
 };
 
 /**
@@ -92,6 +147,10 @@ export const getModelDisplayName = (modelType: PrinterModelType): string => {
       return 'Adventurer 5M';
     case 'ad5x':
       return 'AD5X';
+    case 'creator-5':
+      return 'Creator 5';
+    case 'creator-5-pro':
+      return 'Creator 5 Pro';
     case 'generic-legacy':
     default:
       return 'Legacy Printer';
@@ -152,8 +211,14 @@ export const detectPrinterFamily = (typeName: string): PrinterFamilyInfo => {
 
   const typeNameLower = typeName.toLowerCase();
 
-  // Check for 5M family indicators
-  const is5MFamily = typeNameLower.includes('5m') || typeNameLower.includes('ad5x');
+  // Check for new-API ("5M family") indicators. Creator 5 / 5 Pro speak the
+  // same HTTP + check-code protocol, so they belong here too. This name-based
+  // path is the fallback for manual connections; discovery-based connections
+  // route on the authoritative USB product ID via detectPrinterFamilyFromId.
+  const is5MFamily =
+    typeNameLower.includes('5m') ||
+    typeNameLower.includes('ad5x') ||
+    typeNameLower.includes('creator 5');
 
   if (is5MFamily) {
     let familyName = 'Adventurer 5M Family';
@@ -164,6 +229,10 @@ export const detectPrinterFamily = (typeName: string): PrinterFamilyInfo => {
       familyName = 'Adventurer 5M';
     } else if (typeNameLower.includes('ad5x')) {
       familyName = 'AD5X';
+    } else if (typeNameLower.includes('creator 5 pro')) {
+      familyName = 'Creator 5 Pro';
+    } else if (typeNameLower.includes('creator 5')) {
+      familyName = 'Creator 5';
     }
 
     return {

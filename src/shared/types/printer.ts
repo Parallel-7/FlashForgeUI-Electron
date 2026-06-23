@@ -67,6 +67,10 @@ export interface DiscoveredPrinter {
   readonly firmwareVersion?: string;
   readonly commandPort?: number;
   readonly eventPort?: number;
+  /** USB product ID from the discovery packet (offset 0x88). Authoritative model id. */
+  readonly productId?: number;
+  /** Product type from the discovery packet (e.g. 0x5A02 = 5M family). */
+  readonly productType?: number;
 }
 
 /**

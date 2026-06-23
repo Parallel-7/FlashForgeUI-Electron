@@ -24,7 +24,13 @@ import { MaterialStationStatus, PrinterFeatureSet } from './printer-features.js'
 /**
  * Printer model types supported by the backend system
  */
-export type PrinterModelType = 'generic-legacy' | 'adventurer-5m' | 'adventurer-5m-pro' | 'ad5x';
+export type PrinterModelType =
+  | 'generic-legacy'
+  | 'adventurer-5m'
+  | 'adventurer-5m-pro'
+  | 'ad5x'
+  | 'creator-5'
+  | 'creator-5-pro';
 
 /**
  * Backend initialization options

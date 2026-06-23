@@ -48,7 +48,9 @@ import { getSavedPrinterService } from '../services/SavedPrinterService.js';
 import { getThumbnailRequestQueue } from '../services/ThumbnailRequestQueue.js';
 import {
   detectPrinterFamily,
+  detectPrinterFamilyFromId,
   detectPrinterModelType,
+  detectPrinterModelTypeFromId,
   determineClientType,
   formatPrinterName,
   getConnectionErrorMessage,
@@ -547,8 +549,10 @@ export class ConnectionFlowManager extends EventEmitter {
         return { success: false, error: tempResult.error || 'Failed to determine printer type' };
       }
 
-      // Step 2: Detect printer family and requirements
-      const familyInfo = detectPrinterFamily(tempResult.typeName);
+      // Step 2: Detect printer family and requirements.
+      // Prefer the authoritative USB product ID from discovery; fall back to the
+      // (user-mutable) typeName for manual IP connections that carry no product ID.
+      const familyInfo = detectPrinterFamilyFromId(discoveredPrinter.productId, tempResult.typeName);
       const clientType = determineClientType(familyInfo.is5MFamily);
 
       this.emit('printer-type-detected', {
@@ -565,7 +569,7 @@ export class ConnectionFlowManager extends EventEmitter {
 
       // Step 3: Extract and validate printer information
       this.loadingManager.updateMessage('Processing printer details...');
-      const modelType = detectPrinterModelType(tempResult.typeName);
+      const modelType = detectPrinterModelTypeFromId(discoveredPrinter.productId, tempResult.typeName);
 
       // Extract serial number from temporary connection if not already present
       let serialNumber = discoveredPrinter.serialNumber;

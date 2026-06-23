@@ -303,6 +303,15 @@ export class PrinterBackendManager extends EventEmitter {
       case 'ad5x':
         return new AD5XBackend(backendOptions);
 
+      case 'creator-5':
+      case 'creator-5-pro':
+        // Creator 5 / 5 Pro speak the modern HTTP + check-code protocol. Until a
+        // dedicated tool-changer backend exists, use the plain 5M backend: it
+        // covers connect / status / temps / job control without polling the
+        // IFS-specific endpoints the AD5X backend expects (the Creator 5 has a
+        // tool changer, not a material station).
+        return new Adventurer5MBackend(backendOptions);
+
       default:
         // Fallback to generic legacy for unknown models
         console.warn(`Unknown printer model: ${modelType}, falling back to generic legacy backend`);
