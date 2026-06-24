@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5-alpha.1] - 2026-06-24
+
+First alpha of the 1.0.5 cycle, adding initial Creator 5 / Creator 5 Pro support.
+
+### Creator 5 / Creator 5 Pro
+- New `Creator5Backend` routes the Creator 5 and Creator 5 Pro to a dedicated backend that reuses the AD5X 4-slot material station and dual HTTP + TCP transport, with the Creator 5's per-tool nozzle temperatures, built-in camera, and native print-start material matching
+- New **Tool Temperatures** grid component shows all four nozzle temperatures; add it from the component picker
+- Creator 5 Pro capability gating: filtration / aux fan and the real door sensor are enabled for the Pro; the plain Creator 5 correctly hides the (sensorless) door status
+- Built on `@ghosttypes/ff-api` 1.3.4, which adds Creator 5 detail parsing, per-tool temps, and the native `/printGcode` start-job command
+
 ## [1.0.4] - 2026-05-31
 
 The 1.0.4 stable release consolidates the 1.0.4-alpha cycle: a major new Calibration Assistant, a complete camera-streaming rework on go2rtc, a full security hardening pass, and a modern testing and tooling foundation.
