@@ -1,0 +1,97 @@
+/**
+ * @fileoverview Tool Temperatures Component Styles
+ *
+ * Responsive grid of per-tool nozzle temperature cells for multi-tool printers
+ * (Creator 5 series). Visual language mirrors the IFS material-station card.
+ */
+
+.component-tool-temps {
+  width: 100%;
+  height: 100%;
+}
+
+.tool-temps {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.tool-temps-unavailable {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 8px;
+  color: var(--text-color-muted);
+  font-size: 0.85em;
+}
+
+.tool-temps-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(72px, 1fr));
+  gap: 8px;
+  padding: 8px;
+  box-sizing: border-box;
+}
+
+.tool-temp-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--card-bg);
+  transition: var(--transition-normal);
+}
+
+.tool-temp-cell.is-active {
+  border-color: var(--accent-color);
+}
+
+.tool-temp-cell.is-heating {
+  border-color: #ff7a45;
+  box-shadow: 0 0 6px rgba(255, 122, 69, 0.5);
+}
+
+.tool-temp-label {
+  font-size: 0.78em;
+  font-weight: 600;
+  color: var(--text-color-muted);
+  letter-spacing: 0.04em;
+}
+
+.tool-temp-value {
+  display: flex;
+  align-items: baseline;
+  gap: 2px;
+  color: var(--text-color);
+  font-variant-numeric: tabular-nums;
+}
+
+.tool-temp-current {
+  font-size: 1.1em;
+  font-weight: 600;
+}
+
+.tool-temp-cell.is-heating .tool-temp-current {
+  color: #ff7a45;
+}
+
+.tool-temp-sep,
+.tool-temp-target {
+  color: var(--text-color-muted);
+  font-size: 0.9em;
+}
+
+.tool-temp-unit {
+  font-size: 0.7em;
+  color: var(--text-color-muted);
+  margin-left: 1px;
+}

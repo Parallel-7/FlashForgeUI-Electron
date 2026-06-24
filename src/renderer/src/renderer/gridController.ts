@@ -23,6 +23,7 @@ import {
   PrinterStatusComponent,
   SpoolmanComponent,
   TemperatureControlsComponent,
+  ToolTempsComponent,
 } from '../ui/components/index.js';
 import { getComponentDefinition } from '../ui/gridstack/ComponentRegistry.js';
 import { editModeController } from '../ui/gridstack/EditModeController.js';
@@ -433,6 +434,8 @@ export class RendererGridController {
         return new SpoolmanComponent(container);
       case 'ifs-station':
         return new IFSStationComponent(container);
+      case 'tool-temps':
+        return new ToolTempsComponent(container);
       default:
         console.error(`Unknown component ID: ${componentId}`);
         return null;

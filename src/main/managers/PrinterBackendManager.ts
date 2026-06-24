@@ -47,6 +47,7 @@ import { EventEmitter } from 'events';
 import { AD5XBackend } from '../printer-backends/AD5XBackend.js';
 import { Adventurer5MBackend } from '../printer-backends/Adventurer5MBackend.js';
 import { Adventurer5MProBackend } from '../printer-backends/Adventurer5MProBackend.js';
+import { Creator5Backend } from '../printer-backends/Creator5Backend.js';
 import { BasePrinterBackend } from '../printer-backends/BasePrinterBackend.js';
 import { GenericLegacyBackend } from '../printer-backends/GenericLegacyBackend.js';
 import { detectPrinterModelType, getModelDisplayName } from '../utils/PrinterUtils.js';
@@ -305,12 +306,11 @@ export class PrinterBackendManager extends EventEmitter {
 
       case 'creator-5':
       case 'creator-5-pro':
-        // Creator 5 / 5 Pro speak the modern HTTP + check-code protocol. Until a
-        // dedicated tool-changer backend exists, use the plain 5M backend: it
-        // covers connect / status / temps / job control without polling the
-        // IFS-specific endpoints the AD5X backend expects (the Creator 5 has a
-        // tool changer, not a material station).
-        return new Adventurer5MBackend(backendOptions);
+        // Creator 5 / 5 Pro = "AD5X + per-tool temps": same 4-slot material
+        // station and dual HTTP + TCP protocol, plus a 4-nozzle tool array and
+        // (on the Pro) camera/LED/filtration. Creator5Backend extends the AD5X
+        // backend and gates the Pro-only capabilities.
+        return new Creator5Backend(backendOptions);
 
       default:
         // Fallback to generic legacy for unknown models

@@ -21,7 +21,13 @@
  * or malformed data gracefully.
  */
 
-import type { CurrentJobInfo, MaterialSlot, MaterialStationStatus, PrinterStatus } from '@shared/types/polling.js';
+import type {
+  CurrentJobInfo,
+  MaterialSlot,
+  MaterialStationStatus,
+  PrinterStatus,
+  TemperatureData,
+} from '@shared/types/polling.js';
 import { secondsToMinutes } from '@shared/utils/time.utils.js';
 import {
   hasValue,
@@ -79,6 +85,10 @@ export class PrinterDataTransformer {
     const nozzleTemp = safeExtractNumber(backendData, 'nozzleTemperature', 0);
     const nozzleTarget = safeExtractNumber(backendData, 'nozzleTargetTemperature', 0);
 
+    // Per-tool nozzle temperatures (Creator 5 series). The backend surfaces these
+    // as `toolTemps: { current, set }[]`; map to the UI TemperatureData shape.
+    const toolTemps = this.extractToolTemps(backendData);
+
     // Extract current job info
     const currentJobName = safeExtractString(backendData, 'currentJob', '');
     const currentJob = this.extractCurrentJob(backendData, state, currentJobName);
@@ -115,6 +125,7 @@ export class PrinterDataTransformer {
           isHeating: nozzleTarget > 0 && Math.abs(nozzleTemp - nozzleTarget) > 2,
         },
       },
+      ...(toolTemps.length > 0 ? { toolTemps } : {}),
       fans: {
         coolingFan: coolingFanSpeed,
         chamberFan: chamberFanSpeed,
@@ -301,6 +312,31 @@ export class PrinterDataTransformer {
   /**
    * Extract filtration status from backend data
    */
+  /**
+   * Extract per-tool nozzle temperatures from the backend status.
+   *
+   * The Creator 5 backend surfaces `toolTemps` as an array of `{ current, set }`
+   * (ff-api Temperature). Map each to the UI TemperatureData shape. Returns an
+   * empty array for single-nozzle printers that don't report it.
+   */
+  private extractToolTemps(backendData: Record<string, unknown>): TemperatureData[] {
+    const raw = backendData.toolTemps;
+    if (!Array.isArray(raw)) {
+      return [];
+    }
+
+    return raw.map((entry) => {
+      const tool = isValidObject(entry) ? entry : {};
+      const current = safeExtractNumber(tool, 'current', 0);
+      const target = safeExtractNumber(tool, 'set', 0);
+      return {
+        current,
+        target,
+        isHeating: target > 0 && Math.abs(current - target) > 2,
+      };
+    });
+  }
+
   private extractFiltrationStatus(backendData: Record<string, unknown>): {
     hasFiltration?: boolean;
     filtrationMode?: 'external' | 'internal' | 'none';

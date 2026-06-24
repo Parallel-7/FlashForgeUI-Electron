@@ -146,6 +146,12 @@ export interface CumulativeStats {
 export interface PrinterStatus {
   state: PrinterState;
   temperatures: PrinterTemperatures;
+  /**
+   * Per-tool nozzle temperatures for multi-tool printers (e.g. Creator 5 series,
+   * one entry per nozzle). Undefined/empty on single-nozzle printers, which use
+   * {@link PrinterTemperatures.extruder} instead.
+   */
+  toolTemps?: TemperatureData[];
   fans: FanStatus;
   filtration: FiltrationStatus;
   settings: PrinterSettings;

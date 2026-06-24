@@ -36,6 +36,7 @@ import {
   PrinterStatusComponent,
   SpoolmanComponent,
   TemperatureControlsComponent,
+  ToolTempsComponent,
 } from '../components/index.js';
 import { getComponentDefinition } from '../gridstack/ComponentRegistry.js';
 import { parseLogEntry } from '../shared/log-panel/index.js';
@@ -194,6 +195,8 @@ function createComponentInstance(componentId: string, container: HTMLElement) {
       return new SpoolmanComponent(container);
     case 'ifs-station':
       return new IFSStationComponent(container);
+    case 'tool-temps':
+      return new ToolTempsComponent(container);
     default:
       console.error(`[ComponentDialog] Unknown component ID: ${componentId}`);
       return null;

@@ -155,4 +155,16 @@ export const COMPONENT_REGISTRY_DATA: ReadonlyArray<ComponentDefinition> = [
     required: false,
     singleton: true,
   },
+
+  {
+    id: 'tool-temps',
+    name: 'Tool Temperatures',
+    icon: 'thermometer',
+    defaultSize: { w: 4, h: 2 },
+    minSize: { w: 2, h: 2 },
+    category: 'main',
+    description: 'Per-tool nozzle temperatures (Creator 5 series)',
+    required: false,
+    singleton: true,
+  },
 ];
