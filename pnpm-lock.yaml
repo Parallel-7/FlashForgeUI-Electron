@@ -33,8 +33,8 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
       '@parallel-7/slicer-meta':
-        specifier: 1.3.0
-        version: 1.3.0
+        specifier: 1.4.0
+        version: 1.4.0
       electron-log:
         specifier: ^5.4.3
         version: 5.4.3
@@ -1395,8 +1395,8 @@ packages:
     resolution: {integrity: sha512-/xGlezI6xfGO9NwuJlnwz/K14qD1kCSAGtacBHnGzeAIuJGazcp45KP5NuyARXoKb7cwulAGWVsbeSxdG/cb0Q==}
     engines: {node: ^18.17.0 || >=20.5.0}
 
-  '@parallel-7/slicer-meta@1.3.0':
-    resolution: {integrity: sha512-TLTem4hRQsSF7X0W03BbkeD5E4mdMXsuAEN68xG3bwC1YTH6bkL5P11OtIKFhTDojEyYaoTzq58XMyqMXtxZQw==, tarball: https://npm.pkg.github.com/download/@parallel-7/slicer-meta/1.3.0/c04a02ffcd74655d6eabb5fef05c4804ecfba914}
+  '@parallel-7/slicer-meta@1.4.0':
+    resolution: {integrity: sha512-R15eRNqns35yWePtYqDWz1D1OXIdXxLvIfhdsrY+4T7qCeh8XNTF89YSJ9MHSt8timFElxD1bFnmF/1uw423mQ==, tarball: https://npm.pkg.github.com/download/@parallel-7/slicer-meta/1.4.0/ea04fac9d320ddc8268150b6c3502af5dc7e1de9}
 
   '@pdf-lib/standard-fonts@1.0.0':
     resolution: {integrity: sha512-hU30BK9IUN/su0Mn9VdlVKsWBS6GyhVfqjwl1FjZN4TxP6cCw0jP2w7V3Hf5uX7M0AZJ16vey9yE0ny7Sa59ZA==}
@@ -5593,7 +5593,7 @@ snapshots:
     dependencies:
       semver: 7.7.4
 
-  '@parallel-7/slicer-meta@1.3.0':
+  '@parallel-7/slicer-meta@1.4.0':
     dependencies:
       adm-zip: 0.5.16
       date-fns: 4.1.0

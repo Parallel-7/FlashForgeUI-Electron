@@ -571,28 +571,18 @@ function populateMetadata(elements: DialogElements, data: MetadataResult): void 
     elements.eta.textContent = data.slicer?.printEta || '-';
   }
 
-  // New Print Information Fields - Use available data or fallbacks
+  // New Print Information Fields - from slicer-meta 1.4.0 (Orca-family; null otherwise)
   if (elements.layerHeight) {
-    // Try to get layer height from threeMf or file with proper type checking
-    const threeMfData = data.threeMf as Record<string, unknown> | undefined;
-    const fileData = data.file as Record<string, unknown> | undefined;
-    const layerHeight =
-      (threeMfData?.layerHeight as number | undefined) || (fileData?.layerHeight as number | undefined);
-    elements.layerHeight.textContent = layerHeight ? `${layerHeight} mm` : '-';
+    const layerHeight = data.file?.layerHeight;
+    elements.layerHeight.textContent = layerHeight != null ? `${layerHeight} mm` : '-';
   }
   if (elements.infill) {
-    // Try to get infill from threeMf or file with proper type checking
-    const threeMfData = data.threeMf as Record<string, unknown> | undefined;
-    const fileData = data.file as Record<string, unknown> | undefined;
-    const infill = (threeMfData?.infill as number | undefined) || (fileData?.infill as number | undefined);
-    elements.infill.textContent = infill ? `${infill}%` : '-';
+    const infill = data.file?.infillDensity;
+    elements.infill.textContent = infill != null ? `${infill}%` : '-';
   }
   if (elements.layers) {
-    // Try to get layer count from threeMf or file with proper type checking
-    const threeMfData = data.threeMf as Record<string, unknown> | undefined;
-    const fileData = data.file as Record<string, unknown> | undefined;
-    const layerCount = (threeMfData?.layerCount as number | undefined) || (fileData?.layers as number | undefined);
-    elements.layers.textContent = layerCount ? layerCount.toString() : '-';
+    const layerCount = data.file?.layerCount;
+    elements.layers.textContent = layerCount != null ? layerCount.toString() : '-';
   }
 
   // First Layer Time (3MF only - from slicer-meta 1.2.0)
