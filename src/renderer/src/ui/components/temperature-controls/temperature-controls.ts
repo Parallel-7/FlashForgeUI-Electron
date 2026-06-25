@@ -29,7 +29,10 @@ export class TemperatureControlsComponent extends BaseComponent {
   public readonly templateHTML = `
     <div class="temperature-controls" role="group" aria-label="Temperature controls">
       <div class="panel-header">Temperature</div>
-      <div class="temperature-controls__content">
+      <div class="temperature-controls__redirect" id="temp-controls-redirect" style="display: none">
+        <span>Use the Creator 5 Temperature card for this printer.</span>
+      </div>
+      <div class="temperature-controls__content" id="temp-controls-content">
         <div class="temperature-controls__grid">
           <section class="temp-card temp-card--bed" aria-label="Bed temperature controls">
             <div class="temp-card__meta">
@@ -100,6 +103,20 @@ export class TemperatureControlsComponent extends BaseComponent {
       const pollingData = data.pollingData;
       const printerStatus = pollingData?.printerStatus;
       const isConnected = pollingData?.isConnected ?? false;
+
+      // On a tool-changer (Creator 5 series, multiple tool temps) this generic card
+      // is superseded by the creator5-temperature card. Self-gate to a redirect
+      // notice instead of showing the single-extruder controls (mirrors how the
+      // material-station card shows an "unavailable" state on printers without one).
+      const isToolChanger = isConnected && (printerStatus?.toolTemps?.length ?? 0) > 1;
+      const redirectEl = this.findElementById('temp-controls-redirect');
+      const contentEl = this.findElementById('temp-controls-content');
+      if (redirectEl) redirectEl.style.display = isToolChanger ? 'flex' : 'none';
+      if (contentEl) contentEl.style.display = isToolChanger ? 'none' : '';
+      if (isToolChanger) {
+        this.updateState(data);
+        return;
+      }
 
       if (printerStatus && isConnected) {
         // Update temperature displays

@@ -145,8 +145,12 @@ export class Creator5Backend extends AD5XBackend {
       ...base,
       // Per-tool current/target temperatures (4 entries on the Creator 5 series).
       toolTemps: info?.ToolTemps ?? [],
+      // Chamber temperature (both Creator 5 and 5 Pro have a heated chamber).
+      chamberTemp: info?.Chamber?.current ?? 0,
+      chamberTargetTemp: info?.Chamber?.set ?? 0,
       // Capability flags for the renderer to gate UI.
       isCreator5Pro: this.isCreator5Pro(),
+      hasChamberControl: this.fiveMClient.capabilities?.hasChamberControl ?? true,
       hasDoorSensor: info?.HasDoorSensor ?? this.isCreator5Pro(),
     };
   }

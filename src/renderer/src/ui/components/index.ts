@@ -39,3 +39,4 @@ export { PrinterTabsComponent } from './printer-tabs/index.js';
 export { SpoolmanComponent } from './spoolman/index.js';
 export { TemperatureControlsComponent } from './temperature-controls/index.js';
 export { ToolTempsComponent } from './tool-temps/index.js';
+export { Creator5TemperatureComponent } from './creator5-temperature/index.js';

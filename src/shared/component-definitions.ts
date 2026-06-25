@@ -167,4 +167,16 @@ export const COMPONENT_REGISTRY_DATA: ReadonlyArray<ComponentDefinition> = [
     required: false,
     singleton: true,
   },
+
+  {
+    id: 'creator5-temperature',
+    name: 'Creator 5 Temperature',
+    icon: 'thermometer',
+    defaultSize: { w: 4, h: 3 },
+    minSize: { w: 3, h: 3 },
+    category: 'main',
+    description: 'Settable 4 tools + bed + chamber (Creator 5 / 5 Pro)',
+    required: false,
+    singleton: true,
+  },
 ];

@@ -33,10 +33,12 @@ import { RendererGridController } from './renderer/gridController.js';
 import { logMessage, setLogPanelComponent } from './renderer/logging.js';
 import {
   loadLayoutForSerial,
+  loadLayoutForSerialMigrated,
   loadShortcutsForSerial,
   saveLayoutForSerial,
   saveShortcutsForSerial,
 } from './renderer/perPrinterStorage.js';
+import { isCreator5Model } from './ui/gridstack/defaults.js';
 // Existing service imports
 import { getGlobalStateTracker, STATE_EVENTS } from './renderer/services/printer-state.js';
 import { handleUIError, resetUI } from './renderer/services/ui-updater.js';
@@ -297,12 +299,17 @@ async function initializePrinterTabs(): Promise<void> {
         const serialLabel = activeContextSerial ?? 'default';
         logDebug(`[PerPrinter] Switching UI to context ${event.contextId} (serial: ${serialLabel})`);
 
+        // One-time tool-changer layout migration (Creator 5 series): swaps the
+        // generic temperature card + tool-temps for the unified creator5-temperature
+        // card and persists it, so the migrated layout is what loads below.
+        const isToolChanger = isCreator5Model(event.contextInfo?.model);
+        const migratedLayout = loadLayoutForSerialMigrated(activeContextSerial, isToolChanger);
+
         if (!gridController.areComponentsInitialized()) {
           await gridController.initialize(activeContextSerial);
         } else {
-          const newLayout = loadLayoutForSerial(activeContextSerial);
           const newShortcutConfig = loadShortcutsForSerial(activeContextSerial);
-          await gridController.reloadGridForLayout(newLayout, serialLabel, newShortcutConfig);
+          await gridController.reloadGridForLayout(migratedLayout, serialLabel, newShortcutConfig);
         }
       } catch (error) {
         console.error('[PerPrinter] Failed to switch context:', error);

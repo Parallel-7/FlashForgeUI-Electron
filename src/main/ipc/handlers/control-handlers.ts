@@ -168,6 +168,67 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
     }
   });
 
+  // Per-tool and chamber temperature handlers (Creator 5 series, HTTP-only). These
+  // route exclusively through the FiveMClient's temperatureCtl_cmd; there is no
+  // legacy TCP path because only HTTP-only printers expose tool/chamber heaters.
+  const withFiveMClient = async (
+    label: string,
+    action: (client: FiveMClient) => Promise<boolean>
+  ): Promise<{ success: boolean; data?: boolean; error?: string }> => {
+    try {
+      const contextManager = getPrinterContextManager();
+      const contextId = contextManager.getActiveContextId();
+
+      if (!contextId) {
+        return { success: false, error: 'No active printer context' };
+      }
+      if (!backendManager.isBackendReady(contextId)) {
+        return { success: false, error: 'Printer not connected' };
+      }
+
+      const backend = backendManager.getBackendForContext(contextId);
+      if (!backend) {
+        return { success: false, error: 'Backend not available' };
+      }
+
+      const fiveMClient = getFiveMClient(backend);
+      if (!fiveMClient) {
+        return { success: false, error: 'Temperature control not available' };
+      }
+
+      const result = await action(fiveMClient);
+      console.log(label, result);
+      return { success: result, data: result };
+    } catch (error) {
+      console.error(`Error: ${label}:`, error);
+      return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    }
+  };
+
+  ipcMain.handle('set-tool-temp', async (_event, toolIndex: number, temperature: number) =>
+    withFiveMClient(`Set tool ${toolIndex} temperature to ${temperature}°C`, (client) =>
+      client.tempControl.setToolTemp(toolIndex, temperature)
+    )
+  );
+
+  ipcMain.handle('turn-off-tool-temp', async (_event, toolIndex: number) =>
+    withFiveMClient(`Turn off tool ${toolIndex} temperature`, (client) =>
+      client.tempControl.cancelToolTemp(toolIndex)
+    )
+  );
+
+  ipcMain.handle('set-chamber-temp', async (_event, temperature: number) =>
+    withFiveMClient(`Set chamber temperature to ${temperature}°C`, (client) =>
+      client.tempControl.setChamberTemp(temperature)
+    )
+  );
+
+  ipcMain.handle('turn-off-chamber-temp', async () =>
+    withFiveMClient('Turn off chamber temperature', (client) =>
+      client.tempControl.cancelChamberTemp()
+    )
+  );
+
   ipcMain.handle('turn-off-extruder-temp', async () => {
     try {
       const contextManager = getPrinterContextManager();

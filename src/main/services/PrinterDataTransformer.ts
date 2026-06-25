@@ -103,6 +103,12 @@ export class PrinterDataTransformer {
     const coolingFanSpeed = safeExtractNumber(backendData, 'coolingFanSpeed', 0);
     const chamberFanSpeed = safeExtractNumber(backendData, 'chamberFanSpeed', 0);
 
+    // Chamber heater (Creator 5 series). The backend only surfaces
+    // `hasChamberControl` for printers that actually have a chamber.
+    const hasChamberControl = backendData.hasChamberControl === true;
+    const chamberTemp = safeExtractNumber(backendData, 'chamberTemp', 0);
+    const chamberTarget = safeExtractNumber(backendData, 'chamberTargetTemp', 0);
+
     // Extract filtration status
     const tvoc = safeExtractNumber(backendData, 'tvoc', 0);
     const filtrationInfo = this.extractFiltrationStatus(backendData);
@@ -124,6 +130,15 @@ export class PrinterDataTransformer {
           target: nozzleTarget,
           isHeating: nozzleTarget > 0 && Math.abs(nozzleTemp - nozzleTarget) > 2,
         },
+        ...(hasChamberControl
+          ? {
+              chamber: {
+                current: chamberTemp,
+                target: chamberTarget,
+                isHeating: chamberTarget > 0 && Math.abs(chamberTemp - chamberTarget) > 2,
+              },
+            }
+          : {}),
       },
       ...(toolTemps.length > 0 ? { toolTemps } : {}),
       fans: {

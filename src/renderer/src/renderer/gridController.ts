@@ -24,6 +24,7 @@ import {
   SpoolmanComponent,
   TemperatureControlsComponent,
   ToolTempsComponent,
+  Creator5TemperatureComponent,
 } from '../ui/components/index.js';
 import { getComponentDefinition } from '../ui/gridstack/ComponentRegistry.js';
 import { editModeController } from '../ui/gridstack/EditModeController.js';
@@ -436,6 +437,8 @@ export class RendererGridController {
         return new MaterialStationComponent(container);
       case 'tool-temps':
         return new ToolTempsComponent(container);
+      case 'creator5-temperature':
+        return new Creator5TemperatureComponent(container);
       default:
         console.error(`Unknown component ID: ${componentId}`);
         return null;
@@ -504,6 +507,8 @@ export class RendererGridController {
         return new CameraPreviewComponent(container);
       case 'temperature-controls':
         return new TemperatureControlsComponent(container);
+      case 'creator5-temperature':
+        return new Creator5TemperatureComponent(container);
       case 'job-stats':
         return new JobStatsComponent(container);
       case 'printer-status':

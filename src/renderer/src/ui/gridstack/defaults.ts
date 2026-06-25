@@ -45,6 +45,77 @@ export function migrateComponentId(componentId: string): string {
 }
 
 /**
+ * Current layout schema version. Bumped when a one-time, capability-conditional
+ * migration needs to run against a printer's persisted layout (see
+ * {@link migrateLayoutForToolChanger}). A layout is migrated at most once: after
+ * it runs, the layout is stamped with this version and saved, so it never repeats.
+ */
+export const LAYOUT_SCHEMA_VERSION = 2;
+
+/** The unified Creator 5 temperature card. */
+const C5_TEMP_CARD_ID = 'creator5-temperature';
+/** Generic/legacy temperature cards folded into the Creator 5 card on a tool-changer. */
+const C5_TEMP_REPLACED_IDS = new Set(['temperature-controls', 'tool-temps']);
+
+/** Whether a model name/type identifies a Creator 5 series tool-changer. */
+export function isCreator5Model(model: string | null | undefined): boolean {
+  return /creator\s*5/i.test(model ?? '');
+}
+
+/**
+ * One-time, version-gated migration for tool-changer printers (Creator 5 / 5 Pro).
+ *
+ * Replaces the generic `temperature-controls` and read-only `tool-temps` widgets
+ * with the single, settable `creator5-temperature` card (preserving the temp
+ * card's grid position; the card is a singleton so duplicates are collapsed).
+ * Non-tool-changer layouts and already-migrated layouts are returned unchanged
+ * (same reference), so callers can persist only when something actually changed.
+ *
+ * @param layout The loaded layout for a specific printer.
+ * @param isToolChanger Whether the connected printer is a Creator 5 series.
+ * @returns The migrated layout (new object) or the original (unchanged) reference.
+ */
+export function migrateLayoutForToolChanger(
+  layout: LayoutConfig,
+  isToolChanger: boolean
+): LayoutConfig {
+  if (!isToolChanger || (layout.version ?? 1) >= LAYOUT_SCHEMA_VERSION) {
+    return layout;
+  }
+
+  let hasCard = false;
+  const widgets: GridStackWidgetConfig[] = [];
+  for (const widget of layout.widgets) {
+    const id = migrateComponentId(widget.componentId);
+
+    if (id === C5_TEMP_CARD_ID) {
+      if (hasCard) continue; // singleton — keep the first
+      hasCard = true;
+      widgets.push({ ...widget, componentId: id });
+      continue;
+    }
+
+    if (C5_TEMP_REPLACED_IDS.has(id)) {
+      if (hasCard) continue; // a C5 card already took a slot; drop the redundant one
+      const def = getComponentDefinition(C5_TEMP_CARD_ID);
+      widgets.push({
+        ...widget,
+        componentId: C5_TEMP_CARD_ID,
+        minW: def?.minSize.w ?? widget.minW,
+        minH: def?.minSize.h ?? widget.minH,
+        id: `widget-${C5_TEMP_CARD_ID}`,
+      });
+      hasCard = true;
+      continue;
+    }
+
+    widgets.push(widget);
+  }
+
+  return { ...layout, widgets, version: LAYOUT_SCHEMA_VERSION };
+}
+
+/**
  * Default grid options matching current layout behavior
  */
 export const DEFAULT_GRID_OPTIONS: GridOptions = {

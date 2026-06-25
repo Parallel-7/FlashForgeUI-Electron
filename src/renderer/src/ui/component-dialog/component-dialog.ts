@@ -37,6 +37,7 @@ import {
   SpoolmanComponent,
   TemperatureControlsComponent,
   ToolTempsComponent,
+  Creator5TemperatureComponent,
 } from '../components/index.js';
 import { getComponentDefinition } from '../gridstack/ComponentRegistry.js';
 import { parseLogEntry } from '../shared/log-panel/index.js';
@@ -197,6 +198,8 @@ function createComponentInstance(componentId: string, container: HTMLElement) {
       return new MaterialStationComponent(container);
     case 'tool-temps':
       return new ToolTempsComponent(container);
+    case 'creator5-temperature':
+      return new Creator5TemperatureComponent(container);
     default:
       console.error(`[ComponentDialog] Unknown component ID: ${componentId}`);
       return null;
