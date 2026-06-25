@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5-alpha.2] - 2026-06-24
+
+Follow-up to the first Creator 5 alpha. The headline fix is that the Creator 5 / 5 Pro now actually connect — alpha.1 couldn't reach them because it assumed a legacy TCP channel these printers don't have.
+
+### Creator 5 / Creator 5 Pro
+- Fixed the connection: the Creator 5 and 5 Pro are HTTP-only (no legacy TCP server on port 8899), so they're now detected by USB product ID and connect over HTTP alone instead of failing on the dead TCP probe
+- Temperature control now routes over HTTP on these printers, so setting and clearing nozzle/bed temps works without a TCP client
+- Pause, resume, cancel, and status no longer error out when there's no TCP fallback
+- Added the Creator 5's own filament palette (24 colors, 21 materials), which differs from the AD5X — slot colors now match what the printer shows instead of snapping to the nearest AD5X color
+- Updated to `@ghosttypes/ff-api` 1.3.6, which allows per-slot material/color editing on the Creator 5
+
+### Material Station
+- Renamed the `ifs-station` grid component to `material-station` now that it serves the Creator 5 as well as the AD5X; existing saved layouts migrate automatically
+
 ## [1.0.5-alpha.1] - 2026-06-24
 
 First alpha of the 1.0.5 cycle, adding initial Creator 5 / Creator 5 Pro support.
