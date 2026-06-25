@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5-alpha.3] - 2026-06-25
+
+Hotfix for alpha.2: a Creator 5 that had been saved under an older build still failed to connect because the saved record carried a "legacy" flag, which forced the connection down the legacy TCP path the Creator 5 doesn't have.
+
+### Creator 5 / Creator 5 Pro
+- Fixed connecting to a Creator 5 / 5 Pro whose saved record was flagged for legacy mode: HTTP-only models now ignore that flag (they have no legacy TCP server, so honoring it just hung on port 8899), and the saved record is corrected on the next successful connect
+
 ## [1.0.5-alpha.2] - 2026-06-24
 
 Follow-up to the first Creator 5 alpha. The headline fix is that the Creator 5 / 5 Pro now actually connect — alpha.1 couldn't reach them because it assumed a legacy TCP channel these printers don't have.

@@ -55,6 +55,7 @@ import {
   formatPrinterName,
   getConnectionErrorMessage,
   getDefaultCheckCode,
+  isHttpOnlyModel,
   shouldPromptForCheckCode,
 } from '../utils/PrinterUtils.js';
 import { getLoadingManager } from './LoadingManager.js';
@@ -592,7 +593,11 @@ export class ConnectionFlowManager extends EventEmitter {
 
       // Check if printer already exists to preserve per-printer settings
       const existingPrinter = this.savedPrinterService.getSavedPrinter(serialNumber);
-      const forceLegacyMode = existingPrinter?.forceLegacyMode ?? false;
+      // HTTP-only models (Creator 5 / 5 Pro) have no legacy TCP server, so a stale
+      // forceLegacyMode flag on the saved record (e.g. saved as legacy under an
+      // older build) must be ignored — honoring it routes the connection to the
+      // dead port 8899 and hangs. Coerce it off and heal the saved record below.
+      const forceLegacyMode = isHttpOnlyModel(modelType) ? false : (existingPrinter?.forceLegacyMode ?? false);
       const resolvedClientType = forceLegacyMode ? 'legacy' : clientType;
 
       // Step 4: Handle check code requirements
@@ -894,7 +899,11 @@ export class ConnectionFlowManager extends EventEmitter {
         console.log(`Initialized default per-printer settings for ${detailsWithDefaults.Name}`);
       }
 
-      const forceLegacyMode = detailsWithDefaults.forceLegacyMode ?? false;
+      // HTTP-only models (Creator 5 / 5 Pro) can't use legacy mode — ignore a stale
+      // forceLegacyMode flag so we don't route them to the dead TCP port and hang.
+      const httpOnly =
+        isHttpOnlyModel(detailsWithDefaults.modelType ?? detectPrinterModelType(detailsWithDefaults.printerModel));
+      const forceLegacyMode = httpOnly ? false : (detailsWithDefaults.forceLegacyMode ?? false);
       const familyInfo = detectPrinterFamily(detailsWithDefaults.printerModel);
 
       // Create a mock discovered printer for connection establishment

@@ -201,12 +201,27 @@ export class ConnectionEstablishmentService extends EventEmitter {
     this.emit('final-connection-started', { printer, typeName });
 
     try {
+      // Resolve the model first. Fall back to the type name when no model type was
+      // passed (manual IP connections that never resolved a product ID).
+      const resolvedModelType = modelType ?? detectPrinterModelType(typeName);
+      const httpOnly = isHttpOnlyModel(resolvedModelType);
+
+      // HTTP-only models (Creator 5 / 5 Pro) have NO legacy TCP server, so they can
+      // never use the legacy path. A stale `forceLegacyMode` flag (e.g. a record
+      // saved as legacy under an older build) or a missed 5M-family detection would
+      // otherwise route them to establishLegacyConnection and hang forever on port
+      // 8899. For these models HTTP always wins, regardless of forceLegacyMode.
+      if (httpOnly) {
+        if (forceLegacyMode) {
+          console.warn(
+            `Ignoring forceLegacyMode for HTTP-only model ${resolvedModelType}: it has no legacy TCP server`
+          );
+        }
+        return await this.establishDualAPIConnection(printer, checkCode, true);
+      }
+
       if (is5MFamily && !forceLegacyMode) {
-        // HTTP-only models (Creator 5 / 5 Pro) get a single HTTP client and no
-        // secondary TCP client. Fall back to the type name when no model type was
-        // passed (manual IP connections that never resolved a product ID).
-        const resolvedModelType = modelType ?? detectPrinterModelType(typeName);
-        return await this.establishDualAPIConnection(printer, checkCode, isHttpOnlyModel(resolvedModelType));
+        return await this.establishDualAPIConnection(printer, checkCode, false);
       } else {
         return await this.establishLegacyConnection(printer);
       }

@@ -443,6 +443,64 @@ describe('ConnectionEstablishmentService', () => {
     });
   });
 
+  it('forces HTTP-only mode for a Creator 5 even when forceLegacyMode is true', async () => {
+    // Regression: a Creator 5 saved as legacy under an older build must not be
+    // routed to the (nonexistent) legacy TCP server — that hangs on port 8899.
+    const service = ConnectionEstablishmentService.getInstance();
+
+    fiveMClientConfigs.push({
+      initialize: jest.fn().mockResolvedValue(true),
+      initControl: jest.fn().mockResolvedValue(true),
+    });
+
+    const result = await service.establishFinalConnection(
+      {
+        name: 'Creator 5',
+        ipAddress: '10.0.0.14',
+        serialNumber: 'SN-C5-LEGACYFLAG',
+      },
+      'Creator 5',
+      true,
+      '4444',
+      true, // stale forceLegacyMode — must be ignored for HTTP-only models
+      'creator-5'
+    );
+
+    // HTTP-only: a single FiveMClient, no secondary TCP client, no legacy client.
+    expect(result).toEqual({
+      primaryClient: fiveMClientInstances[0],
+    });
+    expect(flashForgeClientInstances).toHaveLength(0);
+    expect(fiveMClientInstances[0].args[3]).toMatchObject({ httpOnly: true });
+  });
+
+  it('forces HTTP-only mode for a Creator 5 inferred from type name when no model type is passed', async () => {
+    const service = ConnectionEstablishmentService.getInstance();
+
+    fiveMClientConfigs.push({
+      initialize: jest.fn().mockResolvedValue(true),
+      initControl: jest.fn().mockResolvedValue(true),
+    });
+
+    const result = await service.establishFinalConnection(
+      {
+        name: 'Creator 5 Pro',
+        ipAddress: '10.0.0.15',
+        serialNumber: 'SN-C5P-NOMODEL',
+      },
+      'Creator 5 Pro',
+      true,
+      '4444',
+      false
+      // no modelType — must fall back to the type name and still go HTTP-only
+    );
+
+    expect(result).toEqual({
+      primaryClient: fiveMClientInstances[0],
+    });
+    expect(flashForgeClientInstances).toHaveLength(0);
+  });
+
   it('logs out legacy clients before disposing them', async () => {
     const service = ConnectionEstablishmentService.getInstance();
     const disposedSpy = jest.fn();
