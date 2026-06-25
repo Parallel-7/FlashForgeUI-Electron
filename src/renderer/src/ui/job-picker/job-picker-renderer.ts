@@ -98,12 +98,18 @@ const logDebug = (message: string, ...args: unknown[]): void => {
 let selectedFile: string | null = null;
 let printerCapabilities: PrinterJobManagementFeatures | null = null;
 let selectedPrinterModel: string | null = null;
+// Whether the connected printer has a material station (IFS). Drives the
+// material-matching / single-color-confirmation flow. Derived from the printer's
+// capabilities rather than the model name, so every material-station printer
+// (AD5X, Creator 5 / 5 Pro, and any future model) is handled the same way.
+let hasMaterialStation = false;
 let currentJobsData: readonly unknown[] = []; // Store full job data for AD5X
 
 // Type definitions for printer features
 interface PrinterFeatures {
   readonly jobManagement: PrinterJobManagementFeatures;
   readonly modelType?: string;
+  readonly materialStation?: { readonly available?: boolean };
 }
 
 interface PrinterJobManagementFeatures {
@@ -259,8 +265,12 @@ async function checkPrinterCapabilities(): Promise<void> {
         selectedPrinterModel = features.modelType;
       }
 
+      // Capability-based material-station detection (AD5X, Creator 5 / 5 Pro, …).
+      hasMaterialStation = features.materialStation?.available === true;
+
       logDebug('Job picker: Printer capabilities loaded', printerCapabilities);
       logDebug('Job picker: Printer model type:', selectedPrinterModel);
+      logDebug('Job picker: Has material station:', hasMaterialStation);
     } else {
       console.error('Job picker: Invalid features format received');
     }
@@ -617,14 +627,17 @@ async function handleSelectJob(): Promise<void> {
     return;
   }
 
-  // For AD5X printers, check if this is a multi-color job
+  // For material-station printers (AD5X, Creator 5 / 5 Pro), check if this is a
+  // multi-color job that needs material matching before starting.
   logDebug(
-    'Job picker: Checking for AD5X multi-color - model:',
+    'Job picker: Checking for material-station multi-color - model:',
     selectedPrinterModel,
+    ', hasMaterialStation:',
+    hasMaterialStation,
     ', startNow:',
     startNowCheckbox.checked
   );
-  if (selectedPrinterModel === 'ad5x' && startNowCheckbox.checked) {
+  if (hasMaterialStation && startNowCheckbox.checked) {
     const jobData = findJobDataByFilename(selectedFile);
     logDebug('Job picker: Found job data for', selectedFile, ':', jobData);
 

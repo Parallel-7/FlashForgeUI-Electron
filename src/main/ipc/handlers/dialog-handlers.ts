@@ -574,30 +574,23 @@ export function registerDialogHandlers(configManager: ConfigManager, windowManag
     }
   });
 
-  // AD5X printer detection handler
-  ipcMain.handle('is-ad5x-printer', async (): Promise<boolean> => {
+  // Material-station capability handler. True for any printer with a material
+  // station (AD5X, Creator 5 / 5 Pro, and any future model), so the
+  // material-matching upload flow isn't tied to a specific backend class.
+  ipcMain.handle('has-material-station', async (): Promise<boolean> => {
     try {
       const backendManager = getPrinterBackendManager();
       const contextManager = getPrinterContextManager();
       const contextId = contextManager.getActiveContextId();
 
-      if (!contextId) {
+      if (!contextId || !backendManager.isBackendReady(contextId)) {
         return false;
       }
 
-      if (!backendManager.isBackendReady(contextId)) {
-        return false;
-      }
-
-      const backend = backendManager.getBackendForContext(contextId);
-      if (!backend) {
-        return false;
-      }
-
-      // Check if the backend is an instance of AD5XBackend
-      return backend.constructor.name === 'AD5XBackend';
+      const features = backendManager.getFeatures(contextId);
+      return features?.materialStation?.available === true;
     } catch (error) {
-      console.warn('Error checking AD5X printer status:', error);
+      console.warn('Error checking material-station capability:', error);
       return false;
     }
   });

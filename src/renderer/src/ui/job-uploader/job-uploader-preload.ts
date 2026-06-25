@@ -87,7 +87,8 @@ interface JobUploaderAPI {
     materialMappings?: AD5XMaterialMapping[]
   ) => Promise<AD5XUploadResult>;
   // Helper methods
-  isAD5XPrinter: () => Promise<boolean>;
+  // True when the connected printer has a material station (AD5X, Creator 5 / 5 Pro, …).
+  hasMaterialStation: () => Promise<boolean>;
   // Progress reporting methods
   receiveUploadProgress: (func: (progress: UploadProgress) => void) => void;
   receiveUploadComplete: (func: (result: UploadCompletionResult) => void) => void;
@@ -207,13 +208,13 @@ const jobUploaderAPI: JobUploaderAPI = {
 
   uploadFileAD5X,
 
-  isAD5XPrinter: async (): Promise<boolean> => {
+  hasMaterialStation: async (): Promise<boolean> => {
     try {
-      const isAD5X = (await ipcRenderer.invoke('is-ad5x-printer')) as boolean;
-      console.log('isAD5XPrinter result:', isAD5X);
-      return isAD5X;
+      const result = (await ipcRenderer.invoke('has-material-station')) as boolean;
+      console.log('hasMaterialStation result:', result);
+      return result;
     } catch (error) {
-      console.warn('Error checking AD5X printer status:', error);
+      console.warn('Error checking material-station capability:', error);
       return false;
     }
   },

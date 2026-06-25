@@ -118,8 +118,8 @@ function convertFilamentsToToolData(filaments: FilamentInfo[]): FFGcodeToolData[
  * Determine if file is a 3MF and should use enhanced upload flow
  */
 async function shouldUseEnhanced3MFFlow(api: JobUploaderAPI, filePath: string): Promise<boolean> {
-  const isAD5X = await api.isAD5XPrinter();
-  if (!isAD5X) {
+  const hasMaterialStation = await api.hasMaterialStation();
+  if (!hasMaterialStation) {
     return false;
   }
 
@@ -320,17 +320,17 @@ async function handleMetadataResult(
   showLoading(elements, false);
 
   if (result && !result.error) {
-    // Check if this is an AD5X printer with a non-3MF file
-    const isAD5X = await api.isAD5XPrinter();
+    // Material-station printers (AD5X, Creator 5 / 5 Pro) only accept 3MF files,
+    // which carry the per-tool material data the firmware needs for matching.
+    const hasMaterialStation = await api.hasMaterialStation();
     const is3MF = currentFilePath?.toLowerCase().endsWith('.3mf');
 
-    if (isAD5X && !is3MF) {
-      // AD5X printers only support 3MF files
+    if (hasMaterialStation && !is3MF) {
       const fileName = currentFilePath?.split(/[\\/]/).pop() || 'file';
       const fileExtension = fileName.split('.').pop()?.toUpperCase() || 'unknown';
 
       if (elements.filePathDisplay) {
-        elements.filePathDisplay.textContent = 'Unsupported file type for AD5X printer';
+        elements.filePathDisplay.textContent = 'Unsupported file type for this printer';
       }
 
       resetMetadata(elements);
@@ -338,7 +338,7 @@ async function handleMetadataResult(
       currentFilePath = null;
 
       alert(
-        `AD5X printers only support 3MF files.\n\nThe selected ${fileExtension} file cannot be uploaded to this printer.\n\nPlease select a 3MF file that has been sliced specifically for the AD5X printer.`
+        `This printer only supports 3MF files.\n\nThe selected ${fileExtension} file cannot be uploaded to this printer.\n\nPlease select a 3MF file sliced for this printer.`
       );
       return;
     }
@@ -410,14 +410,14 @@ async function handleMetadataResult(
 async function handleUploadJob(elements: DialogElements, api: JobUploaderAPI): Promise<void> {
   if (!currentFilePath) return;
 
-  // Check if this should use AD5X upload path
-  const isAD5X = await api.isAD5XPrinter();
+  // Material-station printers (AD5X, Creator 5 / 5 Pro) use the material-aware
+  // 3MF upload path; everything else uses the regular upload below.
+  const hasMaterialStation = await api.hasMaterialStation();
   const is3MF = currentFilePath.toLowerCase().endsWith('.3mf');
-  const useAD5XUpload = isAD5X && is3MF;
+  const useAD5XUpload = hasMaterialStation && is3MF;
 
   if (useAD5XUpload) {
-    // Use AD5X upload for 3MF files on AD5X printer
-    console.log('Using AD5X upload for 3MF file');
+    console.log('Using material-station 3MF upload path');
 
     try {
       const result = await api.uploadFileAD5X(
