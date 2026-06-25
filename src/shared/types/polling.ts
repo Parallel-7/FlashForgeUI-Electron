@@ -30,6 +30,8 @@
  * @module types/polling
  */
 
+import type { PrinterModelType } from './printer-backend/backend-operations.js';
+
 // ============================================================================
 // PRINTER STATE (SIMPLE)
 // ============================================================================
@@ -185,6 +187,12 @@ export interface MaterialStationStatus {
   activeSlot: number | null; // 1-4 or null
   errorMessage: string | null;
   lastUpdate: Date;
+  /**
+   * Printer model that owns this station, so the renderer can pick the correct
+   * fixed filament palette (the Creator 5 / 5 Pro use a different palette than the
+   * AD5X — see `@shared/palette`). Optional/absent for older payloads → treat as AD5X.
+   */
+  printerModelType?: PrinterModelType;
 }
 
 // ============================================================================

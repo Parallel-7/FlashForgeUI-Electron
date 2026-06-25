@@ -208,7 +208,6 @@ const validSendChannels = [
   'open-about-dialog',
   'open-printer-selection',
   'open-job-uploader',
-  'open-ifs-dialog',
   'window-minimize',
   'window-maximize',
   'window-close',

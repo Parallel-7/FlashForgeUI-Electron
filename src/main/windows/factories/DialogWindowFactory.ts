@@ -24,7 +24,6 @@
  * - Create material matching dialogs for printer material configuration and return material mappings
  * - Create single color confirmation dialogs for print job validation and return boolean confirmation
  * - Create material info dialogs for displaying material station slot information (void return)
- * - Create IFS dialogs for material station display and management (void return)
  * - Create auto-connect choice dialogs for saved printer selection and return user choice
  * - Create connect choice dialogs for connection method selection and return selected method
  * - Create printer connected warning dialogs when attempting to connect while already connected
@@ -37,7 +36,6 @@
  * - Material Matching Dialog: Promise<unknown[] | null> - Returns material mappings or null if cancelled
  * - Single Color Confirmation: Promise<boolean> - Returns true if confirmed, false if cancelled
  * - Material Info Dialog: void - Display-only, no return value
- * - IFS Dialog: void - Display-only, no return value
  * - Auto-Connect Choice: Promise<string | null> - Returns action choice or null if cancelled
  * - Connect Choice: Promise<string | null> - Returns action choice or null if cancelled
  * - Printer Connected Warning: Promise<boolean> - Returns true to continue, false to cancel
@@ -56,7 +54,6 @@
  * - Material Matching: 700x650 (min 600x550), non-resizable, frameless, transparent
  * - Single Color Confirmation: 450x500 (min 400x450), non-resizable, frameless, transparent
  * - Material Info: 600x500 (min 450x400), non-resizable, frameless, transparent
- * - IFS Dialog: 600x700 (min 600x650), non-resizable, frameless, transparent
  * - Auto-Connect Choice: 500x480 (min 450x420), non-resizable, frameless, transparent
  * - Connect Choice: 480x450 (min 450x400), non-resizable, frameless, transparent
  * - Printer Connected Warning: 450x380 (min 400x350), non-resizable, frameless, transparent
@@ -65,7 +62,6 @@
  * @exports createMaterialMatchingDialog - Create material matching dialog for printer configuration
  * @exports createSingleColorConfirmationDialog - Create single color confirmation for print validation
  * @exports createMaterialInfoDialog - Create material info dialog for slot information
- * @exports createIFSDialog - Create IFS dialog for material station management
  * @exports createAutoConnectChoiceDialog - Create auto-connect choice dialog for saved printers
  * @exports createConnectChoiceDialog - Create connect choice dialog for connection method
  * @exports createPrinterConnectedWarningDialog - Create warning dialog for existing connections

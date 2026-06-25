@@ -172,7 +172,11 @@ export type WindowType =
   | { kind: 'PrinterSelection' }
   | { kind: 'JobPicker'; data: JobPickerInitData }
   | { kind: 'SendCommands' }
-  | { kind: 'IFSDialog' }
+  // Pop-out of the Material Station grid component (AD5X IFS + Creator 5 / 5 Pro).
+  // Unlike the bespoke Material* dialogs below, this is served by the generic
+  // component-dialog path: `component-dialog:open` IPC -> createComponentDialog(
+  // 'material-station'). Replaces the never-wired legacy 'IFSDialog' kind.
+  | { kind: 'MaterialStation' }
   | { kind: 'MaterialInfo'; data: unknown }
   | { kind: 'MaterialMatching'; data: MaterialMatchingDialogData }
   | { kind: 'SingleColorConfirmation'; data: SingleColorConfirmationDialogData }

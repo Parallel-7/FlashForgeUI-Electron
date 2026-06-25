@@ -145,13 +145,13 @@ export const COMPONENT_REGISTRY_DATA: ReadonlyArray<ComponentDefinition> = [
   },
 
   {
-    id: 'ifs-station',
-    name: 'IFS Material Station',
+    id: 'material-station',
+    name: 'Material Station',
     icon: 'grid-3x3',
     defaultSize: { w: 6, h: 3 },
     minSize: { w: 2, h: 2 },
     category: 'main',
-    description: 'Intelligent Filament System material station status (AD5X only)',
+    description: 'Material station status and per-slot editor (AD5X + Creator 5 / 5 Pro)',
     required: false,
     singleton: true,
   },

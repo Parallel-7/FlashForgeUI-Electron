@@ -9,16 +9,19 @@
  * Key exports:
  * - registerMaterialHandlers(): Registers material station IPC handlers
  *
+ * Applies to printers with a material station (AD5X and the Creator 5 / 5 Pro);
+ * the fixed palette is selected per-printer via `@shared/palette`.
+ *
  * IPC Channels:
  * - `material:configure-slot` - Snap a Spoolman spool's material/color onto the
- *   AD5X fixed palette and apply it to a slot via the printer's `msConfig_cmd`.
+ *   printer's fixed palette and apply it to a slot via the printer's `msConfig_cmd`.
  * - `material:set-slot` - Apply an explicit material + color (already chosen from
  *   the fixed palette by the renderer) to a slot. Spoolman-independent.
  *
  * @module ipc/handlers/material-handlers
  */
 
-import { nearestColor, nearestMaterial } from '@shared/ifs-palette.js';
+import { getPaletteForModel } from '@shared/palette.js';
 import { ipcMain } from 'electron';
 import { getConfigManager } from '../../managers/ConfigManager.js';
 import type { PrinterBackendManager } from '../../managers/PrinterBackendManager.js';
@@ -58,12 +61,12 @@ interface ConfigureSlotResult {
 /**
  * Request payload for `material:set-slot` — an explicit, Spoolman-independent
  * slot write. The renderer has already chosen `materialName`/`colorHex` from the
- * fixed AD5X palette via the manual slot editor.
+ * printer's fixed palette via the manual slot editor.
  */
 interface SetSlotRequest {
   /** Target slot number (1-4). */
   slot: number;
-  /** Material name to write (one of the recognized AD5X materials). */
+  /** Material name to write (one of the printer's recognized materials). */
   materialName: string;
   /** Color hex to write (with or without leading "#"). */
   colorHex: string;
@@ -117,13 +120,19 @@ export function registerMaterialHandlers(backendManager: PrinterBackendManager):
         return { success: false, error: 'Spool has no color in Spoolman', spoolName };
       }
 
-      const snappedColor = nearestColor(rawColor);
+      // Snap onto the printer's own fixed palette (the Creator 5 series uses a
+      // different palette than the AD5X). Fall back to the AD5X palette if the
+      // model can't be resolved.
+      const modelType = backendManager.getBackendForContext(contextId)?.getCapabilities().modelType;
+      const palette = getPaletteForModel(modelType);
+
+      const snappedColor = palette.nearestColor(rawColor);
       if (!snappedColor) {
         return { success: false, error: `Could not interpret spool color "${rawColor}"`, spoolName };
       }
 
       // Resolve material: keep the slot's current material when unrecognized.
-      const snappedMaterial = filament.material ? nearestMaterial(filament.material) : null;
+      const snappedMaterial = filament.material ? palette.nearestMaterial(filament.material) : null;
 
       let materialToApply = snappedMaterial;
       if (!materialToApply) {

@@ -41,6 +41,16 @@ function getLegacyClient(backend: BasePrinterBackend): FlashForgeClient | null {
 }
 
 /**
+ * Helper to get the HTTP (FiveMClient) client from a backend, if the primary
+ * client is a FiveMClient. Used to route control over HTTP for HTTP-only printers
+ * (Creator 5 / 5 Pro) that have no legacy TCP client.
+ */
+function getFiveMClient(backend: BasePrinterBackend): FiveMClient | null {
+  const client = backend.getPrimaryClient();
+  return client instanceof FiveMClient ? client : null;
+}
+
+/**
  * Register all printer control related IPC handlers
  */
 export function registerControlHandlers(backendManager: PrinterBackendManager): void {
@@ -63,12 +73,19 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
         return { success: false, error: 'Backend not available' };
       }
 
+      // Dual-API printers use the TCP G-code client; HTTP-only printers
+      // (Creator 5 / 5 Pro) route through the FiveMClient (temperatureCtl_cmd).
       const legacyClient = getLegacyClient(backend);
-      if (!legacyClient) {
-        return { success: false, error: 'Temperature control not available' };
+      let result: boolean;
+      if (legacyClient) {
+        result = await legacyClient.setBedTemp(temperature);
+      } else {
+        const fiveMClient = getFiveMClient(backend);
+        if (!fiveMClient) {
+          return { success: false, error: 'Temperature control not available' };
+        }
+        result = await fiveMClient.tempControl.setBedTemp(temperature);
       }
-
-      const result = await legacyClient.setBedTemp(temperature);
       console.log(`Set bed temperature to ${temperature}°C`, result);
       return { success: result, data: result };
     } catch (error) {
@@ -96,11 +113,16 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
       }
 
       const legacyClient = getLegacyClient(backend);
-      if (!legacyClient) {
-        return { success: false, error: 'Temperature control not available' };
+      let result: boolean;
+      if (legacyClient) {
+        result = await legacyClient.setExtruderTemp(temperature);
+      } else {
+        const fiveMClient = getFiveMClient(backend);
+        if (!fiveMClient) {
+          return { success: false, error: 'Temperature control not available' };
+        }
+        result = await fiveMClient.tempControl.setExtruderTemp(temperature);
       }
-
-      const result = await legacyClient.setExtruderTemp(temperature);
       console.log(`Set extruder temperature to ${temperature}°C`, result);
       return { success: result, data: result };
     } catch (error) {
@@ -128,11 +150,16 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
       }
 
       const legacyClient = getLegacyClient(backend);
-      if (!legacyClient) {
-        return { success: false, error: 'Temperature control not available' };
+      let result: boolean;
+      if (legacyClient) {
+        result = await legacyClient.cancelBedTemp();
+      } else {
+        const fiveMClient = getFiveMClient(backend);
+        if (!fiveMClient) {
+          return { success: false, error: 'Temperature control not available' };
+        }
+        result = await fiveMClient.tempControl.cancelBedTemp();
       }
-
-      const result = await legacyClient.cancelBedTemp();
       console.log('Turned off bed temperature', result);
       return { success: result, data: result };
     } catch (error) {
@@ -160,11 +187,16 @@ export function registerControlHandlers(backendManager: PrinterBackendManager): 
       }
 
       const legacyClient = getLegacyClient(backend);
-      if (!legacyClient) {
-        return { success: false, error: 'Temperature control not available' };
+      let result: boolean;
+      if (legacyClient) {
+        result = await legacyClient.cancelExtruderTemp();
+      } else {
+        const fiveMClient = getFiveMClient(backend);
+        if (!fiveMClient) {
+          return { success: false, error: 'Temperature control not available' };
+        }
+        result = await fiveMClient.tempControl.cancelExtruderTemp();
       }
-
-      const result = await legacyClient.cancelExtruderTemp();
       console.log('Turned off extruder temperature', result);
       return { success: result, data: result };
     } catch (error) {

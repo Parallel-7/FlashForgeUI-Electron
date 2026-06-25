@@ -8,7 +8,7 @@
  * - Input dialog (generic user input prompts)
  * - Job management dialogs (uploader, picker)
  * - Send commands dialog (G-code/command execution)
- * - Material dialogs (IFS, material info, matching, single-color confirmation)
+ * - Material dialogs (material info, matching, single-color confirmation)
  * - Generic window controls (minimize/close for sub-windows)
  *
  * Key exports:

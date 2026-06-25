@@ -54,6 +54,8 @@ const COMPONENT_DIALOG_SIZES: Record<string, { width: number; height: number }> 
   'log-panel': { width: 850, height: 650 },
   'controls-grid': { width: 600, height: 500 },
   'filtration-controls': { width: 500, height: 400 },
+  // Material station: roomy enough for the 4-slot grid + per-slot editor modal.
+  'material-station': { width: 600, height: 700 },
   // Default size for unknown components
   default: { width: 600, height: 500 },
 };

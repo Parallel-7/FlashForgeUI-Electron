@@ -24,8 +24,8 @@ export { ComponentManager, componentManager } from './ComponentManager.js';
 export { CameraPreviewComponent } from './camera-preview/index.js';
 export { ControlsGridComponent } from './controls-grid/index.js';
 export { FiltrationControlsComponent } from './filtration-controls/index.js';
-// IFS Material Station Component
-export { IFSStationComponent } from './ifs-station/index.js';
+// Material Station Component (AD5X + Creator 5 / 5 Pro)
+export { MaterialStationComponent } from './material-station/index.js';
 export { JobInfoComponent } from './job-info/index.js';
 // Individual components - All 10 Phase 1 components
 export { JobStatsComponent } from './job-stats/index.js';

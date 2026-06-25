@@ -16,9 +16,9 @@ import {
   ControlsGridComponent,
   componentManager,
   FiltrationControlsComponent,
-  IFSStationComponent,
   JobStatsComponent,
   LogPanelComponent,
+  MaterialStationComponent,
   ModelPreviewComponent,
   PrinterStatusComponent,
   SpoolmanComponent,
@@ -432,8 +432,8 @@ export class RendererGridController {
       }
       case 'spoolman-tracker':
         return new SpoolmanComponent(container);
-      case 'ifs-station':
-        return new IFSStationComponent(container);
+      case 'material-station':
+        return new MaterialStationComponent(container);
       case 'tool-temps':
         return new ToolTempsComponent(container);
       default:

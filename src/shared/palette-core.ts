@@ -1,22 +1,23 @@
 /**
- * @fileoverview AD5X IFS material/color palette and nearest-match helpers.
+ * @fileoverview Filament palette base class and shared color-science helpers.
  *
  * Pure, framework-agnostic module (no DOM/Electron deps) importable by both the
- * main and renderer processes. The AD5X printer only renders a fixed set of 14
- * materials and 24 colors on its material-station UI; arbitrary values won't draw
- * an icon. These helpers snap an arbitrary Spoolman material/color onto that fixed
- * palette:
+ * main and renderer processes. FlashForge printers only render a fixed set of
+ * materials and colors on their material-station UI; arbitrary values won't draw
+ * an icon. The {@link Palette} class snaps an arbitrary Spoolman material/color
+ * onto a model's fixed palette:
  *
- * - {@link nearestColor} snaps a hex color to the nearest of the 24 swatches using
+ * - {@link Palette.nearestColor} snaps a hex color to the nearest swatch using
  *   CIEDE2000 distance (not plain ΔE76, which mismatches saturated blue/red regions).
- * - {@link nearestMaterial} snaps a raw material string to one of the 14 recognized
- *   materials via exact (normalized) match, else leading-token match, else null.
+ * - {@link Palette.nearestMaterial} snaps a raw material string to a recognized
+ *   material via exact (normalized) match, else leading-token match, else null.
  *
- * The 14 materials, 24 colors, and matching algorithm are ported verbatim from the
- * validated reference implementation (`IfsPalette.kt`) and verified against all 24
- * swatches plus live-Spoolman fixtures.
+ * The data (which colors / materials) differs per model — see `ad5x-palette.ts`
+ * and `creator5-palette.ts`, both firmware-confirmed. The matching algorithm here
+ * is identical for every model and is ported verbatim from the validated reference
+ * implementation (`IfsPalette.kt`).
  *
- * @module shared/ifs-palette
+ * @module shared/palette-core
  */
 
 export interface PaletteColor {
@@ -25,28 +26,6 @@ export interface PaletteColor {
   /** Hex code with leading '#', e.g. "#2750E0". */
   hex: string;
 }
-
-/** The 14 materials the AD5X UI renders (order matches the API docs). */
-export const IFS_MATERIALS: readonly string[] = [
-  'PLA', 'PLA-CF', 'PETG', 'PETG-CF', 'ABS', 'TPU', 'SILK',
-  'PA', 'PA-CF', 'PAHT-CF', 'PC', 'PC-ABS', 'PET-CF', 'PPS-CF',
-];
-
-/** The 24 colors the AD5X UI renders. */
-export const IFS_COLORS: readonly PaletteColor[] = [
-  { name: 'White', hex: '#FFFFFF' }, { name: 'Yellow', hex: '#FEF043' },
-  { name: 'Light Green', hex: '#DCF478' }, { name: 'Green', hex: '#0ACC38' },
-  { name: 'Dark Green', hex: '#067749' }, { name: 'Teal', hex: '#0C6283' },
-  { name: 'Cyan', hex: '#0DE2A0' }, { name: 'Light Blue', hex: '#75D9F3' },
-  { name: 'Blue', hex: '#45A8F9' }, { name: 'Dark Blue', hex: '#2750E0' },
-  { name: 'Purple', hex: '#46328E' }, { name: 'Violet', hex: '#A03CF7' },
-  { name: 'Magenta', hex: '#F330F9' }, { name: 'Pink', hex: '#D4B0DC' },
-  { name: 'Coral', hex: '#F95D73' }, { name: 'Red', hex: '#F72224' },
-  { name: 'Brown', hex: '#7C4B00' }, { name: 'Orange', hex: '#F98D33' },
-  { name: 'Cream', hex: '#FDEBD5' }, { name: 'Tan', hex: '#D3C4A3' },
-  { name: 'Dark Brown', hex: '#AF7836' }, { name: 'Gray', hex: '#898989' },
-  { name: 'Light Gray', hex: '#BCBCBC' }, { name: 'Black', hex: '#161616' },
-];
 
 type Lab = readonly [number, number, number];
 
@@ -130,35 +109,62 @@ function ciede2000(lab1: Lab, lab2: Lab): number {
   return Math.sqrt((dLp / SL) ** 2 + (dCp / SC) ** 2 + (dHp / SH) ** 2 + RT * (dCp / SC) * (dHp / SH));
 }
 
-const PALETTE_LAB: ReadonlyArray<{ color: PaletteColor; lab: Lab }> = IFS_COLORS.map((color) => {
-  const lab = hexToLab(color.hex);
-  if (!lab) throw new Error(`Invalid palette hex: ${color.hex}`);
-  return { color, lab };
-});
-
-/** Snap an arbitrary hex (#RRGGBB, RRGGBB, RRGGBBAA, or #RGB) to the nearest palette swatch via CIEDE2000. Returns null if unparseable. */
-export function nearestColor(hex: string): PaletteColor | null {
-  const lab = hexToLab(hex);
-  if (!lab) return null;
-  let best: PaletteColor | null = null;
-  let bestD = Number.POSITIVE_INFINITY;
-  for (const entry of PALETTE_LAB) {
-    const d = ciede2000(lab, entry.lab);
-    if (d < bestD) { bestD = d; best = entry.color; }
-  }
-  return best;
-}
-
 function normalizeMaterial(raw: string): string {
   return raw.toUpperCase().replace(/[^A-Z0-9]/g, '');
 }
-const MATERIAL_NORM = new Map<string, string>(IFS_MATERIALS.map((m) => [normalizeMaterial(m), m]));
 
-/** Snap a raw Spoolman material to a recognized material: exact (normalized) match, else leading-token match, else null (caller keeps current slot material). */
-export function nearestMaterial(raw: string): string | null {
-  if (typeof raw !== 'string' || raw.trim() === '') return null;
-  const exact = MATERIAL_NORM.get(normalizeMaterial(raw));
-  if (exact) return exact;
-  const leading = raw.trim().split(/\s+/)[0];
-  return MATERIAL_NORM.get(normalizeMaterial(leading)) ?? null;
+/**
+ * A model's fixed filament palette: a list of recognized colors and materials,
+ * plus the nearest-match helpers that snap arbitrary input onto them.
+ *
+ * Construct one per model with that model's firmware-confirmed data; the matching
+ * behavior is identical across models (data-only difference).
+ */
+export class Palette {
+  /** The colors this model's UI renders, in firmware order. */
+  public readonly colors: readonly PaletteColor[];
+  /** The materials this model's UI renders, in firmware order. */
+  public readonly materials: readonly string[];
+
+  private readonly paletteLab: ReadonlyArray<{ color: PaletteColor; lab: Lab }>;
+  private readonly materialNorm: ReadonlyMap<string, string>;
+
+  constructor(colors: readonly PaletteColor[], materials: readonly string[]) {
+    this.colors = colors;
+    this.materials = materials;
+    this.paletteLab = colors.map((color) => {
+      const lab = hexToLab(color.hex);
+      if (!lab) throw new Error(`Invalid palette hex: ${color.hex}`);
+      return { color, lab };
+    });
+    this.materialNorm = new Map(materials.map((m) => [normalizeMaterial(m), m]));
+  }
+
+  /**
+   * Snap an arbitrary hex (#RRGGBB, RRGGBB, RRGGBBAA, or #RGB) to the nearest
+   * palette swatch via CIEDE2000. Returns null if unparseable.
+   */
+  public nearestColor(hex: string): PaletteColor | null {
+    const lab = hexToLab(hex);
+    if (!lab) return null;
+    let best: PaletteColor | null = null;
+    let bestD = Number.POSITIVE_INFINITY;
+    for (const entry of this.paletteLab) {
+      const d = ciede2000(lab, entry.lab);
+      if (d < bestD) { bestD = d; best = entry.color; }
+    }
+    return best;
+  }
+
+  /**
+   * Snap a raw material to a recognized material: exact (normalized) match, else
+   * leading-token match, else null (caller keeps the current slot material).
+   */
+  public nearestMaterial(raw: string): string | null {
+    if (typeof raw !== 'string' || raw.trim() === '') return null;
+    const exact = this.materialNorm.get(normalizeMaterial(raw));
+    if (exact) return exact;
+    const leading = raw.trim().split(/\s+/)[0];
+    return this.materialNorm.get(normalizeMaterial(leading)) ?? null;
+  }
 }

@@ -40,7 +40,6 @@
  * - createMaterialMatchingDialog: Material configuration with mapping result
  * - createSingleColorConfirmationDialog: Print validation with boolean result
  * - createMaterialInfoDialog: Material slot information display
- * - createIFSDialog: Material station management display
  * - createConnectChoiceDialog: Connection method selection
  * - createPrinterConnectedWarningDialog: Connection conflict warning
  *
@@ -65,7 +64,7 @@
  * @exports InputDialogOptions - Type for input dialog configuration
  * @exports createSettingsWindow, createStatusWindow, createLogDialog - Core window functions
  * @exports createInputDialog, createMaterialMatchingDialog, createSingleColorConfirmationDialog,
- *          createMaterialInfoDialog, createIFSDialog, createConnectChoiceDialog,
+ *          createMaterialInfoDialog, createConnectChoiceDialog,
  *          createPrinterConnectedWarningDialog - Dialog window functions
  * @exports createJobUploaderWindow, createJobPickerWindow, createPrinterSelectionWindow,
  *          createSendCommandsWindow - Utility window functions

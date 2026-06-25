@@ -28,6 +28,23 @@ import { getComponentDefinition } from './ComponentRegistry.js';
 import type { GridOptions, GridStackWidgetConfig, LayoutConfig } from './types.js';
 
 /**
+ * Legacy → current component-id renames, applied when loading a saved layout.
+ * Component ids are persisted in stored layouts (and layout history), so renaming
+ * a component requires mapping its old id here or saved widgets would orphan.
+ * Add one entry per rename; keep old entries indefinitely.
+ */
+export const LEGACY_COMPONENT_ID_RENAMES: Readonly<Record<string, string>> = {
+  // The IFS station component was renamed to "material-station" (it also serves
+  // the Creator 5 series now, not just the AD5X IFS).
+  'ifs-station': 'material-station',
+};
+
+/** Map a possibly-legacy component id to its current id (identity if unchanged). */
+export function migrateComponentId(componentId: string): string {
+  return LEGACY_COMPONENT_ID_RENAMES[componentId] ?? componentId;
+}
+
+/**
  * Default grid options matching current layout behavior
  */
 export const DEFAULT_GRID_OPTIONS: GridOptions = {
@@ -206,17 +223,20 @@ export function mergeWithDefaults(userLayout: Partial<LayoutConfig>): LayoutConf
   // Get user widgets or default widgets
   const baseWidgets = userLayout.widgets ?? defaultLayout.widgets;
 
-  // Apply ComponentRegistry minSize values to each widget
+  // Migrate any legacy component ids first (saved layouts may reference old ids),
+  // then apply current ComponentRegistry minSize values to each widget.
   const widgetsWithUpdatedMinSize = baseWidgets.map((widget) => {
-    const componentDef = getComponentDefinition(widget.componentId);
+    const componentId = migrateComponentId(widget.componentId);
+    const migrated = componentId === widget.componentId ? widget : { ...widget, componentId };
+    const componentDef = getComponentDefinition(componentId);
     if (componentDef) {
       return {
-        ...widget,
+        ...migrated,
         minW: componentDef.minSize.w,
         minH: componentDef.minSize.h,
       };
     }
-    return widget;
+    return migrated;
   });
 
   return {

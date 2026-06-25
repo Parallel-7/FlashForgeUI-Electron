@@ -6,7 +6,7 @@
  *
  * Key Features:
  * - Material station status integration for active slot detection
- * - Visual material type and color display from active IFS slot
+ * - Visual material type and color display from active material-station slot
  * - Empty slot detection with error messaging and print blocking
  * - Bed leveling toggle with default preference handling
  * - Real-time material station communication errors
@@ -33,12 +33,12 @@
  * - Start/Cancel buttons with conditional enablement
  *
  * Context:
- * Specifically designed for AD5X and similar printers with Intelligent Filament System (IFS)
- * material stations to prevent print failures from incorrect material selection.
+ * Specifically designed for AD5X and Creator 5 / 5 Pro printers with a material
+ * station to prevent print failures from incorrect material selection.
  */
 
 // Single Color Confirmation Dialog Renderer
-// Shows active IFS slot material before starting single-color print
+// Shows active material-station slot material before starting single-color print
 
 import type { ThemeColors } from '@shared/types/config.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';

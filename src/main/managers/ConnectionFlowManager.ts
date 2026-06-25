@@ -639,7 +639,8 @@ export class ConnectionFlowManager extends EventEmitter {
         tempResult.typeName,
         familyInfo.is5MFamily,
         checkCode,
-        forceLegacyMode
+        forceLegacyMode,
+        modelType
       );
 
       if (!connectionResult) {
@@ -906,13 +907,15 @@ export class ConnectionFlowManager extends EventEmitter {
         eventPort: detailsWithDefaults.httpPort,
       };
 
-      // Establish connection
+      // Establish connection. Prefer the saved (immutable) modelType so HTTP-only
+      // models reconnect over HTTP without attempting the dead legacy TCP channel.
       const connectionResult = await this.connectionService.establishFinalConnection(
         discoveredPrinter,
         detailsWithDefaults.printerModel,
         familyInfo.is5MFamily,
         detailsWithDefaults.CheckCode,
-        forceLegacyMode
+        forceLegacyMode,
+        detailsWithDefaults.modelType
       );
 
       if (!connectionResult) {

@@ -334,10 +334,14 @@ export class AD5XBackend extends DualAPIBackend {
   }
 
   /**
-   * Get material station status (supported on AD5X)
+   * Get material station status (supported on AD5X and the Creator 5 series,
+   * which inherits this backend). Stamps the printer model so the polling layer
+   * and renderer can select the correct fixed filament palette (Creator 5 uses a
+   * different palette than the AD5X — see `@shared/palette`).
    */
   public getMaterialStationStatus(): MaterialStationStatus | null {
-    return extractMaterialStationStatus(this.lastMachineInfo);
+    const status = extractMaterialStationStatus(this.lastMachineInfo);
+    return status ? { ...status, printerModelType: this.modelType } : null;
   }
 
   /**

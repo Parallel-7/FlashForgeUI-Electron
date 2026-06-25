@@ -29,9 +29,9 @@ import {
   CameraPreviewComponent,
   ControlsGridComponent,
   FiltrationControlsComponent,
-  IFSStationComponent,
   JobStatsComponent,
   LogPanelComponent,
+  MaterialStationComponent,
   ModelPreviewComponent,
   PrinterStatusComponent,
   SpoolmanComponent,
@@ -193,8 +193,8 @@ function createComponentInstance(componentId: string, container: HTMLElement) {
       return new FiltrationControlsComponent(container);
     case 'spoolman-tracker':
       return new SpoolmanComponent(container);
-    case 'ifs-station':
-      return new IFSStationComponent(container);
+    case 'material-station':
+      return new MaterialStationComponent(container);
     case 'tool-temps':
       return new ToolTempsComponent(container);
     default:

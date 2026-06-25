@@ -37,7 +37,6 @@
  * - PRINTER_SELECTION: Printer management window
  * - JOB_PICKER: File selection from printer
  * - SEND_COMMANDS: Direct command interface
- * - IFS_DIALOG: Material station display
  * - MATERIAL_INFO_DIALOG: Material slot information
  * - MATERIAL_MATCHING_DIALOG: Material configuration
  * - SINGLE_COLOR_CONFIRMATION_DIALOG: Print validation

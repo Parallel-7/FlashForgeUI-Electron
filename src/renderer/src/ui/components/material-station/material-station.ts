@@ -1,8 +1,8 @@
 /**
- * @fileoverview IFS Material Station Component
+ * @fileoverview Material Station Component
  *
- * GridStack component for displaying the Intelligent Filament System (IFS)
- * material station status on AD5X printers. Shows real-time slot status,
+ * GridStack component for displaying material-station status on printers that
+ * have one (the AD5X IFS and the Creator 5 / 5 Pro). Shows real-time slot status,
  * filament types, colors, and active slot information with responsive layouts
  * that adapt to different grid cell sizes.
  *
@@ -11,17 +11,18 @@
  * - Responsive layouts: horizontal, vertical, square, compact
  * - Real-time material slot visualization with color coding
  * - Active slot highlighting
- * - Per-context availability (only AD5X printers with material station)
+ * - Per-context availability (printers with a material station: AD5X + Creator 5 / 5 Pro)
+ * - Per-model fixed palette in the slot editor (AD5X vs Creator 5 — see @shared/palette)
  *
- * @module ui/components/ifs-station
+ * @module ui/components/material-station
  */
 
-import { IFS_COLORS, IFS_MATERIALS, nearestColor, nearestMaterial } from '@shared/ifs-palette.js';
+import { getPaletteForModel, type Palette } from '@shared/palette.js';
 import type { MaterialStationStatus } from '@shared/types/polling.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
-import type { IFSLayoutMode, MaterialSlot } from './types.js';
-import './ifs-station.css';
+import type { MaterialSlot, MaterialStationLayoutMode } from './types.js';
+import './material-station.css';
 
 /** Shape of a spool handed back from the Spoolman picker (a subset of ActiveSpoolData). */
 interface PickedSpool {
@@ -32,66 +33,66 @@ interface PickedSpool {
 }
 
 /**
- * IFS Material Station component
- * Displays material station status for AD5X printers with responsive layouts
+ * Material Station component
+ * Displays material station status (AD5X + Creator 5 / 5 Pro) with responsive layouts
  */
-export class IFSStationComponent extends BaseComponent {
-  public readonly componentId = 'ifs-station';
+export class MaterialStationComponent extends BaseComponent {
+  public readonly componentId = 'material-station';
   public readonly templateHTML = `
-    <div class="ifs-component">
+    <div class="ms-component">
       <!-- Unavailable state (non-AD5X printers) -->
-      <div class="ifs-state ifs-unavailable">
-        <i data-lucide="grid-3x3" class="ifs-icon"></i>
-        <p class="ifs-message">IFS not available on this printer</p>
+      <div class="ms-state ms-unavailable">
+        <i data-lucide="grid-3x3" class="ms-icon"></i>
+        <p class="ms-message">Material station not available on this printer</p>
       </div>
 
       <!-- Disconnected state -->
-      <div class="ifs-state ifs-disconnected">
-        <i data-lucide="unplug" class="ifs-icon"></i>
-        <p class="ifs-message">Material station disconnected</p>
+      <div class="ms-state ms-disconnected">
+        <i data-lucide="unplug" class="ms-icon"></i>
+        <p class="ms-message">Material station disconnected</p>
       </div>
 
       <!-- Active state -->
-      <div class="ifs-state ifs-active">
-        <div class="ifs-header">
-          <span class="ifs-title">Material Station</span>
-          <span class="ifs-active-indicator"></span>
+      <div class="ms-state ms-active">
+        <div class="ms-header">
+          <span class="ms-title">Material Station</span>
+          <span class="ms-active-indicator"></span>
         </div>
-        <div class="ifs-slots-container">
-          <div class="ifs-slot" data-slot="1">
-            <div class="ifs-spool">
-              <div class="ifs-spool-center"></div>
+        <div class="ms-slots-container">
+          <div class="ms-slot" data-slot="1">
+            <div class="ms-spool">
+              <div class="ms-spool-center"></div>
             </div>
-            <div class="ifs-slot-info">
-              <span class="ifs-slot-label">Slot 1</span>
-              <span class="ifs-slot-material">Empty</span>
-            </div>
-          </div>
-          <div class="ifs-slot" data-slot="2">
-            <div class="ifs-spool">
-              <div class="ifs-spool-center"></div>
-            </div>
-            <div class="ifs-slot-info">
-              <span class="ifs-slot-label">Slot 2</span>
-              <span class="ifs-slot-material">Empty</span>
+            <div class="ms-slot-info">
+              <span class="ms-slot-label">Slot 1</span>
+              <span class="ms-slot-material">Empty</span>
             </div>
           </div>
-          <div class="ifs-slot" data-slot="3">
-            <div class="ifs-spool">
-              <div class="ifs-spool-center"></div>
+          <div class="ms-slot" data-slot="2">
+            <div class="ms-spool">
+              <div class="ms-spool-center"></div>
             </div>
-            <div class="ifs-slot-info">
-              <span class="ifs-slot-label">Slot 3</span>
-              <span class="ifs-slot-material">Empty</span>
+            <div class="ms-slot-info">
+              <span class="ms-slot-label">Slot 2</span>
+              <span class="ms-slot-material">Empty</span>
             </div>
           </div>
-          <div class="ifs-slot" data-slot="4">
-            <div class="ifs-spool">
-              <div class="ifs-spool-center"></div>
+          <div class="ms-slot" data-slot="3">
+            <div class="ms-spool">
+              <div class="ms-spool-center"></div>
             </div>
-            <div class="ifs-slot-info">
-              <span class="ifs-slot-label">Slot 4</span>
-              <span class="ifs-slot-material">Empty</span>
+            <div class="ms-slot-info">
+              <span class="ms-slot-label">Slot 3</span>
+              <span class="ms-slot-material">Empty</span>
+            </div>
+          </div>
+          <div class="ms-slot" data-slot="4">
+            <div class="ms-spool">
+              <div class="ms-spool-center"></div>
+            </div>
+            <div class="ms-slot-info">
+              <span class="ms-slot-label">Slot 4</span>
+              <span class="ms-slot-material">Empty</span>
             </div>
           </div>
         </div>
@@ -104,8 +105,7 @@ export class IFSStationComponent extends BaseComponent {
   private isConnected = false;
   private slots: MaterialSlot[] = [];
   private activeSlot: number | null = null;
-  private errorMessage: string | null = null;
-  private currentLayout: IFSLayoutMode = 'square';
+  private currentLayout: MaterialStationLayoutMode = 'square';
 
   // DOM references
   private unavailableView: HTMLElement | null = null;
@@ -116,6 +116,13 @@ export class IFSStationComponent extends BaseComponent {
 
   // ResizeObserver for responsive layout
   private resizeObserver: ResizeObserver | null = null;
+
+  /**
+   * Fixed filament palette for the connected printer, refreshed from polling data.
+   * The Creator 5 / 5 Pro use a different palette than the AD5X; defaults to the
+   * AD5X palette until the model is known. See `@shared/palette`.
+   */
+  private palette: Palette = getPaletteForModel(null);
 
   // Slot editor state
   private contextId: string | null = null;
@@ -137,11 +144,11 @@ export class IFSStationComponent extends BaseComponent {
    */
   protected async setupEventListeners(): Promise<void> {
     // Cache DOM references
-    this.unavailableView = this.findElementByClass('ifs-unavailable');
-    this.disconnectedView = this.findElementByClass('ifs-disconnected');
-    this.activeView = this.findElementByClass('ifs-active');
-    this.slotsContainer = this.findElementByClass('ifs-slots-container');
-    this.activeIndicator = this.findElementByClass('ifs-active-indicator');
+    this.unavailableView = this.findElementByClass('ms-unavailable');
+    this.disconnectedView = this.findElementByClass('ms-disconnected');
+    this.activeView = this.findElementByClass('ms-active');
+    this.slotsContainer = this.findElementByClass('ms-slots-container');
+    this.activeIndicator = this.findElementByClass('ms-active-indicator');
 
     // Initialize Lucide icons
     this.initializeIcons();
@@ -165,7 +172,7 @@ export class IFSStationComponent extends BaseComponent {
     if (!this.slotsContainer) return;
 
     this.slotsContainer.addEventListener('click', (event) => {
-      const slotEl = (event.target as HTMLElement)?.closest('.ifs-slot') as HTMLElement | null;
+      const slotEl = (event.target as HTMLElement)?.closest('.ms-slot') as HTMLElement | null;
       if (!slotEl) return;
       const slotAttr = slotEl.getAttribute('data-slot');
       const slot = slotAttr ? Number.parseInt(slotAttr, 10) : NaN;
@@ -226,7 +233,10 @@ export class IFSStationComponent extends BaseComponent {
       this.isConnected = materialStation?.connected ?? false;
       this.slots = materialStation?.slots ?? [];
       this.activeSlot = materialStation?.activeSlot ?? null;
-      this.errorMessage = materialStation?.errorMessage ?? null;
+
+      // Select the model's fixed palette (Creator 5 differs from AD5X). Falls back
+      // to the AD5X palette when the model is absent from the payload.
+      this.palette = getPaletteForModel(materialStation?.printerModelType);
 
       // Track the active printer context for slot-config IPC calls (falls back to
       // the active context server-side when null).
@@ -237,7 +247,7 @@ export class IFSStationComponent extends BaseComponent {
       this.updateState(data);
       this.updateView();
     } catch (error) {
-      console.error(`[IFSStation] Error updating component:`, error);
+      console.error(`[MaterialStation] Error updating component:`, error);
     }
   }
 
@@ -258,7 +268,7 @@ export class IFSStationComponent extends BaseComponent {
    * - Dialog: Always 2x2 square layout
    * - Grid: Dynamic based on container size
    */
-  private determineLayout(): IFSLayoutMode {
+  private determineLayout(): MaterialStationLayoutMode {
     // Dialogs always use square layout
     if (this.isInDialog()) {
       return 'square';
@@ -315,7 +325,7 @@ export class IFSStationComponent extends BaseComponent {
       this.currentLayout = newLayout;
 
       // Update CSS class on container
-      const component = this.container?.querySelector('.ifs-component');
+      const component = this.container?.querySelector('.ms-component');
       if (component) {
         component.classList.remove('layout-horizontal', 'layout-vertical', 'layout-square', 'layout-compact');
         component.classList.add(`layout-${newLayout}`);
@@ -349,7 +359,7 @@ export class IFSStationComponent extends BaseComponent {
   private renderSlots(): void {
     if (!this.slotsContainer) return;
 
-    // AD5X has 4 slots with 1-based IDs (1, 2, 3, 4)
+    // AD5X and Creator 5 both expose 4 slots with 1-based IDs (1, 2, 3, 4).
     for (let slotNumber = 1; slotNumber <= 4; slotNumber++) {
       const slotElement = this.slotsContainer.querySelector(`[data-slot="${slotNumber}"]`);
       if (!slotElement) continue;
@@ -376,8 +386,8 @@ export class IFSStationComponent extends BaseComponent {
    * Render a single material slot
    */
   private renderSingleSlot(element: HTMLElement, slotNumber: number, data?: MaterialSlot): void {
-    const spoolElement = element.querySelector('.ifs-spool') as HTMLElement;
-    const materialElement = element.querySelector('.ifs-slot-material') as HTMLElement;
+    const spoolElement = element.querySelector('.ms-spool') as HTMLElement;
+    const materialElement = element.querySelector('.ms-slot-material') as HTMLElement;
 
     // Reset classes
     element.classList.remove('empty', 'active', 'has-material');
@@ -432,48 +442,48 @@ export class IFSStationComponent extends BaseComponent {
 
     // Seed selections from the slot's current material/color, snapped to the palette.
     const current = this.slots.find((s) => s.slotId === slot && !s.isEmpty);
-    const matchedMaterial = current?.materialType ? nearestMaterial(current.materialType) : null;
-    this.dialogMaterial = matchedMaterial ?? IFS_MATERIALS[0] ?? 'PLA';
-    const matchedColor = current?.materialColor ? nearestColor(current.materialColor) : null;
+    const matchedMaterial = current?.materialType ? this.palette.nearestMaterial(current.materialType) : null;
+    this.dialogMaterial = matchedMaterial ?? this.palette.materials[0] ?? 'PLA';
+    const matchedColor = current?.materialColor ? this.palette.nearestColor(current.materialColor) : null;
     this.dialogColorHex = matchedColor?.hex ?? null;
 
     const backdrop = document.createElement('div');
-    backdrop.className = 'ifs-dialog-backdrop';
+    backdrop.className = 'ms-dialog-backdrop';
 
     const dialog = document.createElement('div');
-    dialog.className = 'ifs-dialog';
+    dialog.className = 'ms-dialog';
     dialog.setAttribute('role', 'dialog');
     dialog.setAttribute('aria-modal', 'true');
 
-    const materialOptions = IFS_MATERIALS.map(
+    const materialOptions = this.palette.materials.map(
       (m) => `<option value="${m}"${m === this.dialogMaterial ? ' selected' : ''}>${m}</option>`
     ).join('');
 
-    const swatches = IFS_COLORS.map(
+    const swatches = this.palette.colors.map(
       (c) =>
-        `<button type="button" class="ifs-swatch${c.hex === this.dialogColorHex ? ' selected' : ''}" data-hex="${c.hex}" title="${c.name}" aria-label="${c.name}" style="--swatch:${c.hex}"><span class="ifs-swatch-check">✓</span></button>`
+        `<button type="button" class="ms-swatch${c.hex === this.dialogColorHex ? ' selected' : ''}" data-hex="${c.hex}" title="${c.name}" aria-label="${c.name}" style="--swatch:${c.hex}"><span class="ms-swatch-check">✓</span></button>`
     ).join('');
 
     dialog.innerHTML = `
-      <div class="ifs-dialog-header">
-        <span class="ifs-dialog-title">Configure Slot ${slot}</span>
-        <button type="button" class="ifs-dialog-close" aria-label="Close">&times;</button>
+      <div class="ms-dialog-header">
+        <span class="ms-dialog-title">Configure Slot ${slot}</span>
+        <button type="button" class="ms-dialog-close" aria-label="Close">&times;</button>
       </div>
-      <div class="ifs-dialog-body">
-        <label class="ifs-dialog-field">
-          <span class="ifs-dialog-label">Material</span>
-          <select class="ifs-dialog-material">${materialOptions}</select>
+      <div class="ms-dialog-body">
+        <label class="ms-dialog-field">
+          <span class="ms-dialog-label">Material</span>
+          <select class="ms-dialog-material">${materialOptions}</select>
         </label>
-        <div class="ifs-dialog-field">
-          <span class="ifs-dialog-label">Color</span>
-          <div class="ifs-swatch-grid">${swatches}</div>
+        <div class="ms-dialog-field">
+          <span class="ms-dialog-label">Color</span>
+          <div class="ms-swatch-grid">${swatches}</div>
         </div>
-        <div class="ifs-dialog-preview"></div>
+        <div class="ms-dialog-preview"></div>
       </div>
-      <div class="ifs-dialog-footer">
-        <div class="ifs-dialog-footer-right">
-          <button type="button" class="ifs-dialog-cancel">Cancel</button>
-          <button type="button" class="ifs-dialog-apply">Apply</button>
+      <div class="ms-dialog-footer">
+        <div class="ms-dialog-footer-right">
+          <button type="button" class="ms-dialog-cancel">Cancel</button>
+          <button type="button" class="ms-dialog-apply">Apply</button>
         </div>
       </div>
     `;
@@ -483,26 +493,26 @@ export class IFSStationComponent extends BaseComponent {
     this.dialogEl = backdrop;
 
     // Wire controls.
-    const select = dialog.querySelector('.ifs-dialog-material') as HTMLSelectElement | null;
+    const select = dialog.querySelector('.ms-dialog-material') as HTMLSelectElement | null;
     select?.addEventListener('change', () => {
       this.dialogMaterial = select.value;
       this.updateDialogPreviewAndApply();
     });
 
-    dialog.querySelectorAll('.ifs-swatch').forEach((el) => {
+    dialog.querySelectorAll('.ms-swatch').forEach((el) => {
       el.addEventListener('click', () => {
         const hex = (el as HTMLElement).getAttribute('data-hex');
         if (hex) this.selectDialogColor(hex);
       });
     });
 
-    (dialog.querySelector('.ifs-dialog-close') as HTMLElement | null)?.addEventListener('click', () =>
+    (dialog.querySelector('.ms-dialog-close') as HTMLElement | null)?.addEventListener('click', () =>
       this.closeSlotDialog()
     );
-    (dialog.querySelector('.ifs-dialog-cancel') as HTMLElement | null)?.addEventListener('click', () =>
+    (dialog.querySelector('.ms-dialog-cancel') as HTMLElement | null)?.addEventListener('click', () =>
       this.closeSlotDialog()
     );
-    (dialog.querySelector('.ifs-dialog-apply') as HTMLElement | null)?.addEventListener('click', () =>
+    (dialog.querySelector('.ms-dialog-apply') as HTMLElement | null)?.addEventListener('click', () =>
       void this.applyManualSlot(slot)
     );
 
@@ -546,19 +556,19 @@ export class IFSStationComponent extends BaseComponent {
       } | null;
       enabled = Boolean(config?.SpoolmanEnabled) && Boolean(config?.SpoolmanServerUrl);
     } catch (error) {
-      console.error('[IFSStation] Spoolman config check failed:', error);
+      console.error('[MaterialStation] Spoolman config check failed:', error);
       return;
     }
 
     // Bail if the dialog closed or switched slots while we awaited.
     if (!enabled || !this.dialogEl || this.pendingSlot !== slot) return;
 
-    const footer = dialog.querySelector('.ifs-dialog-footer');
-    if (!footer || footer.querySelector('.ifs-dialog-spoolman')) return;
+    const footer = dialog.querySelector('.ms-dialog-footer');
+    if (!footer || footer.querySelector('.ms-dialog-spoolman')) return;
 
     const btn = document.createElement('button');
     btn.type = 'button';
-    btn.className = 'ifs-dialog-spoolman';
+    btn.className = 'ms-dialog-spoolman';
     btn.textContent = 'Set from Spoolman';
     btn.addEventListener('click', () => void this.startSpoolPick());
     footer.insertBefore(btn, footer.firstChild);
@@ -570,7 +580,7 @@ export class IFSStationComponent extends BaseComponent {
   private selectDialogColor(hex: string): void {
     this.dialogColorHex = hex;
     if (this.dialogEl) {
-      this.dialogEl.querySelectorAll('.ifs-swatch').forEach((el) => {
+      this.dialogEl.querySelectorAll('.ms-swatch').forEach((el) => {
         const btn = el as HTMLElement;
         btn.classList.toggle('selected', btn.getAttribute('data-hex') === hex);
       });
@@ -583,10 +593,10 @@ export class IFSStationComponent extends BaseComponent {
    */
   private updateDialogPreviewAndApply(): void {
     if (!this.dialogEl) return;
-    const preview = this.dialogEl.querySelector('.ifs-dialog-preview') as HTMLElement | null;
-    const applyBtn = this.dialogEl.querySelector('.ifs-dialog-apply') as HTMLButtonElement | null;
+    const preview = this.dialogEl.querySelector('.ms-dialog-preview') as HTMLElement | null;
+    const applyBtn = this.dialogEl.querySelector('.ms-dialog-apply') as HTMLButtonElement | null;
     const colorName = this.dialogColorHex
-      ? (IFS_COLORS.find((c) => c.hex === this.dialogColorHex)?.name ?? this.dialogColorHex)
+      ? (this.palette.colors.find((c) => c.hex === this.dialogColorHex)?.name ?? this.dialogColorHex)
       : null;
     if (preview) {
       preview.textContent = colorName
@@ -610,7 +620,7 @@ export class IFSStationComponent extends BaseComponent {
 
     const material = this.dialogMaterial;
     const hex = this.dialogColorHex;
-    const colorName = IFS_COLORS.find((c) => c.hex === hex)?.name ?? hex;
+    const colorName = this.palette.colors.find((c) => c.hex === hex)?.name ?? hex;
     this.closeSlotDialog();
 
     try {
@@ -621,7 +631,7 @@ export class IFSStationComponent extends BaseComponent {
       }
       window.api?.loading?.showSuccess(`Slot ${slot} → ${material} · ${colorName}`, 4000);
     } catch (error) {
-      console.error('[IFSStation] Failed to set slot:', error);
+      console.error('[MaterialStation] Failed to set slot:', error);
       window.api?.loading?.showError(
         error instanceof Error ? error.message : 'Failed to configure slot',
         5000
@@ -648,7 +658,7 @@ export class IFSStationComponent extends BaseComponent {
     try {
       await window.api.spoolman.openSpoolSelection('slot-config');
     } catch (error) {
-      console.error('[IFSStation] Failed to open spool picker:', error);
+      console.error('[MaterialStation] Failed to open spool picker:', error);
       this.spoolPickedDisposer?.();
       this.spoolPickedDisposer = null;
     }
@@ -662,16 +672,16 @@ export class IFSStationComponent extends BaseComponent {
     if (!this.dialogEl || this.pendingSlot === null || !spool) return;
 
     if (spool.material) {
-      const matched = nearestMaterial(spool.material);
+      const matched = this.palette.nearestMaterial(spool.material);
       if (matched) {
         this.dialogMaterial = matched;
-        const select = this.dialogEl.querySelector('.ifs-dialog-material') as HTMLSelectElement | null;
+        const select = this.dialogEl.querySelector('.ms-dialog-material') as HTMLSelectElement | null;
         if (select) select.value = matched;
       }
     }
 
     if (spool.colorHex) {
-      const snapped = nearestColor(spool.colorHex);
+      const snapped = this.palette.nearestColor(spool.colorHex);
       if (snapped) this.selectDialogColor(snapped.hex);
     }
 

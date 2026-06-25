@@ -1,6 +1,6 @@
 # FlashForgeUI-Electron Development Guide
 
-**Last Updated:** 2026-03-06 17:54 ET (America/New_York)
+**Last Updated:** 2026-05-31 13:40 ET (America/New_York)
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -103,6 +103,10 @@ For detailed architectural information, see the comprehensive reference document
 12. **WebUI cache regressions**: built WebUI assets must remain version-stamped and served with no-cache headers. The browser Playwright suite exists specifically to catch stale asset mixes, icon hydration mismatches, and camera bootstrap regressions before release.
 
 13. **Desktop E2E boundaries**: use `tests/e2e/electron/desktop-smoke.spec.ts` for live `%APPDATA%` smoke coverage and `tests/e2e/electron/desktop-emulator.spec.ts` for isolated emulator-backed lifecycle coverage. On Windows, prefer the dedicated `package.json` scripts over ad hoc Playwright grep invocations.
+
+14. **Release builds are unsigned (no code-signing cert)**: there is no Windows (or macOS) code-signing certificate, so every release artifact - both CI and local `pnpm build:win` - is `NotSigned`. The `signtool.exe` lines in the local build log run but produce no valid Authenticode signature. This is expected, not a regression; Windows users get the normal SmartScreen "unknown publisher" prompt. Don't chase a "missing signature" as a bug.
+
+15. **Release channel is derived from the `package.json` version**: `electron-builder-config.cjs` parses the prerelease suffix - a `-alpha.N` version yields channel `alpha`/`alpha.yml` (prerelease), a bare `X.Y.Z` yields channel `latest`/`latest.yml` (stable). Bumping the version is all that's needed to flip the channel; don't hardcode it. The release workflow (`.github/workflows/release.yml`, `workflow_dispatch`) reads notes from the matching `## [<version>] - <date>` CHANGELOG section, and `softprops/action-gh-release` keyed on the tag will publish an existing **draft** of that tag *keeping the draft's body* (it does not overwrite with the templated notes) - so don't pre-create a draft if you want the workflow's templated notes.
 
 ---
 

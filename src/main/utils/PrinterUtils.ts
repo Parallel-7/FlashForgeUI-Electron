@@ -67,6 +67,27 @@ export const NEW_API_PRODUCT_IDS: Readonly<Record<number, PrinterModelType>> = {
 };
 
 /**
+ * Model types that speak ONLY the HTTP API (no legacy TCP server on port 8899).
+ *
+ * The Creator 5 / 5 Pro are Klipper-based and run only the HTTP `OrcaServer`
+ * (port 8898) — they have no `~M601`/`~M115` TCP control channel. Connections to
+ * these models must skip the legacy TCP temporary connection and the secondary
+ * FlashForgeClient, and the FiveMClient must be created in `httpOnly` mode.
+ */
+const HTTP_ONLY_MODEL_TYPES: ReadonlySet<PrinterModelType> = new Set([
+  'creator-5',
+  'creator-5-pro',
+]);
+
+/**
+ * Whether the given model type is HTTP-only (no legacy TCP control channel).
+ * @param modelType The detected printer model type.
+ * @returns True for Creator 5 / 5 Pro; false for all dual-API and legacy models.
+ */
+export const isHttpOnlyModel = (modelType: PrinterModelType): boolean =>
+  HTTP_ONLY_MODEL_TYPES.has(modelType);
+
+/**
  * Detect specific printer model type from typeName
  * Returns detailed model information for backend selection
  */

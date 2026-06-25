@@ -165,6 +165,8 @@ export class PrinterDataTransformer {
     const activeSlot = safeExtractNumber(backendData, 'activeSlot', -1);
     const errorMessage = safeExtractString(backendData, 'errorMessage', '');
     const slots = safeExtractArray<unknown>(backendData, 'slots', []);
+    // Propagate the owning model so the renderer can pick the right palette.
+    const printerModelType = safeExtractString(backendData, 'printerModelType', '') || undefined;
 
     const transformedSlots: MaterialSlot[] = slots
       .filter(isValidObject)
@@ -176,6 +178,7 @@ export class PrinterDataTransformer {
       activeSlot: activeSlot >= 0 ? activeSlot : null,
       errorMessage: errorMessage || null,
       lastUpdate: new Date(),
+      printerModelType: printerModelType as MaterialStationStatus['printerModelType'],
     };
   }
 

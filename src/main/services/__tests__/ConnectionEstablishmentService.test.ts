@@ -257,7 +257,7 @@ describe('ConnectionEstablishmentService', () => {
       '192.168.1.130',
       'SN-PORTS',
       '7777',
-      { httpPort: 19098, tcpPort: 19099 },
+      { httpPort: 19098, tcpPort: 19099, httpOnly: false },
     ]);
     expect(flashForgeClientInstances[0].args).toEqual(['192.168.1.130', { port: 19099 }]);
   });

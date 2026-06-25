@@ -204,6 +204,7 @@ export class MainProcessPollingCoordinator extends EventEmitter {
           activeSlot: materialStationRaw.activeSlot,
           errorMessage: materialStationRaw.errorMessage,
           lastUpdate: new Date(),
+          printerModelType: materialStationRaw.printerModelType,
         };
       }
 

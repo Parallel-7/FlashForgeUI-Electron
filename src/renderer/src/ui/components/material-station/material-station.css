@@ -1,7 +1,7 @@
 /**
- * @fileoverview IFS Material Station Component Styles
+ * @fileoverview Material Station Component Styles
  *
- * Styling for the IFS (Intelligent Filament System) material station component
+ * Styling for the material station component (AD5X IFS + Creator 5 / 5 Pro)
  * with responsive layouts for different grid cell sizes. Supports horizontal,
  * vertical, square, and compact layout modes.
  *
@@ -17,14 +17,14 @@
    ============================================================================ */
 
 /* Ensure the component container fills its parent */
-.component-ifs-station {
+.component-material-station {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
 }
 
-.ifs-component {
+.ms-component {
   width: 100%;
   height: 100%;
   flex: 1;
@@ -41,7 +41,7 @@
   overflow: hidden;
 }
 
-.ifs-state {
+.ms-state {
   display: none;
   flex-direction: column;
   align-items: center;
@@ -55,18 +55,18 @@
    UNAVAILABLE STATE (non-AD5X printers)
    ============================================================================ */
 
-.ifs-unavailable {
+.ms-unavailable {
   text-align: center;
 }
 
-.ifs-icon {
+.ms-icon {
   width: 48px;
   height: 48px;
   opacity: 0.4;
   color: var(--text-color-muted);
 }
 
-.ifs-message {
+.ms-message {
   color: var(--text-color-muted);
   font-size: 13px;
   line-height: 1.5;
@@ -79,11 +79,11 @@
    DISCONNECTED STATE
    ============================================================================ */
 
-.ifs-disconnected {
+.ms-disconnected {
   text-align: center;
 }
 
-.ifs-disconnected .ifs-icon {
+.ms-disconnected .ms-icon {
   color: var(--theme-warning, #ff9800);
   opacity: 0.7;
 }
@@ -92,12 +92,12 @@
    ACTIVE STATE
    ============================================================================ */
 
-.ifs-active {
+.ms-active {
   gap: 8px;
   padding: 4px;
 }
 
-.ifs-header {
+.ms-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -106,7 +106,7 @@
   flex-shrink: 0;
 }
 
-.ifs-title {
+.ms-title {
   font-size: 12px;
   font-weight: 600;
   color: var(--text-color-muted);
@@ -114,7 +114,7 @@
   letter-spacing: 0.5px;
 }
 
-.ifs-active-indicator {
+.ms-active-indicator {
   font-size: 11px;
   color: var(--theme-primary);
   font-weight: 500;
@@ -122,7 +122,7 @@
   transition: opacity 0.2s ease;
 }
 
-.ifs-active-indicator.visible {
+.ms-active-indicator.visible {
   opacity: 1;
 }
 
@@ -130,7 +130,7 @@
    SLOTS CONTAINER - BASE STYLES
    ============================================================================ */
 
-.ifs-slots-container {
+.ms-slots-container {
   display: grid;
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
@@ -145,7 +145,7 @@
    INDIVIDUAL SLOT STYLES
    ============================================================================ */
 
-.ifs-slot {
+.ms-slot {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -161,17 +161,17 @@
   overflow: hidden;
 }
 
-.ifs-slot:hover {
+.ms-slot:hover {
   background: color-mix(in srgb, var(--surface-elevated, var(--theme-surface)) 90%, var(--theme-primary));
   border-color: var(--border-color-light, var(--border-color));
 }
 
-.ifs-slot.active {
+.ms-slot.active {
   border-color: var(--theme-primary);
   box-shadow: 0 0 8px color-mix(in srgb, var(--theme-primary) 30%, transparent);
 }
 
-.ifs-slot.empty {
+.ms-slot.empty {
   opacity: 0.6;
 }
 
@@ -179,7 +179,7 @@
    SPOOL VISUAL
    ============================================================================ */
 
-.ifs-spool {
+.ms-spool {
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -195,15 +195,15 @@
   transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
-.ifs-slot:hover .ifs-spool {
+.ms-slot:hover .ms-spool {
   transform: scale(1.05);
 }
 
-.ifs-slot.active .ifs-spool {
+.ms-slot.active .ms-spool {
   border-color: var(--theme-primary);
 }
 
-.ifs-spool-center {
+.ms-spool-center {
   width: 12px;
   height: 12px;
   border-radius: 50%;
@@ -215,7 +215,7 @@
    SLOT INFO
    ============================================================================ */
 
-.ifs-slot-info {
+.ms-slot-info {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -224,14 +224,14 @@
   width: 100%;
 }
 
-.ifs-slot-label {
+.ms-slot-label {
   font-size: 10px;
   font-weight: 600;
   color: var(--text-color);
   white-space: nowrap;
 }
 
-.ifs-slot-material {
+.ms-slot-material {
   font-size: 9px;
   color: var(--text-color-muted);
   padding: 2px 6px;
@@ -243,12 +243,12 @@
   max-width: 100%;
 }
 
-.ifs-slot.has-material .ifs-slot-material {
+.ms-slot.has-material .ms-slot-material {
   background: color-mix(in srgb, var(--theme-primary) 15%, transparent);
   color: var(--theme-primary);
 }
 
-.ifs-slot.empty .ifs-slot-material {
+.ms-slot.empty .ms-slot-material {
   font-style: italic;
 }
 
@@ -256,27 +256,27 @@
    LAYOUT: HORIZONTAL (wide container)
    ============================================================================ */
 
-.ifs-component.layout-horizontal {
+.ms-component.layout-horizontal {
   padding: 8px;
 }
 
-.ifs-component.layout-horizontal .ifs-header {
+.ms-component.layout-horizontal .ms-header {
   display: none;
 }
 
-.ifs-component.layout-horizontal .ifs-slots-container {
+.ms-component.layout-horizontal .ms-slots-container {
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: 1fr;
 }
 
-.ifs-component.layout-horizontal .ifs-slot {
+.ms-component.layout-horizontal .ms-slot {
   flex-direction: column;
   padding: 4px;
   gap: 2px;
 }
 
 /* Dynamic spool sizing - scales with available height */
-.ifs-component.layout-horizontal .ifs-spool {
+.ms-component.layout-horizontal .ms-spool {
   width: auto;
   height: 50%;
   max-height: 44px;
@@ -285,23 +285,23 @@
   flex-shrink: 1;
 }
 
-.ifs-component.layout-horizontal .ifs-spool-center {
+.ms-component.layout-horizontal .ms-spool-center {
   width: 30%;
   height: 30%;
   min-width: 6px;
   min-height: 6px;
 }
 
-.ifs-component.layout-horizontal .ifs-slot-info {
+.ms-component.layout-horizontal .ms-slot-info {
   gap: 1px;
   min-height: 0;
 }
 
-.ifs-component.layout-horizontal .ifs-slot-label {
+.ms-component.layout-horizontal .ms-slot-label {
   font-size: 9px;
 }
 
-.ifs-component.layout-horizontal .ifs-slot-material {
+.ms-component.layout-horizontal .ms-slot-material {
   font-size: 8px;
   padding: 1px 4px;
 }
@@ -310,38 +310,38 @@
    LAYOUT: VERTICAL (tall container)
    ============================================================================ */
 
-.ifs-component.layout-vertical .ifs-slots-container {
+.ms-component.layout-vertical .ms-slots-container {
   grid-template-columns: 1fr;
   grid-template-rows: repeat(4, 1fr);
 }
 
-.ifs-component.layout-vertical .ifs-slot {
+.ms-component.layout-vertical .ms-slot {
   flex-direction: row;
   justify-content: flex-start;
   padding: 6px 12px;
   gap: 10px;
 }
 
-.ifs-component.layout-vertical .ifs-slot-info {
+.ms-component.layout-vertical .ms-slot-info {
   align-items: flex-start;
   flex: 1;
 }
 
-.ifs-component.layout-vertical .ifs-spool {
+.ms-component.layout-vertical .ms-spool {
   width: 36px;
   height: 36px;
 }
 
-.ifs-component.layout-vertical .ifs-spool-center {
+.ms-component.layout-vertical .ms-spool-center {
   width: 10px;
   height: 10px;
 }
 
-.ifs-component.layout-vertical .ifs-slot-label {
+.ms-component.layout-vertical .ms-slot-label {
   font-size: 11px;
 }
 
-.ifs-component.layout-vertical .ifs-slot-material {
+.ms-component.layout-vertical .ms-slot-material {
   font-size: 10px;
 }
 
@@ -349,7 +349,7 @@
    LAYOUT: SQUARE (2x2 grid - default)
    ============================================================================ */
 
-.ifs-component.layout-square .ifs-slots-container {
+.ms-component.layout-square .ms-slots-container {
   grid-template-columns: 1fr 1fr;
   grid-template-rows: 1fr 1fr;
 }
@@ -358,43 +358,43 @@
    LAYOUT: COMPACT (small container)
    ============================================================================ */
 
-.ifs-component.layout-compact {
+.ms-component.layout-compact {
   padding: 6px;
 }
 
-.ifs-component.layout-compact .ifs-header {
+.ms-component.layout-compact .ms-header {
   display: none;
 }
 
-.ifs-component.layout-compact .ifs-slots-container {
+.ms-component.layout-compact .ms-slots-container {
   grid-template-columns: repeat(4, 1fr);
   grid-template-rows: 1fr;
   gap: 4px;
 }
 
-.ifs-component.layout-compact .ifs-slot {
+.ms-component.layout-compact .ms-slot {
   padding: 4px;
   gap: 2px;
 }
 
-.ifs-component.layout-compact .ifs-spool {
+.ms-component.layout-compact .ms-spool {
   width: 24px;
   height: 24px;
   border-width: 2px;
 }
 
-.ifs-component.layout-compact .ifs-spool-center {
+.ms-component.layout-compact .ms-spool-center {
   width: 6px;
   height: 6px;
   border-width: 1px;
 }
 
-.ifs-component.layout-compact .ifs-slot-info {
+.ms-component.layout-compact .ms-slot-info {
   display: none;
 }
 
 /* Show slot number as overlay in compact mode */
-.ifs-component.layout-compact .ifs-slot::after {
+.ms-component.layout-compact .ms-slot::after {
   content: attr(data-slot);
   position: absolute;
   bottom: 2px;
@@ -404,7 +404,7 @@
   font-weight: 600;
 }
 
-.ifs-component.layout-compact .ifs-slot {
+.ms-component.layout-compact .ms-slot {
   position: relative;
 }
 
@@ -412,13 +412,13 @@
    UNAVAILABLE/DISCONNECTED STATES - SIZE ADJUSTMENTS
    ============================================================================ */
 
-.ifs-component.layout-compact .ifs-unavailable .ifs-icon,
-.ifs-component.layout-compact .ifs-disconnected .ifs-icon {
+.ms-component.layout-compact .ms-unavailable .ms-icon,
+.ms-component.layout-compact .ms-disconnected .ms-icon {
   width: 32px;
   height: 32px;
 }
 
-.ifs-component.layout-compact .ifs-message {
+.ms-component.layout-compact .ms-message {
   font-size: 11px;
 }
 
@@ -435,13 +435,13 @@
   }
 }
 
-.ifs-slot.active {
+.ms-slot.active {
   animation: pulse-glow 2s ease-in-out infinite;
 }
 
 /* Disable animation when prefers-reduced-motion */
 @media (prefers-reduced-motion: reduce) {
-  .ifs-slot.active {
+  .ms-slot.active {
     animation: none;
   }
 }
@@ -451,13 +451,13 @@
    ============================================================================ */
 
 /* Slots are clickable when the editor flow is available */
-.ifs-slot {
+.ms-slot {
   cursor: pointer;
 }
 
 /* ---- Slot editor dialog (manual material/color picker) ---- */
 
-.ifs-dialog-backdrop {
+.ms-dialog-backdrop {
   position: fixed;
   inset: 0;
   z-index: 10000;
@@ -467,10 +467,10 @@
   padding: 16px;
   background: color-mix(in srgb, var(--theme-background, #000) 55%, transparent);
   backdrop-filter: blur(2px);
-  animation: ifs-dialog-fade 0.12s ease-out;
+  animation: ms-dialog-fade 0.12s ease-out;
 }
 
-@keyframes ifs-dialog-fade {
+@keyframes ms-dialog-fade {
   from {
     opacity: 0;
   }
@@ -479,7 +479,7 @@
   }
 }
 
-.ifs-dialog {
+.ms-dialog {
   display: flex;
   flex-direction: column;
   width: 100%;
@@ -490,10 +490,10 @@
   border: 1px solid var(--border-color);
   border-radius: 12px;
   box-shadow: 0 12px 40px color-mix(in srgb, var(--theme-background, #000) 60%, black);
-  animation: ifs-dialog-pop 0.14s ease-out;
+  animation: ms-dialog-pop 0.14s ease-out;
 }
 
-@keyframes ifs-dialog-pop {
+@keyframes ms-dialog-pop {
   from {
     transform: translateY(8px) scale(0.98);
     opacity: 0;
@@ -504,7 +504,7 @@
   }
 }
 
-.ifs-dialog-header {
+.ms-dialog-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -513,13 +513,13 @@
   border-bottom: 1px solid var(--border-color);
 }
 
-.ifs-dialog-title {
+.ms-dialog-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--theme-text, var(--text-color));
 }
 
-.ifs-dialog-close {
+.ms-dialog-close {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -535,12 +535,12 @@
   transition: background 0.15s ease, color 0.15s ease;
 }
 
-.ifs-dialog-close:hover {
+.ms-dialog-close:hover {
   color: var(--theme-text, var(--text-color));
   background: var(--surface-muted, color-mix(in srgb, var(--theme-text, #fff) 10%, transparent));
 }
 
-.ifs-dialog-body {
+.ms-dialog-body {
   display: flex;
   flex-direction: column;
   gap: 16px;
@@ -548,13 +548,13 @@
   overflow-y: auto;
 }
 
-.ifs-dialog-field {
+.ms-dialog-field {
   display: flex;
   flex-direction: column;
   gap: 8px;
 }
 
-.ifs-dialog-label {
+.ms-dialog-label {
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -562,7 +562,7 @@
   color: var(--text-color-muted);
 }
 
-.ifs-dialog-material {
+.ms-dialog-material {
   width: 100%;
   padding: 8px 10px;
   font-size: 13px;
@@ -573,18 +573,18 @@
   cursor: pointer;
 }
 
-.ifs-dialog-material:focus {
+.ms-dialog-material:focus {
   outline: none;
   border-color: var(--theme-primary);
 }
 
-.ifs-swatch-grid {
+.ms-swatch-grid {
   display: grid;
   grid-template-columns: repeat(8, 1fr);
   gap: 6px;
 }
 
-.ifs-swatch {
+.ms-swatch {
   position: relative;
   aspect-ratio: 1 / 1;
   padding: 0;
@@ -595,16 +595,16 @@
   transition: transform 0.1s ease, box-shadow 0.1s ease;
 }
 
-.ifs-swatch:hover {
+.ms-swatch:hover {
   transform: scale(1.08);
 }
 
-.ifs-swatch.selected {
+.ms-swatch.selected {
   box-shadow: 0 0 0 2px var(--surface-elevated, var(--theme-surface)),
     0 0 0 4px var(--theme-primary);
 }
 
-.ifs-swatch-check {
+.ms-swatch-check {
   position: absolute;
   inset: 0;
   display: none;
@@ -616,17 +616,17 @@
   text-shadow: 0 0 2px rgba(0, 0, 0, 0.9), 0 0 3px rgba(0, 0, 0, 0.7);
 }
 
-.ifs-swatch.selected .ifs-swatch-check {
+.ms-swatch.selected .ms-swatch-check {
   display: flex;
 }
 
-.ifs-dialog-preview {
+.ms-dialog-preview {
   font-size: 12px;
   color: var(--text-color-muted);
   min-height: 16px;
 }
 
-.ifs-dialog-footer {
+.ms-dialog-footer {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -635,13 +635,13 @@
   border-top: 1px solid var(--border-color);
 }
 
-.ifs-dialog-footer-right {
+.ms-dialog-footer-right {
   display: flex;
   gap: 8px;
   margin-left: auto;
 }
 
-.ifs-dialog-footer button {
+.ms-dialog-footer button {
   font-size: 12px;
   font-weight: 500;
   padding: 7px 14px;
@@ -650,37 +650,37 @@
   transition: background 0.15s ease, opacity 0.15s ease;
 }
 
-.ifs-dialog-cancel {
+.ms-dialog-cancel {
   color: var(--theme-text, var(--text-color));
   background: var(--surface-muted, transparent);
   border: 1px solid var(--border-color);
 }
 
-.ifs-dialog-cancel:hover {
+.ms-dialog-cancel:hover {
   background: color-mix(in srgb, var(--theme-text, #fff) 10%, transparent);
 }
 
-.ifs-dialog-spoolman {
+.ms-dialog-spoolman {
   color: var(--theme-text, var(--text-color));
   background: color-mix(in srgb, var(--theme-primary) 14%, transparent);
   border: 1px solid color-mix(in srgb, var(--theme-primary) 40%, transparent);
 }
 
-.ifs-dialog-spoolman:hover {
+.ms-dialog-spoolman:hover {
   background: color-mix(in srgb, var(--theme-primary) 26%, transparent);
 }
 
-.ifs-dialog-apply {
+.ms-dialog-apply {
   color: #fff;
   background: var(--theme-primary);
   border: 1px solid var(--theme-primary);
 }
 
-.ifs-dialog-apply:hover:not(:disabled) {
+.ms-dialog-apply:hover:not(:disabled) {
   background: color-mix(in srgb, var(--theme-primary) 85%, black);
 }
 
-.ifs-dialog-apply:disabled {
+.ms-dialog-apply:disabled {
   opacity: 0.45;
   cursor: not-allowed;
 }

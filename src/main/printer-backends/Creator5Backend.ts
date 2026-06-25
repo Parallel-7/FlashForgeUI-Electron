@@ -22,6 +22,7 @@
 
 import {
   type Creator5MaterialMapping,
+  FiveMClient,
   type FFMachineInfo,
 } from '@ghosttypes/ff-api';
 import {
@@ -35,8 +36,28 @@ import { AD5XBackend } from './AD5XBackend.js';
  * Backend implementation for the Creator 5 / Creator 5 Pro.
  * Extends the AD5X backend (shared material station + dual API) and adds the
  * Creator 5's per-tool temperatures and Pro-only hardware capabilities.
+ *
+ * Unlike the other dual-API backends, the Creator 5 series is **HTTP-only**: the
+ * printer runs no legacy TCP server (no port 8899), so there is no secondary
+ * FlashForgeClient. The FiveMClient is created in `httpOnly` mode and is the entire
+ * connection. TCP-only operations inherited from DualAPIBackend (raw G-code,
+ * homing, legacy status fallback) are unavailable; see the overrides below.
  */
 export class Creator5Backend extends AD5XBackend {
+  /**
+   * HTTP-only client initialization. The base {@link DualAPIBackend.initializeClients}
+   * requires a secondary FlashForgeClient and throws without one; the Creator 5 has
+   * no TCP channel, so we validate only the primary FiveMClient here and leave the
+   * legacy client unset.
+   */
+  protected initializeClients(): void {
+    if (!(this.primaryClient instanceof FiveMClient)) {
+      throw new Error('Creator5Backend requires FiveMClient as primary client');
+    }
+    this.fiveMClient = this.primaryClient;
+    // No secondaryClient / legacyClient: the Creator 5 series is HTTP-only.
+  }
+
   /**
    * Whether this specific printer is a Creator 5 Pro (vs a plain Creator 5).
    * Drives the Pro-only capabilities: real door sensor and filtration/aux fan.
@@ -58,11 +79,27 @@ export class Creator5Backend extends AD5XBackend {
 
     return {
       ...features,
-      // Both Creator 5 and Creator 5 Pro have a built-in camera; the OEM stream
-      // URL is populated at runtime from the printer's reported cameraStreamUrl.
-      camera: {
-        ...features.camera,
-        builtin: true,
+      // Both Creator 5 and Creator 5 Pro have a built-in camera; it is enabled at
+      // runtime from the printer's reported `cameraStreamUrl` (same path as the 5M
+      // Pro), so no static feature flag is needed here.
+      // The Creator 5 series is HTTP-only and exposes NO raw G-code / M-code
+      // passthrough: the firmware's only command surface is the HTTP /control
+      // command set, and there is no legacy TCP channel and no gcode_cmd/rawCmd
+      // route (Ghidra RE of firmwareExe 1.9.2 — creator5-analysis §5). Override
+      // the AD5X default (which advertises legacy-API G-code) so the UI does not
+      // surface a manual-command / G-code console affordance the printer can't
+      // honor. (sendGCode already guards the absent legacy client at runtime.)
+      gcodeCommands: {
+        available: false,
+        usesLegacyAPI: false,
+        supportedCommands: [],
+      },
+      // Status comes solely from the HTTP /detail endpoint — there is no legacy
+      // TCP status path on these printers.
+      statusMonitoring: {
+        ...features.statusMonitoring,
+        usesNewAPI: true,
+        usesLegacyAPI: false,
       },
     };
   }

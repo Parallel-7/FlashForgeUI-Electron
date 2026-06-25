@@ -4,7 +4,7 @@
  * GridStack component that displays per-tool nozzle temperatures for multi-tool
  * printers (Creator 5 series — 4 nozzles). Renders a responsive grid of tool
  * cells, each showing the current and target temperature and a heating state,
- * mirroring the visual language of the IFS material-station card.
+ * mirroring the visual language of the material-station card.
  *
  * Data source: `pollingData.printerStatus.toolTemps` (one entry per nozzle).
  * Single-nozzle printers don't report this, so the card shows an "unavailable"
