@@ -237,6 +237,11 @@ export class DialogIntegrationService extends EventEmitter {
     const firmwareVersion = typeof printerData.firmwareVersion === 'string' ? printerData.firmwareVersion : undefined;
     const commandPort = typeof printerData.commandPort === 'number' ? printerData.commandPort : undefined;
     const eventPort = typeof printerData.eventPort === 'number' ? printerData.eventPort : undefined;
+    // Preserve the USB product ID / type from discovery — these are the
+    // authoritative model discriminators used to route HTTP-only models
+    // (Creator 5 / 5 Pro) away from the legacy TCP probe on connect.
+    const productId = typeof printerData.productId === 'number' ? printerData.productId : undefined;
+    const productType = typeof printerData.productType === 'number' ? printerData.productType : undefined;
 
     return {
       name,
@@ -247,6 +252,8 @@ export class DialogIntegrationService extends EventEmitter {
       firmwareVersion,
       commandPort,
       eventPort,
+      productId,
+      productType,
     };
   }
 
@@ -367,7 +374,11 @@ export class DialogIntegrationService extends EventEmitter {
       // Set mode to discovered
       currentWindow.webContents.send('printer-selection:mode', 'discovered');
 
-      // Convert to PrinterInfo format expected by the renderer
+      // Convert to PrinterInfo format expected by the renderer.
+      // NOTE: productId/productType MUST be carried through — they are the
+      // authoritative model discriminator (Creator 5 = 0x0028 etc). Dropping them
+      // here makes the selected printer fall back to legacy detection on connect,
+      // which hangs for HTTP-only models. See validateDiscoveredPrinterData.
       const printerInfos = printers.map((printer) => ({
         name: printer.name,
         ipAddress: printer.ipAddress,
@@ -377,6 +388,8 @@ export class DialogIntegrationService extends EventEmitter {
         firmwareVersion: undefined,
         commandPort: printer.commandPort,
         eventPort: printer.eventPort,
+        productId: printer.productId,
+        productType: printer.productType,
       }));
 
       // Send discovered printer data
