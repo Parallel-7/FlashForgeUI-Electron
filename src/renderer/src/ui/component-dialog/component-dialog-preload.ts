@@ -75,7 +75,7 @@ interface DialogPrinterSettingsAPI {
 }
 
 interface DialogSpoolmanAPI {
-  openSpoolSelection: () => Promise<void>;
+  openSpoolSelection: (purpose?: 'active' | 'slot-config') => Promise<void>;
   getActiveSpool: (contextId?: string) => Promise<unknown>;
   setActiveSpool: (spool: unknown, contextId?: string) => Promise<void>;
   getStatus: (
@@ -83,6 +83,7 @@ interface DialogSpoolmanAPI {
   ) => Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
   onSpoolSelected: (callback: (spool: unknown) => void) => void;
   onSpoolUpdated: (callback: (spool: unknown) => void) => void;
+  onSpoolPickedForSlot: (callback: (spool: unknown) => void) => DialogEventDisposer;
 }
 
 interface DialogConfigAPI {
@@ -123,6 +124,7 @@ interface DialogElectronAPI {
   readonly connectionState: DialogConnectionStateAPI;
   readonly printerSettings: DialogPrinterSettingsAPI;
   readonly spoolman: DialogSpoolmanAPI;
+  readonly material: MaterialAPI;
 }
 
 const listeners = new Map<string, { original: DialogIPCListener; wrapped: DialogIPCListener }>();
@@ -283,6 +285,7 @@ const validReceiveChannels = [
   'log-dialog-cleared',
   'spoolman:spool-selected',
   'spoolman:spool-updated',
+  'spoolman:spool-picked-for-slot',
 ];
 
 const validInvokeChannels = [
@@ -330,6 +333,8 @@ const validInvokeChannels = [
   'spoolman:open-dialog',
   'spoolman:get-active-spool',
   'spoolman:set-active-spool',
+  'material:configure-slot',
+  'material:set-slot',
 ];
 
 // ---------------------------------------------------------------------------
@@ -524,8 +529,8 @@ contextBridge.exposeInMainWorld('api', {
   },
 
   spoolman: {
-    openSpoolSelection: async (): Promise<void> => {
-      await ipcRenderer.invoke('spoolman:open-dialog');
+    openSpoolSelection: async (purpose?: 'active' | 'slot-config'): Promise<void> => {
+      await ipcRenderer.invoke('spoolman:open-dialog', purpose);
     },
     getActiveSpool: async (contextId?: string): Promise<unknown> => {
       return await ipcRenderer.invoke('spoolman:get-active-spool', contextId);
@@ -551,6 +556,38 @@ contextBridge.exposeInMainWorld('api', {
       const wrapped: DialogIPCListener = (_event: unknown, spool: unknown) => callback(spool);
       listeners.set('spoolman:spool-updated', { original: callback as DialogIPCListener, wrapped });
       ipcRenderer.on('spoolman:spool-updated', wrapped);
+    },
+    onSpoolPickedForSlot: (callback: (spool: unknown) => void): DialogEventDisposer =>
+      registerDialogPayloadListener<unknown>('spoolman:spool-picked-for-slot', callback),
+  },
+  material: {
+    configureSlot: async (
+      slot: number,
+      spoolId: number,
+      contextId?: string
+    ): Promise<ConfigureSlotResult> => {
+      const result: unknown = await ipcRenderer.invoke('material:configure-slot', { slot, spoolId, contextId });
+      if (result && typeof result === 'object' && typeof (result as { success?: unknown }).success === 'boolean') {
+        return result as ConfigureSlotResult;
+      }
+      return { success: false, error: 'Invalid response from material:configure-slot' };
+    },
+    setSlot: async (
+      slot: number,
+      materialName: string,
+      colorHex: string,
+      contextId?: string
+    ): Promise<ConfigureSlotResult> => {
+      const result: unknown = await ipcRenderer.invoke('material:set-slot', {
+        slot,
+        materialName,
+        colorHex,
+        contextId,
+      });
+      if (result && typeof result === 'object' && typeof (result as { success?: unknown }).success === 'boolean') {
+        return result as ConfigureSlotResult;
+      }
+      return { success: false, error: 'Invalid response from material:set-slot' };
     },
   },
   dialog: {
