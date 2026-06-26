@@ -306,10 +306,10 @@ export class PrinterBackendManager extends EventEmitter {
 
       case 'creator-5':
       case 'creator-5-pro':
-        // Creator 5 / 5 Pro = "AD5X + per-tool temps": same 4-slot material
-        // station and dual HTTP + TCP protocol, plus a 4-nozzle tool array and
-        // (on the Pro) camera/LED/filtration. Creator5Backend extends the AD5X
-        // backend and gates the Pro-only capabilities.
+        // Creator 5 / 5 Pro: a material-station printer like the AD5X (shared
+        // MaterialStationBackend base), but a SIBLING of AD5XBackend rather than a
+        // subclass — it is HTTP-only, maps materials at print-start (not upload),
+        // and adds per-tool temps / chamber plus Pro-only camera/LED/filtration.
         return new Creator5Backend(backendOptions);
 
       default:

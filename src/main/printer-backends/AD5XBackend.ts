@@ -1,213 +1,64 @@
 /**
  * @fileoverview Backend implementation for AD5X printers with material station support.
  *
- * Provides backend functionality specific to the AD5X series with advanced material management:
- * - Dual API support (FiveMClient + FlashForgeClient)
- * - Material station integration with 4-slot filament management
- * - Multi-color printing support with material mapping
- * - AD5X-specific job operations (upload 3MF with material mappings)
- * - Material station status monitoring (slot contents, active slot, heating status)
- * - No built-in camera (custom camera URL supported)
- * - Custom LED control via G-code (when enabled)
- * - No built-in filtration control
+ * The AD5X maps materials at UPLOAD time: `uploadFileAD5X` carries the full material
+ * mappings (and AD5X-only flags like `firstLayerInspection`) on the upload request, and
+ * the print is started either by `printNow` on that upload or by a later
+ * `startAD5X*Job` against an already-resident file.
+ *
+ * Shared material-station machinery (slot config, status extraction, recent jobs) lives
+ * in {@link MaterialStationBackend}; this class is a sibling of {@link Creator5Backend},
+ * not its parent, so AD5X-specific wire formats can never leak into the Creator 5.
  *
  * Key exports:
  * - AD5XBackend class: Backend for AD5X series printers
- *
- * This backend extends DualAPIBackend and adds material station functionality through
- * ff-api's AD5X-specific methods. It handles material validation, slot mapping, and
- * multi-color job preparation using the integrated filament feeding system.
  */
 
 import type { AD5XMaterialMapping, AD5XUploadParams } from '@ghosttypes/ff-api';
 import {
-  AD5XJobInfo,
-  BasicJobInfo,
-  JobListResult,
   JobOperationParams,
   JobStartResult,
-  MaterialStationStatus,
   PrinterFeatureSet,
 } from '@shared/types/printer-backend/index.js';
 import * as path from 'path';
-import { extractMaterialStationStatus, isAD5XMachineInfo } from './ad5x/index.js';
-import { DualAPIBackend } from './DualAPIBackend.js';
+import { MaterialStationBackend } from './MaterialStationBackend.js';
 
 /**
- * Backend implementation for AD5X printer
- * Uses dual API with material station support
+ * Backend implementation for AD5X printer.
+ * Uses dual API with material station support; materials are mapped at upload time.
  */
-export class AD5XBackend extends DualAPIBackend {
-  private lastMachineInfo: unknown = null; // Store last machine info for material station data
-
+export class AD5XBackend extends MaterialStationBackend {
   /**
-   * Get child-specific base features for AD5X - includes material station functionality
-   * LED and filtration will be auto-detected from product endpoint
+   * AD5X base features: the shared material-station set with no built-in camera
+   * (custom URL only) and LED control gated behind the CustomLeds setting. LED and
+   * filtration are further resolved from the product endpoint by `getBaseFeatures`.
    */
   protected getChildBaseFeatures(): PrinterFeatureSet {
-    return {
-      camera: {
-        oemStreamUrl: '',
-        fallbackStreamUrl: '',
-        customUrl: null,
-        customEnabled: false,
-      },
-      ledControl: {
-        builtin: false, // AD5X requires CustomLeds to be enabled for any LED control
-        customControlEnabled: false, // Will be overridden by settings
-        usesLegacyAPI: true,
-      },
-      filtration: {
-        available: false, // AD5X doesn't have built-in filtration
-        controllable: false,
-        reason: 'Hardware does not support filtration control',
-      },
-      gcodeCommands: {
-        available: true,
-        usesLegacyAPI: true,
-        supportedCommands: this.getSupportedGCodeCommands(),
-      },
-      statusMonitoring: {
-        available: true,
-        usesNewAPI: true,
-        usesLegacyAPI: true,
-        realTimeUpdates: true,
-      },
-      jobManagement: {
-        localJobs: false, // AD5X doesn't support local file listing
-        recentJobs: true,
-        uploadJobs: true,
-        startJobs: true, // AD5X now supports job starting with new ff-api
-        pauseResume: true,
-        cancelJobs: true,
-        usesNewAPI: true,
-      },
-      materialStation: {
-        available: true, // AD5X has material station - this is the key difference
-        slotCount: 4, // AD5X typically has 4 material slots
-        perSlotInfo: true,
-        materialDetection: true,
-      },
-    };
+    return this.materialStationBaseFeatures();
   }
 
   /**
-   * Perform AD5X-specific initialization
+   * Perform AD5X-specific initialization.
    */
   protected async initializeBackend(): Promise<void> {
-    // Call parent initialization
     await super.initializeBackend();
-
-    console.log('- Material station: Available with 4 slots');
     console.log('- Job starting: Enabled with material station support');
-
-    // Initialize material station monitoring
-    this.initializeMaterialStationMonitoring();
   }
 
   /**
-   * Initialize material station monitoring
-   */
-  private initializeMaterialStationMonitoring(): void {
-    try {
-      // Get initial material station status
-      const status = this.getMaterialStationStatus();
-      if (status) {
-        console.log(`Material station initialized with ${status.slots.length} slots`);
-      }
-    } catch (error) {
-      console.warn('Failed to initialize material station monitoring:', error);
-    }
-  }
-
-  /**
-   * Process machine info for material station data extraction
-   * Override from DualAPIBackend
-   */
-  protected async processMachineInfo(_machineInfo: unknown): Promise<void> {
-    await super.processMachineInfo(_machineInfo);
-
-    // Store machine info for material station data extraction with type validation
-    if (isAD5XMachineInfo(_machineInfo)) {
-      this.lastMachineInfo = _machineInfo;
-    } else {
-      console.warn('Invalid machine info structure received from API');
-      this.lastMachineInfo = null;
-    }
-  }
-
-  /**
-   * Get additional status fields specific to AD5X
-   * Override from DualAPIBackend
-   */
-  protected getAdditionalStatusFields(_machineInfo: unknown): Record<string, unknown> {
-    // AD5X doesn't add any additional fields beyond the base implementation
-    return {};
-  }
-
-  /**
-   * Transform job list for AD5X-specific formatting
-   * Override from DualAPIBackend to handle AD5XJobInfo
-   */
-  protected transformJobList(jobs: BasicJobInfo[], source: 'local' | 'recent'): BasicJobInfo[] {
-    if (source === 'recent' && this.lastMachineInfo) {
-      // AD5X returns AD5XJobInfo[] with additional fields for recent jobs
-      // but we still return BasicJobInfo[] from the method
-      return jobs;
-    }
-    return jobs;
-  }
-
-  /**
-   * Override getRecentJobs to preserve full FFGcodeFileEntry data for AD5X
-   */
-  public async getRecentJobs(): Promise<JobListResult> {
-    try {
-      const recentJobs = await this.fiveMClient.files.getRecentFileList();
-
-      if (!recentJobs || !Array.isArray(recentJobs)) {
-        throw new Error('Failed to get recent jobs');
-      }
-
-      // For AD5X, preserve full FFGcodeFileEntry data as AD5XJobInfo
-      const jobs: AD5XJobInfo[] = recentJobs.map((fileEntry) => ({
-        fileName: fileEntry.gcodeFileName,
-        printingTime: fileEntry.printingTime,
-        toolCount: fileEntry.gcodeToolCnt,
-        toolDatas: fileEntry.gcodeToolDatas,
-        totalFilamentWeight: fileEntry.totalFilamentWeight,
-        useMatlStation: fileEntry.useMatlStation,
-        _type: 'ad5x' as const,
-      }));
-
-      return {
-        success: true,
-        jobs,
-        totalCount: jobs.length,
-        source: 'recent',
-        timestamp: new Date(),
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : String(error),
-        jobs: [],
-        totalCount: 0,
-        source: 'recent',
-        timestamp: new Date(),
-      };
-    }
-  }
-
-  /**
-   * Start a job on AD5X printer
-   * Uses new ff-api methods for AD5X-specific job starting
+   * Start a job on the AD5X. New files upload via {@link uploadFileAD5X}; this path
+   * starts a file already resident on the printer, picking the multi- or single-color
+   * command based on whether material mappings were provided.
    */
   public async startJob(params: JobOperationParams): Promise<JobStartResult> {
     try {
       // Handle file upload case
       if (params.filePath) {
-        const success = await this.fiveMClient.jobControl.uploadFile(params.filePath, params.startNow, params.leveling);
+        const success = await this.fiveMClient.jobControl.uploadFile(
+          params.filePath,
+          params.startNow,
+          params.leveling
+        );
 
         if (!success) {
           throw new Error('Failed to upload and start job');
@@ -237,10 +88,11 @@ export class AD5XBackend extends DualAPIBackend {
       }
 
       // Check if material mappings are provided for multi-color job
-      const materialMappings = params.additionalParams?.materialMappings as AD5XMaterialMapping[] | undefined;
+      const materialMappings = params.additionalParams?.materialMappings as
+        | AD5XMaterialMapping[]
+        | undefined;
 
       if (materialMappings && materialMappings.length > 0) {
-        // Multi-color job with material station
         console.log(
           `Starting AD5X multi-color job: ${params.fileName} with ${materialMappings.length} material mappings`
         );
@@ -255,7 +107,6 @@ export class AD5XBackend extends DualAPIBackend {
           throw new Error('Failed to start multi-color job');
         }
       } else {
-        // Single-color job without material station
         console.log(`Starting AD5X single-color job: ${params.fileName}`);
 
         const success = await this.fiveMClient.jobControl.startAD5XSingleColorJob({
@@ -286,8 +137,9 @@ export class AD5XBackend extends DualAPIBackend {
   }
 
   /**
-   * Upload a file to AD5X printer with material station support
-   * Uses the new ff-api uploadFileAD5X method for enhanced 3MF multi-color functionality
+   * Upload a file to the AD5X with material-station support (3MF multi-color). The
+   * AD5X maps materials at upload time, so the full `materialMappings` ride along on
+   * the upload request via ff-api's `uploadFileAD5X`.
    */
   public async uploadFileAD5X(
     filePath: string,
@@ -331,47 +183,5 @@ export class AD5XBackend extends DualAPIBackend {
         timestamp: new Date(),
       };
     }
-  }
-
-  /**
-   * Get material station status (supported on AD5X and the Creator 5 series,
-   * which inherits this backend). Stamps the printer model so the polling layer
-   * and renderer can select the correct fixed filament palette (Creator 5 uses a
-   * different palette than the AD5X — see `@shared/palette`).
-   */
-  public getMaterialStationStatus(): MaterialStationStatus | null {
-    const status = extractMaterialStationStatus(this.lastMachineInfo);
-    return status ? { ...status, printerModelType: this.modelType } : null;
-  }
-
-  /**
-   * Configure a material station slot's material and color.
-   * Sends the AD5X `msConfig_cmd` via the primary FiveMClient control module.
-   *
-   * @param slot - Target slot number (1-4)
-   * @param materialName - Recognized material name (e.g. "PLA")
-   * @param hexRgb - Color hex (with or without leading '#'); the '#' is stripped by ff-api
-   * @returns True if the printer accepted the configuration
-   */
-  public async configureSlot(slot: number, materialName: string, hexRgb: string): Promise<boolean> {
-    return await this.fiveMClient.control.configureSlot(slot, materialName, hexRgb);
-  }
-
-  // Feature detection methods specific to AD5X
-
-  protected supportsMaterialStation(): boolean {
-    return true; // AD5X has material station
-  }
-
-  protected supportsLocalJobs(): boolean {
-    return false; // AD5X doesn't support local job listing
-  }
-
-  protected supportsStartJobs(): boolean {
-    return true; // AD5X now supports job starting with new ff-api
-  }
-
-  protected getMaterialStationSlotCount(): number {
-    return 4; // AD5X has 4 material slots
   }
 }
