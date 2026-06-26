@@ -30,8 +30,8 @@ importers:
   .:
     dependencies:
       '@ghosttypes/ff-api':
-        specifier: ^1.4.0
-        version: 1.4.0
+        specifier: ^1.5.0
+        version: 1.5.0
       '@parallel-7/slicer-meta':
         specifier: 1.4.0
         version: 1.4.0
@@ -1242,8 +1242,8 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@ghosttypes/ff-api@1.4.0':
-    resolution: {integrity: sha512-8lNnKFMdwM2tSrfdAxexv6cLTfgdXm3QXjvLz5MKGIMembAVYGroyVBW8k3QnQrjpfZRmoWoGzJE+baLwCzqwA==, tarball: https://npm.pkg.github.com/download/@ghosttypes/ff-api/1.4.0/bbc147f453c2d1010247c642e526b00bbda7f049}
+  '@ghosttypes/ff-api@1.5.0':
+    resolution: {integrity: sha512-vAi8gDlYWcoTl3SXFCF/y4nSWC/PWgAG2yIZYz3g+labtr3I4Y4cv2Y9ThIpnmpMrMsLV713aNAQmrkQTGaoXQ==, tarball: https://npm.pkg.github.com/download/@ghosttypes/ff-api/1.5.0/637cea7662771d5b20bb18e0453f2fbf2279f690}
 
   '@isaacs/cliui@8.0.2':
     resolution: {integrity: sha512-O8jcjabXaleOG9DQ0+ARXWZBTfnP4WNAqzuiJK7ll44AmxGKv/J2M4TPjxjY3znBCfvBXFzucm1twdyFybFqEA==}
@@ -5301,7 +5301,7 @@ snapshots:
   '@esbuild/win32-x64@0.27.3':
     optional: true
 
-  '@ghosttypes/ff-api@1.4.0':
+  '@ghosttypes/ff-api@1.5.0':
     dependencies:
       axios: 1.16.1
       form-data: 4.0.6

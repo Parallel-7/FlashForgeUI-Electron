@@ -150,7 +150,7 @@ export class Creator5Backend extends AD5XBackend {
       chamberTargetTemp: info?.Chamber?.set ?? 0,
       // Capability flags for the renderer to gate UI.
       isCreator5Pro: this.isCreator5Pro(),
-      hasChamberControl: this.fiveMClient.capabilities?.hasChamberControl ?? true,
+      hasChamberControl: true, // Creator 5 / 5 Pro always have a heated chamber (firmware-confirmed)
       hasDoorSensor: info?.HasDoorSensor ?? this.isCreator5Pro(),
     };
   }
