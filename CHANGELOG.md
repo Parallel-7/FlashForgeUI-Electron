@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5-alpha.4] - 2026-06-26
+
+### Creator 5 / Creator 5 Pro
+- Reworked Creator 5 backend and fixed print uploads
+- Added a unified temperature card showing all four tool nozzles alongside the bed and chamber in one place.
+- Chamber temperature can now be set and cleared on the Creator 5 / 5 Pro.
+- Updated to `@ghosttypes/ff-api` 1.6.0
+
 ## [1.0.5-alpha.3] - 2026-06-25
 
 ### Creator 5 / Creator 5 Pro
