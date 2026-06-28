@@ -442,6 +442,7 @@ export class PrinterContextManager extends EventEmitter {
       name: context.name,
       ip: context.printerDetails.IPAddress,
       model: context.printerDetails.printerModel,
+      modelType: context.printerDetails.modelType,
       serialNumber: context.printerDetails.SerialNumber || null,
       status: context.connectionState,
       isActive: context.isActive,

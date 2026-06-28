@@ -294,6 +294,13 @@ const validInvokeChannels = [
   'set-extruder-temp',
   'turn-off-bed-temp',
   'turn-off-extruder-temp',
+  // Creator 5 series per-tool / chamber heaters. Must mirror the main-window preload
+  // (src/preload/index.ts) or the popped-out temperature card's chamber/tool buttons
+  // silently throw "Invalid invoke channel" and send no request.
+  'set-tool-temp',
+  'turn-off-tool-temp',
+  'set-chamber-temp',
+  'turn-off-chamber-temp',
   'clear-status',
   'led-on',
   'led-off',

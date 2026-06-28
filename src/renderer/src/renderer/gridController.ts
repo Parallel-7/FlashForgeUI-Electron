@@ -36,6 +36,7 @@ import { hydrateLogPanelWithHistory, logMessage, setLogPanelComponent } from './
 import {
   getPinnedComponentIdsForSerial,
   loadLayoutForSerial,
+  loadLayoutForSerialMigrated,
   loadShortcutsForSerial,
   saveLayoutForSerial,
 } from './perPrinterStorage.js';
@@ -52,6 +53,7 @@ export class RendererGridController {
   private componentsInitialized = false;
   private gridInitializationPromise: Promise<void> | null = null;
   private pendingGridInitializationSerial: string | null = null;
+  private pendingIsToolChanger = false;
 
   constructor(private readonly options: GridControllerOptions) {}
 
@@ -63,7 +65,7 @@ export class RendererGridController {
     return this.componentsInitialized;
   }
 
-  async initialize(initialSerial?: string | null): Promise<void> {
+  async initialize(initialSerial?: string | null, isToolChanger = false): Promise<void> {
     if (this.componentsInitialized) {
       return;
     }
@@ -71,14 +73,19 @@ export class RendererGridController {
     if (initialSerial !== undefined) {
       this.pendingGridInitializationSerial = initialSerial;
     }
+    this.pendingIsToolChanger = isToolChanger;
 
     if (!this.gridInitializationPromise) {
       this.gridInitializationPromise = (async () => {
         try {
-          await this.performGridStackInitialization(this.pendingGridInitializationSerial ?? undefined);
+          await this.performGridStackInitialization(
+            this.pendingGridInitializationSerial ?? undefined,
+            this.pendingIsToolChanger
+          );
         } finally {
           this.gridInitializationPromise = null;
           this.pendingGridInitializationSerial = null;
+          this.pendingIsToolChanger = false;
         }
       })();
     }
@@ -272,7 +279,10 @@ export class RendererGridController {
     logMessage(`Component ${componentId} removed from grid`);
   }
 
-  private async performGridStackInitialization(initialSerial?: string | null): Promise<void> {
+  private async performGridStackInitialization(
+    initialSerial?: string | null,
+    isToolChanger = false
+  ): Promise<void> {
     if (this.componentsInitialized) {
       this.logDebug('GridStack already initialized, skipping base setup');
       return;
@@ -284,7 +294,11 @@ export class RendererGridController {
 
     const serialForLoad = initialSerial ?? this.options.getActiveSerial();
 
-    const layout = loadLayoutForSerial(serialForLoad);
+    // Apply the one-time tool-changer migration here (not in the caller): persistence
+    // is only initialized on the line above, so migrating/persisting any earlier
+    // (e.g. in the context-switch handler before initialize) silently no-ops the save
+    // and the generic temperature card would load instead of the Creator 5 card.
+    const layout = loadLayoutForSerialMigrated(serialForLoad, isToolChanger);
     this.logDebug('Loaded layout configuration', layout);
 
     const shortcutConfig = loadShortcutsForSerial(serialForLoad);

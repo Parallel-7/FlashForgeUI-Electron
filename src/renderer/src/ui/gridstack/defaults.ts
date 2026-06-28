@@ -24,6 +24,7 @@
  * @module ui/gridstack/defaults
  */
 
+import type { PrinterModelType } from '@shared/types/printer-backend/index.js';
 import { getComponentDefinition } from './ComponentRegistry.js';
 import type { GridOptions, GridStackWidgetConfig, LayoutConfig } from './types.js';
 
@@ -49,17 +50,27 @@ export function migrateComponentId(componentId: string): string {
  * migration needs to run against a printer's persisted layout (see
  * {@link migrateLayoutForToolChanger}). A layout is migrated at most once: after
  * it runs, the layout is stamped with this version and saved, so it never repeats.
+ *
+ * v3: the v2 tool-changer migration could be silently dropped when it ran before the
+ * layout persistence layer was initialized, leaving early testers stamped at v2 but
+ * still showing the generic temperature card. Bumping to v3 forces the (now correctly
+ * timed) migration to run once more for those layouts; it is idempotent for layouts
+ * that already carry the Creator 5 card.
  */
-export const LAYOUT_SCHEMA_VERSION = 2;
+export const LAYOUT_SCHEMA_VERSION = 3;
 
 /** The unified Creator 5 temperature card. */
 const C5_TEMP_CARD_ID = 'creator5-temperature';
 /** Generic/legacy temperature cards folded into the Creator 5 card on a tool-changer. */
 const C5_TEMP_REPLACED_IDS = new Set(['temperature-controls', 'tool-temps']);
 
-/** Whether a model name/type identifies a Creator 5 series tool-changer. */
-export function isCreator5Model(model: string | null | undefined): boolean {
-  return /creator\s*5/i.test(model ?? '');
+/**
+ * Whether a model type identifies a Creator 5 series tool-changer. Reads the
+ * authoritative PID-derived {@link PrinterModelType} (`creator-5` / `creator-5-pro`)
+ * rather than substring-matching the user-mutable model/name string.
+ */
+export function isCreator5ModelType(modelType: PrinterModelType | null | undefined): boolean {
+  return modelType === 'creator-5' || modelType === 'creator-5-pro';
 }
 
 /**

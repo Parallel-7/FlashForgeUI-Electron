@@ -16,6 +16,8 @@
  * - Integrates with existing backend and service types
  */
 
+import type { PrinterModelType } from './printer-backend/index.js';
+
 /**
  * Connection state for a printer context
  */
@@ -38,6 +40,13 @@ export interface PrinterContextInfo {
 
   /** Printer model string for display */
   readonly model: string;
+
+  /**
+   * Authoritative model type derived from the USB product ID (not the user-mutable
+   * model/name string). Used by the renderer to gate model-specific behaviour such
+   * as the Creator 5 tool-changer layout migration. Optional for older payloads.
+   */
+  readonly modelType?: PrinterModelType;
 
   /** Printer serial number (stable identifier for layout/config persistence) */
   readonly serialNumber: string | null;

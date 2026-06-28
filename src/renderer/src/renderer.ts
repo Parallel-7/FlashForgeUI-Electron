@@ -38,7 +38,7 @@ import {
   saveLayoutForSerial,
   saveShortcutsForSerial,
 } from './renderer/perPrinterStorage.js';
-import { isCreator5Model } from './ui/gridstack/defaults.js';
+import { isCreator5ModelType } from './ui/gridstack/defaults.js';
 // Existing service imports
 import { getGlobalStateTracker, STATE_EVENTS } from './renderer/services/printer-state.js';
 import { handleUIError, resetUI } from './renderer/services/ui-updater.js';
@@ -301,13 +301,15 @@ async function initializePrinterTabs(): Promise<void> {
 
         // One-time tool-changer layout migration (Creator 5 series): swaps the
         // generic temperature card + tool-temps for the unified creator5-temperature
-        // card and persists it, so the migrated layout is what loads below.
-        const isToolChanger = isCreator5Model(event.contextInfo?.model);
-        const migratedLayout = loadLayoutForSerialMigrated(activeContextSerial, isToolChanger);
+        // card and persists it. Gated on the authoritative PID-derived model type.
+        const isToolChanger = isCreator5ModelType(event.contextInfo?.modelType);
 
         if (!gridController.areComponentsInitialized()) {
-          await gridController.initialize(activeContextSerial);
+          // First load: the migration is applied INSIDE initialize, after the layout
+          // persistence layer is initialized (migrating earlier would no-op the save).
+          await gridController.initialize(activeContextSerial, isToolChanger);
         } else {
+          const migratedLayout = loadLayoutForSerialMigrated(activeContextSerial, isToolChanger);
           const newShortcutConfig = loadShortcutsForSerial(activeContextSerial);
           await gridController.reloadGridForLayout(migratedLayout, serialLabel, newShortcutConfig);
         }

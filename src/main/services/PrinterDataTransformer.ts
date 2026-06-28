@@ -148,7 +148,14 @@ export class PrinterDataTransformer {
       filtration: {
         mode: filtrationInfo.filtrationMode || 'none',
         tvocLevel: tvoc,
-        available: filtrationInfo.hasFiltration || false,
+        // Prefer the backend's resolved filtration CAPABILITY flag when present
+        // (model backends force this on for hardware they know has filtration, e.g.
+        // the Creator 5 Pro). Fall back to the per-poll fan heuristic for backends
+        // that don't surface a capability flag.
+        available:
+          typeof backendData.filtrationAvailable === 'boolean'
+            ? backendData.filtrationAvailable
+            : filtrationInfo.hasFiltration || false,
       },
       settings: {
         nozzleSize: parseFloat(nozzleSize) || 0.4,

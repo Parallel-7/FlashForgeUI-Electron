@@ -911,9 +911,15 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
    * Override in subclasses to add model-specific fields
    */
   protected getAdditionalStatusFields(_machineInfo: unknown): Record<string, unknown> {
-    // Default implementation returns empty object
-    // 5M Pro backend will override to add filtration fan fields
-    return {};
+    // Surface the resolved filtration CAPABILITY (from the backend feature set) so the
+    // renderer can gate the filtration controls on it rather than on the per-poll fan
+    // states. The /product-derived fan heuristic is unreliable on some models (e.g. the
+    // Creator 5 Pro under-reports its fan control state), so model backends that know
+    // they have filtration force the capability on in getBaseFeatures(); this carries
+    // that decision through to the UI. Subclasses that override this MUST spread super.
+    return {
+      filtrationAvailable: this.isFeatureAvailable('filtration'),
+    };
   }
 
   /**
