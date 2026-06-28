@@ -141,7 +141,7 @@ export class Creator5TemperatureComponent extends BaseComponent {
           (_, i) => `
         <section class="c5-temp-cell c5-temp-cell--tool" data-tool="${i}">
           <div class="c5-temp-meta">
-            <span class="c5-temp-label">T${i}</span>
+            <span class="c5-temp-label">T${i + 1}</span>
             <span class="c5-temp-reading" data-role="reading">0°C/0°C</span>
           </div>
           <div class="c5-temp-actions">
@@ -198,7 +198,9 @@ export class Creator5TemperatureComponent extends BaseComponent {
   private labelFor(target: HeaterTarget): string {
     if (target.kind === 'bed') return 'Bed';
     if (target.kind === 'chamber') return 'Chamber';
-    return `Tool T${target.index}`;
+    // Display tools as 1-based (T1-T4) to match the printer UI; the index stays
+    // 0-based on the wire (set-tool-temp / nozzles[]).
+    return `Tool T${target.index + 1}`;
   }
 
   private async handleSet(target: HeaterTarget): Promise<void> {

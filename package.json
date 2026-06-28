@@ -1,7 +1,7 @@
 {
   "name": "FlashForgeUI",
   "productName": "FlashForgeUI",
-  "version": "1.0.5-alpha.5",
+  "version": "1.0.5-alpha.6",
   "packageManager": "pnpm@10.23.0",
   "description": "Monitoring and Control software for FlashForge printers",
   "main": "out/main/index.js",
@@ -87,7 +87,7 @@
     }
   },
   "dependencies": {
-    "@ghosttypes/ff-api": "^1.6.0",
+    "@ghosttypes/ff-api": "^1.6.1",
     "@parallel-7/slicer-meta": "1.4.0",
     "electron-log": "^5.4.3",
     "electron-updater": "^6.8.3",

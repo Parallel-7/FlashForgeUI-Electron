@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5-alpha.6] - 2026-06-28
+
+### Creator 5 / Creator 5 Pro
+- The per-tool **Off** button now actually turns the tool head off. The Creator 5 firmware only treats `0` as "off" inside the per-nozzle command and ignored the `-100` sentinel the cancel path was sending (`@ghosttypes/ff-api` 1.6.1).
+- Tool heads are now displayed as **T1–T4** to match the printer's own UI (the wire protocol stays 0-based).
+
+## [1.0.5-alpha.5] - 2026-06-28
+
+### Creator 5 / Creator 5 Pro
+- Fixed chamber and per-tool nozzle temperature control: the popped-out temperature card's chamber/tool buttons were silently blocked by the component-dialog IPC allowlist and sent no request (only the bed worked).
+- Filtration controls now gate on the backend capability flag instead of the unreliable `/product` fan heuristic, so filtration is enabled on the Creator 5 Pro and hidden on the plain Creator 5.
+- The dashboard now reliably swaps the generic temperature card for the unified Creator 5 temperature card on connect, keyed off the authoritative USB product ID; existing testers' layouts migrate automatically on load.
+
 ## [1.0.5-alpha.4] - 2026-06-26
 
 ### Creator 5 / Creator 5 Pro
