@@ -235,20 +235,18 @@ export async function setTemperature(): Promise<void> {
   }
 
   const target = dialog.temperatureTarget;
-  let temperature = parseInt(input.value, 10);
+  const temperature = parseInt(input.value, 10);
 
   if (!target) {
     showToast('Unknown temperature target', 'error');
     return;
   }
 
+  // Chamber is capped at CHAMBER_MAX_TEMP by the range check below (no separate clamp needed).
   const maxTemperature = target.kind === 'chamber' ? CHAMBER_MAX_TEMP : 300;
   if (isNaN(temperature) || temperature < 0 || temperature > maxTemperature) {
     showToast('Invalid temperature value', 'error');
     return;
-  }
-  if (target.kind === 'chamber') {
-    temperature = Math.min(temperature, CHAMBER_MAX_TEMP);
   }
 
   if (!dialogHandlers.onTemperatureSubmit) {
