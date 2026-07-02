@@ -53,6 +53,7 @@ import {
   confirmMaterialMatching,
   setupMaterialMatchingHandlers,
 } from './features/material-matching.js';
+import { refreshMaterialStationCard, setupMaterialStationCard } from './features/material-station.js';
 import { loadSpoolmanConfig, setupSpoolmanHandlers } from './features/spoolman.js';
 import { $, hideElement, showElement } from './shared/dom.js';
 import { initializeLucideIcons } from './shared/icons.js';
@@ -114,6 +115,18 @@ export interface PrinterStatus {
   cumulativePrintTime?: number; // Total lifetime print time in minutes
   formattedEta?: string; // Firmware ETA string (e.g. "04:48" = 4h48m remaining)
   elapsedTimeSeconds?: number; // Precise elapsed seconds for HH:MM:SS display
+  // Creator 5 series (multi-tool) fields. Undefined/empty on single-nozzle printers.
+  toolTemps?: ToolTemperature[];
+  chamberTemperature?: number;
+  chamberTargetTemperature?: number;
+  hasChamberControl?: boolean;
+  isCreator5Pro?: boolean;
+  tvocLevel?: number;
+}
+
+export interface ToolTemperature {
+  current: number;
+  target: number;
 }
 
 export interface PrinterFeatures {
@@ -125,6 +138,8 @@ export interface PrinterFeatures {
   canResume: boolean;
   canCancel: boolean;
   ledUsesLegacyAPI?: boolean; // Whether custom LED control is enabled
+  hasMultiTool?: boolean; // Creator 5 series — gates the per-tool temperature card
+  isCreator5Pro?: boolean; // Creator 5 Pro — gates the read-only TVOC display
 }
 
 export interface AD5XToolData {
@@ -217,6 +232,8 @@ export interface MaterialStationStatus {
   activeSlot: number | null;
   overallStatus: 'ready' | 'warming' | 'error' | 'disconnected';
   errorMessage: string | null;
+  /** Printer model that owns this station, so the slot editor picks the right palette (AD5X vs Creator 5). */
+  printerModelType?: string;
 }
 
 export interface MaterialStationStatusResponse extends ApiResponse {
@@ -297,6 +314,7 @@ onConnectionChange((connected) => {
 
 onStatusUpdate((status) => {
   updatePrinterStatus(status);
+  void refreshMaterialStationCard();
 });
 
 onSpoolmanUpdate((contextId, spool) => {
@@ -344,12 +362,17 @@ async function initialize(): Promise<void> {
       closeMaterialMatchingModal();
     },
     onMaterialMatchingConfirm: () => confirmMaterialMatching(),
-    onTemperatureSubmit: (type, temperature) => sendPrinterCommand(`temperature/${type}`, { temperature }),
+    onTemperatureSubmit: (target, temperature) => {
+      const endpoint =
+        target.kind === 'tool' ? `temperature/tool/${target.index}` : `temperature/${target.kind}`;
+      return sendPrinterCommand(endpoint, { temperature });
+    },
   };
   setupDialogEventHandlers(dialogHandlers);
   setupJobControlEventHandlers();
   setupMaterialMatchingHandlers();
   setupSpoolmanHandlers();
+  setupMaterialStationCard();
 
   const contextHandlers = {
     onContextSwitched: async () => {
@@ -357,6 +380,7 @@ async function initialize(): Promise<void> {
       await loadSpoolmanConfig();
       ensureSpoolmanVisibilityIfEnabled();
       initializeCamera();
+      void refreshMaterialStationCard();
     },
   };
 
@@ -377,6 +401,7 @@ async function initialize(): Promise<void> {
     onAfterLayoutRefresh: () => {
       updateFeatureVisibility();
       initializeCamera();
+      void refreshMaterialStationCard();
     },
   });
 

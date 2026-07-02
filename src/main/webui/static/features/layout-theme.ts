@@ -500,11 +500,27 @@ export function isComponentSupported(componentId: string, features: PrinterFeatu
   }
 
   if (componentId === 'filtration-tvoc') {
-    return Boolean(features.hasFiltration);
+    // Shown for filtration-capable printers, and for the Creator 5 Pro which exposes
+    // a read-only TVOC air-quality reading (its filtration controls are hidden).
+    return Boolean(features.hasFiltration) || Boolean(features.isCreator5Pro);
+  }
+
+  // The single-nozzle temperature card and the multi-tool (Creator 5) card are
+  // mutually exclusive — pick one based on the printer's tool configuration.
+  if (componentId === 'temp-control') {
+    return !features.hasMultiTool;
+  }
+
+  if (componentId === 'creator5-temperature') {
+    return Boolean(features.hasMultiTool);
   }
 
   if (componentId === 'spoolman-tracker') {
     return isSpoolmanAvailableForCurrentContext();
+  }
+
+  if (componentId === 'material-station') {
+    return Boolean(features.hasMaterialStation);
   }
 
   return true;

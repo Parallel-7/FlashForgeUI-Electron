@@ -18,15 +18,59 @@ import {
   isMultiColorJobFile,
 } from '../shared/formatting.js';
 
+/**
+ * A settable heater target. Single-nozzle printers use `bed`/`extruder`; the
+ * Creator 5 series adds `chamber` and per-`tool` heaters (index is 0-based on the
+ * wire, displayed as T1..Tn in the UI).
+ */
+export type TemperatureTarget =
+  | { kind: 'bed' }
+  | { kind: 'extruder' }
+  | { kind: 'chamber' }
+  | { kind: 'tool'; index: number };
+
 interface TemperatureDialogElement extends HTMLElement {
-  temperatureType?: 'bed' | 'extruder';
+  temperatureTarget?: TemperatureTarget;
 }
+
+/** Firmware chamber temperature ceiling (matches the desktop Creator 5 card). */
+const CHAMBER_MAX_TEMP = 80;
 
 export interface DialogHandlers {
   onStartPrintJob?: () => Promise<void> | void;
   onMaterialMatchingClosed?: () => void;
   onMaterialMatchingConfirm?: () => Promise<void> | void;
-  onTemperatureSubmit?: (type: 'bed' | 'extruder', temperature: number) => Promise<void> | void;
+  onTemperatureSubmit?: (target: TemperatureTarget, temperature: number) => Promise<void> | void;
+}
+
+function temperatureTargetLabel(target: TemperatureTarget): string {
+  switch (target.kind) {
+    case 'bed':
+      return 'Bed';
+    case 'extruder':
+      return 'Extruder';
+    case 'chamber':
+      return 'Chamber';
+    case 'tool':
+      return `Tool T${target.index + 1}`;
+  }
+}
+
+function currentTargetTemperature(target: TemperatureTarget): number {
+  const status = state.printerStatus;
+  if (!status) {
+    return 0;
+  }
+  switch (target.kind) {
+    case 'bed':
+      return status.bedTargetTemperature;
+    case 'extruder':
+      return status.nozzleTargetTemperature;
+    case 'chamber':
+      return status.chamberTargetTemperature ?? 0;
+    case 'tool':
+      return status.toolTemps?.[target.index]?.target ?? 0;
+  }
 }
 
 let dialogHandlers: DialogHandlers = {};
@@ -159,7 +203,7 @@ export function showFileModal(files: WebUIJobFile[], source: 'recent' | 'local')
   showElement('file-modal');
 }
 
-export function showTemperatureDialog(type: 'bed' | 'extruder'): void {
+export function showTemperatureDialog(target: TemperatureTarget): void {
   const dialog = $('temp-dialog');
   const title = $('temp-dialog-title');
   const message = $('temp-dialog-message');
@@ -169,18 +213,14 @@ export function showTemperatureDialog(type: 'bed' | 'extruder'): void {
     return;
   }
 
-  title.textContent = type === 'bed' ? 'Set Bed Temperature' : 'Set Extruder Temperature';
-  message.textContent = `Enter ${type} temperature (°C):`;
+  const label = temperatureTargetLabel(target);
+  const maxNote = target.kind === 'chamber' ? `, max ${CHAMBER_MAX_TEMP}` : '';
+  title.textContent = `Set ${label} Temperature`;
+  message.textContent = `Enter ${label} temperature (°C)${maxNote}:`;
 
-  if (state.printerStatus) {
-    const currentTarget =
-      type === 'bed' ? state.printerStatus.bedTargetTemperature : state.printerStatus.nozzleTargetTemperature;
-    input.value = Math.round(currentTarget).toString();
-  } else {
-    input.value = '0';
-  }
+  input.value = state.printerStatus ? Math.round(currentTargetTemperature(target)).toString() : '0';
 
-  (dialog as TemperatureDialogElement).temperatureType = type;
+  (dialog as TemperatureDialogElement).temperatureTarget = target;
   showElement('temp-dialog');
   input.focus();
   input.select();
@@ -194,17 +234,21 @@ export async function setTemperature(): Promise<void> {
     return;
   }
 
-  const type = dialog.temperatureType;
-  const temperature = parseInt(input.value, 10);
+  const target = dialog.temperatureTarget;
+  let temperature = parseInt(input.value, 10);
 
-  if (!type) {
+  if (!target) {
     showToast('Unknown temperature target', 'error');
     return;
   }
 
-  if (isNaN(temperature) || temperature < 0 || temperature > 300) {
+  const maxTemperature = target.kind === 'chamber' ? CHAMBER_MAX_TEMP : 300;
+  if (isNaN(temperature) || temperature < 0 || temperature > maxTemperature) {
     showToast('Invalid temperature value', 'error');
     return;
+  }
+  if (target.kind === 'chamber') {
+    temperature = Math.min(temperature, CHAMBER_MAX_TEMP);
   }
 
   if (!dialogHandlers.onTemperatureSubmit) {
@@ -213,7 +257,7 @@ export async function setTemperature(): Promise<void> {
   }
 
   try {
-    await dialogHandlers.onTemperatureSubmit(type, temperature);
+    await dialogHandlers.onTemperatureSubmit(target, temperature);
     hideElement('temp-dialog');
   } catch (error) {
     console.error('Failed to submit temperature command:', error);

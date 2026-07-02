@@ -76,6 +76,15 @@ export interface WebSocketCommand {
 }
 
 /**
+ * Per-tool temperature reading for multi-tool printers (Creator 5 series).
+ * One entry per nozzle; index 0 maps to the printer's T1 in the UI.
+ */
+export interface ToolTemperatureData {
+  current: number;
+  target: number;
+}
+
+/**
  * Extended printer status data for WebSocket transmission
  * Extends PrinterStatus with additional fields like thumbnails
  */
@@ -99,6 +108,13 @@ export interface PrinterStatusData {
   cumulativePrintTime?: number;
   formattedEta?: string;
   elapsedTimeSeconds?: number;
+  // Creator 5 series (multi-tool) fields. Undefined/empty on single-nozzle printers.
+  toolTemps?: ToolTemperatureData[];
+  chamberTemperature?: number;
+  chamberTargetTemperature?: number;
+  hasChamberControl?: boolean;
+  isCreator5Pro?: boolean;
+  tvocLevel?: number;
 }
 
 // ============================================================================
@@ -127,6 +143,10 @@ export interface PrinterFeatures {
   canResume: boolean;
   canCancel: boolean;
   ledUsesLegacyAPI: boolean;
+  /** Multi-tool printer (Creator 5 series) — gates the per-tool temperature card. */
+  hasMultiTool: boolean;
+  /** Creator 5 Pro — gates the read-only TVOC air-quality display. */
+  isCreator5Pro: boolean;
 }
 
 export interface PrinterStatus {
@@ -148,6 +168,13 @@ export interface PrinterStatus {
   cumulativePrintTime?: number;
   formattedEta?: string;
   elapsedTimeSeconds?: number;
+  // Creator 5 series (multi-tool) fields. Undefined/empty on single-nozzle printers.
+  toolTemps?: ToolTemperatureData[];
+  chamberTemperature?: number;
+  chamberTargetTemperature?: number;
+  hasChamberControl?: boolean;
+  isCreator5Pro?: boolean;
+  tvocLevel?: number;
 }
 
 export interface PrinterStatusResponse extends StandardAPIResponse {

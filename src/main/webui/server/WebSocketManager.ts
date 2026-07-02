@@ -483,6 +483,13 @@ export class WebSocketManager extends EventEmitter {
     const filtrationMode: 'external' | 'internal' | 'none' =
       rawFiltrationMode === 'external' || rawFiltrationMode === 'internal' ? rawFiltrationMode : 'none';
 
+    // Creator 5 series (multi-tool) fields. Undefined/empty on single-nozzle printers.
+    const toolTemps = (status.toolTemps ?? []).map((tool) => ({
+      current: Math.round(tool.current),
+      target: Math.round(tool.target),
+    }));
+    const chamber = status.temperatures?.chamber;
+
     return {
       printerState: status.state, // Note: 'state' not 'printerState'
       bedTemperature: Math.round(bedTemp.current),
@@ -508,6 +515,12 @@ export class WebSocketManager extends EventEmitter {
       // Backend provides filament usage in meters, same as main UI
       cumulativeFilament: status.cumulativeStats?.totalFilamentUsed || undefined,
       cumulativePrintTime: status.cumulativeStats?.totalPrintTime || undefined,
+      // Creator 5 multi-tool + chamber + air-quality fields
+      toolTemps: toolTemps.length > 0 ? toolTemps : undefined,
+      chamberTemperature: chamber ? Math.round(chamber.current) : undefined,
+      chamberTargetTemperature: chamber ? Math.round(chamber.target) : undefined,
+      hasChamberControl: chamber !== undefined ? true : undefined,
+      tvocLevel: status.filtration?.tvocLevel,
     };
   }
 

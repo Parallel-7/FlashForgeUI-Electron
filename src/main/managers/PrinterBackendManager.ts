@@ -506,6 +506,75 @@ export class PrinterBackendManager extends EventEmitter {
   }
 
   /**
+   * Resolve the HTTP (FiveMClient) client for a context, if the backend's primary
+   * client is a FiveMClient. Used to route per-tool / chamber temperature control over
+   * HTTP for the Creator 5 series, which is HTTP-only and has no G-code passthrough.
+   */
+  private getFiveMClient(contextId: string): FiveMClient | null {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
+      return null;
+    }
+    const client = backend.getPrimaryClient();
+    return client instanceof FiveMClient ? client : null;
+  }
+
+  /**
+   * Run a FiveMClient temperature-control action for a context and normalize the
+   * result. Mirrors the desktop control IPC handlers so the WebUI can drive per-tool
+   * and chamber heaters on HTTP-only Creator 5 printers.
+   */
+  private async runTempControl(
+    contextId: string,
+    action: (client: FiveMClient) => Promise<boolean>
+  ): Promise<CommandResult> {
+    const client = this.getFiveMClient(contextId);
+    if (!client) {
+      return {
+        success: false,
+        error: 'Temperature control not available for this printer',
+        timestamp: new Date(),
+      };
+    }
+    try {
+      const result = await action(client);
+      return { success: result, timestamp: new Date() };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date(),
+      };
+    }
+  }
+
+  /** Set a single tool (nozzle) target temperature on a multi-tool printer. */
+  public async setToolTemperature(
+    contextId: string,
+    toolIndex: number,
+    temperature: number
+  ): Promise<CommandResult> {
+    return this.runTempControl(contextId, (client) =>
+      client.tempControl.setToolTemp(toolIndex, temperature)
+    );
+  }
+
+  /** Turn off a single tool (nozzle) heater on a multi-tool printer. */
+  public async cancelToolTemperature(contextId: string, toolIndex: number): Promise<CommandResult> {
+    return this.runTempControl(contextId, (client) => client.tempControl.cancelToolTemp(toolIndex));
+  }
+
+  /** Set the heated-chamber target temperature. */
+  public async setChamberTemperature(contextId: string, temperature: number): Promise<CommandResult> {
+    return this.runTempControl(contextId, (client) => client.tempControl.setChamberTemp(temperature));
+  }
+
+  /** Turn off the heated chamber. */
+  public async cancelChamberTemperature(contextId: string): Promise<CommandResult> {
+    return this.runTempControl(contextId, (client) => client.tempControl.cancelChamberTemp());
+  }
+
+  /**
    * Get current printer status
    *
    * @param contextId - Context ID

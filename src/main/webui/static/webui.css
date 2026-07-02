@@ -671,6 +671,267 @@ body {
   background-color: var(--button-hover);
 }
 
+/* Material Station card (AD5X IFS + Creator 5 Material Station) */
+.ms-card-state {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  height: 100%;
+}
+
+.ms-card-message {
+  color: var(--text-color-muted, var(--text-color));
+  font-size: 13px;
+  opacity: 0.8;
+}
+
+.ms-card-active-indicator {
+  font-size: 12px;
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.ms-card-slots {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+
+.ms-card-slot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.ms-card-slot:hover {
+  border-color: var(--accent-color);
+  background-color: var(--primary-alpha-10);
+}
+
+.ms-card-slot.active {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 1px var(--accent-color) inset;
+}
+
+.ms-card-slot.empty .ms-card-swatch {
+  background-color: transparent;
+  border-style: dashed;
+}
+
+.ms-card-swatch {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+  background-color: transparent;
+}
+
+.ms-card-slot-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.ms-card-slot-label {
+  font-size: 11px;
+  color: var(--text-color-muted, var(--text-color));
+}
+
+.ms-card-slot-material {
+  font-size: 13px;
+  color: var(--text-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Material Station slot editor modal */
+.ms-editor-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--overlay-bg, rgba(0, 0, 0, 0.5));
+  padding: 16px;
+}
+
+.ms-editor-content {
+  background-color: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  box-shadow: var(--shadow-lg);
+  width: 100%;
+  max-width: 420px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.ms-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.ms-editor-title {
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+.ms-editor-close {
+  background: none;
+  border: none;
+  color: var(--text-color);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ms-editor-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.ms-editor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ms-editor-label {
+  font-size: 12px;
+  color: var(--text-color-muted, var(--text-color));
+}
+
+.ms-editor-material {
+  background-color: var(--card-bg-hover);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 8px;
+  font-size: 14px;
+}
+
+.ms-swatch-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 6px;
+}
+
+.ms-swatch {
+  aspect-ratio: 1;
+  border: 2px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--swatch);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.ms-swatch.selected {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px var(--accent-color);
+}
+
+.ms-swatch-check {
+  color: #fff;
+  font-size: 12px;
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.8);
+  opacity: 0;
+}
+
+.ms-swatch.selected .ms-swatch-check {
+  opacity: 1;
+}
+
+.ms-editor-preview {
+  font-size: 13px;
+  color: var(--text-color-secondary, var(--text-color));
+  min-height: 18px;
+}
+
+.ms-editor-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 14px 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.ms-editor-spoolman {
+  margin-right: auto;
+}
+
+.ms-editor-btn {
+  background-color: var(--card-bg-hover);
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
+}
+
+.ms-editor-btn:hover {
+  background-color: var(--primary-alpha-15);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.ms-editor-apply {
+  background-color: var(--accent-color);
+  border-color: transparent;
+  color: var(--text-on-primary);
+}
+
+.ms-editor-apply:hover {
+  background-color: var(--button-hover);
+  color: var(--text-on-primary);
+}
+
+.ms-editor-apply:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Creator 5 multi-tool temperature card */
+.c5-temps-body {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.c5-tool-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.c5-temps-unavailable {
+  color: var(--text-muted, var(--text-color));
+  font-size: 13px;
+  opacity: 0.75;
+}
+
+.temp-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Modals */
 .modal {
   position: fixed;

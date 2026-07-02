@@ -55,6 +55,10 @@ describe('printer-status-routes', () => {
         isFeatureAvailable: jest.fn().mockImplementation((_contextId: string, feature: string) => {
           return feature === 'camera' || feature === 'led-control' || feature === 'filtration';
         }),
+        getBackendStatus: jest.fn().mockReturnValue({
+          capabilities: { modelType: 'adventurer-5m' },
+        }),
+        configureMaterialSlot: jest.fn().mockResolvedValue({ success: true }),
         getMaterialStationStatus: jest.fn().mockReturnValue({
           connected: true,
           slots: [],
@@ -142,6 +146,8 @@ describe('printer-status-routes', () => {
         canResume: true,
         canCancel: true,
         ledUsesLegacyAPI: true,
+        hasMultiTool: false,
+        isCreator5Pro: false,
       },
     });
   });
@@ -202,5 +208,59 @@ describe('printer-status-routes', () => {
         errorMessage: null,
       },
     });
+  });
+
+  it('configures a material-station slot via the backend manager', async () => {
+    const deps = createDependencies({
+      backendManager: {
+        ...createDependencies().backendManager,
+        isFeatureAvailable: jest
+          .fn()
+          .mockImplementation((_contextId: string, feature: string) => feature === 'material-station'),
+      },
+    });
+    const server = await startTestServer((app) => {
+      const router = express.Router();
+      registerPrinterStatusRoutes(router, deps);
+      app.use('/api', router);
+    });
+
+    const response = await fetch(`${server.baseUrl}/api/printer/material-station/slot?contextId=context-1`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slot: 2, materialName: 'PLA', colorHex: '#F72224' }),
+    });
+    const body = await response.json();
+    await server.close();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(deps.backendManager.configureMaterialSlot).toHaveBeenCalledWith('context-1', 2, 'PLA', '#F72224');
+  });
+
+  it('rejects a material-station slot write with an invalid color', async () => {
+    const deps = createDependencies({
+      backendManager: {
+        ...createDependencies().backendManager,
+        isFeatureAvailable: jest
+          .fn()
+          .mockImplementation((_contextId: string, feature: string) => feature === 'material-station'),
+      },
+    });
+    const server = await startTestServer((app) => {
+      const router = express.Router();
+      registerPrinterStatusRoutes(router, deps);
+      app.use('/api', router);
+    });
+
+    const response = await fetch(`${server.baseUrl}/api/printer/material-station/slot?contextId=context-1`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slot: 2, materialName: 'PLA', colorHex: 'nothex' }),
+    });
+    await server.close();
+
+    expect(response.status).toBe(400);
+    expect(deps.backendManager.configureMaterialSlot).not.toHaveBeenCalled();
   });
 });

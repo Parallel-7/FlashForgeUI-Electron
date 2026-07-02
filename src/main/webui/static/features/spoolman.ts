@@ -27,6 +27,23 @@ const DEFAULT_SPOOL_COLOR = 'var(--text-color-muted)';
 let spoolSearchDebounceTimer: number | null = null;
 let handlersRegistered = false;
 
+/**
+ * When set, the spool selection modal is in "pick" mode: choosing a spool invokes
+ * this callback (e.g. to pre-fill the material-station slot editor) instead of
+ * setting the active tracked spool. Cleared when the modal closes.
+ */
+let spoolPickCallback: ((spool: SpoolSummary) => void) | null = null;
+
+/**
+ * Open the spool selection modal in pick mode. The provided callback runs with the
+ * chosen spool and the modal closes; the spool is NOT set as the active tracked
+ * spool. Used by the material-station slot editor's "Set from Spoolman" shortcut.
+ */
+export function openSpoolPicker(onPick: (spool: SpoolSummary) => void): void {
+  spoolPickCallback = onPick;
+  openSpoolSelectionModal();
+}
+
 export async function loadSpoolmanConfig(): Promise<void> {
   if (state.authRequired && !state.authToken) {
     return;
@@ -187,6 +204,9 @@ export function openSpoolSelectionModal(): void {
 }
 
 export function closeSpoolSelectionModal(): void {
+  // Cancelling the picker discards any pending pick callback.
+  spoolPickCallback = null;
+
   const modal = $('spoolman-modal');
   if (!modal) {
     return;
@@ -252,6 +272,13 @@ export function renderSpoolList(spools: SpoolSummary[]): void {
     `;
 
     item.addEventListener('click', () => {
+      if (spoolPickCallback) {
+        const callback = spoolPickCallback;
+        spoolPickCallback = null;
+        closeSpoolSelectionModal();
+        callback(spool);
+        return;
+      }
       void selectSpool(spool.id);
     });
 

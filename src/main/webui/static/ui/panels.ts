@@ -46,6 +46,7 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
     setTextContent('current-job', 'No data');
     setTextContent('progress-percentage', '0%');
     updateModelPreview(null);
+    updateCreator5TemperatureCard(null);
     return;
   }
 
@@ -130,6 +131,118 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
 
   updateButtonStates(status.printerState || 'Unknown');
   updateFiltrationStatus(status.filtrationMode);
+  updateCreator5TemperatureCard(status);
+  updateTvocDisplay(status);
+}
+
+/** `<current>°C / <target>°C`, guarding against NaN readings. */
+function formatTempPair(current: number, target: number): string {
+  const c = isNaN(current) ? 0 : Math.round(current);
+  const t = isNaN(target) ? 0 : Math.round(target);
+  return `${c}°C / ${t}°C`;
+}
+
+/** Whether heater Set/Off controls should be disabled for the given printer state. */
+function isHeaterControlDisabled(printerState: string): boolean {
+  const isPrintingActive =
+    printerState === 'Printing' ||
+    printerState === 'Paused' ||
+    printerState === 'Calibrating' ||
+    printerState === 'Heating' ||
+    printerState === 'Pausing';
+  const isBusy = printerState === 'Busy' || printerState === 'Error';
+  return isPrintingActive || isBusy;
+}
+
+/**
+ * Render the Creator 5 multi-tool temperature card (per-tool heaters + bed +
+ * chamber). Self-gates: shows an "unavailable" message when the printer does not
+ * report per-tool temperatures. No-ops when the card is not mounted (non-C5).
+ */
+export function updateCreator5TemperatureCard(status: PrinterStatus | null): void {
+  const panel = document.querySelector<HTMLElement>('[data-component-id="creator5-temperature"]');
+  if (!panel) {
+    return;
+  }
+
+  const unavailable = $('c5-temps-unavailable');
+  const body = $('c5-temps-body');
+  const toolGrid = $('c5-tool-grid');
+  const chamberRow = $('c5-chamber-row');
+
+  const toolTemps = status?.toolTemps ?? [];
+  const available = Boolean(status) && toolTemps.length > 0;
+
+  unavailable?.classList.toggle('hidden', available);
+  body?.classList.toggle('hidden', !available);
+
+  if (!available || !status) {
+    return;
+  }
+
+  // Rebuild the per-tool rows only when the tool count changes.
+  if (toolGrid) {
+    const existingRows = toolGrid.querySelectorAll('.temp-row').length;
+    if (existingRows !== toolTemps.length) {
+      toolGrid.innerHTML = toolTemps
+        .map(
+          (_, i) => `
+        <div class="temp-row">
+          <span>T${i + 1}: <span class="c5-tool-reading" data-tool-reading="${i}">--°C / --°C</span></span>
+          <div class="temp-buttons">
+            <button class="temp-btn" data-c5-action="set" data-heater="tool" data-tool="${i}">Set</button>
+            <button class="temp-btn" data-c5-action="off" data-heater="tool" data-tool="${i}">Off</button>
+          </div>
+        </div>`
+        )
+        .join('');
+    }
+    toolTemps.forEach((tool, i) => {
+      const reading = toolGrid.querySelector(`[data-tool-reading="${i}"]`);
+      if (reading) {
+        reading.textContent = formatTempPair(tool.current, tool.target);
+      }
+    });
+  }
+
+  setTextContent('c5-bed-temp', formatTempPair(status.bedTemperature, status.bedTargetTemperature));
+
+  const hasChamber = Boolean(status.hasChamberControl) && status.chamberTemperature !== undefined;
+  chamberRow?.classList.toggle('hidden', !hasChamber);
+  if (hasChamber) {
+    setTextContent(
+      'c5-chamber-temp',
+      formatTempPair(status.chamberTemperature ?? 0, status.chamberTargetTemperature ?? 0)
+    );
+  }
+
+  const disabled = isHeaterControlDisabled(status.printerState || 'Unknown');
+  panel.querySelectorAll<HTMLButtonElement>('button[data-c5-action]').forEach((btn) => {
+    btn.disabled = disabled;
+  });
+}
+
+/**
+ * Show the read-only TVOC air-quality reading for the Creator 5 Pro and hide its
+ * (non-functional) filtration controls. Other printers keep their filtration
+ * controls and hide the TVOC block.
+ */
+export function updateTvocDisplay(status: PrinterStatus | null): void {
+  const tvocInfo = $('tvoc-info');
+  const filtrationSection = $('filtration-section');
+  if (!tvocInfo && !filtrationSection) {
+    return;
+  }
+
+  const isCreator5Pro = Boolean(state.printerFeatures?.isCreator5Pro);
+
+  filtrationSection?.classList.toggle('hidden', isCreator5Pro);
+  tvocInfo?.classList.toggle('hidden', !isCreator5Pro);
+
+  if (isCreator5Pro) {
+    const tvoc = status?.tvocLevel;
+    setTextContent('tvoc-status', tvoc !== undefined && !isNaN(tvoc) ? `${Math.round(tvoc)}` : '--');
+  }
 }
 
 export function updateFiltrationStatus(mode?: 'external' | 'internal' | 'none'): void {
