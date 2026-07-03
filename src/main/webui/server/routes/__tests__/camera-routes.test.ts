@@ -143,11 +143,10 @@ describe('camera-routes', () => {
     );
     expect(body).toEqual({
       success: true,
-      wsUrl: expect.stringContaining('/api/ws?src=context-1-camera'),
+      wsUrl: '/api/camera/ws?src=context-1-camera',
       streamType: 'mjpeg',
       sourceType: 'oem',
       streamName: 'context-1-camera',
-      apiPort: 1984,
       mode: 'webrtc,mse,mjpeg',
       showCameraFps: true,
     });
@@ -248,11 +247,10 @@ describe('camera-routes', () => {
     );
     expect(body).toEqual({
       success: true,
-      wsUrl: expect.stringContaining('/api/ws?src=context-1-camera'),
+      wsUrl: '/api/camera/ws?src=context-1-camera',
       streamType: 'mjpeg',
       sourceType: 'intelligent-fallback',
       streamName: 'context-1-camera',
-      apiPort: 1984,
       mode: 'webrtc,mse,mjpeg',
       showCameraFps: true,
     });

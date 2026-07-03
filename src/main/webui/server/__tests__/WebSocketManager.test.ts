@@ -162,15 +162,13 @@ describe('WebSocketManager', () => {
 
   it('initializes the websocket server with auth verification and spoolman subscriptions', () => {
     const manager = WebSocketManager.getInstance();
-    const httpServer = {} as any;
 
-    manager.initialize(httpServer);
+    manager.initialize();
 
     expect(manager.isServerRunning()).toBe(true);
     expect(mockWebSocketServerInstances).toHaveLength(1);
     expect(mockWebSocketServerInstances[0].options).toMatchObject({
-      server: httpServer,
-      path: '/ws',
+      noServer: true,
       verifyClient: expect.any(Function),
     });
     expect(mockWebSocketServerInstances[0].on).toHaveBeenCalledWith('connection', expect.any(Function));
@@ -297,7 +295,7 @@ describe('WebSocketManager', () => {
 
   it('broadcasts printer and spoolman updates and targets token-specific clients', async () => {
     const manager = WebSocketManager.getInstance();
-    manager.initialize({} as any);
+    manager.initialize();
 
     const wsOne = createMockSocket();
     const wsTwo = createMockSocket();

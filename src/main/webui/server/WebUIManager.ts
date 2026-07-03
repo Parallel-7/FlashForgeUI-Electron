@@ -36,6 +36,7 @@ import { isHeadlessMode } from '../../utils/HeadlessDetection.js';
 import { WebUILoginRequestSchema } from '../schemas/web-api.schemas.js';
 import { getAuthManager } from './AuthManager.js';
 import { buildRouteDependencies, createAPIRoutes } from './api-routes.js';
+import { CameraStreamProxy } from './CameraStreamProxy.js';
 import {
   AuthenticatedRequest,
   createAuthMiddleware,
@@ -105,6 +106,9 @@ export class WebUIManager extends EventEmitter {
 
   // WebSocket manager
   private readonly webSocketManager = getWebSocketManager();
+
+  // Camera stream proxy (created per server start, torn down on stop)
+  private cameraStreamProxy: CameraStreamProxy | null = null;
 
   // RTSP stream service for RTSP camera streaming
 
@@ -371,8 +375,30 @@ export class WebUIManager extends EventEmitter {
       // Create HTTP server
       this.httpServer = http.createServer(this.expressApp!);
 
-      // Initialize WebSocket server
-      this.webSocketManager.initialize(this.httpServer);
+      // Initialize WebSocket server (noServer mode; upgrades dispatched below)
+      this.webSocketManager.initialize();
+
+      // Camera stream proxy tunnels authenticated clients to the local go2rtc API
+      this.cameraStreamProxy = new CameraStreamProxy();
+
+      // Single upgrade dispatcher shared by all WebSocket endpoints
+      this.httpServer.on('upgrade', (req, socket, head) => {
+        let pathname: string;
+        try {
+          pathname = new URL(req.url ?? '', 'http://localhost').pathname;
+        } catch {
+          socket.destroy();
+          return;
+        }
+
+        if (pathname === '/ws') {
+          this.webSocketManager.handleUpgrade(req, socket, head);
+        } else if (pathname === '/api/camera/ws') {
+          this.cameraStreamProxy?.handleUpgrade(req, socket, head);
+        } else {
+          socket.destroy();
+        }
+      });
 
       // Start listening
       await this.startListening();
@@ -407,8 +433,10 @@ export class WebUIManager extends EventEmitter {
         this.httpServer = null;
       }
 
-      // Shutdown WebSocket server
+      // Shutdown WebSocket server and camera proxy bridges
       this.webSocketManager.shutdown();
+      this.cameraStreamProxy?.shutdown();
+      this.cameraStreamProxy = null;
 
       this.expressApp = null;
       this.isRunning = false;

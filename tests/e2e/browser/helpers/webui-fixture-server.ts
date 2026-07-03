@@ -40,11 +40,11 @@ interface FixturePrinterFeatures {
 
 interface FixtureCameraConfig {
   success: boolean;
+  /** Relative WebSocket path on the WebUI server (authenticated camera proxy) */
   wsUrl?: string;
   streamType?: 'mjpeg' | 'rtsp';
   sourceType?: 'builtin' | 'custom';
   streamName?: string;
-  apiPort?: number;
   mode?: string;
   showCameraFps?: boolean;
   error?: string;

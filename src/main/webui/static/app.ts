@@ -177,7 +177,7 @@ export interface PrinterFeaturesResponse extends ApiResponse {
 }
 
 export interface CameraProxyConfigResponse extends ApiResponse {
-  /** go2rtc WebSocket URL for stream negotiation */
+  /** Relative WebSocket path on the WebUI server (authenticated camera proxy) */
   wsUrl?: string;
   /** Original stream type (before go2rtc conversion) */
   streamType?: 'mjpeg' | 'rtsp';
@@ -185,8 +185,6 @@ export interface CameraProxyConfigResponse extends ApiResponse {
   sourceType?: 'oem' | 'custom' | 'intelligent-fallback';
   /** Stream name in go2rtc */
   streamName?: string;
-  /** go2rtc API port */
-  apiPort?: number;
   /** Preferred playback modes (e.g., 'webrtc,mse,mjpeg') */
   mode?: string;
   /** Whether to show FPS overlay */

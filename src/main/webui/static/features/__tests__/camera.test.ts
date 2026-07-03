@@ -15,7 +15,11 @@
  */
 
 const mockApiRequest = jest.fn();
-const mockState = {
+const mockState: {
+  authRequired: boolean;
+  authToken: string | null;
+  printerFeatures: { hasCamera: boolean };
+} = {
   authRequired: false,
   authToken: null,
   printerFeatures: {
@@ -47,10 +51,10 @@ describe('webui camera feature', () => {
     teardownCameraStreamElements();
   });
 
-  it('creates a video-rtc element from the websocket camera configuration', async () => {
+  it('creates a video-rtc element from the proxied camera configuration', async () => {
     mockApiRequest.mockResolvedValue({
       success: true,
-      wsUrl: 'ws://localhost:1984/api/ws?src=context-1-camera',
+      wsUrl: '/api/camera/ws?src=context-1-camera',
       mode: 'webrtc,mse,mjpeg',
       showCameraFps: true,
     });
@@ -61,11 +65,29 @@ describe('webui camera feature', () => {
     const overlay = document.getElementById('camera-fps-overlay');
 
     expect(player).not.toBeNull();
-    expect((player as any).src).toBe('ws://localhost:1984/api/ws?src=context-1-camera');
+    expect((player as any).src).toBe('/api/camera/ws?src=context-1-camera');
     expect((player as any).mode).toBe('webrtc,mse,mjpeg');
     expect(document.getElementById('camera-placeholder')?.classList.contains('hidden')).toBe(true);
     expect(overlay?.classList.contains('hidden')).toBe(false);
     expect(overlay?.textContent).toBe('Streaming');
+  });
+
+  it('appends the auth token to the proxied websocket URL when authenticated', async () => {
+    mockState.authRequired = true;
+    mockState.authToken = 'secret token';
+    mockApiRequest.mockResolvedValue({
+      success: true,
+      wsUrl: '/api/camera/ws?src=context-1-camera',
+      mode: 'webrtc,mse,mjpeg',
+      showCameraFps: false,
+    });
+
+    await loadCameraStream();
+
+    const player = document.querySelector('video-rtc') as HTMLElement | null;
+
+    expect(player).not.toBeNull();
+    expect((player as any).src).toBe('/api/camera/ws?src=context-1-camera&token=secret%20token');
   });
 
   it('surfaces camera configuration errors when the server omits a websocket URL', async () => {

@@ -22,6 +22,7 @@ import type { PollingData } from '@shared/types/polling.js';
 import { PrinterStatusData, WebSocketCommand, WebSocketMessage } from '@shared/types/web-api.types.js';
 import { EventEmitter } from 'events';
 import * as http from 'http';
+import type { Duplex } from 'node:stream';
 import { RawData, WebSocket, WebSocketServer } from 'ws';
 import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
@@ -95,9 +96,12 @@ export class WebSocketManager extends EventEmitter {
   }
 
   /**
-   * Initialize WebSocket server with HTTP server
+   * Initialize WebSocket server.
+   * Runs in noServer mode; WebUIManager dispatches HTTP upgrade requests for
+   * the /ws path to handleUpgrade so multiple WebSocket endpoints can share
+   * the same HTTP server (e.g. the camera stream proxy).
    */
-  public initialize(httpServer: http.Server): void {
+  public initialize(): void {
     if (this.wss) {
       console.warn('WebSocket server already initialized');
       return;
@@ -105,8 +109,7 @@ export class WebSocketManager extends EventEmitter {
 
     // Create WebSocket server
     this.wss = new WebSocketServer({
-      server: httpServer,
-      path: '/ws',
+      noServer: true,
       verifyClient: this.verifyClient.bind(this),
     });
 
@@ -124,6 +127,21 @@ export class WebSocketManager extends EventEmitter {
 
     this.isRunning = true;
     console.log('WebSocket server initialized');
+  }
+
+  /**
+   * Complete an HTTP upgrade for the /ws endpoint.
+   * Called by WebUIManager's shared upgrade dispatcher.
+   */
+  public handleUpgrade(req: http.IncomingMessage, socket: Duplex, head: Buffer): void {
+    if (!this.wss) {
+      socket.destroy();
+      return;
+    }
+
+    this.wss.handleUpgrade(req, socket, head, (ws) => {
+      this.wss!.emit('connection', ws, req);
+    });
   }
 
   /**

@@ -168,12 +168,16 @@ http://<server-ip>:3000
 
 Default password is configured in your application settings (or use `--webui-password=` to override).
 
+### Remote Access / Port Forwarding
+
+Everything the WebUI needs - including live camera streams - is served over the single WebUI port (default `3000`). If you expose the WebUI outside your LAN, forward **only** that port. Camera video is tunneled through the authenticated WebUI server, so do **not** forward the internal go2rtc streaming port (`1984`); it has no authentication of its own and should never be reachable from outside your machine's network.
+
 ## Multi-Printer Mode
 
 When using `--all-saved-printers` or specifying multiple printers with `--printers=`, the WebUI provides:
 
 - **Printer Selector**: Dropdown to switch between printers
-- **Per-Printer Camera**: Each printer gets its own camera stream (ports 8181+)
+- **Per-Printer Camera**: Each printer gets its own camera stream, served through the WebUI port
 - **Independent Control**: Each printer maintains its own state and features
 
 ## Troubleshooting
