@@ -470,15 +470,6 @@ export class RendererGridController {
       return;
     }
 
-    const widgetElement = document.createElement('div');
-    widgetElement.className = 'grid-stack-item';
-    widgetElement.setAttribute('data-component-id', componentId);
-    widgetElement.setAttribute('gs-id', `widget-${componentId}`);
-
-    const contentContainer = document.createElement('div');
-    contentContainer.className = 'grid-stack-item-content';
-    widgetElement.appendChild(contentContainer);
-
     const config: GridStackWidgetConfig = widgetConfig || {
       componentId,
       w: componentDef.defaultSize?.w || 4,
@@ -489,62 +480,46 @@ export class RendererGridController {
       autoPosition: true,
     };
 
+    // Build the widget via the shared factory so the context-reload path gets
+    // the same DOM as initial load and palette-add — including the edit-mode
+    // remove button (`.grid-stack-item-remove`) that was missing here, causing
+    // the missing delete "X" on the second printer. See issue #77.
+    const widgetElement = this.createGridWidget(componentId);
+
     const addedWidget = gridStackManager.addWidget(config, widgetElement);
-
-    if (addedWidget) {
-      const component = this.createComponentInstance(componentId, contentContainer);
-
-      if (component) {
-        componentManager.registerComponent(component);
-        await component.initialize();
-
-        const lastPollingData = this.options.getLastPollingData();
-        if (lastPollingData) {
-          const updateData: ComponentUpdateData = {
-            pollingData: lastPollingData,
-            timestamp: new Date().toISOString(),
-            printerState: lastPollingData.printerStatus?.state,
-            connectionState: lastPollingData.isConnected,
-          };
-          if (configData) {
-            updateData.config = configData;
-          }
-          component.update(updateData);
-        }
-      }
+    if (!addedWidget) {
+      return;
     }
-  }
 
-  private createComponentInstance(componentId: string, container: HTMLElement) {
-    switch (componentId) {
-      case 'camera-preview':
-        return new CameraPreviewComponent(container);
-      case 'temperature-controls':
-        return new TemperatureControlsComponent(container);
-      case 'creator5-temperature':
-        return new Creator5TemperatureComponent(container);
-      case 'job-stats':
-        return new JobStatsComponent(container);
-      case 'printer-status':
-        return new PrinterStatusComponent(container);
-      case 'model-preview':
-        return new ModelPreviewComponent(container);
-      case 'additional-info':
-        return new AdditionalInfoComponent(container);
-      case 'log-panel': {
-        const logPanel = new LogPanelComponent(container);
-        setLogPanelComponent(logPanel);
-        return logPanel;
+    const contentContainer = addedWidget.querySelector('.grid-stack-item-content') as HTMLElement | null;
+    if (!contentContainer) {
+      return;
+    }
+
+    // Use the canonical factory so every component (incl. material-station and
+    // tool-temps) is instantiated. The stale duplicate factory below previously
+    // returned null for these and rendered blank tiles on context switch.
+    // See issue #77.
+    const component = this.createComponentForGrid(componentId, contentContainer);
+    if (!component) {
+      return;
+    }
+
+    componentManager.registerComponent(component);
+    await component.initialize();
+
+    const lastPollingData = this.options.getLastPollingData();
+    if (lastPollingData) {
+      const updateData: ComponentUpdateData = {
+        pollingData: lastPollingData,
+        timestamp: new Date().toISOString(),
+        printerState: lastPollingData.printerStatus?.state,
+        connectionState: lastPollingData.isConnected,
+      };
+      if (configData) {
+        updateData.config = configData;
       }
-      case 'controls-grid':
-        return new ControlsGridComponent(container);
-      case 'filtration-controls':
-        return new FiltrationControlsComponent(container);
-      case 'spoolman-tracker':
-        return new SpoolmanComponent(container);
-      default:
-        console.error(`[ShortcutButtons] Unknown component ID: ${componentId}`);
-        return null;
+      component.update(updateData);
     }
   }
 
