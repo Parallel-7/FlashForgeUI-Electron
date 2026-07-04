@@ -108,6 +108,8 @@ export interface AppConfig {
   readonly WebUITheme: ThemeColors;
   readonly desktopThemeProfiles: readonly ThemeProfile[];
   readonly webUIThemeProfiles: readonly ThemeProfile[];
+  readonly StartAtBoot: boolean;
+  readonly StartMinimized: boolean;
 }
 
 /**
@@ -147,6 +149,8 @@ export interface MutableAppConfig {
   WebUITheme: ThemeColors;
   desktopThemeProfiles: readonly ThemeProfile[];
   webUIThemeProfiles: readonly ThemeProfile[];
+  StartAtBoot: boolean;
+  StartMinimized: boolean;
 }
 
 /**
@@ -291,6 +295,8 @@ export const DEFAULT_CONFIG: AppConfig = {
   WebUITheme: DEFAULT_THEME,
   desktopThemeProfiles: [...SYSTEM_THEME_PROFILES],
   webUIThemeProfiles: [...SYSTEM_THEME_PROFILES],
+  StartAtBoot: false,
+  StartMinimized: false,
 } as const;
 
 /**

@@ -65,6 +65,7 @@ import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection.js';
 import { getHeadlessManager } from './managers/HeadlessManager.js';
 import { getLoadingManager } from './managers/LoadingManager.js';
 import { getAutoUpdateService } from './services/AutoUpdateService.js';
+import { getAutoLaunchService } from './services/AutoLaunchService.js';
 import {
   initializeSpoolmanIntegrationService,
   getSpoolmanIntegrationService,
@@ -108,11 +109,21 @@ if (!gotTheLock) {
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
+      // Surface hidden / --hidden-launched windows so a re-launch brings them into view.
+      mainWindow.show();
       mainWindow.focus();
       console.log('Second instance blocked - focused existing window');
     }
   });
 }
+
+// Synchronously expose packaged (production vs development) state to preloads. The renderer
+// preloads run sandboxed, where the main-process `app` module is unavailable, so they cannot
+// read `app.isPackaged` directly - they resolve it via this synchronous IPC channel instead.
+// Registered at module scope so it is available before any BrowserWindow loads its preload.
+ipcMain.on('app:is-packaged', (event) => {
+  event.returnValue = app.isPackaged;
+});
 
 // Note: app.setName() and app.setAppUserModelId() are now called in bootstrap.ts
 // to ensure they execute before any singleton initialization
@@ -328,6 +339,18 @@ const createMainWindow = async (): Promise<void> => {
   const windowManager = getWindowManager();
   const environmentService = getEnvironmentDetectionService();
   const staticFileManager = getStaticFileManager();
+  const configManager = getConfigManager();
+  const autoLaunchService = getAutoLaunchService();
+
+  // ConfigManager loads asynchronously in its constructor, so the saved config may not be
+  // populated yet when createMainWindow runs. Wait for it before reading StartMinimized so
+  // the hidden-start decision is accurate for every launch (not just OS auto-launched sessions).
+  if (!configManager.isConfigLoaded()) {
+    console.log('Config not yet loaded - waiting before resolving hidden-start state');
+    await new Promise<void>((resolve) => {
+      configManager.once('config-loaded', () => resolve());
+    });
+  }
 
   // Handle rounded UI compatibility before creating windows
   await handleRoundedUICompatibilityIssues();
@@ -348,10 +371,16 @@ const createMainWindow = async (): Promise<void> => {
   console.log(`Will load HTML from: ${htmlPath}`);
 
   // Get UI configuration for main window (only for transparency)
-  const configManager = getConfigManager();
   const config: Readonly<AppConfig> = configManager.getConfig();
   const roundedUI = config.RoundedUI;
   const useRoundedUI = roundedUI && isRoundedUISupported();
+
+  // Resolve the hidden-start (minimized) state for this launch. StartMinimized applies to
+  // every launch; wasLaunchedHidden() covers OS auto-launched sessions via the --hidden arg.
+  const startHidden = config.StartMinimized || autoLaunchService.wasLaunchedHidden();
+  console.log(
+    `[Window] Hidden-start decision: startHidden=${startHidden} (StartMinimized=${config.StartMinimized})`
+  );
 
   // Create the browser window - always frameless for custom titlebar
   const mainWindow = new BrowserWindow({
@@ -369,7 +398,7 @@ const createMainWindow = async (): Promise<void> => {
     },
     frame: false, // Always frameless for custom titlebar
     transparent: useRoundedUI, // Only transparent when rounded UI is enabled
-    show: true, // Show immediately when ready
+    show: !startHidden, // Hide immediately when starting hidden/minimized
   });
 
   // Hide traffic light buttons on macOS
@@ -379,6 +408,13 @@ const createMainWindow = async (): Promise<void> => {
 
   // Ensure background throttling is disabled for WebContents
   mainWindow.webContents.setBackgroundThrottling(false);
+
+  // Apply taskbar minimize for hidden starts on Windows/Linux without flashing the window.
+  // On macOS, the window was created with show:false and stays hidden until surfaced.
+  if (startHidden && (process.platform === 'win32' || process.platform === 'linux')) {
+    mainWindow.minimize();
+    console.log('[Window] Main window started minimized to taskbar');
+  }
 
   // Load the app using environment-aware path resolution
   try {
@@ -984,6 +1020,17 @@ const initializeApp = async (): Promise<void> => {
     console.error('Failed to initialize auto-update service:', autoUpdateError);
   }
 
+  // Initialize auto-launch (start-at-boot / start-minimized) service. Mirrors the
+  // AutoUpdateService init guard above; OS login-item registration is skipped in dev.
+  try {
+    const autoLaunchService = getAutoLaunchService();
+    autoLaunchService.initialize();
+    console.log('Auto-launch service initialized');
+  } catch (error: unknown) {
+    const autoLaunchError = toError(error);
+    console.error('Failed to initialize auto-launch service:', autoLaunchError);
+  }
+
   // Initialize multi-context notification coordinator
   const multiContextNotificationCoordinator = getMultiContextNotificationCoordinator();
   multiContextNotificationCoordinator.initialize();
@@ -1317,9 +1364,17 @@ void app
       await initializeApp();
 
       app.on('activate', () => {
-        // On macOS, re-create a window when the dock icon is clicked
-        if (BrowserWindow.getAllWindows().length === 0) {
+        // On macOS, clicking the dock icon should surface the app. Re-create the window only
+        // when none exists; otherwise show/focus the existing one. This matters for hidden
+        // starts (StartMinimized), where the window is created with show:false and would
+        // otherwise remain unreachable via the dock.
+        const existingWindow = getWindowManager().getMainWindow();
+        if (!existingWindow) {
           void createMainWindow();
+        } else {
+          if (existingWindow.isMinimized()) existingWindow.restore();
+          existingWindow.show();
+          existingWindow.focus();
         }
       });
     }

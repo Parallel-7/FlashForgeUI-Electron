@@ -17,6 +17,7 @@
  *
  * - window.windowControls: Generic window operations
  *   - minimize/close/closeGeneric: Window state management
+ * - window.IS_PACKAGED: Whether the app is running from a packaged (production) build
  */
 
 // src/ui/settings/settings-preload.ts
@@ -104,3 +105,8 @@ contextBridge.exposeInMainWorld('windowControls', {
   close: () => ipcRenderer.send('dialog-window-close'),
   closeGeneric: () => ipcRenderer.send('close-current-window'),
 });
+
+// Expose packaged state (production vs development) synchronously to the settings renderer.
+// Resolved via synchronous IPC because the sandboxed preload cannot access the main-process
+// `app` module (app.isPackaged) directly.
+contextBridge.exposeInMainWorld('IS_PACKAGED', ipcRenderer.sendSync('app:is-packaged'));

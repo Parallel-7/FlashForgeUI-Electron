@@ -115,6 +115,8 @@ const INPUT_TO_CONFIG_MAP: Record<string, SettingsConfigKey> = {
   'spoolman-enabled': 'SpoolmanEnabled',
   'spoolman-server-url': 'SpoolmanServerUrl',
   'spoolman-update-mode': 'SpoolmanUpdateMode',
+  'start-at-boot': 'StartAtBoot',
+  'start-minimized': 'StartMinimized',
 };
 
 class SettingsRenderer {
@@ -132,6 +134,14 @@ class SettingsRenderer {
   private hasUnsavedChanges: boolean = false;
   private autoDownloadSupported: boolean = true;
   private perPrinterControlsEnabled: boolean = true;
+  /**
+   * Whether the app is running from a packaged (production) build.
+   * Defaults to `true` so production users can toggle "Start with system".
+   * Whether the app is running from a packaged (production) build, exposed
+   * synchronously by the settings preload as window.IS_PACKAGED. Used to
+   * disable the "Start with system" checkbox in development builds.
+   */
+  private readonly isPackaged: boolean = window.IS_PACKAGED;
   private desktopThemeSection: DesktopThemeSection | null = null;
   private tabSection: TabSection | null = null;
   private dependencySection: InputDependencySection | null = null;
@@ -495,13 +505,28 @@ class SettingsRenderer {
       console.log(`[Settings] Updated global setting ${configKey}:`, value);
     }
 
+    // "Start minimized" only makes sense when the app launches at boot. When "Start with
+    // system" is turned off, clear StartMinimized so the app does not keep starting minimized
+    // via a stale value behind the now-disabled checkbox.
+    if (configKey === 'StartAtBoot' && value === false) {
+      const startMinimizedInput = this.inputs.get('start-minimized');
+      if (startMinimizedInput?.checked) {
+        startMinimizedInput.checked = false;
+      }
+      this.settings.global['StartMinimized'] = false;
+    }
+
     this.hasUnsavedChanges = true;
     this.updateSaveButtonState();
     this.updateInputStates();
   }
 
   private updateInputStates(): void {
-    this.dependencySection?.updateStates(this.perPrinterControlsEnabled, this.autoDownloadSupported);
+    this.dependencySection?.updateStates(
+      this.perPrinterControlsEnabled,
+      this.autoDownloadSupported,
+      this.isPackaged
+    );
   }
 
   private updateSaveButtonState(): void {

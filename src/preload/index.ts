@@ -517,6 +517,9 @@ const validReceiveChannels = [
 
 // Expose platform directly (no IPC needed) - available synchronously to renderer
 contextBridge.exposeInMainWorld('PLATFORM', process.platform);
+// Expose packaged state (production vs development). Resolved via synchronous IPC because the
+// sandboxed preload cannot access the main-process `app` module (app.isPackaged) directly.
+contextBridge.exposeInMainWorld('IS_PACKAGED', ipcRenderer.sendSync('app:is-packaged'));
 
 const configAPI: ConfigAPI = {
   get: async (): Promise<AppConfig> => {

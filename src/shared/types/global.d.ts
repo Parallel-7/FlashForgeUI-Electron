@@ -267,6 +267,7 @@ declare global {
     api: ElectronAPI;
     componentDialogAPI?: ComponentDialogAPI;
     PLATFORM: string;
+    IS_PACKAGED: boolean;
     windowControls?: WindowControls;
     logMessage?: (message: string) => void;
   }
