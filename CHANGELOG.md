@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5-alpha.7] - 2026-07-04
+
+### Start at Boot
+- New **Start with system** and **Start minimized** preferences (#75). The app can register itself as an OS login item (hidden on macOS, `--hidden` launch on Windows/Linux) and boot straight to the tray/minimized. Both toggles live in Settings and re-apply live when changed; dev builds honor the toggles without touching OS login-item settings.
+
 ## [1.0.5-alpha.6] - 2026-06-28
 
 ### Creator 5 / Creator 5 Pro
