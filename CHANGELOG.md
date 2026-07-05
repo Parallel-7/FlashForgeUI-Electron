@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5-alpha.8] - 2026-07-05
+
+### WebUI
+- The file dialog (Recent/Local) now shows a lazily loaded thumbnail preview for each job, with a "No Preview" fallback. Previews reuse the same on-disk thumbnail cache as the desktop job picker (`userData/Thumbnails/{serial}/`), so they are shared between the desktop and web UIs and appear instantly on re-open.
+- Fixed the TVOC air-quality reading in the file/filtration card: it now displays on every printer that reports it (e.g. the Adventurer 5M Pro) instead of only the Creator 5 Pro. The Creator 5 Pro now shows the filtration card with its controls disabled rather than hiding it entirely.
+
 ## [1.0.5-alpha.7] - 2026-07-04
 
 ### Start at Boot
