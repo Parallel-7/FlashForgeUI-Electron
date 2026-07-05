@@ -223,9 +223,11 @@ export function updateCreator5TemperatureCard(status: PrinterStatus | null): voi
 }
 
 /**
- * Show the read-only TVOC air-quality reading for the Creator 5 Pro and hide its
- * (non-functional) filtration controls. Other printers keep their filtration
- * controls and hide the TVOC block.
+ * Populate the read-only TVOC air-quality reading and gate the filtration
+ * controls. Every printer that mounts this card (filtration-capable printers and
+ * the Creator 5 Pro) shows both its filtration mode/controls and its TVOC level.
+ * The Creator 5 Pro reports TVOC but cannot switch filtration modes, so its
+ * control buttons are shown but disabled.
  */
 export function updateTvocDisplay(status: PrinterStatus | null): void {
   const tvocInfo = $('tvoc-info');
@@ -234,14 +236,22 @@ export function updateTvocDisplay(status: PrinterStatus | null): void {
     return;
   }
 
+  // The card itself is only mounted for filtration-capable printers or the
+  // Creator 5 Pro (see layout-theme component gating), so whenever it exists we
+  // show both the filtration controls and the TVOC readout together.
+  filtrationSection?.classList.remove('hidden');
+  tvocInfo?.classList.remove('hidden');
+
+  const tvoc = status?.tvocLevel;
+  setTextContent('tvoc-status', tvoc !== undefined && !isNaN(tvoc) ? `${Math.round(tvoc)}` : '--');
+
+  // The Creator 5 Pro exposes a TVOC sensor but no filtration-mode control.
   const isCreator5Pro = Boolean(state.printerFeatures?.isCreator5Pro);
-
-  filtrationSection?.classList.toggle('hidden', isCreator5Pro);
-  tvocInfo?.classList.toggle('hidden', !isCreator5Pro);
-
-  if (isCreator5Pro) {
-    const tvoc = status?.tvocLevel;
-    setTextContent('tvoc-status', tvoc !== undefined && !isNaN(tvoc) ? `${Math.round(tvoc)}` : '--');
+  for (const id of ['btn-external-filtration', 'btn-internal-filtration', 'btn-no-filtration']) {
+    const btn = $(id) as HTMLButtonElement | null;
+    if (btn) {
+      btn.disabled = isCreator5Pro;
+    }
   }
 }
 
