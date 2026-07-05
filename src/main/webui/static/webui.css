@@ -1501,8 +1501,9 @@ body {
   cursor: pointer;
   transition: background-color var(--transition-fast), transform var(--transition-fast);
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
   border: 1px solid var(--border-color);
 }
 
@@ -1515,6 +1516,47 @@ body {
   background-color: var(--accent-color);
   border-color: transparent;
   color: var(--text-on-primary);
+}
+
+.file-item-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.file-thumbnail {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--surface-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  font-size: 11px;
+  text-align: center;
+  color: var(--text-color-secondary);
+  padding: 4px;
+}
+
+.file-thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.file-thumbnail.loading {
+  color: var(--text-color-secondary);
+  opacity: 0.7;
+}
+
+.file-item.selected .file-thumbnail {
+  border-color: var(--text-on-primary);
 }
 
 .file-item-header {
