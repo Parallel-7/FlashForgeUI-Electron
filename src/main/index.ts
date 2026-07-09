@@ -49,6 +49,7 @@ import { getGo2rtcService } from './services/Go2rtcService.js';
 import { getWebUIManager } from './webui/server/WebUIManager.js';
 import { getEnvironmentDetectionService } from './services/EnvironmentDetectionService.js';
 import { getStaticFileManager } from './services/StaticFileManager.js';
+import { getFileManagerService } from './services/FileManagerService.js';
 import { initializeNotificationSystem, disposeNotificationSystem } from './services/notifications/index.js';
 import { getThumbnailCacheService } from './services/ThumbnailCacheService.js';
 import { injectUIStyleVariables } from './utils/CSSVariables.js';
@@ -698,6 +699,17 @@ const setupPrinterContextEventForwarding = (): void => {
     console.log(`[Main] Cleaning up context ${contextId}`);
 
     console.log(`[Main] Context ${contextId} cleanup delegated to context lifecycle services`);
+
+    // Release the pooled SFTP session for this context (file-manager:<contextId>)
+    // so it does not linger until the SSHConnectionManager's stale-cleanup
+    // timer reaps it. Fire-and-forget: a disconnect failure must never break
+    // context cleanup.
+    console.log(`[Main] Releasing file manager session for ${contextId}`);
+    getFileManagerService()
+      .disconnect(contextId)
+      .catch((error) => {
+        console.warn(`[Main] File manager SFTP cleanup failed for ${contextId}:`, error);
+      });
 
     // Forward to renderer
     const mainWindow = windowManager.getMainWindow();

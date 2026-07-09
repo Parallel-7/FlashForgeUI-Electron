@@ -172,7 +172,7 @@ Both the file manager and the calibration assistant operate over root SSH/SFTP p
 - `src/renderer/src/ui/settings/sections/SSHSection.ts` - Settings → SSH tab (desktop-only editing; WebUI currently has no SSH-edit UI)
 - `src/shared/types/ssh-settings.ts` - SSH settings types + defaults
 - `src/main/services/FileManagerService.ts` - SFTP listing/delete/rename/thumbnails (pooled via SSHConnectionManager under `file-manager:<contextId>` keys, separate from calibration keys)
-- `src/main/ipc/handlers/file-manager-handlers.ts` - `file-manager:*` IPC surface (always operates on the active context)
+- `src/main/ipc/handlers/file-manager-handlers.ts` - `file-manager:*` IPC surface (pinned to the context active when the dialog opened)
 - `src/renderer/src/ui/file-manager/*` - dialog HTML/CSS/preload/renderer (Internal + USB tabs, multi-select, confirm overlays)
 - `src/shared/types/file-manager.ts` - shared IPC payload types; opened only via the topbar shortcut (`availability: 'shortcut'` registry entry)
 
