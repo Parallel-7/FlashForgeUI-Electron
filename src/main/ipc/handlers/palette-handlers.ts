@@ -48,7 +48,7 @@
  * @module ipc/handlers/palette-handlers
  */
 
-import { COMPONENT_REGISTRY_DATA } from '@shared/component-definitions.js';
+import { getGridComponentDefinitions } from '@shared/component-definitions.js';
 import { ipcMain } from 'electron';
 import {
   closeComponentPaletteWindow,
@@ -95,8 +95,9 @@ export function registerPaletteHandlers(): void {
     console.log('[Palette Handlers] Fetching available components from shared registry');
 
     try {
-      // Map to the format expected by palette
-      const components: ComponentDefinition[] = COMPONENT_REGISTRY_DATA.map((comp) => ({
+      // Map to the format expected by palette (grid-capable components only;
+      // shortcut-only entries like the file manager never appear here)
+      const components: ComponentDefinition[] = getGridComponentDefinitions().map((comp) => ({
         id: comp.id,
         name: comp.name,
         icon: comp.icon,

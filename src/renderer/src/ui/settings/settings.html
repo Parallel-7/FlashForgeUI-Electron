@@ -39,6 +39,9 @@
             <button class="settings-tab-button" role="tab" id="tab-button-advanced" data-tab="advanced" aria-controls="tab-panel-advanced" aria-selected="false" tabindex="-1">
                 Advanced
             </button>
+            <button class="settings-tab-button" role="tab" id="tab-button-ssh" data-tab="ssh" aria-controls="tab-panel-ssh" aria-selected="false" tabindex="-1">
+                SSH
+            </button>
             <button class="settings-tab-button" role="tab" id="tab-button-printer" data-tab="printer" aria-controls="tab-panel-printer" aria-selected="false" tabindex="-1">
                 Printer Settings
             </button>
@@ -383,6 +386,52 @@
                     </label>
                     <div class="settings-info-text">
                         Open the app minimized to the taskbar instead of showing the window.
+                    </div>
+                </div>
+            </section>
+
+            <section id="tab-panel-ssh" class="tab-panel" role="tabpanel" aria-labelledby="tab-button-ssh" hidden>
+                <h3 class="tab-panel-title">SSH Access</h3>
+                <div id="ssh-settings-empty-state" class="settings-info-text" hidden>
+                    Connect to a printer to configure its SSH access.
+                </div>
+
+                <div id="ssh-settings-content">
+                    <div class="settings-info-text">
+                        SSH credentials for the active printer, used by the File Manager and the Calibration
+                        assistant. The defaults match the FlashForge easy-SSH setup (user <code>root</code>,
+                        password <code>flashforge</code>) — only change them if you configured your printer
+                        differently.
+                    </div>
+
+                    <div class="settings-section">
+                        <div class="input-group">
+                            <label for="ssh-settings-username">Username:</label>
+                            <input type="text" id="ssh-settings-username" class="settings-input" placeholder="root" autocomplete="off">
+                        </div>
+                        <div class="input-group">
+                            <label for="ssh-settings-password">Password:</label>
+                            <input type="password" id="ssh-settings-password" class="settings-input" placeholder="flashforge" autocomplete="new-password">
+                        </div>
+                        <div class="input-group">
+                            <label for="ssh-settings-port">Port:</label>
+                            <input type="number" id="ssh-settings-port" class="settings-input" min="1" max="65535" placeholder="22">
+                        </div>
+                        <div class="input-group">
+                            <label for="ssh-settings-key-path">Private Key File (optional):</label>
+                            <div class="input-with-button">
+                                <input type="text" id="ssh-settings-key-path" class="settings-input" placeholder="Password authentication">
+                                <button type="button" id="btn-ssh-settings-key-browse" class="dialog-button">Browse</button>
+                            </div>
+                        </div>
+                        <div class="settings-info-text">
+                            When a private key is set it is used instead of the password.
+                        </div>
+                    </div>
+
+                    <div class="settings-section">
+                        <button type="button" id="btn-ssh-settings-reset" class="dialog-button">Reset to Defaults</button>
+                        <span id="ssh-settings-status" class="settings-info-text" aria-live="polite"></span>
                     </div>
                 </div>
             </section>

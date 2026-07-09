@@ -13,14 +13,32 @@ import type {
   CalibrationHistoryEntry,
   CalibrationSettings,
   MeshData,
-  SSHConnectionConfig,
   SSHConnectionStatus,
   TransferResult,
   WorkflowData,
 } from '../../../shared/types/calibration';
 import { getCalibrationManager } from '../../managers/CalibrationManager';
+import { getPrinterContextManager } from '../../managers/PrinterContextManager';
 import type { CommandResult } from '../../services/calibration/ssh';
 import { getSSHConnectionManager, SCPFileTransfer } from '../../services/calibration/ssh';
+import { getSSHSettingsService } from '../../services/SSHSettingsService';
+
+/**
+ * Resolve a calibration context id to the printer's serial number and IP.
+ * Resolves only the exact context id; returns null when the id no longer matches
+ * (context ids are per-session while SSH settings are stored per serial).
+ */
+function resolveSshTarget(contextId: string): { serialNumber: string; host: string } | null {
+  const contextManager = getPrinterContextManager();
+  const context = contextManager.getContext(contextId);
+  if (!context) {
+    return null;
+  }
+  return {
+    serialNumber: context.printerDetails.SerialNumber,
+    host: context.printerDetails.IPAddress,
+  };
+}
 
 /**
  * Register all calibration IPC handlers.
@@ -307,23 +325,17 @@ export function registerCalibrationHandlers(): void {
   const scpTransfer = new SCPFileTransfer(sshManager);
 
   /**
-   * Connect to a printer via SSH.
+   * Connect to a printer via SSH using the centralized per-printer SSH
+   * settings (Settings -> SSH; defaults match the flashforge-easyssh script).
    */
-  ipcMain.handle(
-    'calibration:ssh-connect',
-    async (_event, contextId: string, config: SSHConnectionConfig): Promise<void> => {
-      const resolvedConfig: SSHConnectionConfig = { ...config };
-      if (resolvedConfig.privateKey && !resolvedConfig.privateKey.includes('BEGIN')) {
-        try {
-          const keyContent = await fs.readFile(resolvedConfig.privateKey, 'utf-8');
-          resolvedConfig.privateKey = keyContent;
-        } catch {
-          // Leave as-is if file read fails (could already be key content)
-        }
-      }
-      await sshManager.connect(contextId, resolvedConfig);
+  ipcMain.handle('calibration:ssh-connect', async (_event, contextId: string): Promise<void> => {
+    const target = resolveSshTarget(contextId);
+    if (!target || !target.host) {
+      throw new Error('No connected printer to resolve SSH settings for');
     }
-  );
+    const config = await getSSHSettingsService().buildConnectionConfig(target.serialNumber, target.host);
+    await sshManager.connect(contextId, config);
+  });
 
   /**
    * Disconnect SSH connection.
@@ -481,19 +493,25 @@ export function registerCalibrationHandlers(): void {
   // SSH Settings Persistence
   // ============================================================================
 
+  // Credentials live in the centralized per-printer SSH settings store
+  // (SSHSettingsService, keyed by serial). Only the calibration-specific
+  // remote config path stays in the calibration data store.
+
   ipcMain.handle('calibration:get-ssh-config', async (_event, contextId: string) => {
     const data = await manager.getPrinterData(contextId);
-    if (!data) {
-      return null;
+    const target = resolveSshTarget(contextId);
+    if (!target) {
+      return { configPath: data.sshConfigPath };
     }
+
+    const ssh = await getSSHSettingsService().getSettings(target.serialNumber);
     return {
-      host: data.sshHost,
-      port: data.sshPort,
-      username: data.sshUsername,
-      password: data.sshPassword,
-      keyPath: data.sshKeyPath,
+      host: target.host,
+      port: ssh.port,
+      username: ssh.username,
+      keyPath: ssh.keyPath,
+      isCustom: ssh.isCustom,
       configPath: data.sshConfigPath,
-      saveCredentials: data.sshSaveCredentials,
     };
   });
 
@@ -503,43 +521,47 @@ export function registerCalibrationHandlers(): void {
       _event,
       contextId: string,
       config: {
-        host?: string;
         port?: number;
         username?: string;
         password?: string;
         keyPath?: string;
         configPath?: string;
-        saveCredentials?: boolean;
       }
     ) => {
-      const data = await manager.getPrinterData(contextId);
-      const updated = {
-        ...data,
-        sshHost: config.host,
-        sshPort: config.port,
-        sshUsername: config.username,
-        sshPassword: config.password,
-        sshKeyPath: config.keyPath,
-        sshConfigPath: config.configPath,
-        sshSaveCredentials: config.saveCredentials ?? true,
-      };
-      await manager.savePrinterData(contextId, updated);
+      const target = resolveSshTarget(contextId);
+      if (
+        target &&
+        (config.username !== undefined ||
+          config.password !== undefined ||
+          config.port !== undefined ||
+          config.keyPath !== undefined)
+      ) {
+        await getSSHSettingsService().updateSettings(target.serialNumber, {
+          username: config.username,
+          password: config.password,
+          port: config.port,
+          keyPath: config.keyPath,
+        });
+      }
+
+      if (config.configPath !== undefined) {
+        const data = await manager.getPrinterData(contextId);
+        await manager.savePrinterData(contextId, { ...data, sshConfigPath: config.configPath || undefined });
+      }
     }
   );
 
   ipcMain.handle('calibration:clear-ssh-config', async (_event, contextId: string) => {
+    const target = resolveSshTarget(contextId);
+    if (target) {
+      await getSSHSettingsService().resetSettings(target.serialNumber);
+    }
+
     const data = await manager.getPrinterData(contextId);
-    const updated = {
+    await manager.savePrinterData(contextId, {
       ...data,
-      sshHost: undefined,
-      sshPort: undefined,
-      sshUsername: undefined,
-      sshPassword: undefined,
-      sshKeyPath: undefined,
       sshConfigPath: undefined,
-      sshSaveCredentials: false,
-    };
-    await manager.savePrinterData(contextId, updated);
+    });
   });
 
   /**

@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### File Manager
+- New SFTP-based file manager (topbar shortcut) for the Adventurer 5M / 5M Pro / AD5X. Browse, multi-select delete, and rename gcode/3MF files on internal storage and USB, with thumbnails resolved through the local cache, printer-side cache PNGs, and ranged-read `.3mf` extraction (no full-file download). USB presence is probed via `/proc/mounts`.
+
+### SSH Settings
+- Centralized per-printer SSH credentials (Settings -> SSH), keyed by serial and encrypted at rest. Defaults assume the sibling [FlashForge-EasySSH](https://github.com/Parallel-7/FlashForge-EasySSH) USB provisioning (`root`/`flashforge`, port 22); the file manager and calibration assistant now share this one store. The old per-calibration credential fields were removed (old data is ignored).
+
+### Reboot
+- New **Reboot** action in the hamburger menu for the Adventurer 5M / 5M Pro / AD5X, performed over SSH. A full-screen overlay tracks the whole lifecycle (rebooting -> waiting -> reconnecting services -> back online) and proactively restarts the camera stream, so the printer reconnects seamlessly without leaving the tab in an error state.
+
 ## [1.0.5-alpha.8] - 2026-07-05
 
 ### WebUI

@@ -98,6 +98,7 @@ export enum WindowType {
   UPDATE_DIALOG = 'updateDialog',
   ABOUT_DIALOG = 'aboutDialog',
   CALIBRATION_DIALOG = 'calibrationDialog',
+  FILE_MANAGER = 'fileManager',
 }
 
 class WindowManager {
@@ -412,6 +413,19 @@ class WindowManager {
 
   public hasCalibrationDialogWindow(): boolean {
     return this.hasWindow(WindowType.CALIBRATION_DIALOG);
+  }
+
+  // Convenience methods for file manager window access
+  public getFileManagerWindow(): BrowserWindow | null {
+    return this.getWindow(WindowType.FILE_MANAGER);
+  }
+
+  public setFileManagerWindow(window: BrowserWindow | null): void {
+    this.setWindow(WindowType.FILE_MANAGER, window);
+  }
+
+  public hasFileManagerWindow(): boolean {
+    return this.hasWindow(WindowType.FILE_MANAGER);
   }
 
   /**

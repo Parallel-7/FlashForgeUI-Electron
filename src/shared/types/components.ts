@@ -17,6 +17,16 @@ export interface ComponentSize {
 }
 
 /**
+ * Where a registered component can be surfaced.
+ *
+ * - 'grid': only available as a dashboard grid widget (palette / saved layouts)
+ * - 'shortcut': only available as a topbar shortcut button (never appears in the
+ *   grid palette and is never instantiated as a grid widget)
+ * - 'both': available in the grid and as a topbar shortcut (default)
+ */
+export type ComponentAvailability = 'grid' | 'shortcut' | 'both';
+
+/**
  * Component metadata definition for registry
  * Provides information about available components
  */
@@ -50,4 +60,18 @@ export interface ComponentDefinition {
 
   /** Whether component supports multiple instances */
   readonly singleton?: boolean;
+
+  /**
+   * Where this component can be surfaced (grid palette, topbar shortcuts, or both).
+   * Defaults to 'both' when omitted.
+   */
+  readonly availability?: ComponentAvailability;
+
+  /**
+   * For shortcut-capable entries that open a dedicated window instead of the
+   * generic component dialog, the IPC channel the topbar shortcut button sends
+   * when clicked (e.g. 'file-manager:open'). When omitted, shortcut clicks open
+   * the component in the shared component dialog.
+   */
+  readonly shortcutOpenChannel?: string;
 }

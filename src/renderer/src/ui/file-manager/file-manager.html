@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8" />
+    <title>File Manager</title>
+    <link rel="stylesheet" href="file-manager.css">
+</head>
+
+<body>
+<div class="dialog-container dialog-container--full">
+    <div class="dialog-header">
+        <div class="dialog-title" id="dialog-title">File Manager</div>
+        <button class="dialog-close" id="btn-close" aria-label="Close">
+            <i data-lucide="x" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <div class="dialog-content">
+        <div class="fm-tabs" id="fm-tabs">
+            <button class="fm-tab active" id="tab-internal" data-storage="internal">
+                <i data-lucide="hard-drive" aria-hidden="true"></i>
+                <span>Internal</span>
+            </button>
+            <button class="fm-tab hidden" id="tab-usb" data-storage="usb">
+                <i data-lucide="usb" aria-hidden="true"></i>
+                <span>USB</span>
+            </button>
+            <div class="fm-tabs-spacer"></div>
+            <button class="fm-toolbar-btn" id="btn-refresh" title="Refresh">
+                <i data-lucide="refresh-cw" aria-hidden="true"></i>
+            </button>
+        </div>
+
+        <div class="fm-toolbar" id="fm-toolbar">
+            <div class="fm-breadcrumb hidden" id="fm-breadcrumb"></div>
+            <div class="fm-toolbar-actions">
+                <button class="fm-toolbar-btn" id="btn-select-all" title="Select all files">
+                    <i data-lucide="check-square" aria-hidden="true"></i>
+                    <span>Select All</span>
+                </button>
+                <button class="fm-toolbar-btn hidden" id="btn-clear-selection" title="Clear selection">
+                    <i data-lucide="square" aria-hidden="true"></i>
+                    <span>Clear</span>
+                </button>
+                <button class="fm-toolbar-btn danger hidden" id="btn-delete-selected" title="Delete selected files">
+                    <i data-lucide="trash-2" aria-hidden="true"></i>
+                    <span id="delete-selected-label">Delete Selected</span>
+                </button>
+            </div>
+        </div>
+
+        <div class="fm-body">
+            <div class="fm-state" id="fm-loading">
+                <div class="loading-spinner"></div>
+                <div class="fm-state-text">Connecting to printer&hellip;</div>
+            </div>
+
+            <div class="fm-state hidden" id="fm-message">
+                <i data-lucide="alert-triangle" aria-hidden="true" class="fm-state-icon"></i>
+                <div class="fm-state-text" id="fm-message-text"></div>
+                <button class="fm-toolbar-btn" id="btn-retry">
+                    <i data-lucide="refresh-cw" aria-hidden="true"></i>
+                    <span>Retry</span>
+                </button>
+            </div>
+
+            <div class="fm-grid hidden" id="fm-grid"></div>
+        </div>
+    </div>
+
+    <div class="dialog-footer">
+        <div class="fm-summary" id="fm-summary"></div>
+        <div class="action-buttons">
+            <button class="cancel" id="btn-close-footer">Close</button>
+        </div>
+    </div>
+
+    <!-- Confirmation overlay (delete) -->
+    <div class="fm-overlay hidden" id="confirm-overlay">
+        <div class="fm-overlay-panel">
+            <div class="fm-overlay-title">
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+                <span id="confirm-title">Delete file?</span>
+            </div>
+            <div class="fm-overlay-body" id="confirm-body"></div>
+            <div class="fm-overlay-actions">
+                <button class="cancel" id="btn-confirm-cancel">Cancel</button>
+                <button class="danger" id="btn-confirm-delete">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rename overlay -->
+    <div class="fm-overlay hidden" id="rename-overlay">
+        <div class="fm-overlay-panel">
+            <div class="fm-overlay-title">
+                <i data-lucide="pencil" aria-hidden="true"></i>
+                <span>Rename file</span>
+            </div>
+            <div class="fm-overlay-body">
+                <div class="fm-rename-row">
+                    <input type="text" id="rename-input" spellcheck="false" autocomplete="off" />
+                    <span class="fm-rename-ext" id="rename-ext"></span>
+                </div>
+                <div class="fm-rename-error hidden" id="rename-error"></div>
+            </div>
+            <div class="fm-overlay-actions">
+                <button class="cancel" id="btn-rename-cancel">Cancel</button>
+                <button id="btn-rename-confirm">Rename</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="./file-manager-renderer.ts"></script>
+</body>
+</html>

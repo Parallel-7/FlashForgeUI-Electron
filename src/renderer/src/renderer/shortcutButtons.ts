@@ -5,8 +5,9 @@
  * and grid reloads when pins change.
  */
 
+import { getShortcutComponentDefinitions } from '@shared/component-definitions.js';
 import { componentManager } from '../ui/components/index.js';
-import { getAllComponents, getComponentDefinition } from '../ui/gridstack/ComponentRegistry.js';
+import { getComponentDefinition } from '../ui/gridstack/ComponentRegistry.js';
 import { gridStackManager } from '../ui/gridstack/GridStackManager.js';
 import { DEFAULT_SHORTCUT_CONFIG, type ShortcutButtonConfig } from '../ui/shortcuts/types.js';
 import type { RendererGridController } from './gridController.js';
@@ -74,9 +75,19 @@ export class ShortcutButtonController {
         btn.addEventListener('click', () => {
           const componentId = btn.getAttribute('data-component-id');
           console.log(`[ShortcutButtons] Slot ${i} clicked, component: ${componentId}`);
-          if (componentId && window.api?.send) {
-            window.api.send('component-dialog:open', componentId);
+          if (!componentId || !window.api?.send) {
+            return;
           }
+
+          // Shortcut-only entries (e.g. the file manager) open a dedicated
+          // window via their own IPC channel instead of the component dialog.
+          const definition = getComponentDefinition(componentId);
+          if (definition?.shortcutOpenChannel) {
+            window.api.send(definition.shortcutOpenChannel);
+            return;
+          }
+
+          window.api.send('component-dialog:open', componentId);
         });
       }
     }
@@ -146,7 +157,9 @@ export class ShortcutButtonController {
 
     const activeGridComponents = this.getActiveGridComponentIds();
 
-    return getAllComponents()
+    // Only shortcut-capable definitions are offered; grid-only components
+    // cannot be pinned to the topbar.
+    return getShortcutComponentDefinitions()
       .filter((component) => {
         if (pinnedIds.has(component.id)) {
           return true;

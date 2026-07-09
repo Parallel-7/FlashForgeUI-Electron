@@ -28,6 +28,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { CameraProxyStatus } from '@shared/types/camera/camera.types.js';
 import { isValidConfig } from '@shared/types/config.js';
 import type { AppConfig, ThemeColors } from '@shared/types/config.js';
+import type { RebootResult, RebootStatusPayload } from '@shared/types/printer-power.js';
 import type {
   ISettingsAPI,
   IAutoUpdateAPI,
@@ -84,6 +85,8 @@ interface ElectronAPI {
   printerSettings: PrinterSettingsAPI;
   spoolman: SpoolmanAPI;
   material: MaterialAPI;
+  rebootPrinter: (contextId: string) => Promise<RebootResult>;
+  onRebootStatus: (callback: (payload: RebootStatusPayload) => void) => EventDisposer;
 }
 
 // Result of an AD5X material-slot configuration attempt
@@ -463,6 +466,7 @@ const validSendChannels = [
   'palette:toggle-edit-mode',
   'shortcut-config:open',
   'component-dialog:open',
+  'file-manager:open',
 ];
 
 const validReceiveChannels = [
@@ -488,6 +492,7 @@ const validReceiveChannels = [
   'loading-message-updated',
   'loading-cancelled',
   'polling-update',
+  'printer:reboot-status',
   'platform-info',
   'printer-context-created',
   'printer-context-switched',
@@ -666,6 +671,7 @@ const electronAPI: ElectronAPI = {
       'spoolman:get-status',
       'material:configure-slot',
       'material:set-slot',
+      'printer:reboot',
       'debug:get-state',
       'e2e:discord:send-current-status',
       'e2e:discord:send-print-complete',
@@ -900,6 +906,18 @@ const electronAPI: ElectronAPI = {
       }
       return { success: false, error: 'Invalid response from material:set-slot' };
     },
+  },
+
+  rebootPrinter: async (contextId: string): Promise<RebootResult> => {
+    const result: unknown = await ipcRenderer.invoke('printer:reboot', contextId);
+    if (isRecord(result) && isBoolean(result.success)) {
+      return { success: result.success };
+    }
+    return { success: false };
+  },
+
+  onRebootStatus: (callback: (payload: RebootStatusPayload) => void): EventDisposer => {
+    return registerPayloadEventListener<RebootStatusPayload>('printer:reboot-status', callback);
   },
 };
 

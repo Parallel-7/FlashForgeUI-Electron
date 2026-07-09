@@ -357,6 +357,62 @@ body {
   background-color: var(--border-color);
 }
 
+/* In-dropdown confirm panel (e.g. Reboot Printer confirmation). */
+.menu-confirm-panel {
+  margin: 4px 8px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  background-color: var(--surface-elevated, var(--tab-bg));
+  border: 1px solid var(--border-color-light, var(--border-color));
+}
+
+.menu-confirm-panel.hidden {
+  display: none;
+}
+
+.menu-confirm-message {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--text-color);
+}
+
+.menu-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.menu-confirm-btn {
+  min-width: 64px;
+  padding: 6px 12px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  border: 1px solid var(--border-color-light, var(--border-color));
+  transition: background-color var(--transition-fast);
+  -webkit-app-region: no-drag;
+}
+
+.menu-confirm-cancel {
+  background-color: transparent;
+  color: var(--text-color);
+}
+
+.menu-confirm-cancel:hover {
+  background-color: var(--tab-bg-hover);
+}
+
+.menu-confirm-danger {
+  background-color: var(--error-color);
+  color: var(--button-text-color, #fff);
+  border-color: transparent;
+}
+
+.menu-confirm-danger:hover {
+  background-color: color-mix(in srgb, var(--error-color) 85%, white);
+}
+
 /* Shortcut Buttons */
 .shortcut-button {
   display: none;
@@ -851,6 +907,49 @@ body.platform-darwin .traffic-lights {
 
 .loading-cancel-btn:hover {
   background-color: color-mix(in srgb, var(--error-color) 85%, white);
+}
+
+/* Reboot overlay action buttons (Retry / Close). Shown only while the reboot
+   lifecycle owns the loading overlay; reuse theme variables, no hardcoding. */
+.loading-reboot-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.loading-reboot-actions.hidden {
+  display: none;
+}
+
+.loading-action-btn {
+  min-width: 96px;
+  padding: 8px 16px;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  -webkit-app-region: no-drag;
+}
+
+.loading-action-btn#loading-retry-btn {
+  background-color: var(--theme-primary, var(--accent-color));
+  color: var(--button-text-color, #fff);
+  border: 1px solid transparent;
+}
+
+.loading-action-btn#loading-retry-btn:hover {
+  background-color: var(--theme-primary-hover, var(--theme-primary, var(--accent-color)));
+}
+
+.loading-action-btn#loading-close-btn {
+  background-color: transparent;
+  color: var(--text-color);
+  border: 1px solid var(--border-color);
+}
+
+.loading-action-btn#loading-close-btn:hover {
+  background-color: var(--tab-bg-hover);
 }
 
 .loading-success-icon,

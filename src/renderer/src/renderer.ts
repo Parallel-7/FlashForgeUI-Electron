@@ -137,6 +137,39 @@ let activeContextId: string | null = null;
 /** Current active printer serial number (stable identifier for layouts/shortcuts) */
 let activeContextSerial: string | null = null;
 
+/**
+ * Reboot availability state for the active context (modelType + connection
+ * status + display name). Mirrors the main-process guard; both must stay in
+ * sync when adding reboot-capable models.
+ */
+interface ActiveRebootInfo {
+  modelType?: string;
+  name?: string;
+  status?: string;
+}
+
+let activeRebootInfo: ActiveRebootInfo = {};
+
+/** Whether a model type supports remote reboot (5M / 5M Pro / AD5X only). */
+function isRebootSupportedModel(modelType: string | undefined): boolean {
+  return (
+    modelType === 'adventurer-5m' ||
+    modelType === 'adventurer-5m-pro' ||
+    modelType === 'ad5x'
+  );
+}
+
+/** Recompute Reboot menu item visibility from the active context state. */
+function updateRebootAvailability(): void {
+  const supported = isRebootSupportedModel(activeRebootInfo.modelType);
+  const connected = activeRebootInfo.status === 'connected';
+  shellController.setRebootAvailable(
+    supported && connected,
+    connected ? activeContextId : null,
+    activeRebootInfo.name ?? null
+  );
+}
+
 /** Track disposers for config-related IPC listeners */
 const configEventDisposers: Array<() => void> = [];
 
@@ -188,6 +221,10 @@ function handleAllContextsRemoved(): void {
   activeContextId = null;
   activeContextSerial = null;
   editModeController.setActiveSerial(null);
+
+  // No active context: hide the Reboot item.
+  activeRebootInfo = {};
+  updateRebootAvailability();
 
   if (gridController.areComponentsInitialized()) {
     gridController.clearAllComponents();
@@ -299,6 +336,14 @@ async function initializePrinterTabs(): Promise<void> {
         const serialLabel = activeContextSerial ?? 'default';
         logDebug(`[PerPrinter] Switching UI to context ${event.contextId} (serial: ${serialLabel})`);
 
+        // Track reboot availability for the newly active context.
+        activeRebootInfo = {
+          modelType: event.contextInfo?.modelType,
+          name: event.contextInfo?.name,
+          status: event.contextInfo?.status,
+        };
+        updateRebootAvailability();
+
         // One-time tool-changer layout migration (Creator 5 series): swaps the
         // generic temperature card + tool-temps for the unified creator5-temperature
         // card and persists it. Gated on the authoritative PID-derived model type.
@@ -347,6 +392,16 @@ async function initializePrinterTabs(): Promise<void> {
       logDebug('Renderer received context-updated event:', event);
       if (printerTabsComponent) {
         printerTabsComponent.updateTab(event.contextId, event.updates);
+      }
+
+      // Keep reboot availability in sync with the active context's status/model.
+      if (event.contextId === activeContextId) {
+        activeRebootInfo = {
+          modelType: event.updates.modelType ?? activeRebootInfo.modelType,
+          name: event.updates.name ?? activeRebootInfo.name,
+          status: event.updates.status ?? activeRebootInfo.status,
+        };
+        updateRebootAvailability();
       }
     });
 
@@ -456,6 +511,7 @@ function initializeStateAndEventListeners(): void {
         printerName: string;
         modelType: string;
         backendType?: string;
+        contextId?: string;
         timestamp: string;
       };
       logDebug('Backend initialized:', data);
@@ -465,6 +521,17 @@ function initializeStateAndEventListeners(): void {
       if (isLegacyBackendType(backendType)) {
         logDebug('[LegacyUI] Legacy printer detected:', backendType);
         logMessage('Legacy printer detected - some features may be unavailable');
+      }
+
+      // A ready backend means the active context is connected; confirm its
+      // model/name so the Reboot item can surface for supported printers.
+      if (!data.contextId || data.contextId === activeContextId) {
+        activeRebootInfo = {
+          modelType: data.modelType && data.modelType !== 'unknown' ? data.modelType : activeRebootInfo.modelType,
+          name: data.printerName ?? activeRebootInfo.name,
+          status: 'connected',
+        };
+        updateRebootAvailability();
       }
     });
 
@@ -612,6 +679,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       'x-circle',
       'pencil',
       'rotate-ccw',
+      'rotate-cw',
       'plug'
     )
   );

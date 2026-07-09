@@ -61,6 +61,7 @@
  * @exports createJobPickerWindow - Create job picker window for file selection
  * @exports createPrinterSelectionWindow - Create printer selection window for configuration
  * @exports createSendCommandsWindow - Create send commands window for direct printer control
+ * @exports createFileManagerWindow - Create SFTP file manager window for printer storage
  */
 
 import { getMainProcessPollingCoordinator } from '../../services/MainProcessPollingCoordinator.js';
@@ -258,4 +259,43 @@ export const createSendCommandsWindow = (): void => {
 
   // Register with WindowManager
   windowManager.setSendCommandsWindow(sendCommandsWindow);
+};
+
+/**
+ * Create the SFTP file manager window for browsing printer storage
+ * Provides thumbnail grid with delete/rename support for internal + USB storage
+ */
+export const createFileManagerWindow = (): void => {
+  const windowManager = getWindowManager();
+
+  // Check for existing window and focus if present
+  if (windowManager.hasFileManagerWindow()) {
+    const existingWindow = windowManager.getFileManagerWindow();
+    if (focusExistingWindow(existingWindow)) {
+      return;
+    }
+  }
+
+  const mainWindow = windowManager.getMainWindow();
+  if (!validateParentWindow(mainWindow, 'file manager window')) {
+    return;
+  }
+
+  // Create window with standardized configuration
+  const dimensions = getWindowDimensions('FILE_MANAGER');
+  const preloadPath = createUIPreloadPath('file-manager');
+
+  const fileManagerWindow = createModalWindow(mainWindow, dimensions, preloadPath, { resizable: true, frame: false });
+
+  // Load HTML content
+  void loadWindowHTML(fileManagerWindow, 'file-manager');
+
+  // Setup lifecycle handlers
+  setupWindowLifecycle(fileManagerWindow, () => windowManager.setFileManagerWindow(null));
+
+  // Setup development tools
+  setupDevTools(fileManagerWindow);
+
+  // Register with WindowManager
+  windowManager.setFileManagerWindow(fileManagerWindow);
 };

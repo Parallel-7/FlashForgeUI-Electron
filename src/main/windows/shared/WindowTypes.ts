@@ -296,4 +296,10 @@ export const WINDOW_SIZES = {
     minWidth: createWindowMinWidth(980),
     minHeight: createWindowMinHeight(720),
   },
+  FILE_MANAGER: {
+    width: createWindowWidth(980),
+    height: createWindowHeight(760),
+    minWidth: createWindowMinWidth(760),
+    minHeight: createWindowMinHeight(560),
+  },
 } as const;

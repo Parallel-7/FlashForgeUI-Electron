@@ -29,6 +29,7 @@ import type {
   ISettingsAPI,
   UpdateStatusResponse,
 } from '@shared/types/external.js';
+import type { SSHSettingsResponse, SSHSettingsUpdate } from '@shared/types/ssh-settings.js';
 import { contextBridge, ipcRenderer } from 'electron';
 
 // Ensure this file is treated as a module
@@ -79,6 +80,23 @@ const printerSettingsAPI: IPrinterSettingsAPI = {
   },
 };
 
+const sshSettingsAPI = {
+  get: async (): Promise<SSHSettingsResponse> => {
+    return (await ipcRenderer.invoke('ssh-settings:get')) as SSHSettingsResponse;
+  },
+  save: async (update: SSHSettingsUpdate): Promise<boolean> => {
+    const result: unknown = await ipcRenderer.invoke('ssh-settings:save', update);
+    return typeof result === 'boolean' ? result : false;
+  },
+  reset: async (): Promise<boolean> => {
+    const result: unknown = await ipcRenderer.invoke('ssh-settings:reset');
+    return typeof result === 'boolean' ? result : false;
+  },
+  browseKeyFile: async (): Promise<{ filePath?: string } | null> => {
+    return (await ipcRenderer.invoke('calibration:open-ssh-key-file')) as { filePath?: string } | null;
+  },
+} as const;
+
 const autoUpdateAPI: IAutoUpdateAPI = {
   checkForUpdates: async (): Promise<{ success: boolean; error?: string }> => {
     return (await ipcRenderer.invoke('check-for-updates')) as { success: boolean; error?: string };
@@ -96,8 +114,11 @@ contextBridge.exposeInMainWorld('api', {
     settings: settingsAPI,
     printerSettings: printerSettingsAPI,
     autoUpdate: autoUpdateAPI,
+    sshSettings: sshSettingsAPI,
   },
 });
+
+export type ISSHSettingsAPI = typeof sshSettingsAPI;
 
 // Generic window controls for sub-windows
 contextBridge.exposeInMainWorld('windowControls', {

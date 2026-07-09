@@ -58,6 +58,22 @@
           <span class="menu-item-shortcut" data-shortcut-id="calibration"></span>
         </button>
 
+        <button class="menu-item hidden" data-action="reboot" role="menuitem">
+          <span class="menu-item-content">
+            <i data-lucide="rotate-cw" class="menu-item-icon" aria-hidden="true"></i>
+            <span class="menu-item-label">Reboot Printer</span>
+          </span>
+          <span class="menu-item-shortcut" data-shortcut-id="reboot"></span>
+        </button>
+
+        <div id="reboot-confirm-panel" class="menu-confirm-panel hidden" role="dialog" aria-label="Confirm reboot">
+          <p class="menu-confirm-message" id="reboot-confirm-message"></p>
+          <div class="menu-confirm-actions">
+            <button class="menu-confirm-btn menu-confirm-cancel" id="reboot-cancel-btn" type="button">Cancel</button>
+            <button class="menu-confirm-btn menu-confirm-danger" id="reboot-confirm-btn" type="button">Reboot</button>
+          </div>
+        </div>
+
         <div class="menu-divider" role="presentation"></div>
 
         <button class="menu-item" data-action="pin-config" role="menuitem" aria-keyshortcuts="Control+P">
@@ -149,6 +165,10 @@
           <div class="loading-progress-text" id="loading-progress-text">0%</div>
         </div>
         <button class="loading-cancel-btn" id="loading-cancel-btn">Cancel</button>
+        <div class="loading-reboot-actions hidden" id="loading-reboot-actions">
+          <button class="loading-action-btn" id="loading-retry-btn" type="button">Retry</button>
+          <button class="loading-action-btn" id="loading-close-btn" type="button">Close</button>
+        </div>
       </div>
     </div>
   </div>

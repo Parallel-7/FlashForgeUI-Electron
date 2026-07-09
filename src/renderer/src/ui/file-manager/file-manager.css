@@ -1,0 +1,561 @@
+/* File Manager CSS - uses the shared dialog template + theme variables only */
+@import url("../shared/rounded-dialog-template.css");
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.dialog-container {
+  height: 100%;
+  position: relative;
+}
+
+.dialog-content {
+  padding: 16px 24px 0 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.hidden {
+  display: none !important;
+}
+
+/* ---------------------------------------------------------------------------
+ * Tabs
+ * ------------------------------------------------------------------------- */
+
+.fm-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.fm-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: color-mix(in srgb, var(--theme-text) 70%, transparent);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fm-tab:hover {
+  background: var(--surface-elevated);
+  color: var(--theme-text);
+}
+
+.fm-tab.active {
+  background: color-mix(in srgb, var(--theme-primary) 18%, transparent);
+  border-color: var(--theme-primary);
+  color: var(--theme-text);
+}
+
+.fm-tab .lucide-icon {
+  width: 16px;
+  height: 16px;
+}
+
+.fm-tabs-spacer {
+  flex: 1;
+}
+
+/* ---------------------------------------------------------------------------
+ * Toolbar + breadcrumb
+ * ------------------------------------------------------------------------- */
+
+.fm-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 0;
+  flex-shrink: 0;
+  min-height: 48px;
+}
+
+.fm-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.fm-toolbar-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: var(--theme-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--theme-text);
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.fm-toolbar-btn:hover:not(:disabled) {
+  background: var(--surface-elevated);
+  border-color: var(--border-color-focus);
+}
+
+.fm-toolbar-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.fm-toolbar-btn .lucide-icon {
+  width: 15px;
+  height: 15px;
+}
+
+.fm-toolbar-btn.danger {
+  background: color-mix(in srgb, var(--error-color, #f44336) 18%, var(--theme-surface));
+  border-color: color-mix(in srgb, var(--error-color, #f44336) 60%, var(--border-color));
+}
+
+.fm-toolbar-btn.danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--error-color, #f44336) 32%, var(--theme-surface));
+}
+
+.fm-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-wrap: wrap;
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--theme-text) 70%, transparent);
+  min-width: 0;
+}
+
+.fm-breadcrumb button {
+  background: none;
+  border: none;
+  color: var(--theme-primary);
+  cursor: pointer;
+  font-size: 0.85rem;
+  padding: 4px 6px;
+  border-radius: 4px;
+}
+
+.fm-breadcrumb button:hover {
+  background: var(--surface-elevated);
+}
+
+.fm-breadcrumb .crumb-current {
+  padding: 4px 6px;
+  color: var(--theme-text);
+  font-weight: 500;
+}
+
+.fm-breadcrumb .lucide-icon {
+  width: 13px;
+  height: 13px;
+  opacity: 0.6;
+}
+
+/* ---------------------------------------------------------------------------
+ * File grid
+ * ------------------------------------------------------------------------- */
+
+.fm-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-bottom: 12px;
+}
+
+.fm-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 14px;
+  padding: 4px 4px 12px 4px;
+  overflow-y: auto;
+  flex: 1;
+  align-content: start;
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb-color) var(--scrollbar-track-color);
+}
+
+.fm-item {
+  background-color: var(--theme-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 12px 10px 10px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.fm-item:hover {
+  background-color: var(--surface-elevated);
+  border-color: var(--border-color-focus);
+}
+
+.fm-item.selected {
+  background-color: color-mix(in srgb, var(--theme-primary) 16%, transparent);
+  border-color: var(--theme-primary);
+}
+
+.fm-item.directory {
+  cursor: pointer;
+}
+
+.fm-item.pending {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+/* Hover-reveal per-tile controls */
+.fm-item-controls {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+  z-index: 5;
+}
+
+.fm-item:hover .fm-item-controls,
+.fm-item.selected .fm-item-controls {
+  opacity: 1;
+}
+
+.fm-item-btn {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--theme-background) 80%, transparent);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--theme-text);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+}
+
+.fm-item-btn:hover {
+  background: var(--surface-elevated);
+  border-color: var(--border-color-focus);
+}
+
+.fm-item-btn.delete:hover {
+  background: color-mix(in srgb, var(--error-color, #f44336) 30%, var(--theme-surface));
+  border-color: var(--error-color, #f44336);
+}
+
+.fm-item-btn .lucide-icon {
+  width: 14px;
+  height: 14px;
+}
+
+/* Selection checkbox (top-left) */
+.fm-item-check {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--theme-background) 80%, transparent);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: transparent;
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s ease;
+  z-index: 5;
+  padding: 0;
+}
+
+.fm-item:hover .fm-item-check,
+.fm-item.selected .fm-item-check {
+  opacity: 1;
+}
+
+.fm-item.selected .fm-item-check {
+  background: var(--theme-primary);
+  border-color: var(--theme-primary);
+  color: var(--accent-text-color);
+}
+
+.fm-item-check .lucide-icon {
+  width: 13px;
+  height: 13px;
+}
+
+.fm-thumbnail {
+  width: 110px;
+  height: 110px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: var(--surface-muted);
+  border-radius: 6px;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.fm-thumbnail img {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.fm-thumbnail .lucide-icon {
+  width: 42px;
+  height: 42px;
+  opacity: 0.35;
+}
+
+.fm-thumbnail .thumb-spinner {
+  width: 22px;
+  height: 22px;
+  border: 2px solid color-mix(in srgb, var(--theme-text) 20%, transparent);
+  border-top-color: var(--theme-primary);
+  border-radius: 50%;
+  animation: fm-spin 0.9s linear infinite;
+}
+
+.fm-name {
+  font-size: 0.82rem;
+  color: var(--theme-text);
+  text-align: center;
+  word-break: break-word;
+  line-height: 1.3;
+  max-height: 2.6em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.fm-size {
+  font-size: 0.72rem;
+  color: color-mix(in srgb, var(--theme-text) 55%, transparent);
+  margin-top: 4px;
+}
+
+/* ---------------------------------------------------------------------------
+ * States (loading / message)
+ * ------------------------------------------------------------------------- */
+
+.fm-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 24px;
+  text-align: center;
+}
+
+.fm-state-text {
+  color: color-mix(in srgb, var(--theme-text) 75%, transparent);
+  font-size: 0.95rem;
+  max-width: 480px;
+  line-height: 1.5;
+}
+
+.fm-state-icon.lucide-icon,
+.fm-state .fm-state-icon {
+  width: 40px;
+  height: 40px;
+  color: color-mix(in srgb, var(--theme-text) 45%, transparent);
+}
+
+.loading-spinner {
+  width: 36px;
+  height: 36px;
+  border: 3px solid color-mix(in srgb, var(--theme-text) 15%, transparent);
+  border-top-color: var(--theme-primary);
+  border-radius: 50%;
+  animation: fm-spin 0.9s linear infinite;
+}
+
+@keyframes fm-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Footer
+ * ------------------------------------------------------------------------- */
+
+.dialog-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 24px;
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.fm-summary {
+  font-size: 0.85rem;
+  color: color-mix(in srgb, var(--theme-text) 65%, transparent);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.action-buttons button,
+.fm-overlay-actions button {
+  padding: 8px 18px;
+  border-radius: 6px;
+  border: 1px solid var(--border-color);
+  background: var(--theme-primary);
+  color: var(--button-text-color);
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.action-buttons button:hover,
+.fm-overlay-actions button:hover {
+  background: var(--theme-primary-hover);
+}
+
+.action-buttons button.cancel,
+.fm-overlay-actions button.cancel {
+  background: var(--theme-surface);
+  color: var(--theme-text);
+}
+
+.action-buttons button.cancel:hover,
+.fm-overlay-actions button.cancel:hover {
+  background: var(--surface-elevated);
+}
+
+.fm-overlay-actions button.danger {
+  background: var(--error-color, #f44336);
+  border-color: var(--error-color, #f44336);
+  color: var(--button-text-color, #ffffff);
+}
+
+.fm-overlay-actions button.danger:hover {
+  background: color-mix(in srgb, var(--error-color, #f44336) 85%, black);
+}
+
+/* ---------------------------------------------------------------------------
+ * Overlays (confirm / rename)
+ * ------------------------------------------------------------------------- */
+
+.fm-overlay {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--theme-background) 65%, transparent);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  border-radius: inherit;
+}
+
+.fm-overlay-panel {
+  background: var(--theme-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  box-shadow: 0 12px 40px color-mix(in srgb, black 40%, transparent);
+  width: min(440px, calc(100% - 48px));
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.fm-overlay-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--theme-text);
+}
+
+.fm-overlay-title .lucide-icon {
+  width: 18px;
+  height: 18px;
+}
+
+.fm-overlay-body {
+  color: color-mix(in srgb, var(--theme-text) 80%, transparent);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.fm-overlay-body ul {
+  margin: 8px 0 0 0;
+  padding-left: 18px;
+}
+
+.fm-overlay-body li {
+  word-break: break-word;
+}
+
+.fm-overlay-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.fm-rename-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.fm-rename-row input {
+  flex: 1;
+  padding: 8px 10px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--theme-text);
+  font-size: 0.9rem;
+  outline: none;
+}
+
+.fm-rename-row input:focus {
+  border-color: var(--border-color-focus);
+}
+
+.fm-rename-ext {
+  color: color-mix(in srgb, var(--theme-text) 60%, transparent);
+  font-size: 0.9rem;
+  white-space: nowrap;
+}
+
+.fm-rename-error {
+  margin-top: 8px;
+  color: var(--error-color, #f44336);
+  font-size: 0.82rem;
+}

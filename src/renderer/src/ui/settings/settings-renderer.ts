@@ -47,6 +47,7 @@ import { DiscordWebhookSection } from './sections/DiscordWebhookSection.js';
 import { InputDependencySection } from './sections/InputDependencySection.js';
 import { PrinterContextSection } from './sections/PrinterContextSection.js';
 import { RoundedUISection } from './sections/RoundedUISection.js';
+import { type ISSHSettingsAPI, SSHSection } from './sections/SSHSection.js';
 import { SpoolmanTestSection } from './sections/SpoolmanTestSection.js';
 import { TabSection } from './sections/TabSection.js';
 import type { MutableSettings } from './types.js';
@@ -72,6 +73,10 @@ const resolvePrinterSettingsAPI = (): IPrinterSettingsAPI | undefined => {
 
 const resolveAutoUpdateAPI = (): IAutoUpdateAPI | undefined => {
   return window.api?.dialog?.autoUpdate as IAutoUpdateAPI | undefined;
+};
+
+const resolveSSHSettingsAPI = (): ISSHSettingsAPI | undefined => {
+  return window.api?.dialog?.sshSettings as ISSHSettingsAPI | undefined;
 };
 
 type PerPrinterSettingsConfigKey =
@@ -150,6 +155,7 @@ class SettingsRenderer {
   private discordWebhookSection: DiscordWebhookSection | null = null;
   private printerContextSection: PrinterContextSection | null = null;
   private roundedUISection: RoundedUISection | null = null;
+  private sshSection: SSHSection | null = null;
   private webUIEnabledToggle: HTMLInputElement | null = null;
   private readonly settingsAPI?: ISettingsAPI = resolveSettingsAPI();
   private readonly printerSettingsAPI?: IPrinterSettingsAPI = resolvePrinterSettingsAPI();
@@ -259,6 +265,16 @@ class SettingsRenderer {
       document,
       settings: this.settings,
     });
+
+    this.sshSection = new SSHSection({
+      document,
+      sshSettingsAPI: resolveSSHSettingsAPI(),
+      onDirty: () => {
+        this.hasUnsavedChanges = true;
+        this.updateSaveButtonState();
+      },
+    });
+    this.sshSection.initialize();
   }
 
   private setupEventListeners(): void {
@@ -381,6 +397,8 @@ class SettingsRenderer {
         if (this.roundedUISection) {
           await this.roundedUISection.initialize();
         }
+
+        await this.sshSection?.load();
 
         this.updateInputStates();
       } catch (error) {
@@ -559,6 +577,15 @@ class SettingsRenderer {
           }
         }
 
+        // Save per-printer SSH settings when edited
+        if (this.sshSection?.isDirty()) {
+          const sshSuccess = await this.sshSection.save();
+          if (!sshSuccess) {
+            this.showSaveStatus('Failed to save SSH settings', true);
+            return;
+          }
+        }
+
         if (success) {
           this.hasUnsavedChanges = false;
           this.updateSaveButtonState();
@@ -724,6 +751,7 @@ class SettingsRenderer {
     this.discordWebhookSection?.dispose();
     this.autoUpdateSection?.dispose();
     this.printerContextSection?.dispose();
+    this.sshSection?.dispose();
     // Note: No longer need to remove IPC listeners since we're using promises
   }
 

@@ -88,6 +88,29 @@ export const isHttpOnlyModel = (modelType: PrinterModelType): boolean =>
   HTTP_ONLY_MODEL_TYPES.has(modelType);
 
 /**
+ * Model types that support the remote "Reboot Printer" feature.
+ *
+ * Reboot is delivered over the flashforge-easyssh root SSH/SFTP surface, which
+ * is only provisioned on the Adventurer 5M / 5M Pro / AD5X. Creator 5 / 5 Pro
+ * use a different (Klipper) SSH method that is not yet wired up, and legacy
+ * printers have no SSH surface at all. Mirrored by a renderer-side guard in
+ * ShellController.setRebootAvailable — keep both in sync when adding models.
+ */
+const REBOOT_SUPPORTED_MODEL_TYPES: ReadonlySet<PrinterModelType> = new Set([
+  'adventurer-5m',
+  'adventurer-5m-pro',
+  'ad5x',
+]);
+
+/**
+ * Whether a printer model supports the remote reboot command. Defense-in-depth:
+ * the renderer also hides the menu item, but the main-process reboot handler
+ * re-checks this before dispatching the SSH command.
+ * @param modelType The detected (PID-derived) printer model type.
+ */
+export const isRebootSupportedModel = (modelType: PrinterModelType | undefined): boolean =>
+  !!modelType && REBOOT_SUPPORTED_MODEL_TYPES.has(modelType);
+/**
  * Detect specific printer model type from typeName
  * Returns detailed model information for backend selection
  */

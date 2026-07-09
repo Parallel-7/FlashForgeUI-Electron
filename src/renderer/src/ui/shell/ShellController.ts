@@ -12,6 +12,7 @@
  */
 
 import { initializeUIAnimations } from '../../renderer/services/ui-updater.js';
+import { RebootController } from './RebootController.js';
 
 const MAIN_MENU_ACTIONS = ['connect', 'settings', 'status', 'calibration', 'pin-config', 'about'] as const;
 type MainMenuAction = (typeof MAIN_MENU_ACTIONS)[number];
@@ -215,11 +216,26 @@ export class ShellController {
   private readonly menuShortcutManager: MenuShortcutManager;
   private currentLoadingState: LoadingState = { ...defaultLoadingState };
 
+  // Reboot feature: the menu item is shown only for supported+connected
+  // contexts, and the overlay is claimed exclusively during a reboot so the
+  // regular 'loading-state-changed' IPC cannot clobber it. 'reboot' is handled
+  // like 'edit-layout' — special-cased in the click handler, intentionally NOT
+  // registered in MAIN_MENU_ACTIONS / MAIN_MENU_ACTION_CHANNELS (no shortcut,
+  // not a fire-and-forget IPC send).
+  private readonly rebootController: RebootController;
+  private rebootOverlayClaimed = false;
+  private rebootContext: { contextId: string; printerName: string } | null = null;
+  private rebootConfirmPanel: HTMLDivElement | null = null;
+
   constructor(
     private readonly logMessage: (message: string) => void,
     private readonly onEditLayout?: () => void
   ) {
     this.menuShortcutManager = new MenuShortcutManager(() => this.closeMainMenu());
+    this.rebootController = new RebootController(
+      { claimOverlay: () => this.claimOverlay(), releaseOverlay: () => this.releaseOverlay() },
+      logMessage
+    );
   }
 
   /**
@@ -250,10 +266,98 @@ export class ShellController {
     this.setupLoadingEventListeners();
     this.initializeMainMenu();
     this.menuShortcutManager.initialize();
+    this.rebootController.init();
   }
 
   dispose(): void {
     this.menuShortcutManager.dispose();
+    this.rebootController.dispose();
+  }
+
+  /**
+   * Toggle DOM visibility of the Reboot Printer menu item. Shown only when the
+   * active context is a supported model (5M / 5M Pro / AD5X) AND connected. The
+   * caller (renderer.ts) computes availability from context/backend events and
+   * also supplies the context id / printer name used to drive the lifecycle.
+   */
+  setRebootAvailable(
+    available: boolean,
+    contextId: string | null,
+    printerName: string | null
+  ): void {
+    this.rebootContext =
+      contextId && printerName ? { contextId, printerName } : null;
+
+    const button = document.querySelector<HTMLButtonElement>('.menu-item[data-action="reboot"]');
+    if (!button) {
+      return;
+    }
+
+    button.classList.toggle('hidden', !available);
+    this.updateRebootItemDisabled();
+  }
+
+  /**
+   * Disable the Reboot item while the overlay is busy with a non-reboot loading
+   * operation. Chosen over queueing: simplest robust contention guard. When a
+   * reboot owns the overlay the item is hidden anyway (the overlay covers it).
+   */
+  private updateRebootItemDisabled(): void {
+    const button = document.querySelector<HTMLButtonElement>('.menu-item[data-action="reboot"]');
+    if (!button) {
+      return;
+    }
+    button.disabled = !this.rebootOverlayClaimed && this.currentLoadingState.isVisible;
+  }
+
+  /** Claim the shared overlay for a reboot (blocks regular loading events). */
+  private claimOverlay(): void {
+    this.rebootOverlayClaimed = true;
+    this.updateRebootItemDisabled();
+  }
+
+  /** Release the overlay back to the regular loading-state-changed flow. */
+  private releaseOverlay(): void {
+    this.rebootOverlayClaimed = false;
+    this.currentLoadingState = { ...defaultLoadingState };
+    this.updateLoadingOverlay();
+    this.updateRebootItemDisabled();
+  }
+
+  /** Wire the in-dropdown reboot confirm panel buttons (called once on init). */
+  private setupRebootConfirmPanel(): void {
+    this.rebootConfirmPanel = document.getElementById('reboot-confirm-panel') as HTMLDivElement | null;
+
+    const cancelBtn = document.getElementById('reboot-cancel-btn');
+    cancelBtn?.addEventListener('click', () => this.hideRebootConfirm());
+
+    const confirmBtn = document.getElementById('reboot-confirm-btn');
+    confirmBtn?.addEventListener('click', () => {
+      const ctx = this.rebootContext;
+      this.hideRebootConfirm();
+      this.closeMainMenu();
+      if (ctx) {
+        this.rebootController.start(ctx.contextId, ctx.printerName);
+      } else {
+        this.logMessage('Reboot requested but no printer context is available');
+      }
+    });
+  }
+
+  private showRebootConfirm(): void {
+    if (!this.rebootContext) {
+      this.logMessage('Reboot unavailable: no active supported context');
+      return;
+    }
+    const messageEl = document.getElementById('reboot-confirm-message');
+    if (messageEl) {
+      messageEl.textContent = `Reboot ${this.rebootContext.printerName}? It will disconnect and come back in ~30-60s.`;
+    }
+    this.rebootConfirmPanel?.classList.remove('hidden');
+  }
+
+  private hideRebootConfirm(): void {
+    this.rebootConfirmPanel?.classList.add('hidden');
   }
 
   private setupWindowControls(): void {
@@ -315,6 +419,12 @@ export class ShellController {
     }
 
     window.api.receive('loading-state-changed', (eventData: unknown) => {
+      // While a reboot owns the overlay, ignore regular loading events so the
+      // connection-flow / file-operation states can't clobber the reboot UI.
+      if (this.rebootOverlayClaimed) {
+        return;
+      }
+
       const data = eventData as {
         state: 'hidden' | 'loading' | 'success' | 'error';
         message?: string;
@@ -330,6 +440,7 @@ export class ShellController {
         canCancel: data.canCancel || false,
       };
       this.updateLoadingOverlay();
+      this.updateRebootItemDisabled();
     });
 
     const cancelBtn = document.getElementById('loading-cancel-btn');
@@ -404,6 +515,8 @@ export class ShellController {
 
     this.applyEditLayoutShortcutLabel();
 
+    this.setupRebootConfirmPanel();
+
     const menuItems = this.mainMenuDropdown.querySelectorAll<HTMLButtonElement>('.menu-item');
     menuItems.forEach((item) => {
       item.addEventListener('click', () => {
@@ -413,6 +526,13 @@ export class ShellController {
         if (action === 'edit-layout') {
           this.onEditLayout?.();
           this.closeMainMenu();
+          return;
+        }
+
+        // Reboot opens an in-dropdown confirm panel instead of firing an IPC
+        // action. The menu stays open so the user can confirm or cancel.
+        if (action === 'reboot') {
+          this.showRebootConfirm();
           return;
         }
 

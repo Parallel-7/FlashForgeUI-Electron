@@ -13,7 +13,6 @@ import type {
   MeshData,
   ScrewAdjustment,
   ShaperResult,
-  SSHConnectionConfig,
   TapeRecommendation,
   WorkflowData,
 } from '../../../../shared/types/calibration';
@@ -112,14 +111,9 @@ const elements = {
   btnSaveShaperConfig: document.getElementById('btn-save-shaper-config') as HTMLButtonElement,
   btnUploadShaperConfig: document.getElementById('btn-upload-shaper-config') as HTMLButtonElement,
 
-  // SSH tab
+  // SSH tab (credentials are managed in Settings -> SSH)
   sshHost: document.getElementById('ssh-host') as HTMLInputElement,
-  sshPort: document.getElementById('ssh-port') as HTMLInputElement,
-  sshUsername: document.getElementById('ssh-username') as HTMLInputElement,
-  sshPassword: document.getElementById('ssh-password') as HTMLInputElement,
-  sshKeyPath: document.getElementById('ssh-key-path') as HTMLInputElement,
-  btnSSHKeyBrowse: document.getElementById('btn-ssh-key-browse') as HTMLButtonElement,
-  sshSaveCredentials: document.getElementById('ssh-save-credentials') as HTMLInputElement,
+  sshConnectionSummary: document.getElementById('ssh-connection-summary') as HTMLInputElement,
   btnSSHConnect: document.getElementById('btn-ssh-connect') as HTMLButtonElement,
   btnSSHDisconnect: document.getElementById('btn-ssh-disconnect') as HTMLButtonElement,
   btnSSHTest: document.getElementById('btn-ssh-test') as HTMLButtonElement,
@@ -182,6 +176,13 @@ async function initialize(): Promise<void> {
 
   // Check SSH status
   await updateSSHStatus();
+
+  // Auto-connect SSH when a printer is active so the Fetch-via-SSH workflows
+  // are immediately usable. Mirrors the file manager, which connects on open;
+  // credentials come from the centralized per-printer SSH settings store.
+  if (state.contextId && !state.sshConnected) {
+    void handleSSHConnect();
+  }
 }
 
 function initMeshVisualizer(): void {
@@ -251,8 +252,7 @@ function setupEventListeners(): void {
   elements.btnSSHConnect.addEventListener('click', handleSSHConnect);
   elements.btnSSHDisconnect.addEventListener('click', handleSSHDisconnect);
   elements.btnSSHTest.addEventListener('click', handleSSHTest);
-  elements.btnSSHKeyBrowse.addEventListener('click', handleBrowseSSHKey);
-  elements.sshSaveCredentials.addEventListener('change', handleSSHSaveToggle);
+  elements.sshConfigPath.addEventListener('change', () => void persistConfigPath());
 
   // History controls
   elements.btnClearHistory.addEventListener('click', handleClearHistory);
@@ -318,28 +318,25 @@ async function loadSSHSettings(): Promise<void> {
   if (!state.contextId) return;
 
   try {
-    // Host is sourced from the active printer context; port is fixed for FlashForge SSH.
+    // Host is sourced from the active printer context; credentials come from
+    // the centralized per-printer SSH settings (Settings -> SSH).
     const detectedHost = state.contextIp?.trim() || '';
     elements.sshHost.readOnly = true;
-    elements.sshPort.readOnly = true;
-    elements.sshPort.value = '22';
 
     const saved = await window.calibration.getSSHConfig(state.contextId);
-    const savedHost = saved?.host?.trim() || '';
-    elements.sshHost.value = detectedHost || savedHost;
+    elements.sshHost.value = detectedHost || saved?.host?.trim() || '';
 
     if (!elements.sshHost.value) {
       elements.sshHost.placeholder = 'Printer IP unavailable (connect printer first)';
     }
 
     if (saved) {
-      if (saved.username) elements.sshUsername.value = saved.username;
-      if (saved.password) elements.sshPassword.value = saved.password;
-      if (saved.keyPath) elements.sshKeyPath.value = saved.keyPath;
+      const username = saved.username || 'root';
+      const port = saved.port || 22;
+      const auth = saved.keyPath ? 'private key' : 'password';
+      const source = saved.isCustom ? 'custom' : 'easy-SSH defaults';
+      elements.sshConnectionSummary.value = `${username} (port ${port}, ${auth} auth, ${source})`;
       if (saved.configPath) elements.sshConfigPath.value = saved.configPath;
-      if (typeof saved.saveCredentials === 'boolean') {
-        elements.sshSaveCredentials.checked = saved.saveCredentials;
-      }
     }
   } catch (error) {
     console.error('Failed to load SSH settings:', error);
@@ -854,8 +851,7 @@ async function updateSSHStatus(): Promise<void> {
 async function handleSSHConnect(): Promise<void> {
   if (!state.contextId) return;
 
-  const config = buildSSHConfig();
-  if (!config.host) {
+  if (!resolveSSHHost()) {
     setSSHResult('Printer IP unavailable. Connect a printer first.', 'error');
     return;
   }
@@ -864,10 +860,9 @@ async function handleSSHConnect(): Promise<void> {
     elements.btnSSHConnect.disabled = true;
     setSSHResult('Connecting...', 'info');
 
-    await window.calibration.sshConnect(state.contextId, config);
+    await window.calibration.sshConnect(state.contextId);
 
     setSSHResult('Connected successfully!', 'success');
-    await persistSSHSettings();
     await updateSSHStatus();
   } catch (error) {
     setSSHResult(`Connection failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
@@ -890,8 +885,7 @@ async function handleSSHDisconnect(): Promise<void> {
 async function handleSSHTest(): Promise<void> {
   if (!state.contextId) return;
 
-  const config = buildSSHConfig();
-  if (!config.host) {
+  if (!resolveSSHHost()) {
     setSSHResult('Printer IP unavailable. Connect a printer first.', 'error');
     return;
   }
@@ -900,7 +894,7 @@ async function handleSSHTest(): Promise<void> {
     elements.btnSSHTest.disabled = true;
     setSSHResult('Testing connection...', 'info');
 
-    await window.calibration.sshConnect(state.contextId, config);
+    await window.calibration.sshConnect(state.contextId);
     const result = await window.calibration.sshExecute(state.contextId, 'echo "Connection test"');
 
     if (result.success) {
@@ -910,7 +904,6 @@ async function handleSSHTest(): Promise<void> {
     }
 
     await updateSSHStatus();
-    await persistSSHSettings();
   } catch (error) {
     setSSHResult(`Test failed: ${error instanceof Error ? error.message : 'Unknown error'}`, 'error');
   } finally {
@@ -930,54 +923,17 @@ function resolveSSHHost(): string {
   return state.contextIp?.trim() || elements.sshHost.value.trim();
 }
 
-function buildSSHConfig(): SSHConnectionConfig {
-  const password = elements.sshPassword.value.trim();
-  const keyPath = elements.sshKeyPath.value.trim();
-
-  return {
-    host: resolveSSHHost(),
-    port: 22,
-    username: elements.sshUsername.value.trim() || 'root',
-    password: password.length > 0 ? password : undefined,
-    privateKey: keyPath.length > 0 ? keyPath : undefined,
-    timeout: 10000,
-    keepaliveInterval: 10000,
-  };
-}
-
-async function persistSSHSettings(): Promise<void> {
+/** Persist the calibration-specific remote config path override. */
+async function persistConfigPath(): Promise<void> {
   if (!state.contextId) return;
 
-  if (!elements.sshSaveCredentials.checked) {
-    await window.calibration.clearSSHConfig(state.contextId);
-    return;
-  }
-
-  await window.calibration.saveSSHConfig(state.contextId, {
-    host: resolveSSHHost(),
-    port: 22,
-    username: elements.sshUsername.value.trim() || 'root',
-    password: elements.sshPassword.value,
-    keyPath: elements.sshKeyPath.value.trim(),
-    configPath: elements.sshConfigPath.value.trim(),
-    saveCredentials: true,
-  });
-}
-
-async function handleBrowseSSHKey(): Promise<void> {
   try {
-    const result = await window.calibration.openSSHKeyFile();
-    if (result?.filePath) {
-      elements.sshKeyPath.value = result.filePath;
-    }
+    await window.calibration.saveSSHConfig(state.contextId, {
+      configPath: elements.sshConfigPath.value.trim(),
+    });
   } catch (error) {
-    setStatus(`Failed to select key: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    console.error('Failed to save config path:', error);
   }
-}
-
-async function handleSSHSaveToggle(): Promise<void> {
-  if (!state.contextId) return;
-  await persistSSHSettings();
 }
 
 // ============================================================================
