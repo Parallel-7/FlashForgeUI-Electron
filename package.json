@@ -65,8 +65,8 @@
   "license": "MIT",
   "pnpm": {
     "overrides": {
-      "js-yaml": "4.1.1",
-      "tar": "7.5.12",
+      "js-yaml": "4.2.0",
+      "tar": "7.5.16",
       "fast-xml-parser": "5.8.0",
       "flatted": "3.4.2",
       "axios": "1.16.1",
@@ -75,6 +75,9 @@
       "ip-address": "10.2.0",
       "postcss": "8.5.15",
       "@babel/plugin-transform-modules-systemjs": "7.29.7",
+      "esbuild": "0.28.1",
+      "form-data": "4.0.6",
+      "shell-quote": "1.8.4",
       "handlebars@<4.7.9": "4.7.9",
       "brace-expansion@<1.1.13": "1.1.13",
       "brace-expansion@>=2.0.0 <2.0.3": "2.0.3",
@@ -102,7 +105,7 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "@babel/core": "^7.29.0",
+    "@babel/core": "^7.29.6",
     "@babel/preset-env": "^7.29.0",
     "@biomejs/biome": "2.3.10",
     "@electron-toolkit/tsconfig": "^2.0.0",
@@ -125,9 +128,9 @@
     "ts-jest": "^29.4.6",
     "ts-morph": "^27.0.2",
     "ts-node": "^10.9.2",
-    "tsx": "^4.21.0",
+    "tsx": "^4.23.0",
     "typescript": "^5.9.3",
-    "vite": "^7.3.2"
+    "vite": "^7.3.6"
   },
   "type": "module"
 }
