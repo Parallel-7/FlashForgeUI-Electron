@@ -3,8 +3,9 @@
  *
  * Validates OS login-item registration for the "Start with system" / "Start minimized"
  * preferences (issue #75): correct app.setLoginItemSettings arguments on toggle, openAsHidden
- * only applying on darwin, wasLaunchedHidden() detection across platforms, and that unpackaged
- * (development) builds skip the OS registration call entirely while still honoring live toggles.
+ * only applying on darwin, the Linux freedesktop `.desktop` autostart path (write/remove,
+ * APPIMAGE vs execPath, XDG_CONFIG_HOME, --hidden), wasLaunchedHidden() detection across
+ * platforms, and that unpackaged (development) builds skip OS registration while honoring toggles.
  *
  * @module services/__tests__/AutoLaunchService.test
  */
@@ -13,10 +14,25 @@
 const mockApp = {
   setLoginItemSettings: jest.fn(),
   getLoginItemSettings: jest.fn(() => ({ launchItems: [] })),
+  getName: jest.fn(() => 'FlashForgeUI'),
 };
 
 jest.mock('electron', () => ({
   app: mockApp,
+}));
+
+// Filesystem mock for the Linux autostart path (node:fs).
+const mockFs = {
+  mkdirSync: jest.fn(),
+  writeFileSync: jest.fn(),
+  rmSync: jest.fn(),
+};
+
+jest.mock('node:fs', () => mockFs);
+
+// Home directory mock so Linux autostart paths are deterministic.
+jest.mock('node:os', () => ({
+  homedir: jest.fn(() => '/home/testuser'),
 }));
 
 // Mutable ConfigManager mock used by the service constructor + listeners.
@@ -43,6 +59,7 @@ import { AutoLaunchService, getAutoLaunchService } from '../AutoLaunchService.js
 
 describe('AutoLaunchService', () => {
   let service: AutoLaunchService;
+  const originalExecPath = process.execPath;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -59,7 +76,17 @@ describe('AutoLaunchService', () => {
     mockApp.getLoginItemSettings.mockReturnValue({ launchItems: [] });
     Object.defineProperty(process, 'argv', { value: ['electron'], configurable: true });
 
+    // Clear Linux autostart env vars so each test controls them explicitly.
+    delete process.env.APPIMAGE;
+    delete process.env.XDG_CONFIG_HOME;
+
     service = getAutoLaunchService();
+  });
+
+  afterEach(() => {
+    delete process.env.APPIMAGE;
+    delete process.env.XDG_CONFIG_HOME;
+    Object.defineProperty(process, 'execPath', { value: originalExecPath, configurable: true });
   });
 
   describe('Singleton Pattern', () => {
@@ -240,6 +267,96 @@ describe('AutoLaunchService', () => {
       const subscribedChannels = mockConfigManager.on.mock.calls.map((call) => call[0]);
       expect(subscribedChannels).toContain('config:StartAtBoot');
       expect(subscribedChannels).toContain('config:StartMinimized');
+    });
+  });
+
+  describe('initialize - Linux freedesktop autostart', () => {
+    const AUTOSTART_FILE = '/home/testuser/.config/autostart/flashforgeui.desktop';
+
+    beforeEach(() => {
+      Object.defineProperty(process, 'platform', { value: 'linux', configurable: true });
+    });
+
+    it('does not call setLoginItemSettings on Linux', () => {
+      process.env.APPIMAGE = '/home/testuser/Apps/FlashForgeUI.AppImage';
+      mockConfigManager.getConfig.mockReturnValue({ StartAtBoot: true, StartMinimized: false });
+
+      service.initialize();
+
+      expect(mockApp.setLoginItemSettings).not.toHaveBeenCalled();
+    });
+
+    it('writes a .desktop entry to ~/.config/autostart using the APPIMAGE path', () => {
+      process.env.APPIMAGE = '/home/testuser/Apps/FlashForgeUI.AppImage';
+      mockConfigManager.getConfig.mockReturnValue({ StartAtBoot: true, StartMinimized: false });
+
+      service.initialize();
+
+      expect(mockFs.mkdirSync).toHaveBeenCalledWith('/home/testuser/.config/autostart', {
+        recursive: true,
+      });
+      expect(mockFs.writeFileSync).toHaveBeenCalledTimes(1);
+      const [writtenPath, contents] = mockFs.writeFileSync.mock.calls[0] as [string, string];
+      expect(writtenPath).toBe(AUTOSTART_FILE);
+      expect(contents).toContain('[Desktop Entry]');
+      expect(contents).toContain('Type=Application');
+      expect(contents).toContain('Exec="/home/testuser/Apps/FlashForgeUI.AppImage"');
+      expect(contents).not.toContain('--hidden');
+    });
+
+    it('appends --hidden to the Exec line when StartMinimized is on', () => {
+      process.env.APPIMAGE = '/home/testuser/Apps/FlashForgeUI.AppImage';
+      mockConfigManager.getConfig.mockReturnValue({ StartAtBoot: true, StartMinimized: true });
+
+      service.initialize();
+
+      const [, contents] = mockFs.writeFileSync.mock.calls[0] as [string, string];
+      expect(contents).toContain('Exec="/home/testuser/Apps/FlashForgeUI.AppImage" --hidden');
+    });
+
+    it('honors XDG_CONFIG_HOME for the autostart directory', () => {
+      process.env.XDG_CONFIG_HOME = '/custom/config';
+      process.env.APPIMAGE = '/home/testuser/Apps/FlashForgeUI.AppImage';
+      mockConfigManager.getConfig.mockReturnValue({ StartAtBoot: true, StartMinimized: false });
+
+      service.initialize();
+
+      const [writtenPath] = mockFs.writeFileSync.mock.calls[0] as [string, string];
+      expect(writtenPath).toBe('/custom/config/autostart/flashforgeui.desktop');
+    });
+
+    it('falls back to process.execPath when APPIMAGE is not set (.deb/.rpm)', () => {
+      // A .deb/.rpm install exposes a stable POSIX binary path; emulate it explicitly so the
+      // assertion holds regardless of the OS running the test suite.
+      Object.defineProperty(process, 'execPath', {
+        value: '/opt/FlashForgeUI/flashforgeui',
+        configurable: true,
+      });
+      mockConfigManager.getConfig.mockReturnValue({ StartAtBoot: true, StartMinimized: false });
+
+      service.initialize();
+
+      const [, contents] = mockFs.writeFileSync.mock.calls[0] as [string, string];
+      expect(contents).toContain('Exec="/opt/FlashForgeUI/flashforgeui"');
+    });
+
+    it('removes the .desktop entry when StartAtBoot is off', () => {
+      mockConfigManager.getConfig.mockReturnValue({ StartAtBoot: false, StartMinimized: false });
+
+      service.initialize();
+
+      expect(mockFs.rmSync).toHaveBeenCalledWith(AUTOSTART_FILE, { force: true });
+      expect(mockFs.writeFileSync).not.toHaveBeenCalled();
+    });
+
+    it('skips filesystem writes in development (unpackaged) mode', () => {
+      mockEnvironmentService.isPackaged.mockReturnValue(false);
+      mockConfigManager.getConfig.mockReturnValue({ StartAtBoot: true, StartMinimized: false });
+
+      service.initialize();
+
+      expect(mockFs.writeFileSync).not.toHaveBeenCalled();
+      expect(mockFs.rmSync).not.toHaveBeenCalled();
     });
   });
 
