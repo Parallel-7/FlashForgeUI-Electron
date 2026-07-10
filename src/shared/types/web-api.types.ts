@@ -12,6 +12,8 @@
  * payloads, and related transport shapes used by both the WebUI server and static client.
  */
 
+import type { RebootStatusPayload } from './printer-power.js';
+
 // ============================================================================
 // AUTHENTICATION TYPES
 // ============================================================================
@@ -55,7 +57,7 @@ export interface ActiveSpoolData {
  * WebSocket message types for real-time communication
  */
 export interface WebSocketMessage {
-  type: 'AUTH_SUCCESS' | 'STATUS_UPDATE' | 'ERROR' | 'COMMAND_RESULT' | 'PONG' | 'SPOOLMAN_UPDATE';
+  type: 'AUTH_SUCCESS' | 'STATUS_UPDATE' | 'ERROR' | 'COMMAND_RESULT' | 'PONG' | 'SPOOLMAN_UPDATE' | 'REBOOT_STATUS';
   timestamp: string;
   status?: PrinterStatusData | null;
   error?: string;
@@ -64,6 +66,7 @@ export interface WebSocketMessage {
   success?: boolean;
   contextId?: string;
   spool?: ActiveSpoolData | null;
+  reboot?: RebootStatusPayload;
 }
 
 /**

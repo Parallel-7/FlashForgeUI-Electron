@@ -6,7 +6,13 @@
  * spoolman updates. Keeps transport concerns isolated from UI orchestration.
  */
 
-import type { ActiveSpoolData, PrinterStatus, WebSocketCommand, WebSocketMessage } from '../app.js';
+import type {
+  ActiveSpoolData,
+  PrinterStatus,
+  RebootStatusPayload,
+  WebSocketCommand,
+  WebSocketMessage,
+} from '../app.js';
 import { showToast } from '../shared/dom.js';
 import { state } from './AppState.js';
 
@@ -91,10 +97,12 @@ export async function apiRequestWithMetadata<T>(
 type StatusUpdateCallback = (status: PrinterStatus) => void;
 type SpoolmanUpdateCallback = (contextId: string, spool: ActiveSpoolData | null) => void;
 type ConnectionChangeCallback = (connected: boolean) => void;
+type RebootStatusCallback = (contextId: string, payload: RebootStatusPayload) => void;
 
 const statusUpdateCallbacks: StatusUpdateCallback[] = [];
 const spoolmanUpdateCallbacks: SpoolmanUpdateCallback[] = [];
 const connectionCallbacks: ConnectionChangeCallback[] = [];
+const rebootStatusCallbacks: RebootStatusCallback[] = [];
 
 export function onStatusUpdate(callback: StatusUpdateCallback): void {
   statusUpdateCallbacks.push(callback);
@@ -106,6 +114,10 @@ export function onSpoolmanUpdate(callback: SpoolmanUpdateCallback): void {
 
 export function onConnectionChange(callback: ConnectionChangeCallback): void {
   connectionCallbacks.push(callback);
+}
+
+export function onRebootStatus(callback: RebootStatusCallback): void {
+  rebootStatusCallbacks.push(callback);
 }
 
 function notifyConnectionChange(connected: boolean): void {
@@ -212,6 +224,12 @@ function handleWebSocketMessage(message: WebSocketMessage): void {
     case 'SPOOLMAN_UPDATE':
       if (message.contextId) {
         spoolmanUpdateCallbacks.forEach((callback) => callback(message.contextId!, message.spool ?? null));
+      }
+      break;
+
+    case 'REBOOT_STATUS':
+      if (message.contextId && message.reboot) {
+        rebootStatusCallbacks.forEach((callback) => callback(message.contextId!, message.reboot!));
       }
       break;
   }

@@ -54,6 +54,10 @@ import {
   setupMaterialMatchingHandlers,
 } from './features/material-matching.js';
 import { refreshMaterialStationCard, setupMaterialStationCard } from './features/material-station.js';
+import { refreshFileManagerButton, setupFileManager } from './features/file-manager.js';
+import { refreshRebootButton, setupReboot } from './features/reboot.js';
+import { refreshSSHSettings, setupSSHSettings } from './features/ssh.js';
+import { refreshCalibrationButton, setupCalibration } from './features/calibration.js';
 import { loadSpoolmanConfig, setupSpoolmanHandlers } from './features/spoolman.js';
 import { $, hideElement, showElement } from './shared/dom.js';
 import { initializeLucideIcons } from './shared/icons.js';
@@ -78,7 +82,7 @@ export interface AuthStatusResponse {
 }
 
 export interface WebSocketMessage {
-  type: 'AUTH_SUCCESS' | 'STATUS_UPDATE' | 'ERROR' | 'COMMAND_RESULT' | 'PONG' | 'SPOOLMAN_UPDATE';
+  type: 'AUTH_SUCCESS' | 'STATUS_UPDATE' | 'ERROR' | 'COMMAND_RESULT' | 'PONG' | 'SPOOLMAN_UPDATE' | 'REBOOT_STATUS';
   timestamp: string;
   status?: PrinterStatus;
   error?: string;
@@ -87,6 +91,23 @@ export interface WebSocketMessage {
   success?: boolean;
   contextId?: string;
   spool?: ActiveSpoolData | null;
+  reboot?: RebootStatusPayload;
+}
+
+/** Lifecycle phase of an in-flight printer reboot (see printer-power routes). */
+export type RebootPhase =
+  | 'rebooting'
+  | 'reconnecting'
+  | 'reconnecting-services'
+  | 'success'
+  | 'timeout'
+  | 'failed';
+
+/** Payload carried by REBOOT_STATUS WebSocket broadcasts. */
+export interface RebootStatusPayload {
+  readonly phase: RebootPhase;
+  readonly message?: string;
+  readonly printerName?: string;
 }
 
 export interface WebSocketCommand {
@@ -371,6 +392,15 @@ async function initialize(): Promise<void> {
   setupMaterialMatchingHandlers();
   setupSpoolmanHandlers();
   setupMaterialStationCard();
+  setupFileManager();
+  setupCalibration();
+  setupReboot();
+  setupSSHSettings();
+
+  // Refresh the (per-printer) SSH section every time the settings modal opens.
+  $('settings-button')?.addEventListener('click', () => {
+    void refreshSSHSettings();
+  });
 
   const contextHandlers = {
     onContextSwitched: async () => {
@@ -379,6 +409,10 @@ async function initialize(): Promise<void> {
       ensureSpoolmanVisibilityIfEnabled();
       initializeCamera();
       void refreshMaterialStationCard();
+      void refreshFileManagerButton();
+      void refreshCalibrationButton();
+      void refreshRebootButton();
+      void refreshSSHSettings();
     },
   };
 
@@ -433,6 +467,9 @@ async function handlePostLoginTasks(): Promise<void> {
     ensureSpoolmanVisibilityIfEnabled();
 
     initializeCamera();
+    void refreshFileManagerButton();
+    void refreshCalibrationButton();
+    void refreshRebootButton();
   } catch (error) {
     console.error('Failed to load features:', error);
   }

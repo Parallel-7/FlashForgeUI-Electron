@@ -2,8 +2,8 @@
  * @fileoverview Shared IPC types for the remote "Reboot Printer" feature.
  *
  * Consumed by the main-process handler (`printer-power-handlers.ts`), the
- * preload bridge, and the renderer's reboot overlay controller. Desktop only —
- * WebUI parity is deferred.
+ * preload bridge, the renderer's reboot overlay controller, and the WebUI
+ * (REBOOT_STATUS WebSocket broadcasts + the printer-power route).
  *
  * Key exports:
  * - RebootPhase: lifecycle phase pushed over the 'printer:reboot-status' channel.

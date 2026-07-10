@@ -19,6 +19,7 @@
  */
 
 import type { PollingData } from '@shared/types/polling.js';
+import type { RebootStatusPayload } from '@shared/types/printer-power.js';
 import { PrinterStatusData, WebSocketCommand, WebSocketMessage } from '@shared/types/web-api.types.js';
 import { EventEmitter } from 'events';
 import * as http from 'http';
@@ -620,6 +621,23 @@ export class WebSocketManager extends EventEmitter {
         ws.send(messageStr);
       }
     }
+  }
+
+  /**
+   * Broadcast an in-flight reboot lifecycle update to every connected client.
+   * No-op when the WebSocket server is not running (e.g. WebUI disabled) so
+   * desktop-triggered reboots never fail on the broadcast path.
+   */
+  public broadcastRebootStatus(contextId: string, payload: RebootStatusPayload): void {
+    if (!this.isRunning || this.clients.size === 0) {
+      return;
+    }
+    this.broadcast({
+      type: 'REBOOT_STATUS',
+      timestamp: new Date().toISOString(),
+      contextId,
+      reboot: payload,
+    });
   }
 
   /**

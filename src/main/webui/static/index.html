@@ -48,6 +48,31 @@
           </div>
         </div>
         <div class="header-right">
+          <button
+            id="file-manager-button"
+            class="settings-button hidden"
+            aria-haspopup="dialog"
+            aria-controls="file-manager-modal"
+            title="File Manager"
+          >
+            <i data-lucide="folder" aria-hidden="true"></i>
+          </button>
+          <button
+            id="calibration-button"
+            class="settings-button hidden"
+            aria-haspopup="dialog"
+            aria-controls="calibration-modal"
+            title="Calibration Assistant"
+          >
+            <i data-lucide="gauge" aria-hidden="true"></i>
+          </button>
+          <button
+            id="reboot-button"
+            class="settings-button hidden"
+            title="Reboot Printer"
+          >
+            <i data-lucide="power" aria-hidden="true"></i>
+          </button>
           <button id="edit-mode-toggle" class="edit-mode-toggle" aria-pressed="false">
             <i id="edit-mode-lock-icon" class="lock-icon" data-lucide="lock" aria-hidden="true"></i>
             <span class="edit-text">Locked</span>
@@ -151,6 +176,37 @@
               <div class="theme-buttons">
                 <button id="apply-webui-theme-btn" class="primary-btn">Apply Theme</button>
                 <button id="reset-webui-theme-btn" class="secondary-btn">Reset to Default</button>
+              </div>
+            </section>
+            <section class="settings-section" id="ssh-settings-section">
+              <h3>SSH (Current Printer)</h3>
+              <p class="help-text" id="ssh-settings-printer">
+                Credentials used by the file manager, calibration assistant, and reboot.
+                Defaults match the FlashForge-EasySSH provisioning tool.
+              </p>
+              <div id="ssh-settings-unavailable" class="help-text hidden">No printer is connected.</div>
+              <div class="ssh-settings-grid" id="ssh-settings-form">
+                <label>
+                  <span>Username:</span>
+                  <input type="text" id="ssh-username" autocomplete="off" spellcheck="false" placeholder="root">
+                </label>
+                <label>
+                  <span>Password:</span>
+                  <input type="password" id="ssh-password" autocomplete="new-password" placeholder="">
+                </label>
+                <label>
+                  <span>Port:</span>
+                  <input type="number" id="ssh-port" min="1" max="65535" placeholder="22">
+                </label>
+                <label>
+                  <span>Private key path (on host):</span>
+                  <input type="text" id="ssh-keypath" autocomplete="off" spellcheck="false" placeholder="Optional">
+                </label>
+              </div>
+              <p class="help-text" id="ssh-password-hint"></p>
+              <div class="theme-buttons">
+                <button id="ssh-save-btn" class="primary-btn">Save SSH Settings</button>
+                <button id="ssh-reset-btn" class="secondary-btn">Reset to Defaults</button>
               </div>
             </section>
             <section class="settings-section">
@@ -265,6 +321,438 @@
           <div class="modal-footer">
             <button id="temp-cancel" class="secondary-btn">Cancel</button>
             <button id="temp-confirm" class="primary-btn">Set</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- File Manager Modal (SFTP printer files) -->
+      <div id="file-manager-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="file-manager-title">
+        <div class="modal-content large fm-modal-content">
+          <div class="modal-header">
+            <h2 id="file-manager-title">File Manager</h2>
+            <button id="fm-close" class="close-btn" aria-label="Close file manager">&times;</button>
+          </div>
+          <div class="modal-body fm-modal-body">
+            <div class="fm-tabs" id="fm-tabs">
+              <button class="fm-tab active" id="fm-tab-internal" data-storage="internal">
+                <i data-lucide="hard-drive" aria-hidden="true"></i>
+                <span>Internal</span>
+              </button>
+              <button class="fm-tab hidden" id="fm-tab-usb" data-storage="usb">
+                <i data-lucide="usb" aria-hidden="true"></i>
+                <span>USB</span>
+              </button>
+              <div class="fm-tabs-spacer"></div>
+              <button class="fm-toolbar-btn" id="fm-refresh" title="Refresh">
+                <i data-lucide="refresh-cw" aria-hidden="true"></i>
+              </button>
+            </div>
+
+            <div class="fm-toolbar" id="fm-toolbar">
+              <div class="fm-breadcrumb hidden" id="fm-breadcrumb"></div>
+              <div class="fm-toolbar-actions">
+                <button class="fm-toolbar-btn" id="fm-select-all" title="Select all files">
+                  <i data-lucide="check-square" aria-hidden="true"></i>
+                  <span>Select All</span>
+                </button>
+                <button class="fm-toolbar-btn hidden" id="fm-clear-selection" title="Clear selection">
+                  <i data-lucide="square" aria-hidden="true"></i>
+                  <span>Clear</span>
+                </button>
+                <button class="fm-toolbar-btn danger hidden" id="fm-delete-selected" title="Delete selected files">
+                  <i data-lucide="trash-2" aria-hidden="true"></i>
+                  <span id="fm-delete-selected-label">Delete Selected</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="fm-body">
+              <div class="fm-state" id="fm-loading">
+                <div class="loading-spinner"></div>
+                <div class="fm-state-text">Connecting to printer&hellip;</div>
+              </div>
+
+              <div class="fm-state hidden" id="fm-message">
+                <i data-lucide="alert-triangle" aria-hidden="true" class="fm-state-icon"></i>
+                <div class="fm-state-text" id="fm-message-text"></div>
+                <button class="fm-toolbar-btn" id="fm-retry">
+                  <i data-lucide="refresh-cw" aria-hidden="true"></i>
+                  <span>Retry</span>
+                </button>
+              </div>
+
+              <div class="fm-grid hidden" id="fm-grid"></div>
+            </div>
+          </div>
+          <div class="modal-footer fm-footer">
+            <div class="fm-summary" id="fm-summary"></div>
+            <button id="fm-close-footer" class="secondary-btn">Close</button>
+          </div>
+
+          <!-- Confirmation overlay (delete) -->
+          <div class="fm-overlay hidden" id="fm-confirm-overlay">
+            <div class="fm-overlay-panel">
+              <div class="fm-overlay-title">
+                <i data-lucide="trash-2" aria-hidden="true"></i>
+                <span id="fm-confirm-title">Delete file?</span>
+              </div>
+              <div class="fm-overlay-body" id="fm-confirm-body"></div>
+              <div class="fm-overlay-actions">
+                <button class="secondary-btn" id="fm-confirm-cancel">Cancel</button>
+                <button class="primary-btn danger" id="fm-confirm-delete">Delete</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Rename overlay -->
+          <div class="fm-overlay hidden" id="fm-rename-overlay">
+            <div class="fm-overlay-panel">
+              <div class="fm-overlay-title">
+                <i data-lucide="pencil" aria-hidden="true"></i>
+                <span>Rename file</span>
+              </div>
+              <div class="fm-overlay-body">
+                <div class="fm-rename-row">
+                  <input type="text" id="fm-rename-input" spellcheck="false" autocomplete="off" />
+                  <span class="fm-rename-ext" id="fm-rename-ext"></span>
+                </div>
+                <div class="fm-rename-error hidden" id="fm-rename-error"></div>
+              </div>
+              <div class="fm-overlay-actions">
+                <button class="secondary-btn" id="fm-rename-cancel">Cancel</button>
+                <button class="primary-btn" id="fm-rename-confirm">Rename</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Calibration Assistant Modal -->
+      <div id="calibration-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="calibration-title">
+        <div class="modal-content cal-modal-content">
+          <div class="modal-header">
+            <h2 id="calibration-title">Calibration Assistant</h2>
+            <button id="cal-close" class="close-btn" aria-label="Close calibration assistant">&times;</button>
+          </div>
+          <div class="modal-body cal-modal-body">
+            <div class="cal-header">
+              <div id="cal-context-indicator" class="cal-context-indicator" aria-live="polite"></div>
+              <div id="cal-ssh-indicator" class="cal-ssh-indicator">
+                <span class="cal-ssh-dot"></span>
+                <span class="cal-ssh-text">SSH: Disconnected</span>
+              </div>
+            </div>
+
+            <nav class="cal-tabs" role="tablist" aria-label="Calibration categories">
+              <button class="cal-tab-button" role="tab" id="cal-tab-bed" data-tab="bed" aria-controls="cal-panel-bed" aria-selected="true">
+                <i data-lucide="grid-3x3" aria-hidden="true"></i>
+                Bed Leveling
+              </button>
+              <button class="cal-tab-button" role="tab" id="cal-tab-shaper" data-tab="shaper" aria-controls="cal-panel-shaper" aria-selected="false" tabindex="-1">
+                <i data-lucide="activity" aria-hidden="true"></i>
+                Input Shaper
+              </button>
+              <button class="cal-tab-button" role="tab" id="cal-tab-ssh" data-tab="ssh" aria-controls="cal-panel-ssh" aria-selected="false" tabindex="-1">
+                <i data-lucide="terminal" aria-hidden="true"></i>
+                SSH
+              </button>
+              <button class="cal-tab-button" role="tab" id="cal-tab-history" data-tab="history" aria-controls="cal-panel-history" aria-selected="false" tabindex="-1">
+                <i data-lucide="history" aria-hidden="true"></i>
+                History
+              </button>
+            </nav>
+
+            <div class="cal-tab-panels">
+              <!-- Bed Leveling Tab -->
+              <section id="cal-panel-bed" class="cal-tab-panel" role="tabpanel" aria-labelledby="cal-tab-bed">
+                <div class="cal-panel-layout">
+                  <div class="cal-panel-main">
+                    <div class="cal-mesh-container">
+                      <canvas id="cal-mesh-canvas" width="400" height="400"></canvas>
+                      <div class="cal-mesh-stats">
+                        <div class="cal-stat-item">
+                          <span class="cal-stat-label">Range:</span>
+                          <span id="cal-stat-range" class="cal-stat-value">--</span>
+                        </div>
+                        <div class="cal-stat-item">
+                          <span class="cal-stat-label">Max Dev:</span>
+                          <span id="cal-stat-max-dev" class="cal-stat-value">--</span>
+                        </div>
+                        <div class="cal-stat-item">
+                          <span class="cal-stat-label">Std Dev:</span>
+                          <span id="cal-stat-std-dev" class="cal-stat-value">--</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="cal-controls-row">
+                      <button id="cal-btn-load-file" class="cal-control-button primary">
+                        <i data-lucide="file-up" aria-hidden="true"></i>
+                        Load Config File
+                      </button>
+                      <button id="cal-btn-fetch-ssh" class="cal-control-button" disabled>
+                        <i data-lucide="download" aria-hidden="true"></i>
+                        Fetch via SSH
+                      </button>
+                      <select id="cal-profile-select" class="cal-profile-select" disabled>
+                        <option value="">Select Profile</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div class="cal-panel-sidebar">
+                    <div class="cal-workflow-section">
+                      <h3 class="cal-section-title">Calibration Workflow</h3>
+                      <div id="cal-workflow-stages" class="cal-workflow-stages">
+                        <div class="cal-workflow-stage" data-stage="initial">
+                          <span class="cal-stage-icon"><i data-lucide="circle" aria-hidden="true"></i></span>
+                          <span class="cal-stage-label">Load Mesh Data</span>
+                        </div>
+                        <div class="cal-workflow-stage" data-stage="belt_sync">
+                          <span class="cal-stage-icon"><i data-lucide="circle" aria-hidden="true"></i></span>
+                          <span class="cal-stage-label">Belt Sync Check</span>
+                        </div>
+                        <div class="cal-workflow-stage" data-stage="screw_adjust">
+                          <span class="cal-stage-icon"><i data-lucide="circle" aria-hidden="true"></i></span>
+                          <span class="cal-stage-label">Screw Adjustments</span>
+                        </div>
+                        <div class="cal-workflow-stage" data-stage="tape_compensate">
+                          <span class="cal-stage-icon"><i data-lucide="circle" aria-hidden="true"></i></span>
+                          <span class="cal-stage-label">Tape Compensation</span>
+                        </div>
+                      </div>
+
+                      <button id="cal-btn-run-workflow" class="cal-control-button primary" disabled>
+                        <i data-lucide="play" aria-hidden="true"></i>
+                        Run Analysis
+                      </button>
+                    </div>
+
+                    <div id="cal-results-section" class="cal-results-section" hidden>
+                      <h3 class="cal-section-title">Adjustments Required</h3>
+
+                      <div class="cal-adjustments-container">
+                        <h4 class="cal-subsection-title">Screw Adjustments</h4>
+                        <div id="cal-screw-list" class="cal-adjustments-list"></div>
+                      </div>
+
+                      <div class="cal-adjustments-container">
+                        <h4 class="cal-subsection-title">Tape Recommendations</h4>
+                        <div id="cal-tape-list" class="cal-adjustments-list"></div>
+                      </div>
+
+                      <div class="cal-improvement-display">
+                        <span class="cal-improvement-label">Improvement:</span>
+                        <span id="cal-improvement-value" class="cal-improvement-value">--%</span>
+                      </div>
+
+                      <button id="cal-btn-visual-rec" class="cal-control-button">
+                        <i data-lucide="sparkles" aria-hidden="true"></i>
+                        Visualize Recommendations
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- Input Shaper Tab -->
+              <section id="cal-panel-shaper" class="cal-tab-panel" role="tabpanel" aria-labelledby="cal-tab-shaper" hidden>
+                <div class="cal-panel-layout">
+                  <div class="cal-panel-main">
+                    <div class="cal-shaper-container">
+                      <canvas id="cal-shaper-canvas" width="600" height="300"></canvas>
+                      <div class="cal-axis-selector">
+                        <button id="cal-btn-axis-x" class="cal-axis-button active" data-axis="x">X Axis</button>
+                        <button id="cal-btn-axis-y" class="cal-axis-button" data-axis="y">Y Axis</button>
+                      </div>
+                    </div>
+
+                    <div class="cal-controls-row">
+                      <button id="cal-btn-load-csv" class="cal-control-button primary">
+                        <i data-lucide="file-up" aria-hidden="true"></i>
+                        Load CSV File
+                      </button>
+                      <button id="cal-btn-fetch-shaper" class="cal-control-button" disabled>
+                        <i data-lucide="download" aria-hidden="true"></i>
+                        Fetch via SSH
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="cal-panel-sidebar">
+                    <div class="cal-shaper-results-section">
+                      <h3 class="cal-section-title">Recommended Shaper</h3>
+                      <div id="cal-shaper-recommendation" class="cal-shaper-recommendation">
+                        <div class="cal-empty-state">Load accelerometer data to see recommendations</div>
+                      </div>
+                    </div>
+
+                    <div class="cal-shaper-comparison-section">
+                      <h3 class="cal-section-title">All Shapers</h3>
+                      <div id="cal-shaper-comparison" class="cal-shaper-comparison">
+                        <div class="cal-empty-state">No data loaded</div>
+                      </div>
+                    </div>
+
+                    <div class="cal-shaper-config">
+                      <h3 class="cal-section-title">Config Output</h3>
+                      <pre id="cal-shaper-config-output" class="cal-shaper-config-output">Load data to generate config</pre>
+                      <div class="cal-shaper-config-actions">
+                        <button id="cal-btn-copy-config" class="cal-control-button" disabled>
+                          <i data-lucide="copy" aria-hidden="true"></i>
+                          Copy
+                        </button>
+                        <button id="cal-btn-save-config" class="cal-control-button" disabled>
+                          <i data-lucide="download" aria-hidden="true"></i>
+                          Export Config
+                        </button>
+                        <button id="cal-btn-upload-config" class="cal-control-button" disabled>
+                          <i data-lucide="upload" aria-hidden="true"></i>
+                          Upload via SSH
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- SSH Tab -->
+              <section id="cal-panel-ssh" class="cal-tab-panel" role="tabpanel" aria-labelledby="cal-tab-ssh" hidden>
+                <div class="cal-ssh-panel">
+                  <h3 class="cal-section-title">SSH Connection</h3>
+                  <div class="cal-info-text">
+                    Connect to your printer via SSH to fetch configuration files directly.
+                    Credentials are managed centrally in Settings &rarr; SSH and default to the
+                    FlashForge easy-SSH setup, so most printers connect with no configuration.
+                  </div>
+
+                  <div class="cal-ssh-fields">
+                    <div class="cal-input-group">
+                      <label for="cal-ssh-host">Printer IP Address (Auto-detected):</label>
+                      <input type="text" id="cal-ssh-host" class="cal-input" placeholder="Active printer IP" readonly>
+                    </div>
+
+                    <div class="cal-input-group">
+                      <label for="cal-ssh-summary">Credentials (from Settings &rarr; SSH):</label>
+                      <input type="text" id="cal-ssh-summary" class="cal-input" readonly>
+                    </div>
+                  </div>
+
+                  <div class="cal-ssh-buttons">
+                    <button id="cal-btn-ssh-connect" class="cal-control-button primary">
+                      <i data-lucide="plug" aria-hidden="true"></i>
+                      Connect
+                    </button>
+                    <button id="cal-btn-ssh-disconnect" class="cal-control-button" disabled>
+                      <i data-lucide="unplug" aria-hidden="true"></i>
+                      Disconnect
+                    </button>
+                    <button id="cal-btn-ssh-test" class="cal-control-button">
+                      <i data-lucide="check-circle" aria-hidden="true"></i>
+                      Test Connection
+                    </button>
+                  </div>
+
+                  <div id="cal-ssh-test-result" class="cal-ssh-test-result"></div>
+
+                  <div class="cal-ssh-fields">
+                    <h4 class="cal-subsection-title">Remote Paths</h4>
+                    <div class="cal-info-text">Override only if your printer uses a custom location.</div>
+                    <div class="cal-input-group">
+                      <label for="cal-ssh-config-path">printer.cfg Path (optional override):</label>
+                      <input type="text" id="cal-ssh-config-path" class="cal-input" placeholder="Auto-detect (recommended)">
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              <!-- History Tab -->
+              <section id="cal-panel-history" class="cal-tab-panel" role="tabpanel" aria-labelledby="cal-tab-history" hidden>
+                <div class="cal-history-panel">
+                  <div class="cal-history-header">
+                    <h3 class="cal-section-title">Calibration History</h3>
+                    <button id="cal-btn-clear-history" class="cal-control-button danger">
+                      <i data-lucide="trash-2" aria-hidden="true"></i>
+                      Clear History
+                    </button>
+                  </div>
+
+                  <div id="cal-history-list" class="cal-history-list">
+                    <div class="cal-empty-state">No calibration history for this printer</div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </div>
+          <div class="modal-footer cal-footer">
+            <span id="cal-status-message" class="cal-status-message"></span>
+            <div class="cal-footer-actions">
+              <label class="cal-export-format">
+                <span>Format</span>
+                <select id="cal-export-format" class="cal-export-select">
+                  <option value="json">JSON</option>
+                  <option value="csv">CSV</option>
+                  <option value="png">PNG</option>
+                  <option value="pdf">PDF</option>
+                </select>
+              </label>
+              <button id="cal-btn-export" class="secondary-btn">
+                <i data-lucide="download" aria-hidden="true"></i>
+                Export Report
+              </button>
+              <button id="cal-close-footer" class="secondary-btn">Close</button>
+            </div>
+          </div>
+
+          <!-- Visual recommendations overlay -->
+          <div id="cal-visual-rec-overlay" class="cal-overlay hidden" role="dialog" aria-modal="true" aria-label="Visual recommendations">
+            <div class="cal-overlay-panel">
+              <div class="cal-overlay-title">
+                <i data-lucide="sparkles" aria-hidden="true"></i>
+                <span>Visual Recommendations</span>
+                <button id="cal-visual-rec-close" class="close-btn" aria-label="Close visual recommendations">&times;</button>
+              </div>
+              <div class="cal-overlay-body">
+                <canvas id="cal-rec-canvas" width="620" height="420"></canvas>
+                <div class="cal-rec-legend">
+                  <div class="cal-legend-item"><span class="cal-legend-swatch cw"></span>Clockwise adjustment</div>
+                  <div class="cal-legend-item"><span class="cal-legend-swatch ccw"></span>Counter-clockwise adjustment</div>
+                  <div class="cal-legend-item"><span class="cal-legend-swatch tape"></span>Tape layers</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reboot Confirmation Modal -->
+      <div id="reboot-confirm-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="reboot-confirm-title">
+        <div class="modal-content small">
+          <div class="modal-header">
+            <h2 id="reboot-confirm-title">Reboot Printer?</h2>
+            <button id="reboot-confirm-close" class="close-btn" aria-label="Close reboot confirmation">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p id="reboot-confirm-message">This will reboot the printer. Any active print will be interrupted.</p>
+          </div>
+          <div class="modal-footer">
+            <button id="reboot-cancel" class="secondary-btn">Cancel</button>
+            <button id="reboot-confirm" class="primary-btn danger">Reboot</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Reboot Progress Overlay -->
+      <div id="reboot-overlay" class="reboot-overlay hidden" role="alertdialog" aria-live="assertive" aria-labelledby="reboot-overlay-title">
+        <div class="reboot-overlay-panel">
+          <div class="loading-spinner" id="reboot-spinner"></div>
+          <i data-lucide="check-circle" aria-hidden="true" class="reboot-result-icon success hidden" id="reboot-success-icon"></i>
+          <i data-lucide="alert-triangle" aria-hidden="true" class="reboot-result-icon error hidden" id="reboot-error-icon"></i>
+          <div class="reboot-overlay-title" id="reboot-overlay-title">Rebooting printer&hellip;</div>
+          <div class="reboot-overlay-message" id="reboot-overlay-message"></div>
+          <div class="reboot-overlay-actions">
+            <button id="reboot-overlay-retry" class="secondary-btn hidden">Retry</button>
+            <button id="reboot-overlay-dismiss" class="primary-btn hidden">Dismiss</button>
           </div>
         </div>
       </div>

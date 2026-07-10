@@ -36,6 +36,12 @@ jest.mock('../../../services/Go2rtcService.js', () => ({
   getGo2rtcService: jest.fn(),
 }));
 
+// The WebSocketManager import chain pulls in WebUIManager -> ConnectionFlow ->
+// window factories -> electron at module load, so it must be mocked out.
+jest.mock('../../../webui/server/WebSocketManager.js', () => ({
+  getWebSocketManager: jest.fn(() => ({ broadcastRebootStatus: jest.fn() })),
+}));
+
 import type { RebootSshClient } from '../printer-power-handlers.js';
 import {
   REBOOT_COMMAND,

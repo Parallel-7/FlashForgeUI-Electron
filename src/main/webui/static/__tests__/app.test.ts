@@ -57,6 +57,14 @@ const mockSetupSpoolmanHandlers = jest.fn();
 const mockInitializeLucideIcons = jest.fn();
 const mockSetupDialogEventHandlers = jest.fn();
 const mockSetupHeaderEventHandlers = jest.fn();
+const mockRefreshFileManagerButton = jest.fn();
+const mockSetupFileManager = jest.fn();
+const mockRefreshRebootButton = jest.fn();
+const mockSetupReboot = jest.fn();
+const mockRefreshSSHSettings = jest.fn();
+const mockSetupSSHSettings = jest.fn();
+const mockRefreshCalibrationButton = jest.fn();
+const mockSetupCalibration = jest.fn();
 const mockUpdateConnectionStatus = jest.fn();
 const mockUpdatePrinterStatus = jest.fn();
 const mockUpdateSpoolmanPanelState = jest.fn();
@@ -136,6 +144,26 @@ jest.mock('../features/material-matching.js', () => ({
 jest.mock('../features/spoolman.js', () => ({
   loadSpoolmanConfig: () => mockLoadSpoolmanConfig(),
   setupSpoolmanHandlers: () => mockSetupSpoolmanHandlers(),
+}));
+
+jest.mock('../features/file-manager.js', () => ({
+  refreshFileManagerButton: () => mockRefreshFileManagerButton(),
+  setupFileManager: () => mockSetupFileManager(),
+}));
+
+jest.mock('../features/reboot.js', () => ({
+  refreshRebootButton: () => mockRefreshRebootButton(),
+  setupReboot: () => mockSetupReboot(),
+}));
+
+jest.mock('../features/ssh.js', () => ({
+  refreshSSHSettings: () => mockRefreshSSHSettings(),
+  setupSSHSettings: () => mockSetupSSHSettings(),
+}));
+
+jest.mock('../features/calibration.js', () => ({
+  refreshCalibrationButton: () => mockRefreshCalibrationButton(),
+  setupCalibration: () => mockSetupCalibration(),
 }));
 
 jest.mock('../shared/icons.js', () => ({

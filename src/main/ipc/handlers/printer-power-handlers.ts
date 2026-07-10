@@ -1,5 +1,5 @@
 /**
- * @fileoverview IPC handler for the remote "Reboot Printer" feature (desktop only).
+ * @fileoverview IPC handler + shared core for the remote "Reboot Printer" feature.
  *
  * Reboots an Adventurer 5M / 5M Pro / AD5X over the flashforge-easyssh root SSH
  * surface. The renderer hides the menu item for unsupported models; this handler
@@ -21,10 +21,14 @@
  * expected to drop. dispatchRebootCommand() races the exec against a short
  * timeout and treats a channel-drop / error as success.
  *
- * WebUI parity is intentionally deferred (desktop only).
+ * Status updates fan out to BOTH the desktop renderer (push channel) and WebUI
+ * WebSocket clients (REBOOT_STATUS broadcast), so a reboot triggered from one
+ * surface is visible on the other.
  *
  * Key exports:
  * - registerPrinterPowerHandlers(): registers the 'printer:reboot' handler.
+ * - startPrinterReboot(): shared validate/dispatch/monitor core (also used by
+ *   the WebUI printer-power route).
  * - dispatchRebootCommand(): fire-and-forget reboot exec (testable).
  * - REBOOT_COMMAND: the exact shell string dispatched to the printer.
  * - REBOOT_STABLE_POLLS_REQUIRED: consecutive polls needed to declare success.
@@ -45,6 +49,7 @@ import { getSSHSettingsService } from '../../services/SSHSettingsService.js';
 import { isRebootSupportedModel } from '../../utils/PrinterUtils.js';
 import { getWindowManager } from '../../windows/WindowManager.js';
 import { getGo2rtcService } from '../../services/Go2rtcService.js';
+import { getWebSocketManager } from '../../webui/server/WebSocketManager.js';
 
 /**
  * Reboot shell command sent to the printer.
@@ -160,11 +165,23 @@ interface RebootMonitor {
 const activeMonitors = new Map<string, RebootMonitor>();
 let contextRemovalListenerRegistered = false;
 
-/** Push a reboot status update to the main renderer window (no-op if absent). */
-function sendRebootStatus(_contextId: string, payload: RebootStatusPayload): void {
+/**
+ * Push a reboot status update to every listening surface: the main renderer
+ * window (desktop overlay) and any connected WebUI WebSocket clients. Either
+ * sink may be absent (headless has no window; desktop may have no WebUI
+ * clients) — both paths are no-ops in that case, so a reboot triggered from
+ * one surface is always visible on the other.
+ */
+function sendRebootStatus(contextId: string, payload: RebootStatusPayload): void {
   const mainWindow = getWindowManager().getMainWindow();
   if (mainWindow && !mainWindow.isDestroyed()) {
     mainWindow.webContents.send('printer:reboot-status', payload);
+  }
+  try {
+    getWebSocketManager().broadcastRebootStatus(contextId, payload);
+  } catch (error) {
+    // Broadcasting is best-effort; a WebUI failure must never break the reboot.
+    console.warn('[PrinterPower] Failed to broadcast reboot status to WebUI:', describeError(error));
   }
 }
 
@@ -353,6 +370,75 @@ function ensureContextRemovalCleanup(): void {
 }
 
 /**
+ * Validate, dispatch, and monitor a printer reboot. Shared entry point for the
+ * desktop 'printer:reboot' IPC handler and the WebUI POST /printer/reboot
+ * route — both surfaces receive the same lifecycle updates because
+ * sendRebootStatus fans out to the desktop window AND WebUI WebSocket clients.
+ * Throws with an actionable message on validation or SSH-connect failure.
+ */
+export async function startPrinterReboot(contextId: unknown): Promise<{ success: true }> {
+  if (typeof contextId !== 'string' || contextId.length === 0) {
+    throw new Error('Invalid reboot request: missing context id');
+  }
+
+  ensureContextRemovalCleanup();
+
+  // STRICT context resolution — no active-context fallback.
+  const context = getPrinterContextManager().getContext(contextId);
+  if (!context) {
+    throw new Error('Printer context not found');
+  }
+
+  const details = context.printerDetails;
+  const modelType: PrinterModelType | undefined = details.modelType;
+
+  // Defense-in-depth model guard (renderer also hides the item).
+  if (!isRebootSupportedModel(modelType)) {
+    throw new Error('Reboot is only supported on Adventurer 5M / 5M Pro / AD5X printers');
+  }
+
+  const serialNumber = details.SerialNumber;
+  const host = details.IPAddress;
+  const printerName = details.Name || host || 'Printer';
+  const powerKey = `power:${contextId}`;
+
+  if (!serialNumber || !host) {
+    throw new Error('Printer is missing the serial number or IP address required for reboot');
+  }
+
+  // Abort any prior in-flight monitor for this context (Retry path).
+  const existing = activeMonitors.get(contextId);
+  if (existing) {
+    existing.cleanup();
+  }
+
+  // Dedicated SSH namespace — a reboot must not tear down the file-manager
+  // or calibration sessions (those use separate connection keys).
+  const config = await getSSHSettingsService().buildConnectionConfig(serialNumber, host);
+  try {
+    await getSSHConnectionManager().connect(powerKey, config);
+  } catch (error) {
+    // A genuine SSH failure (unreachable / wrong creds) is a real failure.
+    throw new Error(`Could not reach ${printerName} over SSH: ${describeError(error)}`);
+  }
+
+  // Fire-and-forget the reboot command (channel-drop treated as success).
+  await dispatchRebootCommand(getSSHConnectionManager() as SSHConnectionManager, powerKey);
+
+  // Notify all surfaces that the reboot has been dispatched.
+  sendRebootStatus(contextId, {
+    phase: 'rebooting',
+    message: `Rebooting ${printerName}...`,
+    printerName,
+  });
+
+  // Watch for the printer going offline and coming back.
+  startReconnectMonitor(contextId, printerName, (payload) => sendRebootStatus(contextId, payload));
+
+  return { success: true };
+}
+
+/**
  * Register the 'printer:reboot' IPC handler. Called once during app init.
  */
 export function registerPrinterPowerHandlers(): void {
@@ -361,63 +447,7 @@ export function registerPrinterPowerHandlers(): void {
   ensureContextRemovalCleanup();
 
   ipcMain.handle('printer:reboot', async (_event, contextId: unknown): Promise<{ success: true }> => {
-    if (typeof contextId !== 'string' || contextId.length === 0) {
-      throw new Error('Invalid reboot request: missing context id');
-    }
-
-    // STRICT context resolution — no active-context fallback.
-    const context = getPrinterContextManager().getContext(contextId);
-    if (!context) {
-      throw new Error('Printer context not found');
-    }
-
-    const details = context.printerDetails;
-    const modelType: PrinterModelType | undefined = details.modelType;
-
-    // Defense-in-depth model guard (renderer also hides the item).
-    if (!isRebootSupportedModel(modelType)) {
-      throw new Error('Reboot is only supported on Adventurer 5M / 5M Pro / AD5X printers');
-    }
-
-    const serialNumber = details.SerialNumber;
-    const host = details.IPAddress;
-    const printerName = details.Name || host || 'Printer';
-    const powerKey = `power:${contextId}`;
-
-    if (!serialNumber || !host) {
-      throw new Error('Printer is missing the serial number or IP address required for reboot');
-    }
-
-    // Abort any prior in-flight monitor for this context (Retry path).
-    const existing = activeMonitors.get(contextId);
-    if (existing) {
-      existing.cleanup();
-    }
-
-    // Dedicated SSH namespace — a reboot must not tear down the file-manager
-    // or calibration sessions (those use separate connection keys).
-    const config = await getSSHSettingsService().buildConnectionConfig(serialNumber, host);
-    try {
-      await getSSHConnectionManager().connect(powerKey, config);
-    } catch (error) {
-      // A genuine SSH failure (unreachable / wrong creds) is a real failure.
-      throw new Error(`Could not reach ${printerName} over SSH: ${describeError(error)}`);
-    }
-
-    // Fire-and-forget the reboot command (channel-drop treated as success).
-    await dispatchRebootCommand(getSSHConnectionManager() as SSHConnectionManager, powerKey);
-
-    // Notify the renderer that the reboot has been dispatched.
-    sendRebootStatus(contextId, {
-      phase: 'rebooting',
-      message: `Rebooting ${printerName}...`,
-      printerName,
-    });
-
-    // Watch for the printer going offline and coming back.
-    startReconnectMonitor(contextId, printerName, (payload) => sendRebootStatus(contextId, payload));
-
-    return { success: true };
+    return startPrinterReboot(contextId);
   });
 
   console.log('[PrinterPower Handlers] Printer power IPC handlers registered');
