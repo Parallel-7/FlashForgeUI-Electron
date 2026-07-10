@@ -7,6 +7,8 @@
  *
  * Key Features:
  * - Session-based log files with timestamps (debug-YYYY-MM-DD_HH-mm-ss.log)
+ * - Full console output capture file (console-YYYY-MM-DD_HH-mm-ss.log) - every
+ *   main-process console.* line (what a CLI launch shows) via ConsoleCapture
  * - Separate network logging file (network-debug-YYYY-MM-DD_HH-mm-ss.log)
  * - Automatic cleanup of old log files (configurable retention count)
  * - Real-time log writing with buffering for performance
@@ -14,7 +16,8 @@
  * - CLI argument support for headless mode activation
  *
  * Log File Locations:
- * - Debug logs: <userData>/logs/debug-<timestamp>.log
+ * - Debug logs (targeted instrumentation): <userData>/logs/debug-<timestamp>.log
+ * - Console logs (full console mirror): <userData>/logs/console-<timestamp>.log
  * - Network logs: <userData>/logs/network-debug-<timestamp>.log
  *
  * Usage:
@@ -30,6 +33,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 
 import { ConfigManager } from '../managers/ConfigManager.js';
+import { getOriginalConsole, installConsoleCapture, type ConsoleLevel } from '../utils/ConsoleCapture.js';
 
 /**
  * Log entry structure for internal processing
@@ -75,11 +79,14 @@ export class DebugLogService {
   private readonly flushIntervalMs: number;
 
   private debugLogPath: string | null = null;
+  private consoleLogPath: string | null = null;
   private networkLogPath: string | null = null;
   private debugLogStream: fs.WriteStream | null = null;
+  private consoleLogStream: fs.WriteStream | null = null;
   private networkLogStream: fs.WriteStream | null = null;
 
   private debugBuffer: string[] = [];
+  private consoleBuffer: string[] = [];
   private networkBuffer: string[] = [];
   private flushTimer: NodeJS.Timeout | null = null;
 
@@ -115,6 +122,11 @@ export class DebugLogService {
   public initialize(cliDebug: boolean = false, cliNetwork: boolean = false): void {
     this.cliDebugOverride = cliDebug;
     this.cliNetworkOverride = cliNetwork;
+
+    // Mirror all main-process console output into the console log file.
+    // Installed unconditionally (idempotent); logConsole() no-ops while disabled,
+    // so toggling debug mode mid-session starts/stops capture automatically.
+    installConsoleCapture((level, message) => this.logConsole(level, message));
 
     // updateEnabledState() handles starting/stopping sessions based on state transitions
     this.updateEnabledState();
@@ -175,6 +187,13 @@ export class DebugLogService {
    */
   public getNetworkLogPath(): string | null {
     return this.networkLogPath;
+  }
+
+  /**
+   * Get the path to the current console log file
+   */
+  public getConsoleLogPath(): string | null {
+    return this.consoleLogPath;
   }
 
   /**
@@ -250,6 +269,29 @@ export class DebugLogService {
     };
 
     this.writeDebugEntry(entry);
+  }
+
+  /**
+   * Record a captured console line into the console log file
+   * Called by the ConsoleCapture sink for every main-process console.* call
+   */
+  public logConsole(level: ConsoleLevel, message: string): void {
+    if (!this.isEnabled) return;
+
+    const timestamp = this.formatLogTimestamp(new Date());
+    const levelLabel = level.toUpperCase().padEnd(5);
+    this.consoleBuffer.push(`[${timestamp}] [${levelLabel}] ${message}\n`);
+  }
+
+  /**
+   * Record a renderer-originated log message into the console log file
+   * Fed by the 'add-log-message' IPC channel (in-app log panel messages)
+   */
+  public logRendererMessage(message: string): void {
+    if (!this.isEnabled) return;
+
+    const timestamp = this.formatLogTimestamp(new Date());
+    this.consoleBuffer.push(`[${timestamp}] [LOG  ] [Renderer] ${message}\n`);
   }
 
   /**
@@ -390,6 +432,13 @@ export class DebugLogService {
   }
 
   /**
+   * List all available console log files
+   */
+  public listConsoleLogs(): string[] {
+    return this.listLogFiles('console-');
+  }
+
+  /**
    * Read the contents of a specific log file
    */
   public readLogFile(filename: string): string | null {
@@ -422,10 +471,19 @@ export class DebugLogService {
   }
 
   /**
+   * Get the most recent console log file path
+   */
+  public getMostRecentConsoleLog(): string | null {
+    const logs = this.listConsoleLogs();
+    return logs.length > 0 ? path.join(this.logsDir, logs[0]) : null;
+  }
+
+  /**
    * Flush any buffered log entries to disk
    */
   public flush(): void {
     this.flushDebugBuffer();
+    this.flushConsoleBuffer();
     this.flushNetworkBuffer();
   }
 
@@ -460,6 +518,11 @@ export class DebugLogService {
     // Write session header
     const header = this.createSessionHeader('Debug Log');
     this.debugLogStream.write(header);
+
+    // Create console log file (full mirror of main-process console output)
+    this.consoleLogPath = path.join(this.logsDir, `console-${timestamp}.log`);
+    this.consoleLogStream = fs.createWriteStream(this.consoleLogPath, { flags: 'a' });
+    this.consoleLogStream.write(this.createSessionHeader('Console Log'));
 
     // Start network log if enabled
     if (this.isNetworkLoggingEnabled) {
@@ -506,9 +569,16 @@ export class DebugLogService {
       this.debugLogStream = null;
     }
 
+    if (this.consoleLogStream) {
+      this.consoleLogStream.write(this.createSessionFooter());
+      this.consoleLogStream.end();
+      this.consoleLogStream = null;
+    }
+
     this.closeNetworkLog();
 
     this.debugLogPath = null;
+    this.consoleLogPath = null;
     this.sessionStartTime = null;
 
     console.log('[DebugLogService] Session ended');
@@ -575,9 +645,11 @@ export class DebugLogService {
     const line = this.formatLogEntry(entry);
     this.debugBuffer.push(line);
 
-    // Also output to console in development
+    // Also output to console in development (via the original console so debug
+    // entries are not duplicated into the console log file by the capture)
     if (process.env.NODE_ENV === 'development') {
-      console.debug(line.trim());
+      const original = getOriginalConsole();
+      (original?.debug ?? console.debug)(line.trim());
     }
   }
 
@@ -638,6 +710,21 @@ export class DebugLogService {
     }
   }
 
+  private flushConsoleBuffer(): void {
+    if (this.consoleBuffer.length === 0 || !this.consoleLogStream) return;
+
+    const content = this.consoleBuffer.join('');
+    this.consoleBuffer = [];
+
+    try {
+      this.consoleLogStream.write(content);
+    } catch (error) {
+      // Use the original console to avoid re-capturing our own failure report
+      const original = getOriginalConsole();
+      (original?.error ?? console.error)('[DebugLogService] Failed to write to console log:', error);
+    }
+  }
+
   private flushNetworkBuffer(): void {
     if (this.networkBuffer.length === 0 || !this.networkLogStream) return;
 
@@ -669,6 +756,16 @@ export class DebugLogService {
         for (const file of toDelete) {
           fs.unlinkSync(path.join(this.logsDir, file));
           console.log(`[DebugLogService] Deleted old debug log: ${file}`);
+        }
+      }
+
+      // Cleanup console logs
+      const consoleLogs = this.listConsoleLogs();
+      if (consoleLogs.length > this.maxLogFiles) {
+        const toDelete = consoleLogs.slice(this.maxLogFiles);
+        for (const file of toDelete) {
+          fs.unlinkSync(path.join(this.logsDir, file));
+          console.log(`[DebugLogService] Deleted old console log: ${file}`);
         }
       }
 

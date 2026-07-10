@@ -100,6 +100,9 @@ class AutoUpdateService extends EventEmitter {
   private setupAutoUpdater(): void {
     autoUpdater.autoDownload = false;
     autoUpdater.autoInstallOnAppQuit = true;
+    // We ship full NSIS installers, not web installers; silences the
+    // electron-updater warning and matches its future default
+    autoUpdater.disableWebInstaller = true;
 
     autoUpdater.on('checking-for-update', () => {
       this.downloadProgress = null;

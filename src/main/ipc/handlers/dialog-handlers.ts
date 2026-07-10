@@ -497,6 +497,8 @@ export function registerDialogHandlers(configManager: ConfigManager, windowManag
     try {
       const logService = getLogService();
       logService.addMessage(message);
+      // Tee renderer log-panel messages into the console log file when debug mode is on
+      getDebugLogService().logRendererMessage(message);
     } catch (error) {
       console.error('Failed to add log message to LogService:', error);
     }

@@ -7,8 +7,9 @@
  * - CLI arguments (--debug) - for headless mode override
  * - Global runtime flag - set by main process for cross-process coordination
  *
- * In the main process, logs are also written to file via DebugLogService
- * when debug mode is enabled.
+ * In the main process, console output (including logVerbose) is mirrored to
+ * the console log file by DebugLogService's console capture when debug mode
+ * is enabled. Renderer-process output is not captured to file.
  *
  * @module shared/logging
  */

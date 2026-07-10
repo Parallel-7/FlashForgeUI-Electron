@@ -291,6 +291,28 @@ export class ConfigManager extends EventEmitter {
   }
 
   /**
+   * Fill in defaults that depend on the installed build rather than static
+   * values. Currently: when the stored config carries no explicit UpdateChannel
+   * (fresh installs and configs predating the setting), default the channel to
+   * match the running build so alpha installs receive alpha updates. Explicit
+   * user selections are never overridden.
+   */
+  private applyDerivedDefaults(config: AppConfig, hasExplicitUpdateChannel: boolean): AppConfig {
+    if (hasExplicitUpdateChannel) {
+      return config;
+    }
+    return { ...config, UpdateChannel: this.deriveDefaultUpdateChannel() };
+  }
+
+  /**
+   * Derive the update channel matching the installed build's version
+   * (prerelease suffix means an alpha build)
+   */
+  private deriveDefaultUpdateChannel(): AppConfig['UpdateChannel'] {
+    return app.getVersion().includes('-') ? 'alpha' : 'stable';
+  }
+
+  /**
    * Loads configuration from file
    */
   private async loadFromFile(): Promise<void> {
@@ -304,9 +326,14 @@ export class ConfigManager extends EventEmitter {
       if (fs.existsSync(this.configPath)) {
         const fileContent = await fs.promises.readFile(this.configPath, 'utf8');
         const loadedData: unknown = JSON.parse(fileContent);
+        const hasExplicitUpdateChannel =
+          typeof loadedData === 'object' && loadedData !== null && 'UpdateChannel' in loadedData;
 
         if (isValidConfig(loadedData)) {
-          const sanitizedConfig = sanitizeConfig(loadedData as Partial<AppConfig>);
+          const sanitizedConfig = this.applyDerivedDefaults(
+            sanitizeConfig(loadedData as Partial<AppConfig>),
+            hasExplicitUpdateChannel
+          );
           const previousConfig = { ...this.currentConfig };
           this.currentConfig = { ...sanitizedConfig };
 
@@ -325,9 +352,12 @@ export class ConfigManager extends EventEmitter {
         } else {
           console.warn('Loaded config is invalid, using defaults');
           // Sanitize and use what we can
-          const sanitizedConfig = sanitizeConfig(loadedData as Partial<AppConfig>);
+          const sanitizedConfig = this.applyDerivedDefaults(
+            sanitizeConfig(loadedData as Partial<AppConfig>),
+            hasExplicitUpdateChannel
+          );
           const previousConfig = { ...this.currentConfig };
-          this.currentConfig = sanitizedConfig;
+          this.currentConfig = { ...sanitizedConfig };
 
           // Only emit events for keys that actually changed
           const changedKeys = (Object.keys(DEFAULT_CONFIG) as Array<keyof AppConfig>).filter(
@@ -339,6 +369,15 @@ export class ConfigManager extends EventEmitter {
 
           // Save the sanitized version
           this.scheduleSave();
+        }
+      } else {
+        // Fresh install - no config file means no explicit channel choice yet,
+        // so match the installed build (alpha builds track the alpha channel)
+        const derivedChannel = this.deriveDefaultUpdateChannel();
+        if (this.currentConfig.UpdateChannel !== derivedChannel) {
+          const previousConfig = { ...this.currentConfig };
+          this.currentConfig.UpdateChannel = derivedChannel;
+          this.emitUpdateEvent(previousConfig, ['UpdateChannel']);
         }
       }
     } catch (error) {
