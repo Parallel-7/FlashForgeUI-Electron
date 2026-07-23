@@ -1,0 +1,31 @@
+abi <abi/4.0>,
+include <tunables/global>
+
+# AppArmor profile for FlashForgeUI (deb / rpm installs).
+#
+# Ubuntu 23.10+ ships kernel.apparmor_restrict_unprivileged_userns=1, which forbids unprivileged
+# processes from creating user namespaces. Chromium needs them for its namespace sandbox, so
+# without a profile granting `userns` the app aborts during startup and never draws a window.
+# See https://bugs.launchpad.net/ubuntu/+source/apparmor/+bug/2046844.
+#
+# flags=(unconfined) means this profile does not actually confine the application - it exists
+# solely to carry the `userns` grant, which is the pattern the AppArmor maintainers recommend for
+# application packages.
+#
+# The attachment uses brace expansion to cover both entry points, because the Linux build wraps
+# the Electron binary in a small launcher script (see scripts/linux/after-pack.cjs):
+#   /opt/FlashForgeUI/FlashForgeUI      - the launcher script
+#   /opt/FlashForgeUI/FlashForgeUI.bin  - the real Electron binary the launcher execs
+# Covering the .bin path is the part that matters: that is the process which actually creates the
+# user namespace, and it must match a profile granting `userns` regardless of how the interpreted
+# launcher script resolves its own attachment.
+#
+# This file overrides app-builder-lib/templates/linux/apparmor-profile.tpl, whose attachment only
+# covers the unwrapped binary path.
+
+profile "FlashForgeUI" "/opt/FlashForgeUI/FlashForgeUI{,.bin}" flags=(unconfined) {
+  userns,
+
+  # Site-specific additions and overrides. See local/README for details.
+  include if exists <local/FlashForgeUI>
+}

@@ -4,8 +4,10 @@
  * Validates OS login-item registration for the "Start with system" / "Start minimized"
  * preferences (issue #75): correct app.setLoginItemSettings arguments on toggle, openAsHidden
  * only applying on darwin, the Linux freedesktop `.desktop` autostart path (write/remove,
- * APPIMAGE vs execPath, XDG_CONFIG_HOME, --hidden), wasLaunchedHidden() detection across
- * platforms, and that unpackaged (development) builds skip OS registration while honoring toggles.
+ * APPIMAGE vs execPath vs the wrapped `.bin` launcher, XDG_CONFIG_HOME, --hidden, TryExec/Icon,
+ * `%%` escaping), deferral of the initial apply until the config has loaded, wasLaunchedHidden()
+ * detection across platforms, and that unpackaged (development) builds skip OS registration while
+ * honoring toggles.
  *
  * @module services/__tests__/AutoLaunchService.test
  */
@@ -21,11 +23,13 @@ jest.mock('electron', () => ({
   app: mockApp,
 }));
 
-// Filesystem mock for the Linux autostart path (node:fs).
+// Filesystem mock for the Linux autostart path (node:fs). existsSync backs the launcher-vs-.bin
+// resolution and defaults to false so tests opt in explicitly.
 const mockFs = {
   mkdirSync: jest.fn(),
   writeFileSync: jest.fn(),
   rmSync: jest.fn(),
+  existsSync: jest.fn(() => false),
 };
 
 jest.mock('node:fs', () => mockFs);
@@ -38,7 +42,9 @@ jest.mock('node:os', () => ({
 // Mutable ConfigManager mock used by the service constructor + listeners.
 const mockConfigManager = {
   getConfig: jest.fn(() => ({ StartAtBoot: false, StartMinimized: false })),
+  isConfigLoaded: jest.fn(() => true),
   on: jest.fn(),
+  once: jest.fn(),
   emit: jest.fn(),
 };
 
@@ -72,7 +78,9 @@ describe('AutoLaunchService', () => {
 
     // Restore default mock return values.
     mockConfigManager.getConfig.mockReturnValue({ StartAtBoot: false, StartMinimized: false });
+    mockConfigManager.isConfigLoaded.mockReturnValue(true);
     mockEnvironmentService.isPackaged.mockReturnValue(true);
+    mockFs.existsSync.mockReturnValue(false);
     mockApp.getLoginItemSettings.mockReturnValue({ launchItems: [] });
     Object.defineProperty(process, 'argv', { value: ['electron'], configurable: true });
 
@@ -347,6 +355,84 @@ describe('AutoLaunchService', () => {
 
       expect(mockFs.rmSync).toHaveBeenCalledWith(AUTOSTART_FILE, { force: true });
       expect(mockFs.writeFileSync).not.toHaveBeenCalled();
+    });
+
+    it('writes TryExec and Icon so stale entries are skipped and KDE renders the row', () => {
+      process.env.APPIMAGE = '/home/testuser/Apps/FlashForgeUI.AppImage';
+      mockConfigManager.getConfig.mockReturnValue({ StartAtBoot: true, StartMinimized: false });
+
+      service.initialize();
+
+      const [, contents] = mockFs.writeFileSync.mock.calls[0] as [string, string];
+      // TryExec is a plain path, not a quoted Exec-style command line.
+      expect(contents).toContain('TryExec=/home/testuser/Apps/FlashForgeUI.AppImage');
+      expect(contents).toContain('Icon=FlashForgeUI');
+    });
+
+    it('escapes literal percent signs in the Exec path as %%', () => {
+      // A literal % is a field code to the Exec parser, so it must be doubled.
+      process.env.APPIMAGE = '/home/testuser/100% Apps/FlashForgeUI.AppImage';
+      mockConfigManager.getConfig.mockReturnValue({ StartAtBoot: true, StartMinimized: false });
+
+      service.initialize();
+
+      const [, contents] = mockFs.writeFileSync.mock.calls[0] as [string, string];
+      expect(contents).toContain('Exec="/home/testuser/100%% Apps/FlashForgeUI.AppImage"');
+    });
+
+    it('targets the launcher script rather than the wrapped .bin binary on deb/rpm', () => {
+      // The Linux build moves the real Electron binary to <name>.bin behind a launcher script;
+      // autostart should invoke the launcher, which is the supported entry point.
+      Object.defineProperty(process, 'execPath', {
+        value: '/opt/FlashForgeUI/FlashForgeUI.bin',
+        configurable: true,
+      });
+      mockFs.existsSync.mockImplementation((p: unknown) => p === '/opt/FlashForgeUI/FlashForgeUI');
+      mockConfigManager.getConfig.mockReturnValue({ StartAtBoot: true, StartMinimized: false });
+
+      service.initialize();
+
+      const [, contents] = mockFs.writeFileSync.mock.calls[0] as [string, string];
+      expect(contents).toContain('Exec="/opt/FlashForgeUI/FlashForgeUI"');
+      expect(contents).toContain('TryExec=/opt/FlashForgeUI/FlashForgeUI');
+    });
+
+    it('keeps the .bin path when no sibling launcher exists', () => {
+      Object.defineProperty(process, 'execPath', {
+        value: '/opt/FlashForgeUI/FlashForgeUI.bin',
+        configurable: true,
+      });
+      mockFs.existsSync.mockReturnValue(false);
+      mockConfigManager.getConfig.mockReturnValue({ StartAtBoot: true, StartMinimized: false });
+
+      service.initialize();
+
+      const [, contents] = mockFs.writeFileSync.mock.calls[0] as [string, string];
+      expect(contents).toContain('Exec="/opt/FlashForgeUI/FlashForgeUI.bin"');
+    });
+
+    it('defers the initial apply until the config is loaded', () => {
+      // Applying default StartAtBoot=false eagerly would delete a valid autostart entry before
+      // the saved config arrives.
+      mockConfigManager.isConfigLoaded.mockReturnValue(false);
+      mockConfigManager.getConfig.mockReturnValue({ StartAtBoot: false, StartMinimized: false });
+      process.env.APPIMAGE = '/home/testuser/Apps/FlashForgeUI.AppImage';
+
+      service.initialize();
+
+      expect(mockFs.rmSync).not.toHaveBeenCalled();
+      expect(mockFs.writeFileSync).not.toHaveBeenCalled();
+
+      // Once the load settles, the saved values are applied.
+      const configLoadedCall = mockConfigManager.once.mock.calls.find(
+        ([event]) => event === 'config-loaded'
+      );
+      expect(configLoadedCall).toBeDefined();
+      mockConfigManager.getConfig.mockReturnValue({ StartAtBoot: true, StartMinimized: true });
+      (configLoadedCall as unknown as [string, () => void])[1]();
+
+      const [, contents] = mockFs.writeFileSync.mock.calls[0] as [string, string];
+      expect(contents).toContain('Exec="/home/testuser/Apps/FlashForgeUI.AppImage" --hidden');
     });
 
     it('skips filesystem writes in development (unpackaged) mode', () => {

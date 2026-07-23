@@ -23,7 +23,10 @@
  *   real, fixed `.AppImage` location in `process.env.APPIMAGE`; that is what we write. For non-AppImage
  *   packaging (.deb/.rpm) there is no FUSE mount and `process.execPath` already IS the stable installed
  *   binary path (e.g. `/opt/FlashForgeUI/flashforgeui`), and no APPIMAGE var is set — so falling back to
- *   `process.execPath` there is correct. In short: prefer APPIMAGE when set, else process.execPath.
+ *   `process.execPath` there is correct. In short: prefer APPIMAGE when set, else process.execPath -
+ *   minus the `.bin` suffix the packaged Linux launcher wrapper introduces (see resolveLinuxExecPath).
+ * - The entry also carries TryExec (so a moved or uninstalled binary makes the entry a silent no-op
+ *   rather than a failing launch) and Icon (so KDE's Autostart panel renders the row properly).
  * - Disabling start-at-boot removes the `.desktop` file.
  *
  * Key exports:
@@ -38,7 +41,7 @@
  * @module services/AutoLaunchService
  */
 
-import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { posix as pathPosix } from 'node:path';
 
@@ -62,13 +65,23 @@ const HIDDEN_LAUNCH_ARG = '--hidden';
 const LINUX_AUTOSTART_FILENAME = 'flashforgeui.desktop';
 
 /**
+ * Suffix the Linux build gives the real Electron binary when it is moved aside for the
+ * sandbox-aware launcher script (see `scripts/linux/after-pack.cjs`). Kept in sync with that hook.
+ */
+const WRAPPED_BINARY_SUFFIX = '.bin';
+
+/**
  * Quote a single argument for a Desktop Entry `Exec=` line per the freedesktop Desktop Entry
  * Specification: the argument is wrapped in double quotes and the reserved characters `"`, backtick,
  * `$` and `\` are escaped with a preceding backslash. Wrapping in double quotes also covers spaces
  * and other reserved characters (parentheses, `&`, `;`, etc.) that can appear in install paths.
  */
 const quoteDesktopExecArg = (value: string): string => {
-  const escaped = value.replace(/(["`$\\])/g, '\\$1');
+  // Literal percent signs are field codes to the Exec parser and must be doubled. This is applied
+  // before quoting because `%` is not one of the backslash-escaped characters - `%%` is its own
+  // escape mechanism, independent of the surrounding double quotes.
+  const percentEscaped = value.replace(/%/g, '%%');
+  const escaped = percentEscaped.replace(/(["`$\\])/g, '\\$1');
   return `"${escaped}"`;
 };
 
@@ -103,10 +116,12 @@ class AutoLaunchService {
    * Read current StartAtBoot / StartMinimized preferences, apply the OS login item, and
    * subscribe to per-key config changes so live toggles stay in sync.
    *
-   * ConfigManager loads asynchronously, so getConfig() may initially return defaults. The
-   * per-key `config:<key>` events also fire during load (for values that differ from defaults),
-   * which re-applies the correct registration once the saved values are available. This mirrors
-   * AutoUpdateService's initialize() behavior.
+   * ConfigManager loads asynchronously, so getConfig() returns defaults until the load settles.
+   * Applying those defaults eagerly is not harmless on Linux: StartAtBoot defaults to false, and
+   * a false value DELETES the autostart entry - so a user with start-at-boot enabled would have
+   * their `.desktop` file removed and then rewritten moments later when the load completes. The
+   * initial apply is therefore deferred until the config is loaded; the per-key listeners are
+   * registered immediately either way so live toggles are never missed.
    */
   public initialize(): void {
     if (this.initialized) {
@@ -114,8 +129,15 @@ class AutoLaunchService {
     }
     this.initialized = true;
 
-    const config = this.configManager.getConfig();
-    this.applyLoginItemSettings(config.StartAtBoot, config.StartMinimized);
+    if (this.configManager.isConfigLoaded()) {
+      const config = this.configManager.getConfig();
+      this.applyLoginItemSettings(config.StartAtBoot, config.StartMinimized);
+    } else {
+      this.configManager.once('config-loaded', () => {
+        const loadedConfig = this.configManager.getConfig();
+        this.applyLoginItemSettings(loadedConfig.StartAtBoot, loadedConfig.StartMinimized);
+      });
+    }
 
     this.configManager.on('config:StartAtBoot', (startAtBoot: boolean) => {
       const currentConfig = this.configManager.getConfig();
@@ -194,10 +216,26 @@ class AutoLaunchService {
    * `.desktop` entry referencing it would be dead after the first reboot. APPIMAGE holds the
    * stable path to the actual `.AppImage` file. Non-AppImage packaging (.deb/.rpm, or a plain
    * unpacked run) has no APPIMAGE env var and falls back to `process.execPath`.
+   *
+   * One wrinkle on .deb/.rpm: the Linux build wraps the Electron binary in a launcher script
+   * (`scripts/linux/after-pack.cjs`) and moves the real binary aside to `<name>.bin`, so
+   * `process.execPath` points at the `.bin`. Autostart should invoke the launcher - the supported
+   * entry point - so a trailing `.bin` is dropped when the sibling launcher actually exists.
    */
   private resolveLinuxExecPath(): string {
     const appImagePath = process.env.APPIMAGE?.trim();
-    return appImagePath && appImagePath.length > 0 ? appImagePath : process.execPath;
+    if (appImagePath && appImagePath.length > 0) {
+      return appImagePath;
+    }
+
+    const execPath = process.execPath;
+    if (execPath.endsWith(WRAPPED_BINARY_SUFFIX)) {
+      const launcherPath = execPath.slice(0, -WRAPPED_BINARY_SUFFIX.length);
+      if (existsSync(launcherPath)) {
+        return launcherPath;
+      }
+    }
+    return execPath;
   }
 
   /**
@@ -236,6 +274,14 @@ class AutoLaunchService {
       `Name=${app.getName()}`,
       'Comment=Automatically start FlashForgeUI at login',
       `Exec=${execLine}`,
+      // TryExec makes a stale entry fail silently instead of loudly: if the binary has been moved,
+      // renamed or uninstalled, the autostart spec requires the entry to be skipped rather than
+      // executed. Unlike Exec this is a plain path, not a quoted/escaped command line.
+      `TryExec=${execPath}`,
+      // Icon is optional for autostart itself, but KDE's Autostart control panel and several
+      // session managers list the entry with its icon; without it the row renders blank. The name
+      // matches the icon the .deb/.rpm install into hicolor.
+      `Icon=${app.getName()}`,
       'Terminal=false',
       'X-GNOME-Autostart-enabled=true',
       '',

@@ -8,7 +8,7 @@
 
 ![Platforms](https://img.shields.io/badge/Platforms-Win%20%7C%20macOS%20%7C%20Linux-3178c6?style=flat)
 ![Downloads](https://img.shields.io/github/downloads/Parallel-7/FlashForgeUI-Electron/total?style=flat&color=brightgreen)
-![Version](https://img.shields.io/badge/Version-1.0.4--alpha.4-orange?style=flat)
+![Version](https://img.shields.io/github/v/release/Parallel-7/FlashForgeUI-Electron?include_prereleases&style=flat&color=orange&label=Version)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=flat)
 
 **Monitor and control your printer from your desktop or any device on your network &mdash; with more features than any official FlashForge software, completely free.**
@@ -28,8 +28,6 @@
 ## Overview
 
 FlashForgeUI connects directly to your FlashForge printer over your local network &mdash; no cloud account required. Watch live camera and temperature data, start and manage prints, control LEDs and filtration, and keep an eye on multiple printers at once. When you're away from your desk, the built-in WebUI gives you the same control from your phone or any browser, and headless mode lets you run it as a lightweight always-on server.
-
-It works with everything from the latest Adventurer 5M / 5M Pro / AD5X to older legacy models, automatically picking the right way to talk to each printer.
 
 <div align="center">
 
@@ -65,6 +63,9 @@ It works with everything from the latest Adventurer 5M / 5M Pro / AD5X to older 
 | **[Spoolman Integration](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Spoolman-Integration)** | Track filament usage automatically and assign spools per printer |
 | **[Notifications](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Notifications)** | Desktop and Discord alerts for print completion, cooldown, and more |
 | **Hardware Controls** | Temperature, LED, and filtration control • axis homing • clear platform • direct command terminal |
+| **Printer File Manager** | Browse, rename, and delete files stored on the printer and on USB, with thumbnail previews &mdash; desktop and WebUI • 5M / 5M Pro / AD5X, requires SSH access via [FlashForge-EasySSH](https://github.com/Parallel-7/FlashForge-EasySSH) |
+| **Calibration Assistant** | Read and analyze on-printer calibration data to help diagnose print quality &mdash; same models and SSH requirement as the file manager |
+| **Start with System** | Optionally launch at login on Windows, macOS, and Linux &mdash; start minimized to the tray and let prints run unattended |
 | **[Customizable UI](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Customizing-the-Desktop-UI)** | Drag-and-drop layouts, light/dark themes, and custom color palettes on both desktop and WebUI |
 
 </div>
@@ -75,6 +76,8 @@ It works with everything from the latest Adventurer 5M / 5M Pro / AD5X to older 
 
 | Printer | Support | Material Station | Notes |
 | --- | --- | --- | --- |
+| **Creator 5 Pro** | Full | Yes (4 slots) | HTTP-only API |
+| **Creator 5** | Full | Yes (4 slots) | HTTP-only API |
 | **AD5X** | Full | Yes (4 slots) | Multi-material 3MF printing |
 | **Adventurer 5M Pro** | Full | No | Includes filtration control |
 | **Adventurer 5M** | Full | No | |
@@ -92,7 +95,7 @@ It works with everything from the latest Adventurer 5M / 5M Pro / AD5X to older 
 | Step | Instructions |
 | --- | --- |
 | **1. Download** | Grab the [latest release](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/latest) for your platform |
-| **2. Install** | **Windows:** run the `.exe` installer<br>**macOS:** open the `.dmg` and drag to Applications<br>**Linux:** use the `.AppImage`, `.deb`, or `.rpm` package |
+| **2. Install** | **Windows:** run the `.exe` installer<br>**macOS:** open the `.dmg` and drag to Applications<br>**Linux:** install the `.deb` or `.rpm`, or run the `.AppImage` directly &mdash; on Ubuntu 24.04+ prefer the `.deb`, see [Linux Notes](docs/README.md#linux-notes) |
 | **3. Connect** | Launch the app, use auto-discovery or enter your printer's IP, and add the [pairing code](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/1.-Pairing-your-printer) if prompted |
 | **4. Configure** | Optional: set up [remote access](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/WebUI-Setup), [Discord alerts](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Notifications), [Spoolman](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Spoolman-Integration), and [custom cameras](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Custom-Camera-Setup) |
 
@@ -121,7 +124,7 @@ pnpm build:linux  # package Linux artifacts
 
 ![Electron](https://img.shields.io/badge/Electron-39.8.10-47848f?style=flat&logo=electron)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-3178c6?style=flat&logo=typescript)
-![Vite](https://img.shields.io/badge/Vite-7.3.2-646cff?style=flat&logo=vite)
+![Vite](https://img.shields.io/badge/Vite-7.3.6-646cff?style=flat&logo=vite)
 ![Express](https://img.shields.io/badge/Express-5.2.1-000000?style=flat&logo=express)
 
 ## License

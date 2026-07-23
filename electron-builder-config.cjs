@@ -41,6 +41,11 @@ module.exports = {
   executableName: 'FlashForgeUI',
   copyright: `Copyright © ${new Date().getFullYear()} GhostTypes`,
 
+  // Linux-only: wraps the packed binary in a launcher that falls back to --no-sandbox when an
+  // AppImage has no usable Chromium sandbox (Ubuntu 23.10+ AppArmor userns restriction). No-op on
+  // Windows/macOS. See the hook's header for the full rationale.
+  afterPack: 'scripts/linux/after-pack.cjs',
+
   // Shared configurations
   directories: {
     output: 'dist',
@@ -241,14 +246,20 @@ module.exports = {
   },
 
   // DEB configuration
+  // NOTE: supplying afterInstall/afterRemove REPLACES electron-builder's own templates rather than
+  // extending them, so those scripts must reproduce the upstream body (AppArmor profile install,
+  // chrome-sandbox permissions, update-alternatives). appArmorProfile likewise overrides the
+  // generated profile so its attachment can cover the wrapped binary. See the file headers.
   deb: {
     afterInstall: 'assets/linux/afterInstall.sh',
     afterRemove: 'assets/linux/afterRemove.sh',
+    appArmorProfile: 'assets/linux/apparmor-profile',
   },
 
   // RPM configuration
   rpm: {
     afterInstall: 'assets/linux/afterInstall.sh',
     afterRemove: 'assets/linux/afterRemove.sh',
+    appArmorProfile: 'assets/linux/apparmor-profile',
   },
 };

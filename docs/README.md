@@ -34,7 +34,19 @@ For MacOS, the command structure starts with
 open "/Applications/FlashForgeUI.app/Contents/MacOS/FlashForgeUI"
 ```
 
-For Linux, (coming soon...)
+For Linux, the command depends on which package you installed.
+
+Installed from the `.deb` or `.rpm` — the installer puts `FlashForgeUI` on your `PATH`:
+```bash
+FlashForgeUI --headless
+```
+
+Running the AppImage — call it by path (make it executable once with `chmod +x` if you have not already):
+```bash
+./FlashForgeUI-*.AppImage --headless
+```
+
+Both accept the same flags as the Windows examples below.
 
 ## Starting Headless Mode
 
@@ -190,3 +202,67 @@ When using `--all-saved-printers` or specifying multiple printers with `--printe
 - The file has been sliced with OrcaSlicer and lacks the correct (and correct ordering of) metadata. FlashForge printers only "broadcast" this information to the API for files sliced by Orca-FlashForge. Both slicers include the information, but in different formats, and FlashForge printers only look for/accept the format from Orca-FlashForge.
 - Please download and set up [this](https://github.com/GhostTypes/orca2flashforge) post-process script
 - If you already have a script for MD5 generation, remove it and add `-m` to the end of this. It will generate both the MD5 hash and the corrected metadata.
+
+## Linux Notes
+
+### Start with system / Start minimized
+
+"Start with system" writes a standard freedesktop autostart entry to `~/.config/autostart/flashforgeui.desktop` (or `$XDG_CONFIG_HOME/autostart/` if you set that variable). Every major desktop environment honors it - GNOME, KDE, XFCE, Cinnamon, MATE - so it works the same on any distro. Turning the setting off deletes the file.
+
+"Start minimized" only applies to sessions the system auto-launched; launching FlashForgeUI yourself always shows the window.
+
+Be aware that some environments ignore requests from an application to minimize itself. Wayland in particular has no "minimized" window state, so on a Wayland session the window may simply open normally instead of minimizing. Use the tray icon to get back to the window whenever it is out of sight. On GNOME, tray icons require the AppIndicator extension - without it the icon will not appear, though relaunching FlashForgeUI always brings the existing window to the front.
+
+### Headless start with system
+
+The "Start with system" setting is part of the desktop app and does not apply to headless mode. To start headless FlashForgeUI at login, create a systemd user service at `~/.config/systemd/user/flashforgeui.service`:
+
+```ini
+[Unit]
+Description=FlashForgeUI (headless)
+After=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/opt/FlashForgeUI/FlashForgeUI --headless
+Restart=on-failure
+
+[Install]
+WantedBy=default.target
+```
+
+Adjust `ExecStart` to match your install (for an AppImage, use the full path to the `.AppImage` file). Then enable it:
+
+```bash
+systemctl --user daemon-reload
+systemctl --user enable --now flashforgeui
+loginctl enable-linger "$USER"   # start without an active login session
+```
+
+### The AppImage runs without Chromium's sandbox on Ubuntu
+
+Ubuntu 23.10 and newer ship `kernel.apparmor_restrict_unprivileged_userns=1`, which stops unprivileged programs from creating user namespaces. Chromium - which Electron is built on - needs either those namespaces or a root-owned `chrome-sandbox` helper to sandbox itself. An AppImage runs from a temporary user-owned mount, so the helper can never be root-owned, and the namespace route is now blocked. With neither available, Chromium refuses to start and the app appears to do nothing when launched.
+
+FlashForgeUI detects this at launch and starts with `--no-sandbox` so the app remains usable. This happens **only** when running the AppImage on a system where namespaces are blocked; the `.deb` and `.rpm` packages always run fully sandboxed.
+
+**If you want the AppImage sandboxed as well**, you can install an AppArmor profile yourself. This is optional and unsupported - it depends on where you keep the AppImage and is not something the app can do for you, since granting the permission requires root. Create `/etc/apparmor.d/flashforgeui` with the path to your AppImage:
+
+```
+abi <abi/4.0>,
+include <tunables/global>
+
+profile flashforgeui /home/YOUR_USER/Applications/FlashForgeUI.AppImage flags=(unconfined) {
+  userns,
+  include if exists <local/flashforgeui>
+}
+```
+
+Then load it:
+
+```bash
+sudo apparmor_parser -r /etc/apparmor.d/flashforgeui
+```
+
+The profile is tied to that exact path, so moving or renaming the AppImage means updating it. Installing the **`.deb` (or `.rpm`) instead** avoids all of this - those packages install their own AppArmor profile automatically during installation and need no manual steps. On Ubuntu 24.04+ the `.deb` is the recommended download.
+
+Background: [electron#41066](https://github.com/electron/electron/issues/41066) and [Ubuntu bug #2046844](https://bugs.launchpad.net/ubuntu/+source/apparmor/+bug/2046844).

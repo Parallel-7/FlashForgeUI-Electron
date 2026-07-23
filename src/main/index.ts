@@ -67,6 +67,7 @@ import { getHeadlessManager } from './managers/HeadlessManager.js';
 import { getLoadingManager } from './managers/LoadingManager.js';
 import { getAutoUpdateService } from './services/AutoUpdateService.js';
 import { getAutoLaunchService } from './services/AutoLaunchService.js';
+import { getTrayService } from './services/TrayService.js';
 import {
   initializeSpoolmanIntegrationService,
   getSpoolmanIntegrationService,
@@ -376,9 +377,13 @@ const createMainWindow = async (): Promise<void> => {
   const roundedUI = config.RoundedUI;
   const useRoundedUI = roundedUI && isRoundedUISupported();
 
-  // Resolve the hidden-start (minimized) state for this launch. StartMinimized applies to
-  // every launch; wasLaunchedHidden() covers OS auto-launched sessions via the --hidden arg.
-  const startHidden = config.StartMinimized || autoLaunchService.wasLaunchedHidden();
+  // Resolve the hidden-start (minimized) state for this launch. StartMinimized is a MODIFIER on
+  // StartAtBoot, not an independent preference: it reaches this process as the `--hidden` launch
+  // argument that AutoLaunchService writes into the OS login item (Windows/macOS) or the
+  // freedesktop autostart entry (Linux). Reading config.StartMinimized directly here would also
+  // hide manually launched sessions, which reads as "the app does not start" - especially on
+  // Linux, where a hidden window may never surface in the taskbar at all.
+  const startHidden = autoLaunchService.wasLaunchedHidden();
   console.log(
     `[Window] Hidden-start decision: startHidden=${startHidden} (StartMinimized=${config.StartMinimized})`
   );
@@ -399,7 +404,10 @@ const createMainWindow = async (): Promise<void> => {
     },
     frame: false, // Always frameless for custom titlebar
     transparent: useRoundedUI, // Only transparent when rounded UI is enabled
-    show: !startHidden, // Hide immediately when starting hidden/minimized
+    // Hidden starts create the window unmapped so it never flashes on screen. Linux is the
+    // exception: an unmapped window cannot be minimized (see the hidden-start block below), so
+    // it is created shown and minimized once its contents are ready.
+    show: !startHidden || process.platform === 'linux',
   });
 
   // Hide traffic light buttons on macOS
@@ -410,11 +418,26 @@ const createMainWindow = async (): Promise<void> => {
   // Ensure background throttling is disabled for WebContents
   mainWindow.webContents.setBackgroundThrottling(false);
 
-  // Apply taskbar minimize for hidden starts on Windows/Linux without flashing the window.
-  // On macOS, the window was created with show:false and stays hidden until surfaced.
-  if (startHidden && (process.platform === 'win32' || process.platform === 'linux')) {
-    mainWindow.minimize();
-    console.log('[Window] Main window started minimized to taskbar');
+  // Apply taskbar minimize for hidden starts. Platform behavior differs:
+  // - Windows: minimize() on the not-yet-shown window creates the taskbar button directly, so the
+  //   window never flashes on screen.
+  // - Linux: minimize() cannot act on a window that was never mapped (see electron#45815 for the
+  //   same defect via maximize()), so the window is created shown and minimized on ready-to-show.
+  //   Some environments ignore programmatic minimize entirely - notably Wayland, where "minimized"
+  //   is not a supported window state - and there the window simply stays open. That is a
+  //   window-manager limitation, not something the app can work around; the tray icon is the
+  //   reliable way back to the window in that case.
+  // - macOS: the window was created with show:false and stays hidden until the dock surfaces it.
+  if (startHidden) {
+    if (process.platform === 'win32') {
+      mainWindow.minimize();
+      console.log('[Window] Main window started minimized to taskbar');
+    } else if (process.platform === 'linux') {
+      mainWindow.once('ready-to-show', () => {
+        mainWindow.minimize();
+        console.log('[Window] Main window minimized after ready-to-show (Linux hidden start)');
+      });
+    }
   }
 
   // Load the app using environment-aware path resolution
@@ -976,6 +999,10 @@ const initializeApp = async (): Promise<void> => {
   await createMainWindow();
   console.log('Main window created with all handlers ready');
 
+  // Create the tray icon once a window exists for it to surface. This is the reliable way back to
+  // the app after a hidden start, since not every desktop environment honors minimize-to-taskbar.
+  getTrayService().initialize();
+
   // Initialize Spoolman integration service (after window creation to avoid timing issues)
   const spoolmanService = initializeSpoolmanIntegrationService(
     getConfigManager(),
@@ -1408,6 +1435,9 @@ app.on('window-all-closed', () => {
 // Cleanup when app is quitting
 app.on('before-quit', async () => {
   try {
+    // Remove the tray icon first so it does not linger in the status area during teardown
+    getTrayService().destroy();
+
     // Stop power save blocker
     if (powerSaveBlockerId !== null) {
       powerSaveBlocker.stop(powerSaveBlockerId);

@@ -16,6 +16,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Reboot
 - New **Reboot** action in the hamburger menu for the Adventurer 5M / 5M Pro / AD5X, performed over SSH. A full-screen overlay tracks the whole lifecycle (rebooting -> waiting -> reconnecting services -> back online) and proactively restarts the camera stream, so the printer reconnects seamlessly without leaving the tab in an error state.
 
+### WebUI
+- The full SSH toolset now works in the browser: the file manager, the calibration assistant, SSH settings editing, and remote reboot match what the desktop app can do. Passwords are write-only — they can be changed but never read back from the browser.
+- Reboot progress now broadcasts over the WebUI socket, so a reboot started from the desktop app shows its lifecycle in any open browser session (and vice versa).
+- Fixed the calibration dialog being too narrow and its export button rendering comically large.
+- Fixed see-through popup backgrounds caused by a broken style definition.
+- Updated the slicer file reader to its latest version.
+
+### Diagnostics & Updates
+- Debug mode now captures all main-process console output (plus renderer log-panel messages) to a new `console-<timestamp>.log`, alongside the targeted `debug-*.log` instrumentation channel. Console logs are also exposed through the WebUI debug routes (list / download / latest).
+- `electron-log` is now mocked globally in Jest, so tests no longer pollute the real `main.log`.
+- The release workflow now uploads `.exe.blockmap` assets so differential updates work (retrofitted for v1.0.4 and v1.0.5-alpha.8 manually).
+- `UpdateChannel` now defaults to match the installed build (alpha installs track the alpha channel) unless explicitly chosen, and `disableWebInstaller` is set to silence the electron-updater warning.
+
+### Start at Boot
+- Refactored the Linux "start with system" implementation (follow-up to the #75 boot feature). Electron's native login-item API is Windows/macOS only, so Linux now gets a proper freedesktop autostart entry in `~/.config/autostart/`, resolved against the stable AppImage path rather than its temporary mount point. The entry also carries `TryExec` and `Icon`, and escapes literal `%` correctly.
+- Fixed "start minimized" doing nothing visible on Linux. The window was being minimized before it had ever been mapped, which leaves no taskbar button at all; it is now shown first and minimized once ready.
+- "Start minimized" now applies only to sessions the system auto-launched. Launching the app yourself always shows the window — previously the setting also hid manual launches, which looked like the app failing to start.
+- Added a system tray icon (Show / Quit) as a reliable way back to the window, since some desktop environments — Wayland sessions in particular — ignore requests from an app to minimize itself.
+
+### Linux Packaging
+- Fixed the `.deb` and `.rpm` packages not installing an AppArmor profile. Ubuntu 23.10+ blocks unprivileged user namespaces, and without the profile Chromium has no usable sandbox and the app does not start at all on Ubuntu 24.04+. The custom post-install script had been silently replacing electron-builder's own template, which also dropped the `chrome-sandbox` permission handling.
+- The AppImage now detects when it has no usable sandbox and falls back to `--no-sandbox` so it still launches on Ubuntu 24.04+. The `.deb`/`.rpm` packages are unaffected and remain fully sandboxed; on Ubuntu 24.04+ they are the recommended download.
+- Documented Linux autostart behavior, the sandbox situation, and headless start-at-boot via a systemd user unit in the user guide.
+
+### Dependencies
+- Patched all eight open Dependabot security advisories (#190–#199): bumped `js-yaml` and `tar`, and added overrides for `shell-quote` (critical), `form-data`, and `esbuild`; bumped `vite`, `tsx`, and `@babel/core`. No application source changes.
+
 ## [1.0.5-alpha.8] - 2026-07-05
 
 ### WebUI

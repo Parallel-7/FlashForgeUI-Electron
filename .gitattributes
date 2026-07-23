@@ -1,0 +1,5 @@
+# Shell scripts and Linux packaging data must keep LF endings regardless of the checkout platform.
+# With core.autocrlf=true on Windows these files would otherwise be checked out with CRLF, and a
+# packaged postinst starting with `#!/bin/bash\r` fails on Linux with "bad interpreter".
+*.sh text eol=lf
+assets/linux/apparmor-profile text eol=lf
