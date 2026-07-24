@@ -239,7 +239,21 @@ systemctl --user enable --now flashforgeui
 loginctl enable-linger "$USER"   # start without an active login session
 ```
 
-### The AppImage runs without Chromium's sandbox on Ubuntu
+### Chromium's sandbox on Ubuntu 24.04+ (AppArmor)
+
+**If you installed the `.deb` or `.rpm`, there is nothing to do here** — read this only if the app fails to start.
+
+Those packages install an AppArmor profile to `/etc/apparmor.d/FlashForgeUI` during installation and load it automatically, so FlashForgeUI runs fully sandboxed with no manual steps. To confirm it is active:
+
+```bash
+aa-status | grep FlashForgeUI
+```
+
+Installation deliberately skips the profile on older AppArmor versions that cannot parse it (Ubuntu 22.04 and earlier). That is expected and harmless — those releases do not restrict user namespaces in the first place, so the sandbox works without a profile. You will see a "Skipping the installation of the AppArmor profile" line during install.
+
+If FlashForgeUI does not start after a `.deb`/`.rpm` install on Ubuntu 24.04+, check whether that profile exists and reload it with `sudo apparmor_parser -r /etc/apparmor.d/FlashForgeUI`. Running the app from a terminal will show the underlying Chromium sandbox error.
+
+#### Why the AppImage is different
 
 Ubuntu 23.10 and newer ship `kernel.apparmor_restrict_unprivileged_userns=1`, which stops unprivileged programs from creating user namespaces. Chromium - which Electron is built on - needs either those namespaces or a root-owned `chrome-sandbox` helper to sandbox itself. An AppImage runs from a temporary user-owned mount, so the helper can never be root-owned, and the namespace route is now blocked. With neither available, Chromium refuses to start and the app appears to do nothing when launched.
 
@@ -263,6 +277,6 @@ Then load it:
 sudo apparmor_parser -r /etc/apparmor.d/flashforgeui
 ```
 
-The profile is tied to that exact path, so moving or renaming the AppImage means updating it. Installing the **`.deb` (or `.rpm`) instead** avoids all of this - those packages install their own AppArmor profile automatically during installation and need no manual steps. On Ubuntu 24.04+ the `.deb` is the recommended download.
+The profile is tied to that exact path, so moving or renaming the AppImage means updating it. Installing the **`.deb` (or `.rpm`) instead** avoids all of this, which is why those are the recommended downloads on Ubuntu 24.04+.
 
 Background: [electron#41066](https://github.com/electron/electron/issues/41066) and [Ubuntu bug #2046844](https://bugs.launchpad.net/ubuntu/+source/apparmor/+bug/2046844).
