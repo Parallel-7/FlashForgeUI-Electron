@@ -36,6 +36,11 @@ import {
   SavedPrinterMatch,
   StoredPrinterDetails,
 } from '@shared/types/printer.js';
+import {
+  isModernManualConnectType,
+  type ManualConnectPrinterType,
+  type ManualConnectResult,
+} from '@shared/types/manual-connect.js';
 import { applyPerPrinterDefaults, hasMissingDefaults } from '@shared/utils/printerSettingsDefaults.js';
 import { EventEmitter } from 'events';
 import { getAutoConnectService } from '../services/AutoConnectService.js';
@@ -56,6 +61,7 @@ import {
   getConnectionErrorMessage,
   getDefaultCheckCode,
   isHttpOnlyModel,
+  NEW_API_PRODUCT_IDS,
   shouldPromptForCheckCode,
 } from '../utils/PrinterUtils.js';
 import { getLoadingManager } from './LoadingManager.js';
@@ -70,6 +76,27 @@ interface InputDialogOptions {
   inputType?: 'text' | 'password' | 'hidden';
   placeholder?: string;
 }
+
+// Manual connect dialog options (matching WindowTypes.ManualConnectDialogOptions)
+interface ManualConnectDialogOptions {
+  title?: string;
+  message?: string;
+  defaultIpAddress?: string;
+}
+
+/**
+ * Reverse lookup of {@link NEW_API_PRODUCT_IDS}: the USB product ID for a manually
+ * selected printer type. Returns undefined for `legacy` (and anything unrecognized),
+ * which leaves the connection to be typed by the TCP probe as before.
+ */
+const getManualConnectProductId = (type: ManualConnectPrinterType): number | undefined => {
+  if (!isModernManualConnectType(type)) {
+    return undefined;
+  }
+
+  const entry = Object.entries(NEW_API_PRODUCT_IDS).find(([, modelType]) => modelType === type);
+  return entry ? Number(entry[0]) : undefined;
+};
 
 /**
  * Main connection flow orchestrator
@@ -96,6 +123,10 @@ export class ConnectionFlowManager extends EventEmitter {
   private readonly connectionService = getConnectionEstablishmentService();
 
   private inputDialogHandler: ((options: InputDialogOptions) => Promise<string | null>) | null = null;
+
+  private manualConnectDialogHandler:
+    | ((options: ManualConnectDialogOptions) => Promise<ManualConnectResult | null>)
+    | null = null;
 
   /** Map of active connection flows for tracking concurrent connections */
   private readonly activeFlows = new Map<string, ConnectionFlowState>();
@@ -155,6 +186,13 @@ export class ConnectionFlowManager extends EventEmitter {
   /** Set input dialog handler for check code prompts */
   public setInputDialogHandler(handler: (options: InputDialogOptions) => Promise<string | null>): void {
     this.inputDialogHandler = handler;
+  }
+
+  /** Set the handler that shows the multi-field manual connect form */
+  public setManualConnectDialogHandler(
+    handler: (options: ManualConnectDialogOptions) => Promise<ManualConnectResult | null>
+  ): void {
+    this.manualConnectDialogHandler = handler;
   }
 
   /** Generate unique flow ID */
@@ -525,8 +563,17 @@ export class ConnectionFlowManager extends EventEmitter {
     }
   }
 
-  /** Connect to a selected printer with proper type detection and pairing */
-  private async connectToPrinter(discoveredPrinter: DiscoveredPrinter): Promise<ConnectionResult> {
+  /**
+   * Connect to a selected printer with proper type detection and pairing.
+   *
+   * @param discoveredPrinter The printer to connect to
+   * @param options.checkCodeOverride Check code supplied up front (manual connects
+   *   collect it in the connect form, so the user must not be prompted again)
+   */
+  private async connectToPrinter(
+    discoveredPrinter: DiscoveredPrinter,
+    options: { checkCodeOverride?: string } = {}
+  ): Promise<ConnectionResult> {
     // Start tracking this connection flow
     const flowId = this.startFlow();
 
@@ -604,7 +651,10 @@ export class ConnectionFlowManager extends EventEmitter {
       let checkCode = getDefaultCheckCode();
       const savedCheckCode = existingPrinter?.CheckCode ?? this.savedPrinterService.getSavedCheckCode(serialNumber);
 
-      if (savedCheckCode) {
+      if (options.checkCodeOverride) {
+        console.log('Using check code supplied with the connection request');
+        checkCode = options.checkCodeOverride;
+      } else if (savedCheckCode) {
         console.log('Using saved check code for known printer:', realPrinterName);
         checkCode = savedCheckCode;
       } else if (shouldPromptForCheckCode(familyInfo.is5MFamily, undefined, forceLegacyMode)) {
@@ -799,34 +849,26 @@ export class ConnectionFlowManager extends EventEmitter {
     }
   }
 
-  /** Offer manual IP entry to user */
+  /** Offer manual printer entry to the user */
   private async offerManualIPEntry(): Promise<ConnectionResult> {
-    if (!this.inputDialogHandler) {
-      return { success: false, error: 'Manual IP entry not available - input dialog handler not set' };
+    if (!this.manualConnectDialogHandler) {
+      return {
+        success: false,
+        error: 'Manual connection not available - manual connect dialog handler not set',
+      };
     }
 
     try {
-      const ipAddress = await this.inputDialogHandler({
+      const details = await this.manualConnectDialogHandler({
         title: 'Manual Printer Connection',
-        message: 'No printers found on network. Enter printer IP address manually:',
-        defaultValue: '',
-        inputType: 'text',
-        placeholder: 'e.g., 192.168.1.100',
+        message: "No printers found on network. Enter your printer's details manually:",
       });
 
-      if (!ipAddress) {
-        return { success: false, error: 'No IP address provided' };
+      if (!details) {
+        return { success: false, error: 'Manual connection cancelled' };
       }
 
-      // Validate IP address format
-      const { IPAddressSchema } = await import('../utils/validation.utils.js');
-      const validation = IPAddressSchema.safeParse(ipAddress.trim());
-      if (!validation.success) {
-        this.loadingManager.showError('Invalid IP address format', 3000);
-        return { success: false, error: 'Invalid IP address format' };
-      }
-
-      return await this.connectDirectlyToIP(validation.data);
+      return await this.connectDirectlyToIP(details);
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
       this.loadingManager.showError(`Manual connection failed: ${errorMessage}`, 4000);
@@ -834,27 +876,48 @@ export class ConnectionFlowManager extends EventEmitter {
     }
   }
 
-  /** Connect directly to an IP address */
-  public async connectDirectlyToIP(ipAddress: string): Promise<ConnectionResult> {
+  /**
+   * Connect directly to a manually entered printer.
+   *
+   * Accepts either a bare IP string (legacy callers — the printer is TCP-probed as
+   * before) or the full details collected by the manual connect dialog. When a
+   * modern printer type is named, its product ID is passed through so the flow
+   * types the printer from that ID and skips the legacy TCP probe entirely — which
+   * is also why the serial number has to come from the user in that case.
+   */
+  public async connectDirectlyToIP(
+    target: string | ManualConnectResult
+  ): Promise<ConnectionResult> {
+    const details: ManualConnectResult =
+      typeof target === 'string' ? { ipAddress: target, printerType: 'legacy' } : target;
+    const { ipAddress, printerType, serialNumber, checkCode } = details;
+
     try {
       this.loadingManager.show({ message: `Connecting to printer at ${ipAddress}...`, canCancel: false });
 
-      // Create a mock discovered printer for the connection process
-      // The actual name and serial will be determined during temporary connection
+      // A named modern model resolves to a product ID, which makes the connection
+      // flow type the printer from that ID instead of probing it over TCP. Legacy
+      // (and bare-IP) connections carry no product ID and are still probed.
+      const productId = getManualConnectProductId(printerType);
+
       const mockDiscoveredPrinter: DiscoveredPrinter = {
-        name: `Printer at ${ipAddress}`, // Temporary name, will be updated
-        ipAddress: ipAddress,
-        serialNumber: '', // Will be determined during connection
-        model: undefined, // Will be determined during connection
+        name: `Printer at ${ipAddress}`, // Temporary name, replaced once identified
+        ipAddress,
+        // Modern printers skip the probe, so the serial cannot be recovered
+        // automatically — it comes from the connect form. Legacy connects leave it
+        // blank and take it from the probe.
+        serialNumber: serialNumber ?? '',
+        model: undefined,
+        productId,
       };
 
-      console.log('Starting direct IP connection to:', ipAddress);
+      console.log('Starting direct connection to:', { ipAddress, printerType, productId });
 
       // Use the standard connection flow which will:
-      // 1. Create temporary connection to get printer info
-      // 2. Extract proper name and serial number
-      // 3. Establish final connection with correct details
-      return await this.connectToPrinter(mockDiscoveredPrinter);
+      // 1. Type the printer (from the product ID, or the TCP probe when absent)
+      // 2. Resolve the final name and serial number
+      // 3. Establish the final connection with the correct details
+      return await this.connectToPrinter(mockDiscoveredPrinter, { checkCodeOverride: checkCode });
     } catch (error) {
       const errorMessage = getConnectionErrorMessage(error);
       console.error('Direct IP connection failed:', error);
@@ -1159,7 +1222,13 @@ export class ConnectionFlowManager extends EventEmitter {
    * @returns Array of successfully connected contexts with their IDs
    */
   public async connectHeadlessDirect(
-    printerSpecs: Array<{ ip: string; type: PrinterClientType; checkCode?: string }>
+    printerSpecs: Array<{
+      ip: string;
+      type: PrinterClientType;
+      checkCode?: string;
+      productId?: number;
+      serialNumber?: string;
+    }>
   ): Promise<{ contextId: string; ip: string }[]> {
     const connectedContexts: { contextId: string; ip: string }[] = [];
 
@@ -1167,14 +1236,19 @@ export class ConnectionFlowManager extends EventEmitter {
       try {
         console.log(`[Headless] Connecting directly to ${spec.ip} (${spec.type})`);
 
+        // Create mock discovered printer. A product ID (from a creator-5 /
+        // creator-5-pro TYPE token) makes the temporary connection type the printer
+        // from that ID and skip the legacy TCP probe — required for the HTTP-only
+        // Creator 5 series, which cannot answer it.
         const flowId = this.startFlow();
 
-        // Create mock discovered printer
         const mockDiscoveredPrinter: DiscoveredPrinter = {
           name: `Printer at ${spec.ip}`,
           ipAddress: spec.ip,
-          serialNumber: '', // Will be determined during connection
+          // Supplied for models that skip the probe; otherwise resolved by it
+          serialNumber: spec.serialNumber ?? '',
           model: undefined,
+          productId: spec.productId,
         };
 
         // Determine if this is a 5M family printer
@@ -1199,7 +1273,8 @@ export class ConnectionFlowManager extends EventEmitter {
             ? tempResult.printerInfo.SerialNumber
             : `Unknown-${Date.now()}`;
 
-        const modelType = detectPrinterModelType(tempResult.typeName);
+        // Prefer the authoritative product ID when the TYPE token supplied one
+        const modelType = detectPrinterModelTypeFromId(spec.productId, tempResult.typeName);
 
         // Preserve existing saved printer settings if available
         const existingPrinter = this.savedPrinterService.getSavedPrinter(serialNumber);
@@ -1214,15 +1289,18 @@ export class ConnectionFlowManager extends EventEmitter {
           ipAddress: spec.ip,
           serialNumber: serialNumber,
           model: tempResult.typeName,
+          productId: spec.productId,
         };
 
-        // Establish final connection
+        // Establish final connection. Passing the resolved model type is what routes
+        // the HTTP-only Creator 5 series away from the dead legacy TCP path.
         const connectionResult = await this.connectionService.establishFinalConnection(
           updatedDiscoveredPrinter,
           tempResult.typeName,
           is5MFamily,
           checkCode,
-          forceLegacyMode
+          forceLegacyMode,
+          modelType
         );
 
         if (!connectionResult) {

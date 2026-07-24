@@ -7,7 +7,8 @@
  * Examples:
  *   --headless --last-used
  *   --headless --all-saved-printers
- *   --headless --printers="192.168.1.100:new:12345678,192.168.1.101:legacy"
+ *   --headless --printers="192.168.1.100:new:12345678:SNMOMC1234567,192.168.1.101:legacy"
+ *   --headless --printers="192.168.1.184:creator-5-pro:12345678:SNCRE51234567"
  *   --headless --webui-port=3001 --webui-password=mypassword
  *   --headless --debug --debug-network
  */
@@ -46,6 +47,19 @@ export interface PrinterSpec {
   ip: string;
   type: PrinterClientType;
   checkCode?: string;
+  /**
+   * USB product ID hint for HTTP-only models (Creator 5 series). Set when the
+   * TYPE token is `creator-5` / `creator-5-pro` so the connection flow types the
+   * printer from the ID and skips the legacy TCP probe these printers cannot
+   * answer.
+   */
+  productId?: number;
+  /**
+   * Printer serial number. Modern printers authenticate with serial + check code.
+   * Dual-API models can fall back to the serial reported by the TCP probe;
+   * HTTP-only models cannot, so it is required for the Creator 5 series.
+   */
+  serialNumber?: string;
 }
 
 /**
@@ -126,7 +140,11 @@ export function parseHeadlessArguments(): HeadlessConfig | null {
 /**
  * Parse --printers argument into array of PrinterSpec
  *
- * Format: --printers="192.168.1.100:new:12345678,192.168.1.101:legacy"
+ * Format: --printers="IP:TYPE[:CHECKCODE[:SERIAL]],..."
+ * e.g. --printers="192.168.1.100:new:12345678:SNMOMC1234567,192.168.1.101:legacy"
+ *
+ * TYPE is `new`, `legacy`, `creator-5`, or `creator-5-pro`. The Creator tokens
+ * mark HTTP-only printers so the connection flow skips the legacy TCP probe.
  *
  * @param arg The --printers= argument string
  * @returns Array of PrinterSpec objects
@@ -151,13 +169,21 @@ function parsePrintersArgument(arg: string): PrinterSpec[] {
       continue;
     }
 
-    const [ip, typeStr, checkCode] = parts;
-    const type: PrinterClientType = typeStr === 'new' ? 'new' : 'legacy';
+    const [ip, typeStr, checkCode, serialNumber] = parts;
+    // The Creator 5 series is HTTP-only (no legacy TCP server), so the type token
+    // also carries the model for those printers. All other non-"new" tokens fall
+    // back to legacy, matching historical behavior.
+    const normalizedType = typeStr.trim().toLowerCase();
+    const isCreator = normalizedType === 'creator-5' || normalizedType === 'creator-5-pro';
+    const type: PrinterClientType = normalizedType === 'new' || isCreator ? 'new' : 'legacy';
+    const productId = isCreator ? (normalizedType === 'creator-5' ? 40 : 41) : undefined;
 
     specs.push({
       ip: ip.trim(),
       type,
       checkCode: checkCode?.trim(),
+      productId,
+      serialNumber: serialNumber?.trim() || undefined,
     });
   }
 
@@ -230,6 +256,15 @@ export function validateHeadlessConfig(config: HeadlessConfig): ValidationResult
         }
         if (printer.type === 'new' && !printer.checkCode) {
           errors.push(`Printer ${index + 1}: New printer type requires check code`);
+        }
+        // HTTP-only models (Creator 5 series) can't be probed over TCP for their
+        // serial, so it must be supplied. Dual-API models fall back to the probe's
+        // serial, so it stays optional there for compatibility.
+        if (printer.productId !== undefined && !printer.serialNumber) {
+          errors.push(
+            `Printer ${index + 1}: Creator 5 series requires a serial number ` +
+              `(format IP:TYPE:CHECKCODE:SERIAL)`
+          );
         }
       });
     }

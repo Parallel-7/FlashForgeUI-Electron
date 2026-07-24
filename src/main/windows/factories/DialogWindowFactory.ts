@@ -59,6 +59,7 @@
  * - Printer Connected Warning: 450x380 (min 400x350), non-resizable, frameless, transparent
  *
  * @exports createInputDialog - Create input dialog for user text input
+ * @exports createManualConnectDialog - Create the multi-field manual connect form
  * @exports createMaterialMatchingDialog - Create material matching dialog for printer configuration
  * @exports createSingleColorConfirmationDialog - Create single color confirmation for print validation
  * @exports createMaterialInfoDialog - Create material info dialog for slot information
@@ -78,10 +79,12 @@ import {
   setupWindowLifecycle,
   validateParentWindow,
 } from '../shared/WindowConfig.js';
+import type { ManualConnectResult } from '@shared/types/manual-connect.js';
 import {
   AutoConnectChoiceDialogData,
   ConnectChoiceDialogData,
   InputDialogOptions,
+  ManualConnectDialogOptions,
   MaterialMatchingDialogData,
   PrinterConnectedWarningData,
   SingleColorConfirmationDialogData,
@@ -174,6 +177,89 @@ export const createInputDialog = (options: InputDialogOptions): Promise<string |
 
     setupDevTools(inputDialogWindow);
     windowManager.setInputDialogWindow(inputDialogWindow);
+  });
+};
+
+/**
+ * Create the manual printer-connection dialog with promise-based result handling.
+ *
+ * Collects IP address, printer type, and (for modern models) serial number and
+ * check code — the details the discovery broadcast would have supplied. Modern
+ * printers are typed from their product ID and never TCP-probed, so the serial
+ * cannot be recovered automatically on a manual connect.
+ *
+ * @param options - Dialog configuration options
+ * @returns Promise that resolves with the entered details, or null if cancelled
+ */
+export const createManualConnectDialog = (
+  options: ManualConnectDialogOptions = {}
+): Promise<ManualConnectResult | null> => {
+  return new Promise((resolve) => {
+    const windowManager = getWindowManager();
+    const mainWindow = windowManager.getMainWindow();
+
+    if (!validateParentWindow(mainWindow, 'manual connect dialog')) {
+      resolve(null);
+      return;
+    }
+
+    const dialogId = generateDialogId();
+    const responseChannel = createResponseChannelName(dialogId);
+    let handlerActive = true;
+
+    const manualConnectWindow = createModalWindow(
+      mainWindow,
+      WINDOW_SIZES.MANUAL_CONNECT_DIALOG,
+      createUIPreloadPath('manual-connect-dialog'),
+      { resizable: true, frame: false }
+    );
+
+    const handleResponse = async (
+      _event: unknown,
+      result: ManualConnectResult | null
+    ): Promise<void> => {
+      if (!handlerActive) return;
+
+      handlerActive = false;
+      ipcMain.removeHandler(responseChannel);
+
+      // Shares the input-dialog slot: both are the single modal entry prompt and
+      // can never be open at the same time.
+      windowManager.setInputDialogWindow(null);
+
+      // Close immediately to prevent race conditions
+      if (manualConnectWindow && !manualConnectWindow.isDestroyed()) {
+        manualConnectWindow.destroy();
+      }
+
+      resolve(result);
+    };
+
+    ipcMain.handle(responseChannel, handleResponse);
+
+    void loadWindowHTML(manualConnectWindow, 'manual-connect-dialog');
+
+    manualConnectWindow.webContents.on('did-finish-load', () => {
+      if (manualConnectWindow && !manualConnectWindow.isDestroyed()) {
+        manualConnectWindow.webContents.send('manual-connect:init', {
+          ...options,
+          responseChannel,
+        });
+      }
+    });
+
+    setupWindowLifecycle(manualConnectWindow, () => {
+      windowManager.setInputDialogWindow(null);
+      // Window closed without a response - treat as cancelled
+      if (handlerActive) {
+        handlerActive = false;
+        ipcMain.removeHandler(responseChannel);
+        resolve(null);
+      }
+    });
+
+    setupDevTools(manualConnectWindow);
+    windowManager.setInputDialogWindow(manualConnectWindow);
   });
 };
 

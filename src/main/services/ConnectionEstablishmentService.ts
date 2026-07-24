@@ -29,6 +29,7 @@ import {
   getConnectionErrorMessage,
   getModelDisplayName,
   isHttpOnlyModel,
+  NEW_API_PRODUCT_IDS,
 } from '../utils/PrinterUtils.js';
 
 // Connection clients interface for dual API support
@@ -91,14 +92,18 @@ export class ConnectionEstablishmentService extends EventEmitter {
   public async createTemporaryConnection(printer: DiscoveredPrinter): Promise<TemporaryConnectionResult> {
     this.emit('temporary-connection-started', printer);
 
-    // HTTP-only models (Creator 5 / 5 Pro) run no legacy TCP server, so the usual
-    // ~M601/~M115 probe can't work. When discovery's USB product ID identifies such
-    // a model, synthesize the type info (model name + the serial/name from the
-    // discovery packet) and skip the TCP probe entirely.
+    // Any printer whose discovery USB product ID is a known new-API model is typed
+    // from that ID alone. The same broadcast also carries the serial (0x92) and name
+    // (0x00), and FiveMClient.initialize() later supplies the authoritative capability
+    // flags plus reachability — so the legacy ~M601/~M115 probe contributes nothing
+    // here and is skipped for ALL modern printers (5M / 5M Pro / AD5X / Creator 5 /
+    // 5 Pro). It is also impossible for the HTTP-only Creator 5 series, which runs no
+    // TCP server. Printers with no product ID (genuine legacy, or manual/headless
+    // connects that supplied no model hint) fall through to the TCP probe below.
     const idModelType = detectPrinterModelTypeFromId(printer.productId, '');
-    if (isHttpOnlyModel(idModelType)) {
+    if (printer.productId !== undefined && printer.productId in NEW_API_PRODUCT_IDS) {
       const typeName = getModelDisplayName(idModelType);
-      console.log(`Temporary connection - HTTP-only model detected via product ID: ${typeName}`);
+      console.log(`Temporary connection - modern model detected via product ID: ${typeName}`);
       this.emit('printer-type-detected', { typeName, familyInfo: detectPrinterFamily(typeName) });
       return {
         success: true,

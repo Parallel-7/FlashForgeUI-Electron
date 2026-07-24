@@ -96,6 +96,13 @@ export interface InputDialogOptions {
   readonly placeholder?: string;
 }
 
+// Options for the multi-field manual printer-connection dialog
+export interface ManualConnectDialogOptions {
+  readonly title?: string;
+  readonly message?: string;
+  readonly defaultIpAddress?: string;
+}
+
 // Common window dimension configuration
 export interface WindowDimensions {
   readonly width: WindowWidth;
@@ -211,6 +218,12 @@ export const WINDOW_SIZES = {
     height: createWindowHeight(300),
     minWidth: createWindowMinWidth(380),
     minHeight: createWindowMinHeight(280),
+  },
+  MANUAL_CONNECT_DIALOG: {
+    width: createWindowWidth(480),
+    height: createWindowHeight(480),
+    minWidth: createWindowMinWidth(420),
+    minHeight: createWindowMinHeight(420),
   },
   JOB_UPLOADER: {
     width: createWindowWidth(950),

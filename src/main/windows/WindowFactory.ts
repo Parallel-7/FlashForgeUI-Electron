@@ -71,7 +71,7 @@
  */
 
 // Re-export shared types for backward compatibility
-export type { InputDialogOptions } from './shared/WindowTypes.js';
+export type { InputDialogOptions, ManualConnectDialogOptions } from './shared/WindowTypes.js';
 
 // Re-export all functions from specialized factory modules to maintain API compatibility
 
@@ -88,6 +88,7 @@ export {
 export {
   createConnectChoiceDialog,
   createInputDialog,
+  createManualConnectDialog,
   createMaterialInfoDialog,
   createMaterialMatchingDialog,
   createPrinterConnectedWarningDialog,

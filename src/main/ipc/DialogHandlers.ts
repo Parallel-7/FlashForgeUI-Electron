@@ -22,7 +22,11 @@ import { ipcMain } from 'electron';
 import { getPrinterConnectionManager } from '../managers/ConnectionFlowManager.js';
 import { getLoadingManager } from '../managers/LoadingManager.js';
 import { createPrinterConnectedWarningDialog } from '../windows/factories/DialogWindowFactory.js';
-import { createConnectChoiceDialog, createInputDialog } from '../windows/WindowFactory.js';
+import {
+  createConnectChoiceDialog,
+  createInputDialog,
+  createManualConnectDialog,
+} from '../windows/WindowFactory.js';
 import { getWindowManager } from '../windows/WindowManager.js';
 
 /**
@@ -35,6 +39,11 @@ export const setupDialogHandlers = (): void => {
   // Set up connection manager with input dialog handler
   connectionManager.setInputDialogHandler(async (options) => {
     return createInputDialog(options);
+  });
+
+  // Manual connects collect IP + type + serial + check code in one form
+  connectionManager.setManualConnectDialogHandler(async (options) => {
+    return createManualConnectDialog(options);
   });
 
   // Enhanced connect choice dialog initialization
@@ -68,19 +77,17 @@ export const setupDialogHandlers = (): void => {
         const userChoice = await createConnectChoiceDialog({});
 
         if (userChoice === 'enter-ip') {
-          console.log('User chose to enter IP manually');
-          // Show input dialog for IP entry
-          const ipAddress = await createInputDialog({
-            title: 'Enter Printer IP',
-            message: 'Enter the IP address of your FlashForge printer:',
-            placeholder: '192.168.1.100',
-            inputType: 'text',
+          console.log('User chose to enter printer details manually');
+          // Modern printers are typed from their product ID and never TCP-probed,
+          // so the form also collects the model, serial number and check code.
+          const details = await createManualConnectDialog({
+            title: 'Manual Printer Connection',
+            message: "Enter your FlashForge printer's details:",
           });
 
-          if (ipAddress) {
-            // Connect directly to the provided IP
-            console.log(`Connecting directly to IP: ${ipAddress}`);
-            const result = await connectionManager.connectDirectlyToIP(ipAddress);
+          if (details) {
+            console.log(`Connecting directly to ${details.ipAddress} (${details.printerType})`);
+            const result = await connectionManager.connectDirectlyToIP(details);
             if (result.success) {
               console.log('Manual IP connection completed successfully');
             } else {

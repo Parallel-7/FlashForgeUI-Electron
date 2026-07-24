@@ -29,6 +29,7 @@ import type { CameraProxyStatus } from './camera/camera.types.js';
 import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI } from '../ui/settings/types/external.js';
 import type { PrinterSelectionAPI as PrinterSelectionDialogAPI } from '../ui/printer-selection/printer-selection-preload.js';
 import type { DialogAPI as InputDialogAPI } from '../ui/input-dialog/input-dialog-preload.js';
+import type { ManualConnectDialogAPI } from '../ui/manual-connect-dialog/manual-connect-dialog-preload.js';
 import type { JobUploaderAPI } from '../ui/job-uploader/job-uploader-preload.js';
 import type { AppConfig, ThemeColors } from './config.js';
 import type {
@@ -223,6 +224,7 @@ interface DialogNamespace {
   sendCommands?: SendCommandsDialogAPI;
   status?: StatusDialogAPI;
   input?: InputDialogAPI;
+  manualConnect?: ManualConnectDialogAPI;
   materialInfo?: MaterialInfoDialogAPI;
   materialMatching?: MaterialMatchingDialogAPI;
   singleColor?: SingleColorConfirmDialogAPI;

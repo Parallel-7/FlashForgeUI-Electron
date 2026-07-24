@@ -84,9 +84,14 @@ FlashForgeUI.exe --enable-logging --headless --all-saved-printers
 
 **`--printers=<spec>`**
 - Connects to specific printer(s) by IP address and type
-- Format: `--printers="<ip>:<type>:<checkcode>,<ip>:<type>:<checkcode>,..."`
-- Type: `new` (5M family) or `legacy` (older models)
-- Checkcode: Required for `new` type printers (8-digit code)
+- Format: `--printers="<ip>:<type>[:<checkcode>[:<serial>]],..."`
+- Type: `new` (5M family), `legacy` (older models), or `creator-5` / `creator-5-pro`
+- Checkcode: Required for all modern types (8-digit code)
+- Serial: **Required for `creator-5` / `creator-5-pro`**, optional otherwise
+
+The Creator 5 series is HTTP-only — it runs no legacy TCP server — so those printers
+need the dedicated type token (the generic `new` token triggers a TCP probe they
+cannot answer) and their serial number, which cannot be recovered by probing.
 
 Single printer example:
 ```bash
@@ -96,6 +101,11 @@ FlashForgeUI.exe --enable-logging --headless --printers="192.168.1.100:new:12345
 Multiple printers example:
 ```bash
 FlashForgeUI.exe --enable-logging --headless --printers="192.168.1.100:new:12345678,192.168.1.101:legacy"
+```
+
+Creator 5 Pro example (serial required):
+```bash
+FlashForgeUI.exe --enable-logging --headless --printers="192.168.1.184:creator-5-pro:12345678:SNCRE51234567"
 ```
 
 ### WebUI Server Configuration
@@ -241,25 +251,48 @@ loginctl enable-linger "$USER"   # start without an active login session
 
 ### Chromium's sandbox on Ubuntu 24.04+ (AppArmor)
 
-**If you installed the `.deb` or `.rpm`, there is nothing to do here** — read this only if the app fails to start.
+Ubuntu 23.10 and newer ship `kernel.apparmor_restrict_unprivileged_userns=1`, which stops unprivileged programs from creating user namespaces. Chromium — which Electron is built on — needs either those namespaces or a root-owned `chrome-sandbox` helper in order to sandbox itself. Granting a program permission to use namespaces again requires an AppArmor profile, and installing one requires root.
 
-Those packages install an AppArmor profile to `/etc/apparmor.d/FlashForgeUI` during installation and load it automatically, so FlashForgeUI runs fully sandboxed with no manual steps. To confirm it is active:
+**Whether you have to do anything depends on which package you installed.** Jump to the half that applies to you:
+
+| You installed | Do you need to set anything up? |
+| --- | --- |
+| `.deb` or `.rpm` | **No.** The profile is installed for you. |
+| `.AppImage` | **Only if you want the sandbox on.** It runs unsandboxed otherwise. |
+
+#### Installed from the `.deb` or `.rpm` — nothing to set up
+
+The package installs an AppArmor profile to `/etc/apparmor.d/FlashForgeUI` during installation and loads it, because the installer runs as root and can do what an application cannot do for itself. FlashForgeUI then runs fully sandboxed. There are no manual steps.
+
+To confirm the profile is active:
 
 ```bash
 aa-status | grep FlashForgeUI
 ```
 
-Installation deliberately skips the profile on older AppArmor versions that cannot parse it (Ubuntu 22.04 and earlier). That is expected and harmless — those releases do not restrict user namespaces in the first place, so the sandbox works without a profile. You will see a "Skipping the installation of the AppArmor profile" line during install.
+On Ubuntu 22.04 and earlier the installer deliberately skips the profile and prints "Skipping the installation of the AppArmor profile". This is expected, not a failure — those releases do not restrict user namespaces, so the sandbox already works without one.
 
-If FlashForgeUI does not start after a `.deb`/`.rpm` install on Ubuntu 24.04+, check whether that profile exists and reload it with `sudo apparmor_parser -r /etc/apparmor.d/FlashForgeUI`. Running the app from a terminal will show the underlying Chromium sandbox error.
+If FlashForgeUI does not start at all after installing on Ubuntu 24.04+, check that the profile exists and reload it:
 
-#### Why the AppImage is different
+```bash
+sudo apparmor_parser -r /etc/apparmor.d/FlashForgeUI
+```
 
-Ubuntu 23.10 and newer ship `kernel.apparmor_restrict_unprivileged_userns=1`, which stops unprivileged programs from creating user namespaces. Chromium - which Electron is built on - needs either those namespaces or a root-owned `chrome-sandbox` helper to sandbox itself. An AppImage runs from a temporary user-owned mount, so the helper can never be root-owned, and the namespace route is now blocked. With neither available, Chromium refuses to start and the app appears to do nothing when launched.
+Launching the app from a terminal will show the underlying Chromium sandbox error if something else is wrong.
 
-FlashForgeUI detects this at launch and starts with `--no-sandbox` so the app remains usable. This happens **only** when running the AppImage on a system where namespaces are blocked; the `.deb` and `.rpm` packages always run fully sandboxed.
+#### Running the `.AppImage` — works out of the box, sandbox off
 
-**If you want the AppImage sandboxed as well**, you can install an AppArmor profile yourself. This is optional and unsupported - it depends on where you keep the AppImage and is not something the app can do for you, since granting the permission requires root. Create `/etc/apparmor.d/flashforgeui` with the path to your AppImage:
+An AppImage has no installation step and never runs as root, so it cannot install an AppArmor profile for itself — that is exactly what Ubuntu's restriction is designed to prevent. It also runs from a temporary user-owned mount, so the `chrome-sandbox` helper can never be root-owned either. With neither sandbox available, Chromium would normally refuse to start, and the app would appear to do nothing when launched.
+
+FlashForgeUI detects this at launch and starts with `--no-sandbox` so it remains usable. This happens **only** on systems where namespaces are blocked; everywhere else the AppImage runs sandboxed as normal.
+
+If you are happy running the AppImage unsandboxed, you are done — there is nothing to configure.
+
+##### Optional: sandboxing the AppImage yourself
+
+If you would rather keep the sandbox on, you can install a profile by hand. This is optional and unsupported: it is tied to where you keep the AppImage, and it needs root, which is why the app cannot do it for you.
+
+Create `/etc/apparmor.d/flashforgeui`, replacing the path with the actual location of your AppImage:
 
 ```
 abi <abi/4.0>,
@@ -277,6 +310,6 @@ Then load it:
 sudo apparmor_parser -r /etc/apparmor.d/flashforgeui
 ```
 
-The profile is tied to that exact path, so moving or renaming the AppImage means updating it. Installing the **`.deb` (or `.rpm`) instead** avoids all of this, which is why those are the recommended downloads on Ubuntu 24.04+.
+The profile is tied to that exact path, so moving or renaming the AppImage means updating it and reloading. If that upkeep sounds annoying, installing the `.deb` or `.rpm` avoids the whole problem — which is why those are the recommended downloads on Ubuntu 24.04+.
 
 Background: [electron#41066](https://github.com/electron/electron/issues/41066) and [Ubuntu bug #2046844](https://bugs.launchpad.net/ubuntu/+source/apparmor/+bug/2046844).

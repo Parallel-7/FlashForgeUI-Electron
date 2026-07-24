@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Connecting to Printers
+- Modern printers are now identified from the USB product ID in their discovery broadcast instead of an unauthenticated TCP probe. The probe was previously skipped only for the HTTP-only Creator 5 series; it is now skipped for every modern model (5M, 5M Pro, AD5X, Creator 5, Creator 5 Pro), removing a redundant round trip from every modern connect. The broadcast already carries the serial and name, and the capability flags come from the library after `initialize()`, so the probe had nothing left to contribute. Printers with no product ID — genuine legacy printers, and manual connects that chose "Legacy Printer" — are still probed as before.
+- New **manual connect form**, replacing the single "Enter IP" prompt. Because a named model is no longer probed, the form collects the details the broadcast would have supplied: IP address, printer type, serial number, and check code. Legacy remains IP-only. The check code entered here is used directly, so you are no longer prompted for it a second time.
+- Headless `--printers` now accepts `creator-5` / `creator-5-pro` type tokens and an optional fourth `SERIAL` field (`IP:TYPE[:CHECKCODE[:SERIAL]]`). The Creator tokens mark HTTP-only printers so the flow skips the TCP probe they cannot answer, and a serial is required for them since it cannot be recovered by probing. Documented in the user guide with examples.
+
 ### File Manager
 - New SFTP-based file manager (topbar shortcut) for the Adventurer 5M / 5M Pro / AD5X. Browse, multi-select delete, and rename gcode/3MF files on internal storage and USB, with thumbnails resolved through the local cache, printer-side cache PNGs, and ranged-read `.3mf` extraction (no full-file download). USB presence is probed via `/proc/mounts`.
 
