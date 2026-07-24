@@ -95,7 +95,7 @@ FlashForgeUI connects directly to your FlashForge printer over your local networ
 | Step | Instructions |
 | --- | --- |
 | **1. Download** | Grab the [latest release](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/latest) for your platform |
-| **2. Install** | **Windows:** run the `.exe` installer<br>**macOS:** open the `.dmg` and drag to Applications<br>**Linux:** install the `.deb` or `.rpm`, or run the `.AppImage` directly &mdash; on Ubuntu 24.04+ prefer the `.deb`, see [Linux Notes](docs/README.md#linux-notes) |
+| **2. Install** | **Windows:** run the `.exe` installer<br>**macOS:** open the `.dmg` and drag to Applications<br>**Linux:** install the `.deb` or `.rpm`, or run the `.AppImage` directly &mdash; on Ubuntu 24.04+ prefer the `.deb`, see [Linux Notes](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Auto-Start) |
 | **3. Connect** | Launch the app, use auto-discovery or enter your printer's IP, and add the [pairing code](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/1.-Pairing-your-printer) if prompted |
 | **4. Configure** | Optional: set up [remote access](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/WebUI-Setup), [Discord alerts](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Notifications), [Spoolman](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Spoolman-Integration), and [custom cameras](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Custom-Camera-Setup) |
 

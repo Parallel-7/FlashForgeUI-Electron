@@ -108,7 +108,7 @@ For detailed architectural information, see the comprehensive reference document
 
 15. **Release channel is derived from the `package.json` version**: `electron-builder-config.cjs` parses the prerelease suffix - a `-alpha.N` version yields channel `alpha`/`alpha.yml` (prerelease), a bare `X.Y.Z` yields channel `latest`/`latest.yml` (stable). Bumping the version is all that's needed to flip the channel; don't hardcode it. The release workflow (`.github/workflows/release.yml`, `workflow_dispatch`) reads notes from the matching `## [<version>] - <date>` CHANGELOG section, and `softprops/action-gh-release` keyed on the tag will publish an existing **draft** of that tag *keeping the draft's body* (it does not overwrite with the templated notes) - so don't pre-create a draft if you want the workflow's templated notes.
 
-16. **WebUI camera streams through an authenticated proxy (single-port)**: browsers must NEVER connect directly to go2rtc's unauthenticated API port (1984). `CameraStreamProxy.ts` (`src/main/webui/server/`) tunnels streams through the authenticated WebUI server at `/api/camera/ws?src=<stream>&token=<auth>` on the WebUI port; the token is validated against `AuthManager`. For remote/WebUI access, forward the single WebUI port only — do not expose 1984. See `docs/README.md` and issue #76.
+16. **WebUI camera streams through an authenticated proxy (single-port)**: browsers must NEVER connect directly to go2rtc's unauthenticated API port (1984). `CameraStreamProxy.ts` (`src/main/webui/server/`) tunnels streams through the authenticated WebUI server at `/api/camera/ws?src=<stream>&token=<auth>` on the WebUI port; the token is validated against `AuthManager`. For remote/WebUI access, forward the single WebUI port only — do not expose 1984. See the [Auto Start](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Auto-Start) wiki page and issue #76.
 
 17. **Single widget-creation path in `gridController.ts`**: do not duplicate grid-widget factories. The reload/context-switch and palette-add paths must route through the shared `createGridWidget()` + `createComponentForGrid()` primitives used by initial load. A divergent factory omits component cases (material-station, tool-temps, creator5-temperature) and produces blank tiles and missing edit-mode delete (X) buttons. The stale duplicate `createComponentInstance()` was removed in the fix for issue #77.
 
@@ -204,7 +204,7 @@ Currently targets AD5X + Adventurer 5M / 5M Pro only (Creator 5 / Creator 5 Pro 
 
 - `src/main/utils/HeadlessArguments.ts`, `HeadlessDetection.ts`, `HeadlessLogger.ts`, `src/main/managers/HeadlessManager.ts`
 - `src/main/webui/server/*` (WebUIManager, AuthManager, WebSocketManager, route modules) + `src/main/webui/static/*` (AppState, Transport, features, grid)
-- `docs/README.md` - user-facing headless instructions (keep updated)
+- **[Headless Mode](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Headless-Mode)** wiki page - user-facing headless instructions (keep updated)
 
 ### Testing & Automation
 
@@ -228,7 +228,7 @@ Currently targets AD5X + Adventurer 5M / 5M Pro only (Creator 5 / Creator 5 Pro 
 ### Other Documentation
 
 - **`GEMINI.md`, `QWEN.md`**: Sibling agent guides for cross-AI alignment
-- **`docs/README.md`**: User-facing setup + headless instructions (update alongside feature changes)
+- **[Wiki](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki)**: User-facing setup + headless instructions (update alongside feature changes)
 - **`ai_specs/*`**: Authoritative specs for in-flight features; always review before touching scoped areas
 - **`ai_specs/CAMERA_PRIORITY_SPEC.md`**: Camera proxy + RTSP behavior specification
 - **`ai_specs/webui-push-notifications.md`**: Upcoming WebUI push feature plan
