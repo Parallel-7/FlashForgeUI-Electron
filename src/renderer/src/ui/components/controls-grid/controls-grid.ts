@@ -232,6 +232,7 @@ export class ControlsGridComponent extends BaseComponent {
     isLegacyPrinter?: boolean;
     isActiveJob?: boolean;
     canControlPrint?: boolean;
+    gcodeAvailable?: boolean;
   } = {};
 
   /**
@@ -301,6 +302,7 @@ export class ControlsGridComponent extends BaseComponent {
         isLegacyPrinter: (data.backendCapabilities?.isLegacy as boolean) ?? false,
         isActiveJob: this.determineActiveJobState(data.printerState),
         canControlPrint: this.determineControlPrintCapability(data.printerState),
+        gcodeAvailable: (data.backendCapabilities?.gcodeAvailable as boolean) ?? true,
       };
 
       // Update internal state
@@ -458,6 +460,13 @@ export class ControlsGridComponent extends BaseComponent {
         // Stop only enabled during controllable print states
         shouldDisable = !canControlPrint;
         reason = shouldDisable ? 'Cannot control print' : '';
+      } else if (mapping.id === 'btn-home-axes') {
+        // Home Axes (~G28) is raw G-code. HTTP-only printers (Creator 5 series)
+        // expose no TCP/G-code passthrough, so disable when gcode is unavailable.
+        if (this.currentState.gcodeAvailable === false) {
+          shouldDisable = true;
+          reason = 'G-code unavailable (HTTP-only printer)';
+        }
       }
 
       // Apply button state

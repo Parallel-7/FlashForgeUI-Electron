@@ -161,6 +161,12 @@ export interface PrinterFeatures {
   ledUsesLegacyAPI?: boolean; // Whether custom LED control is enabled
   hasMultiTool?: boolean; // Creator 5 series — gates the per-tool temperature card
   isCreator5Pro?: boolean; // Creator 5 Pro — gates the read-only TVOC display
+  /** Raw G-code passthrough availability; gates the Home Axes (~G28) button. */
+  gcodeCommands?: {
+    available: boolean;
+    usesLegacyAPI: boolean;
+    supportedCommands: readonly string[];
+  };
 }
 
 export interface AD5XToolData {

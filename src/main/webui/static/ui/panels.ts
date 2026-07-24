@@ -53,10 +53,10 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
   state.printerStatus = status;
   updatePrinterStateCard(status);
 
-  const bedTemp = isNaN(status.bedTemperature) ? 0 : Math.round(status.bedTemperature);
-  const bedTarget = isNaN(status.bedTargetTemperature) ? 0 : Math.round(status.bedTargetTemperature);
-  const extruderTemp = isNaN(status.nozzleTemperature) ? 0 : Math.round(status.nozzleTemperature);
-  const extruderTarget = isNaN(status.nozzleTargetTemperature) ? 0 : Math.round(status.nozzleTargetTemperature);
+  const bedTemp = Number.isNaN(status.bedTemperature) ? 0 : Math.round(status.bedTemperature);
+  const bedTarget = Number.isNaN(status.bedTargetTemperature) ? 0 : Math.round(status.bedTargetTemperature);
+  const extruderTemp = Number.isNaN(status.nozzleTemperature) ? 0 : Math.round(status.nozzleTemperature);
+  const extruderTarget = Number.isNaN(status.nozzleTargetTemperature) ? 0 : Math.round(status.nozzleTargetTemperature);
 
   setTextContent('bed-temp', `${bedTemp}°C / ${bedTarget}°C`);
   setTextContent('extruder-temp', `${extruderTemp}°C / ${extruderTarget}°C`);
@@ -64,7 +64,7 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
   if (status.jobName) {
     setTextContent('current-job', status.jobName);
 
-    const progress = isNaN(status.progress) ? 0 : status.progress;
+    const progress = Number.isNaN(status.progress) ? 0 : status.progress;
     const progressPercent = progress <= 1 ? Math.round(progress * 100) : Math.round(progress);
     setTextContent('progress-percentage', `${progressPercent}%`);
 
@@ -76,8 +76,8 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
     if (
       status.currentLayer !== undefined &&
       status.totalLayers !== undefined &&
-      !isNaN(status.currentLayer) &&
-      !isNaN(status.totalLayers)
+      !Number.isNaN(status.currentLayer) &&
+      !Number.isNaN(status.totalLayers)
     ) {
       setTextContent('layer-info', `${status.currentLayer} / ${status.totalLayers}`);
     } else {
@@ -85,9 +85,9 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
     }
 
     // Elapsed — prefer seconds precision
-    if (status.elapsedTimeSeconds !== undefined && !isNaN(status.elapsedTimeSeconds)) {
+    if (status.elapsedTimeSeconds !== undefined && !Number.isNaN(status.elapsedTimeSeconds)) {
       setTextContent('elapsed-time', formatElapsedSeconds(status.elapsedTimeSeconds));
-    } else if (status.timeElapsed !== undefined && !isNaN(status.timeElapsed)) {
+    } else if (status.timeElapsed !== undefined && !Number.isNaN(status.timeElapsed)) {
       setTextContent('elapsed-time', formatTime(status.timeElapsed));
     } else {
       setTextContent('elapsed-time', '--:--');
@@ -96,19 +96,19 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
     // ETA — prefer firmware string
     if (status.formattedEta && status.formattedEta !== '--:--') {
       setTextContent('time-remaining', formatETAFromString(status.formattedEta));
-    } else if (status.timeRemaining !== undefined && !isNaN(status.timeRemaining)) {
+    } else if (status.timeRemaining !== undefined && !Number.isNaN(status.timeRemaining)) {
       setTextContent('time-remaining', formatETA(status.timeRemaining));
     } else {
       setTextContent('time-remaining', '--:--');
     }
 
     // Weight and length as separate fields
-    if (status.estimatedWeight !== undefined && !isNaN(status.estimatedWeight)) {
+    if (status.estimatedWeight !== undefined && !Number.isNaN(status.estimatedWeight)) {
       setTextContent('job-weight', `${Math.round(status.estimatedWeight)}g`);
     } else {
       setTextContent('job-weight', '--');
     }
-    if (status.estimatedLength !== undefined && !isNaN(status.estimatedLength)) {
+    if (status.estimatedLength !== undefined && !Number.isNaN(status.estimatedLength)) {
       setTextContent('job-length', `${status.estimatedLength.toFixed(1)}m`);
     } else {
       setTextContent('job-length', '--');
@@ -137,8 +137,8 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
 
 /** `<current>°C / <target>°C`, guarding against NaN readings. */
 function formatTempPair(current: number, target: number): string {
-  const c = isNaN(current) ? 0 : Math.round(current);
-  const t = isNaN(target) ? 0 : Math.round(target);
+  const c = Number.isNaN(current) ? 0 : Math.round(current);
+  const t = Number.isNaN(target) ? 0 : Math.round(target);
   return `${c}°C / ${t}°C`;
 }
 
@@ -243,7 +243,7 @@ export function updateTvocDisplay(status: PrinterStatus | null): void {
   tvocInfo?.classList.remove('hidden');
 
   const tvoc = status?.tvocLevel;
-  setTextContent('tvoc-status', tvoc !== undefined && !isNaN(tvoc) ? `${Math.round(tvoc)}` : '--');
+  setTextContent('tvoc-status', tvoc !== undefined && !Number.isNaN(tvoc) ? `${Math.round(tvoc)}` : '--');
 
   // The Creator 5 Pro exposes a TVOC sensor but no filtration-mode control.
   const isCreator5Pro = Boolean(state.printerFeatures?.isCreator5Pro);
@@ -423,7 +423,11 @@ function updateButtonStates(printerState: string): void {
 
   if (recentBtn) recentBtn.disabled = !isReadyForNewJob;
   if (localBtn) localBtn.disabled = !isReadyForNewJob;
-  if (homeAxesBtn) homeAxesBtn.disabled = isPrintingActive;
+  // Home Axes (~G28) is a raw G-code command. HTTP-only printers (Creator 5
+  // series) expose no TCP/G-code passthrough, so disable the button while printing
+  // OR when the active printer explicitly reports G-code commands unavailable.
+  const gcodeUnavailable = state.printerFeatures?.gcodeCommands?.available === false;
+  if (homeAxesBtn) homeAxesBtn.disabled = isPrintingActive || gcodeUnavailable;
   const clearStatusBtn = $('btn-clear-status') as HTMLButtonElement | null;
   if (clearStatusBtn) clearStatusBtn.disabled = isPrintingActive;
 

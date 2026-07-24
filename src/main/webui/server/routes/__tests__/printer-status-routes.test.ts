@@ -263,4 +263,56 @@ describe('printer-status-routes', () => {
     expect(response.status).toBe(400);
     expect(deps.backendManager.configureMaterialSlot).not.toHaveBeenCalled();
   });
+
+  it('rejects a material-station slot write with a non-6-digit hex color', async () => {
+    const deps = createDependencies({
+      backendManager: {
+        ...createDependencies().backendManager,
+        isFeatureAvailable: jest
+          .fn()
+          .mockImplementation((_contextId: string, feature: string) => feature === 'material-station'),
+      },
+    });
+    const server = await startTestServer((app) => {
+      const router = express.Router();
+      registerPrinterStatusRoutes(router, deps);
+      app.use('/api', router);
+    });
+
+    const response = await fetch(`${server.baseUrl}/api/printer/material-station/slot?contextId=context-1`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slot: 2, materialName: 'PLA', colorHex: '#FFF' }),
+    });
+    await server.close();
+
+    expect(response.status).toBe(400);
+    expect(deps.backendManager.configureMaterialSlot).not.toHaveBeenCalled();
+  });
+
+  it('rejects a material-station slot write with a missing material name', async () => {
+    const deps = createDependencies({
+      backendManager: {
+        ...createDependencies().backendManager,
+        isFeatureAvailable: jest
+          .fn()
+          .mockImplementation((_contextId: string, feature: string) => feature === 'material-station'),
+      },
+    });
+    const server = await startTestServer((app) => {
+      const router = express.Router();
+      registerPrinterStatusRoutes(router, deps);
+      app.use('/api', router);
+    });
+
+    const response = await fetch(`${server.baseUrl}/api/printer/material-station/slot?contextId=context-1`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slot: 2, materialName: null, colorHex: '#F72224' }),
+    });
+    await server.close();
+
+    expect(response.status).toBe(400);
+    expect(deps.backendManager.configureMaterialSlot).not.toHaveBeenCalled();
+  });
 });

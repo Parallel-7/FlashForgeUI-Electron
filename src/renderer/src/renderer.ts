@@ -149,6 +149,8 @@ interface ActiveRebootInfo {
 }
 
 let activeRebootInfo: ActiveRebootInfo = {};
+/** Whether the active printer supports raw G-code passthrough (gates Home Axes). */
+let activeGcodeAvailable = true;
 
 /** Whether a model type supports remote reboot (5M / 5M Pro / AD5X only). */
 function isRebootSupportedModel(modelType: string | undefined): boolean {
@@ -224,6 +226,7 @@ function handleAllContextsRemoved(): void {
 
   // No active context: hide the Reboot item.
   activeRebootInfo = {};
+  activeGcodeAvailable = true;
   updateRebootAvailability();
 
   if (gridController.areComponentsInitialized()) {
@@ -457,6 +460,7 @@ function initializePollingListeners(): void {
             // Add any other update data fields as needed by components
             printerState: pollingData.printerStatus?.state,
             connectionState: pollingData.isConnected,
+            backendCapabilities: { gcodeAvailable: activeGcodeAvailable },
           };
 
           // Update all components with centralized manager
@@ -511,6 +515,7 @@ function initializeStateAndEventListeners(): void {
         printerName: string;
         modelType: string;
         backendType?: string;
+        gcodeAvailable?: boolean;
         contextId?: string;
         timestamp: string;
       };
@@ -532,6 +537,7 @@ function initializeStateAndEventListeners(): void {
           status: 'connected',
         };
         updateRebootAvailability();
+        activeGcodeAvailable = data.gcodeAvailable ?? true;
       }
     });
 

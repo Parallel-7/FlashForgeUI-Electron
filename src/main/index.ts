@@ -799,6 +799,9 @@ const setupConnectionEventForwarding = (): void => {
         success: true,
         printerName: eventData.printerDetails?.Name || 'Unknown',
         modelType: eventData.modelType || 'unknown',
+        gcodeAvailable: eventData.contextId
+          ? backendManager.getBackendStatus(eventData.contextId)?.features?.gcodeCommands.available ?? true
+          : true,
         contextId: eventData.contextId,
         serialNumber: eventData.printerDetails?.SerialNumber,
         timestamp: new Date().toISOString(),

@@ -12,6 +12,7 @@ import {
   StandardAPIResponse,
 } from '@shared/types/web-api.types.js';
 import type { Response, Router } from 'express';
+import { createValidationError, SlotConfigRequestSchema } from '../../schemas/web-api.schemas.js';
 import { toAppError } from '../../../utils/error.utils.js';
 import type { AuthenticatedRequest } from '../auth-middleware.js';
 import { type RouteDependencies, resolveContext, sendErrorResponse } from './route-helpers.js';
@@ -195,6 +196,7 @@ export function registerPrinterStatusRoutes(router: Router, deps: RouteDependenc
         ledUsesLegacyAPI: features.ledControl.customControlEnabled || features.ledControl.usesLegacyAPI,
         hasMultiTool,
         isCreator5Pro,
+        gcodeCommands: features.gcodeCommands,
       };
 
       return res.json({
@@ -245,20 +247,12 @@ export function registerPrinterStatusRoutes(router: Router, deps: RouteDependenc
         return sendErrorResponse<StandardAPIResponse>(res, contextResult.statusCode, contextResult.error);
       }
 
-      const body = (req.body ?? {}) as { slot?: unknown; materialName?: unknown; colorHex?: unknown };
-      const slot = typeof body.slot === 'number' ? body.slot : Number.parseInt(String(body.slot), 10);
-      const materialName = typeof body.materialName === 'string' ? body.materialName.trim() : '';
-      const colorHex = typeof body.colorHex === 'string' ? body.colorHex.trim() : '';
-
-      if (!Number.isInteger(slot) || slot < 1 || slot > 4) {
-        return sendErrorResponse<StandardAPIResponse>(res, 400, 'Invalid slot number (expected 1-4)');
+      const validation = SlotConfigRequestSchema.safeParse(req.body);
+      if (!validation.success) {
+        const validationError = createValidationError(validation.error);
+        return sendErrorResponse<StandardAPIResponse>(res, 400, validationError.error);
       }
-      if (materialName === '') {
-        return sendErrorResponse<StandardAPIResponse>(res, 400, 'Material name is required');
-      }
-      if (!/^#?[0-9a-fA-F]{6}$/.test(colorHex)) {
-        return sendErrorResponse<StandardAPIResponse>(res, 400, 'A valid 6-digit hex color is required');
-      }
+      const { slot, materialName, colorHex } = validation.data;
 
       if (!deps.backendManager.isFeatureAvailable(contextResult.contextId, 'material-station')) {
         return sendErrorResponse<StandardAPIResponse>(res, 400, 'Material station not available on this printer');

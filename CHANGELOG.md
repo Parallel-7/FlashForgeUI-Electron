@@ -27,6 +27,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Fixed the calibration dialog being too narrow and its export button rendering comically large.
 - Fixed see-through popup backgrounds caused by a broken style definition.
 - Updated the slicer file reader to its latest version.
+- The **Home Axes** button is now disabled on HTTP-only printers (Creator 5 / Creator 5 Pro). Raw G-code passthrough — including the `~G28` homing command — runs over the legacy TCP channel those printers don't expose, so it could never have worked on them. G-code availability is now reported to clients via `features.gcodeCommands`, and the same gating covers the desktop controls grid, not just the browser UI.
+- Aligned the WebUI request-validation schemas with the standalone project: added `GCodeCommandRequestSchema`, `ModelPreviewRequestSchema`, `CommandDataValidators`, `StandardAPIResponseSchema`, and `SlotConfigRequestSchema`.
+- The material-station slot-config endpoint now validates through the shared `SlotConfigRequestSchema` (replacing hand-rolled checks). The schema was tightened to the correct rules — a required material name and a strict 6-digit hex color — matching the AD5X / Creator 5 fixed material and color palettes; the previously permissive 3/6/8-digit hex and nullable material are no longer accepted.
 
 ### Diagnostics & Updates
 - Debug mode now captures all main-process console output (plus renderer log-panel messages) to a new `console-<timestamp>.log`, alongside the targeted `debug-*.log` instrumentation channel. Console logs are also exposed through the WebUI debug routes (list / download / latest).
