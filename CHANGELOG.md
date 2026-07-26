@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.0.5-alpha.9] - 2026-07-26
 
 ### Connecting to Printers
 - Modern printers are now identified from the USB product ID in their discovery broadcast instead of an unauthenticated TCP probe. The probe was previously skipped only for the HTTP-only Creator 5 series; it is now skipped for every modern model (5M, 5M Pro, AD5X, Creator 5, Creator 5 Pro), removing a redundant round trip from every modern connect. The broadcast already carries the serial and name, and the capability flags come from the library after `initialize()`, so the probe had nothing left to contribute. Printers with no product ID — genuine legacy printers, and manual connects that chose "Legacy Printer" — are still probed as before.
@@ -48,8 +48,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The AppImage now detects when it has no usable sandbox and falls back to `--no-sandbox` so it still launches on Ubuntu 24.04+. The `.deb`/`.rpm` packages are unaffected and remain fully sandboxed; on Ubuntu 24.04+ they are the recommended download.
 - Documented Linux autostart behavior, the sandbox situation, and headless start-at-boot via a systemd user unit in the user guide.
 
+### Documentation
+- Moved the project documentation from `docs/README.md` into the GitHub wiki. The in-repo copy was removed, and the references that pointed at it (the top-level README, the headless-WebUI guide, the version-bump command, and CLAUDE.md) were updated to the wiki.
+
 ### Dependencies
 - Patched all eight open Dependabot security advisories (#190–#199): bumped `js-yaml` and `tar`, and added overrides for `shell-quote` (critical), `form-data`, and `esbuild`; bumped `vite`, `tsx`, and `@babel/core`. No application source changes.
+- Bumped `@ghosttypes/ff-api` to `^1.7.1` for proper loopback-address printer discovery, and for the Material Station capability fix: `FFMachineInfo.HasMatlStation` was a raw copy of an AD5X-only `/detail` field that the Creator 5 series never sends, so it arrived `undefined` on a Creator 5 Pro with four loaded slots. The desktop app gates the material station on `MatlStationInfo` rather than that flag, so nothing here was affected, but 1.7.0 should not ship in a new build.
 
 ## [1.0.5-alpha.8] - 2026-07-05
 
