@@ -174,6 +174,13 @@ const spawnEmulatorProcess = (
     stdio: ['ignore', 'pipe', 'pipe'],
     shell: process.platform === 'win32',
     windowsHide: true,
+    // The command is `npm run headless:instance`, so the process that actually binds
+    // the printer ports is a grandchild (npm -> tsx). npm does not forward SIGTERM to
+    // it, so signalling the child alone leaves the grandchild alive still holding
+    // 8899/8898 and the next describe fails with EADDRINUSE. Detaching puts the whole
+    // tree in its own process group, which stopProcessTree can then signal as a unit.
+    // Windows has no process groups and uses `taskkill /T` instead.
+    detached: process.platform !== 'win32',
   }) as ChildProcessByStdio<null, Readable, Readable>;
 
   return child;
@@ -353,11 +360,26 @@ const stopProcessTree = async (child: ChildProcessByStdio<null, Readable, Readab
     return;
   }
 
-  child.kill('SIGTERM');
+  // Signal the whole process group (negative pid) so the tsx grandchild holding the
+  // printer ports dies with npm. Falls back to the child alone if the group is already
+  // gone, which surfaces as ESRCH.
+  const signalTree = (signal: NodeJS.Signals): void => {
+    try {
+      if (child.pid) {
+        process.kill(-child.pid, signal);
+        return;
+      }
+    } catch {
+      // Group already reaped, or the platform refused it - fall through.
+    }
+    child.kill(signal);
+  };
+
+  signalTree('SIGTERM');
   await waitForChildExit(child, PROCESS_EXIT_TIMEOUT_MS);
 
   if (child.exitCode === null) {
-    child.kill('SIGKILL');
+    signalTree('SIGKILL');
     await waitForChildExit(child, PROCESS_EXIT_TIMEOUT_MS);
   }
 };

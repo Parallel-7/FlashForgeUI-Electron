@@ -105,6 +105,15 @@ jobs:
       - name: Install Playwright system dependencies
         run: pnpm exec playwright install-deps chromium
 
+      # Electron refuses to start if its SUID sandbox helper is not root-owned and
+      # setuid, which is how pnpm unpacks it. Fixing the binary keeps the app launching
+      # exactly as it does for users, rather than weakening it with --no-sandbox.
+      - name: Enable the Electron sandbox helper
+        run: |
+          ELECTRON_DIR="$(dirname "$(node -p "require('electron')")")"
+          sudo chown root:root "$ELECTRON_DIR/chrome-sandbox"
+          sudo chmod 4755 "$ELECTRON_DIR/chrome-sandbox"
+
       # The suite drives a real Electron window, so CI needs a virtual display.
       - name: Run emulator E2E track
         run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" pnpm test:e2e:electron:emulator
