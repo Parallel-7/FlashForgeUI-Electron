@@ -62,7 +62,7 @@ jobs:
       fail-fast: false
       matrix:
         os: [windows-latest, macos-latest, ubuntu-latest]
-        node-version: [18] # LTS version, good for Electron
+        node-version: [22] # matches the Node runtime Electron 39 bundles
 
     steps:
       - name: Checkout FlashForgeUI
