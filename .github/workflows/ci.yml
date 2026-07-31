@@ -57,7 +57,7 @@ jobs:
         run: pnpm test
 
   e2e-emulator:
-    name: E2E (emulator track)
+    name: E2E (emulator + WebUI)
     runs-on: ubuntu-latest
     needs: verify
     steps:
@@ -102,8 +102,9 @@ jobs:
         working-directory: emulator
         run: npm ci
 
-      - name: Install Playwright system dependencies
-        run: pnpm exec playwright install-deps chromium
+      # The browser track needs the chromium binary itself, not just its system libraries.
+      - name: Install Playwright chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       # Electron refuses to start if its SUID sandbox helper is not root-owned and
       # setuid, which is how pnpm unpacks it. Fixing the binary keeps the app launching
@@ -120,11 +121,21 @@ jobs:
         env:
           FF_EMULATOR_ROOT: ${{ github.workspace }}/emulator
 
+      # Browser coverage of the WebUI. It launches the real app with --headless against the
+      # same emulator, so it needs Electron and a display too - hence this job rather than
+      # the fast verify one. Runs even if the Electron track failed, since the two cover
+      # different surfaces and one failing should not hide the other.
+      - name: Run WebUI browser E2E
+        if: success() || failure()
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" pnpm test:e2e
+        env:
+          FF_EMULATOR_ROOT: ${{ github.workspace }}/emulator
+
       - name: Upload Playwright artifacts
         if: failure()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-emulator-artifacts
+          name: playwright-e2e-artifacts
           path: |
             test-results/
             playwright-report/

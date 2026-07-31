@@ -1,6 +1,6 @@
 # FlashForgeUI-Electron Development Guide
 
-**Last Updated:** 2026-07-09 15:16 ET (America/New_York)
+**Last Updated:** 2026-07-31 16:11 ET (America/New_York)
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -38,6 +38,7 @@ For detailed architectural information, see the comprehensive reference document
 - **[INTEGRATIONS.md](ai_docs/INTEGRATIONS.md)** - Camera streaming, Spoolman, notifications, Discord, persistence
 - **[THEME_SYSTEM.md](ai_docs/THEME_SYSTEM.md)** - CSS variables, theme computation, design patterns, hardcoded CSS detection
 - **[TOOLING.md](ai_docs/TOOLING.md)** - Development tools, commands, testing constraints, code search MCP tools
+- **[docs/TESTING.md](docs/TESTING.md)** - Test surfaces, the emulator/hardware E2E tracks, CI pipeline, known coverage gaps
 
 ---
 
@@ -57,7 +58,7 @@ For detailed architectural information, see the comprehensive reference document
 
 - **Documentation**: every repo-maintained `.ts`, `.tsx`, `.js`, `.jsx`, and `.cjs` source file should begin with an `@fileoverview` block describing purpose, key exports, and relationships. Use `pnpm docs:check` to catch gaps under `src/` and `pnpm docs:combine` to refresh `fileoverview-report.md`.
 
-- **Testing workflow**: `pnpm test` runs Jest over `src/`, `pnpm test:e2e` runs browser Playwright against the built WebUI fixture server, and `pnpm test:e2e:electron*` covers desktop Playwright flows. `test:all` currently excludes the Electron suites, so run the Electron slice explicitly when desktop behavior changes.
+- **Testing workflow**: **ALWAYS read [docs/TESTING.md](docs/TESTING.md) before writing, changing, or reasoning about any test.** It is the authoritative description of every test surface, the two Electron E2E tracks (`emulator` vs `hardware`, selected by `FFUI_E2E_TRACK`), what each spec actually proves, the CI pipeline, and the known coverage gaps. In brief: `pnpm test` runs Jest over `src/`, `pnpm test:e2e` runs browser Playwright against the built WebUI fixture server, `pnpm test:e2e:electron:emulator` runs the CI-safe Electron track against `flashforge-emulator-v2`, and `pnpm test:e2e:electron:hardware` runs the same specs against real bench printers. `test:all` excludes the Electron suites, so run the Electron slice explicitly when desktop behavior changes.
 
 - **Validation**: run the smallest meaningful checks (`pnpm type-check`, `pnpm lint`, targeted scripts) before handing work back. Reserve `pnpm build*` for user requests or when architectural changes demand it.
 
@@ -102,7 +103,7 @@ For detailed architectural information, see the comprehensive reference document
 
 12. **WebUI cache regressions**: built WebUI assets must remain version-stamped and served with no-cache headers. The browser Playwright suite exists specifically to catch stale asset mixes, icon hydration mismatches, and camera bootstrap regressions before release.
 
-13. **Desktop E2E boundaries**: use `tests/e2e/electron/desktop-smoke.spec.ts` for live `%APPDATA%` smoke coverage and `tests/e2e/electron/desktop-emulator.spec.ts` for isolated emulator-backed lifecycle coverage. On Windows, prefer the dedicated `package.json` scripts over ad hoc Playwright grep invocations.
+13. **Desktop E2E is two tracks over one set of specs**: `tests/e2e/electron/specs/*.spec.ts` run against either the emulator or real hardware depending on `FFUI_E2E_TRACK`; specs branch on target *capabilities* (`hasMaterialStation`, `supportsSftp`, `supportsManualConnect`), never on the track name. Don't fork a spec per track. Prefer the dedicated `package.json` scripts over ad hoc Playwright invocations. See [docs/TESTING.md](docs/TESTING.md).
 
 14. **Release builds are unsigned (no code-signing cert)**: there is no Windows (or macOS) code-signing certificate, so every release artifact - both CI and local `pnpm build:win` - is `NotSigned`. The `signtool.exe` lines in the local build log run but produce no valid Authenticode signature. This is expected, not a regression; Windows users get the normal SmartScreen "unknown publisher" prompt. Don't chase a "missing signature" as a bug.
 
@@ -208,13 +209,17 @@ Currently targets AD5X + Adventurer 5M / 5M Pro only (Creator 5 / Creator 5 Pro 
 
 ### Testing & Automation
 
+**Authoritative reference: [docs/TESTING.md](docs/TESTING.md)** - read it before touching any test.
+
 - `src/**/__tests__/*` - Jest coverage for managers, services, calibration, WebUI server/routes, WebUI static helpers, and build utilities
 - `tests/e2e/browser/webui-smoke.spec.ts`, `tests/e2e/browser/webui-auth.spec.ts`, `tests/e2e/browser/helpers/webui-fixture-server.ts` - browser Playwright coverage for the built WebUI
-- `tests/e2e/electron/desktop-smoke.spec.ts` - live desktop smoke test against the local FlashForgeUI profile
-- `tests/e2e/electron/desktop-emulator.spec.ts`, `tests/e2e/electron/helpers/emulator-harness.ts` - emulator-backed Electron lifecycle coverage across modern and legacy printers
-- `tests/fixtures/calibration/` - synthetic calibration fixture data (not referenced by automated tests; used for manual local testing)
-- `scripts/run-playwright-electron-live.cjs`, `scripts/run-playwright-electron-emulator.cjs` - entry points for the Electron Playwright suites
-- `package.json` - canonical place for the Electron slice scripts (`test:e2e:electron:emulator`, `:legacy`, `:legacy-multi`, `:modern-multi`, `:smoke`, `:live`)
+- `tests/e2e/electron/specs/*.spec.ts` - connect, upload, LED, multi-printer, and SFTP round-trip coverage; each runs on whichever track `FFUI_E2E_TRACK` selects
+- `tests/e2e/electron/support/track.ts` - track selection and target enumeration; `printer-target.ts` - the emulator/hardware abstraction; `hardware-config.ts` - out-of-tree credential resolution + discovery-by-serial
+- `tests/e2e/electron/helpers/emulator-harness.ts` - boots/tears down `flashforge-emulator-v2` instances (process-group kill on POSIX; see docs/TESTING.md before changing teardown)
+- `tests/e2e/electron/discord-hardware.spec.ts` - hardware-only Discord webhook coverage, deliberately outside `specs/` so the emulator runner skips it
+- `tests/fixtures/print-files/` - real slicer output driving the upload specs; `tests/fixtures/calibration/` - synthetic calibration data for manual local testing
+- `scripts/run-playwright-electron-{emulator,hardware,discord}.cjs` - entry points for the Electron Playwright tracks
+- `.github/workflows/ci.yml` - `verify` (type-check, lint, build, Jest) + `e2e-emulator` (emulator track under xvfb)
 
 ---
 

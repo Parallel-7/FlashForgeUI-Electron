@@ -347,7 +347,14 @@ const waitForChildExit = async (
   });
 };
 
-const stopProcessTree = async (child: ChildProcessByStdio<null, Readable, Readable>): Promise<void> => {
+/**
+ * Kills a spawned process and everything it started.
+ *
+ * Exported because the headless WebUI harness spawns Electron the same way and must not
+ * re-derive the POSIX process-group handling below; getting it wrong leaks a process that
+ * still holds a port and breaks the next suite with EADDRINUSE.
+ */
+export const stopProcessTree = async (child: ChildProcessByStdio<null, Readable, Readable>): Promise<void> => {
   if (child.exitCode !== null) {
     return;
   }

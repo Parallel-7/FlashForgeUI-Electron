@@ -45,7 +45,7 @@
     "test:all": "npm run test && npm run test:e2e",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    "test:e2e": "npm run build:webui && playwright test",
+    "test:e2e": "node scripts/run-playwright-browser.cjs",
     "test:e2e:electron": "npm run build && playwright test -c playwright.electron.config.ts",
     "test:e2e:electron:emulator": "node scripts/run-playwright-electron-emulator.cjs",
     "test:e2e:electron:hardware": "node scripts/run-playwright-electron-hardware.cjs",
