@@ -94,6 +94,7 @@ temp/
 
 # Playwright test artifacts
 test-results/
+playwright-report/
 
 # Editor directories and files
 .vscode/

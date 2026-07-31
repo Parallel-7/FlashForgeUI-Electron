@@ -21,6 +21,7 @@ import {
   PrinterFeatureSet,
 } from '@shared/types/printer-backend/index.js';
 import * as path from 'path';
+import { normalizeMaterialMappingColors } from '../../shared/utils/materialColor.js';
 import { MaterialStationBackend } from './MaterialStationBackend.js';
 
 /**
@@ -100,7 +101,7 @@ export class AD5XBackend extends MaterialStationBackend {
         const success = await this.fiveMClient.jobControl.startAD5XMultiColorJob({
           fileName: params.fileName,
           levelingBeforePrint: params.leveling,
-          materialMappings,
+          materialMappings: normalizeMaterialMappingColors(materialMappings),
         });
 
         if (!success) {
@@ -155,7 +156,9 @@ export class AD5XBackend extends MaterialStationBackend {
         flowCalibration: false,
         firstLayerInspection: false,
         timeLapseVideo: false,
-        materialMappings: materialMappings || [],
+        // The AD5X reports slot colours as raw config strings, often without a leading
+        // '#'. ff-api rejects those before sending, so normalise here.
+        materialMappings: normalizeMaterialMappingColors(materialMappings ?? []),
       };
 
       console.log(

@@ -55,3 +55,69 @@ jobs:
 
       - name: Unit tests
         run: pnpm test
+
+  e2e-emulator:
+    name: E2E (emulator track)
+    runs-on: ubuntu-latest
+    needs: verify
+    steps:
+      - name: Checkout FlashForgeUI
+        uses: actions/checkout@v4
+
+      # The emulator lives in a separate public repo and provides the printers this
+      # track drives, so no real hardware is needed.
+      - name: Checkout flashforge-emulator-v2
+        uses: actions/checkout@v4
+        with:
+          repository: GhostTypes/flashforge-emulator-v2
+          path: emulator
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.23.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'pnpm'
+
+      - name: Configure GitHub Packages Authentication
+        shell: bash
+        run: |
+          echo "@ghosttypes:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "@parallel-7:registry=https://npm.pkg.github.com" >> .npmrc
+          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install dependencies
+        shell: bash
+        run: pnpm install --frozen-lockfile
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install emulator dependencies
+        working-directory: emulator
+        run: npm ci
+
+      - name: Install Playwright system dependencies
+        run: pnpm exec playwright install-deps chromium
+
+      # The suite drives a real Electron window, so CI needs a virtual display.
+      - name: Run emulator E2E track
+        run: xvfb-run --auto-servernum --server-args="-screen 0 1920x1080x24" pnpm test:e2e:electron:emulator
+        env:
+          FF_EMULATOR_ROOT: ${{ github.workspace }}/emulator
+
+      - name: Upload Playwright artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-emulator-artifacts
+          path: |
+            test-results/
+            playwright-report/
+          retention-days: 7
+          if-no-files-found: ignore

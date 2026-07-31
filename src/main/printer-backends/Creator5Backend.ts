@@ -33,6 +33,7 @@ import {
   PrinterFeatureSet,
 } from '@shared/types/printer-backend/index.js';
 import { basename } from 'path';
+import { normalizeMaterialMappingColors } from '../../shared/utils/materialColor.js';
 import { MaterialStationBackend } from './MaterialStationBackend.js';
 
 /**
@@ -287,8 +288,12 @@ export class Creator5Backend extends MaterialStationBackend {
     return await this.fiveMClient.jobControl.startCreator5Job({
       fileName,
       levelingBeforePrint,
+      // ff-api validates mapping colours as '#RRGGBB' and refuses to send otherwise, so
+      // normalise before handing them over.
       materialMappings:
-        materialMappings && materialMappings.length > 0 ? materialMappings : undefined,
+        materialMappings && materialMappings.length > 0
+          ? normalizeMaterialMappingColors(materialMappings)
+          : undefined,
     });
   }
 }
