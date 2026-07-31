@@ -110,6 +110,7 @@ export interface AppConfig {
   readonly webUIThemeProfiles: readonly ThemeProfile[];
   readonly StartAtBoot: boolean;
   readonly StartMinimized: boolean;
+  readonly MinimizeToTray: boolean;
 }
 
 /**
@@ -151,6 +152,7 @@ export interface MutableAppConfig {
   webUIThemeProfiles: readonly ThemeProfile[];
   StartAtBoot: boolean;
   StartMinimized: boolean;
+  MinimizeToTray: boolean;
 }
 
 /**
@@ -297,6 +299,10 @@ export const DEFAULT_CONFIG: AppConfig = {
   webUIThemeProfiles: [...SYSTEM_THEME_PROFILES],
   StartAtBoot: false,
   StartMinimized: false,
+  // Off by default: hiding the window is only safe when the tray icon is actually visible, and
+  // tray support is not guaranteed on Linux (stock GNOME needs an AppIndicator extension). Opting
+  // in after seeing the icon avoids stranding users with no way back to the window.
+  MinimizeToTray: false,
 } as const;
 
 /**

@@ -418,7 +418,9 @@ const createMainWindow = async (): Promise<void> => {
   // Ensure background throttling is disabled for WebContents
   mainWindow.webContents.setBackgroundThrottling(false);
 
-  // Apply taskbar minimize for hidden starts. Platform behavior differs:
+  // Apply the hidden start. With MinimizeToTray enabled the window goes to the tray rather than
+  // the taskbar, so a boot start leaves no taskbar entry at all - otherwise platform behavior
+  // differs:
   // - Windows: minimize() on the not-yet-shown window creates the taskbar button directly, so the
   //   window never flashes on screen.
   // - Linux: minimize() cannot act on a window that was never mapped (see electron#45815 for the
@@ -429,7 +431,27 @@ const createMainWindow = async (): Promise<void> => {
   //   reliable way back to the window in that case.
   // - macOS: the window was created with show:false and stays hidden until the dock surfaces it.
   if (startHidden) {
-    if (process.platform === 'win32') {
+    const minimizeToTray = config.MinimizeToTray;
+
+    if (minimizeToTray && process.platform !== 'linux') {
+      // Already created with show:false - leaving it unmapped IS the tray state on these platforms,
+      // so there is nothing to do beyond skipping the taskbar minimize below.
+      console.log('[Window] Main window started hidden to tray');
+    } else if (minimizeToTray) {
+      // Linux created the window shown (see the show: option above), so hide it once it is mapped.
+      // This acts on `mainWindow` directly rather than going through TrayService.hideToTray(),
+      // because ready-to-show can fire before WindowManager has been handed the window below - the
+      // tray-availability guard is applied here instead so the fallback stays identical.
+      mainWindow.once('ready-to-show', () => {
+        if (getTrayService().isAvailable()) {
+          mainWindow.hide();
+          console.log('[Window] Main window hidden to tray after ready-to-show (Linux hidden start)');
+          return;
+        }
+        mainWindow.minimize();
+        console.log('[Window] No tray available - minimized after ready-to-show instead of hiding');
+      });
+    } else if (process.platform === 'win32') {
       mainWindow.minimize();
       console.log('[Window] Main window started minimized to taskbar');
     } else if (process.platform === 'linux') {
@@ -998,13 +1020,16 @@ const initializeApp = async (): Promise<void> => {
   // Setup legacy dialog handlers (printer selection enhancement, loading overlay)
   setupDialogHandlers();
 
+  // Create the tray icon BEFORE the window. The tray resolves the main window lazily through
+  // WindowManager, so it does not need one to exist yet - and createMainWindow's hidden-start path
+  // asks TrayService whether a tray is available before it hides the window, which is only a
+  // meaningful answer once initialize() has run. This is the reliable way back to the app after a
+  // hidden start, since not every desktop environment honors minimize-to-taskbar.
+  getTrayService().initialize();
+
   // NOW create the window - renderer will find handlers already registered
   await createMainWindow();
   console.log('Main window created with all handlers ready');
-
-  // Create the tray icon once a window exists for it to surface. This is the reliable way back to
-  // the app after a hidden start, since not every desktop environment honors minimize-to-taskbar.
-  getTrayService().initialize();
 
   // Initialize Spoolman integration service (after window creation to avoid timing issues)
   const spoolmanService = initializeSpoolmanIntegrationService(

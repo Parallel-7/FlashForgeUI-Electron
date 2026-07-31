@@ -122,6 +122,7 @@ const INPUT_TO_CONFIG_MAP: Record<string, SettingsConfigKey> = {
   'spoolman-update-mode': 'SpoolmanUpdateMode',
   'start-at-boot': 'StartAtBoot',
   'start-minimized': 'StartMinimized',
+  'minimize-to-tray': 'MinimizeToTray',
 };
 
 class SettingsRenderer {

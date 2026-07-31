@@ -14,11 +14,16 @@
  * - Left-click (and double-click, which Windows reports separately) surfaces the main window
  * - Context menu offers Show and Quit
  * - Desktop mode only; headless runs never create a tray
+ * - Hosts the minimize-to-tray target (`hideToTray`) used when the MinimizeToTray setting is on
  *
  * Note that tray support itself is not universal on Linux: GNOME has no built-in StatusNotifierItem
  * host and needs an extension (e.g. AppIndicator) for the icon to appear. Tray creation failing is
  * therefore treated as non-fatal and logged rather than thrown - the app remains fully usable, and
  * relaunching still surfaces the window through the single-instance handler.
+ *
+ * That optionality is why `hideToTray()` checks `isAvailable()` before hiding: a hidden window with
+ * no tray icon is unreachable, so the absence of a tray downgrades the request to a plain minimize
+ * rather than stranding the user (issue #75).
  *
  * Key exports:
  * - TrayService class: singleton managing the tray lifecycle
@@ -29,7 +34,7 @@
 
 import path from 'node:path';
 
-import { app, Menu, nativeImage, Tray } from 'electron';
+import { app, Menu, nativeImage, Notification, Tray } from 'electron';
 import log from 'electron-log';
 
 import { getWindowManager } from '../windows/WindowManager.js';
@@ -48,6 +53,13 @@ class TrayService {
   private static instance: TrayService | null = null;
 
   private tray: Tray | null = null;
+
+  /**
+   * Whether the "still running in the tray" hint has been shown this session. Deliberately not
+   * persisted: the hint is cheap, and re-teaching once per launch matches how easily users forget
+   * where a hidden window went.
+   */
+  private hasShownHideHint = false;
 
   private constructor() {
     // Singleton - use getTrayService()
@@ -108,6 +120,40 @@ class TrayService {
   }
 
   /**
+   * Whether a tray icon actually exists. Creation is best-effort (see initialize), so callers that
+   * intend to hide the window MUST check this first - hiding with no tray icon leaves no way back.
+   */
+  public isAvailable(): boolean {
+    return this.tray !== null;
+  }
+
+  /**
+   * Hide the main window into the tray.
+   *
+   * `hide()` (rather than `minimize()`) is what removes the taskbar/dock button on Windows and
+   * Linux, which is the behavior requested in issue #75 - a minimized window keeps its taskbar
+   * entry. macOS keeps the dock icon regardless; that is platform convention and not worth fighting.
+   *
+   * Falls back to a plain minimize when no tray icon exists so the window is never orphaned.
+   */
+  public hideToTray(): void {
+    const mainWindow = getWindowManager().getMainWindow();
+    if (!mainWindow) {
+      log.warn('[Tray] Hide requested but no main window exists.');
+      return;
+    }
+
+    if (!this.isAvailable()) {
+      log.warn('[Tray] Hide requested but no tray icon exists - minimizing instead.');
+      mainWindow.minimize();
+      return;
+    }
+
+    mainWindow.hide();
+    this.showHideHint();
+  }
+
+  /**
    * Restore, show and focus the main window. Mirrors the single-instance handler so both recovery
    * paths behave identically.
    */
@@ -135,7 +181,39 @@ class TrayService {
 
     this.tray.destroy();
     this.tray = null;
+    this.hasShownHideHint = false;
     log.info('[Tray] System tray icon destroyed.');
+  }
+
+  /**
+   * Show a one-shot desktop notification the first time the window is hidden this session, so the
+   * window does not simply appear to have vanished.
+   *
+   * Uses Electron's Notification directly rather than NotificationService: that service's payload
+   * type is a discriminated union of printer events (PrintComplete, ConnectionLost, ...), and
+   * widening it for a single UI hint would ripple into the notification coordinator and Discord
+   * forwarding for no benefit.
+   */
+  private showHideHint(): void {
+    if (this.hasShownHideHint) {
+      return;
+    }
+    this.hasShownHideHint = true;
+
+    if (!Notification.isSupported()) {
+      return;
+    }
+
+    try {
+      new Notification({
+        title: app.getName(),
+        body: `${app.getName()} is still running in the system tray.`,
+        silent: true,
+      }).show();
+    } catch (error: unknown) {
+      // A failed hint must never break hiding the window.
+      log.warn(`[Tray] Failed to show minimize-to-tray hint: ${String(error)}`);
+    }
   }
 
   /**
