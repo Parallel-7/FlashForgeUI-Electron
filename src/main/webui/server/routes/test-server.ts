@@ -32,6 +32,10 @@ export async function startTestServer(configureApp: (app: express.Application) =
     baseUrl: `http://127.0.0.1:${port}`,
     async close() {
       await new Promise<void>((resolve, reject) => {
+        // undici (global fetch) holds its sockets open with keep-alive. Node 19+
+        // drops idle connections on close(), but Node 18 waits for the 5s
+        // keep-alive timeout, which stalls the closing test past Jest's limit.
+        server.closeAllConnections?.();
         server.close((error) => {
           if (error) {
             reject(error);
