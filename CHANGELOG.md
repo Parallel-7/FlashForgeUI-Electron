@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.5-alpha.10] - 2026-07-31
+
+Hotfix for a crash in the job uploader introduced in 1.0.5-alpha.9.
+
+### Job Uploader
+- Fixed pressing **OK** doing nothing on printers without a material station. The AD5X-only file-type check was generalized to cover the Creator 5 series in alpha.9, but one branch still referenced the removed `isAD5X` variable, so confirming any upload threw `ReferenceError: isAD5X is not defined` and the job was never sent. The safety check now uses the material-station result, and its message no longer names the AD5X specifically since the branch also covers the Creator 5 / Creator 5 Pro.
+
+### Build & CI
+- Added a CI workflow that type-checks, lints, builds, and runs the unit tests on every push and pull request to `main` and `alpha`, and gated the release workflow behind the same checks. The alpha.9 crash was a plain type error that `tsc --noEmit` would have caught before packaging.
+- CI and release builds now run on Node 22, matching the Node runtime bundled with Electron 39 (previously Node 18, which is end-of-life).
+- Fixed the WebUI route tests leaving keep-alive sockets open when closing their fixture servers, which stalled each test for the full keep-alive timeout on Node 18.
+
 ## [1.0.5-alpha.9] - 2026-07-26
 
 ### Connecting to Printers
