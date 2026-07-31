@@ -434,12 +434,12 @@ async function handleUploadJob(elements: DialogElements, api: JobUploaderAPI): P
       console.error('AD5X upload failed:', error);
       alert(`Upload failed: ${error instanceof Error ? error.message : String(error)}`);
     }
-  } else if (isAD5X && !is3MF) {
+  } else if (hasMaterialStation && !is3MF) {
     // This should not happen due to earlier validation, but safety check
-    alert('AD5X printers only support 3MF files. Please select a valid 3MF file.');
+    alert('This printer only supports 3MF files. Please select a valid 3MF file.');
     return;
   } else {
-    // Use regular upload for non-AD5X printers or non-3MF files
+    // Use regular upload for printers without a material station
     const payload: UploadJobPayload = {
       filePath: currentFilePath,
       startNow: elements.startNowCheckbox?.checked || false,
