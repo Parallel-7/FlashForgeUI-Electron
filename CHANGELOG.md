@@ -5,6 +5,24 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Start at Boot
+- New **Minimize to tray** setting (Settings -> Advanced -> Startup, off by default). With it enabled, minimizing the window hides it to the system tray instead of leaving it in the taskbar, and a hidden boot start goes straight to the tray with no taskbar entry at all. Previously the window was only iconified, so it kept its taskbar button even though a tray icon was present (#75).
+- The setting falls back to a normal minimize on desktops where the tray icon could not be created, so the window can never be hidden with no way to get it back. Stock GNOME needs an AppIndicator extension for tray icons to appear, which is why the setting ships off by default — enable it once you can see the icon.
+- A one-time notification on first hide points out that the app is still running in the tray.
+
+### Testing & CI
+- Rebuilt the Electron end-to-end suite around two tracks sharing one set of specs: an **emulator** track that needs no hardware and runs in CI, and a **hardware** track that drives real bench printers. Covers connect (saved, discovery, manual), upload with material matching, LED control, multi-printer contexts, and the SFTP round-trip.
+- The WebUI browser tests now run against the **real headless server** instead of a hand-written mock of the API. They launch the actual app with `--headless` against emulated printers, so real routes, authentication, and websocket traffic are exercised — the mock could not catch a single server-side regression. Added coverage for rejected logins, unauthorized API access, and token revocation on logout.
+- CI now runs both suites on every push and pull request, alongside type-check, lint, build, and unit tests. Type-checking covers the test tree as well, which is why the old suite was able to rot unnoticed.
+- Fixed emulator processes surviving teardown on Linux and leaving printer ports bound, which failed the following test with `EADDRINUSE`.
+- The [FlashForge printer emulator](https://github.com/GhostTypes/flashforge-emulator-v2) used by these tests is now public under the MIT license.
+- New `docs/TESTING.md` documenting each test surface, both tracks, and the remaining coverage gaps.
+
+### Fixed
+- **WebUI: starting a print on a Creator 5 opened an empty material matching dialog.** The Creator 5 series reports file names only on `/gcodeList`, with none of the per-tool material data the dialog is built from, so the modal opened with nothing to map — and its confirm button still passed validation, because zero mappings satisfied zero required tools. Material matching from the recent-files list is AD5X-only; Creator 5 files now go straight to the normal start. Matching when uploading a 3mf is unaffected.
+
 ## [1.0.5-alpha.10] - 2026-07-31
 
 Hotfix for a crash in the job uploader introduced in 1.0.5-alpha.9.
