@@ -427,7 +427,11 @@ export async function openMaterialMatchingModal(pending: PendingJobStart): Promi
   const modal = getMaterialMatchingElement<HTMLDivElement>('material-matching-modal');
   const title = getMaterialMatchingElement<HTMLHeadingElement>('material-matching-title');
 
-  if (!modal || !pending || !pending.job || !isAD5XJobFile(pending.job)) {
+  // `toolDatas.length` is checked as well as the type guard: a Creator 5 reports no
+  // per-tool data on `/gcodeList`, so its files reach here shaped like AD5X ones but
+  // with nothing to map. An empty modal whose confirm button satisfies "0 of 0 tools
+  // mapped" is worse than refusing outright.
+  if (!modal || !pending || !pending.job || !isAD5XJobFile(pending.job) || pending.job.toolDatas.length === 0) {
     showToast('Material matching is not available for this job.', 'error');
     resetMaterialMatchingState();
     return;

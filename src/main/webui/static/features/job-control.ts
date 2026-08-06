@@ -113,7 +113,14 @@ export async function startPrintJob(): Promise<void> {
   const startNow = ($('start-now') as HTMLInputElement | null)?.checked ?? true;
   const jobInfo = state.jobMetadata.get(state.selectedFile);
 
-  if (startNow && hasMaterialStationSupport() && isAD5XJobFile(jobInfo)) {
+  // The length check is load-bearing on the Creator 5 series: `/gcodeList` there
+  // returns file names only - no `gcodeListDetail` - so `toolDatas` arrives as an
+  // empty array, which `isAD5XJobFile` still accepts (an empty array is an array).
+  // Without it the modal opens with no tools to map and its confirm button passes
+  // validation anyway, because 0 mappings equals 0 required. Only the AD5X reports
+  // per-tool material data on the recent-file list; matching a Creator 5 file is
+  // possible on upload, where the 3mf is parsed locally, never from here.
+  if (startNow && hasMaterialStationSupport() && isAD5XJobFile(jobInfo) && jobInfo.toolDatas.length > 0) {
     const pendingJob: PendingJobStart = {
       filename: state.selectedFile,
       leveling: autoLevel,
