@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5-alpha.11] - 2026-08-10
+
+### Fixed
+- **A paused Creator 5 Pro no longer shows as `Unknown`.** The printer reports the raw status `"pause"`, while the API library only knew the documented `"pausing"` and `"paused"` — so every pause fell through to `Unknown`, and it did so at the worst possible moment: the printer pauses itself when it detects a clog, so the status went blank precisely when you needed to know why the print had stopped. Fixed upstream in `@ghosttypes/ff-api` 2.0.0, which this release bumps to; `"downloading"` now reads as `Busy` for the same reason. Observed on a Creator 5 Pro running firmware 1.9.4.
+
+- **The ETA no longer walks forward while a print is paused.** The displayed completion time was computed as `now + remaining` on every poll, which only holds still while the firmware is counting `estimatedTime` down. It freezes that field the moment the print stops advancing, so with one term fixed and the clock still moving the ETA stepped forward a minute every minute — pause on a clog for an hour and the app claimed the print would finish an hour later than when the pause started, receding indefinitely. Nothing suppressed it: `isActive` deliberately includes `Paused`, so the desktop job stats, the built-in WebUI panel, and the Discord notification embed all kept recomputing. Each now shows `--:--` (and the Discord embed omits the ETA field) unless the print is actually advancing, via the new `isPrintAdvancing` predicate in `shared/types/polling.ts` — which covers `Printing` only, since the pre-print `Heating` warmup does not advance the job either and drifts identically, just for minutes rather than hours. The *duration* readouts were never wrong and are unchanged.
+
+  Worth knowing why it went unnoticed: the desktop shows only the wall-clock time ("3:45 PM") with no duration beside it, so there was nothing on screen to contradict it. The same bug exists in FlashForgeWebUI and in both API libraries, fixed in each; it originates in the C# `ff-5mp-api` (`MachineInfo.cs:210`) that every port inherited the line from.
+
 ### Start at Boot
 - New **Minimize to tray** setting (Settings -> Advanced -> Startup, off by default). With it enabled, minimizing the window hides it to the system tray instead of leaving it in the taskbar, and a hidden boot start goes straight to the tray with no taskbar entry at all. Previously the window was only iconified, so it kept its taskbar button even though a tray icon was present (#75).
 - The setting falls back to a normal minimize on desktops where the tray icon could not be created, so the window can never be hidden with no way to get it back. Stock GNOME needs an AppIndicator extension for tray icons to appear, which is why the setting ships off by default — enable it once you can see the icon.
@@ -22,6 +31,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **WebUI: starting a print on a Creator 5 opened an empty material matching dialog.** The Creator 5 series reports file names only on `/gcodeList`, with none of the per-tool material data the dialog is built from, so the modal opened with nothing to map — and its confirm button still passed validation, because zero mappings satisfied zero required tools. Material matching from the recent-files list is AD5X-only; Creator 5 files now go straight to the normal start. Matching when uploading a 3mf is unaffected.
+
+### Dependencies
+- `@ghosttypes/ff-api` 1.8.0 -> 2.0.0. The major bump is the library making `FFMachineInfo.CompletionTime` nullable for the same paused-print reason described above; this app never read that field (it derives its own ETA from the remaining duration), so nothing here changed but the pin.
 
 ## [1.0.5-alpha.10] - 2026-07-31
 
