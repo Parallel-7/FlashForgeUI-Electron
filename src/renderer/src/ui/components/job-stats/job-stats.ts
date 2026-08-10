@@ -22,7 +22,7 @@
  */
 
 import type { PollingData } from '@shared/types/polling.js';
-import { formatLength, formatWeight } from '@shared/types/polling.js';
+import { formatLength, formatWeight, isPrintAdvancing } from '@shared/types/polling.js';
 import { formatJobTime } from '@shared/utils/time.utils.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
@@ -129,12 +129,19 @@ export class JobStatsComponent extends BaseComponent {
    * Update ETA (Estimated Time of Arrival) display
    * Uses formattedEta if available, falls back to timeRemaining calculation
    * Converts to actual completion time in 12-hour format
+   *
+   * Shows '--:--' whenever the print is not advancing. `isActive` deliberately
+   * includes 'Paused', but the firmware freezes `estimatedTime` while paused,
+   * so recomputing `now() + remaining` each poll would step the displayed
+   * completion time forward a minute every minute rather than holding it.
+   *
    * @param pollingData - Current polling data from printer
    */
   private updateETA(pollingData?: PollingData): void {
-    const currentJob = pollingData?.printerStatus?.currentJob;
+    const printerStatus = pollingData?.printerStatus;
+    const currentJob = printerStatus?.currentJob;
 
-    if (currentJob?.isActive && currentJob.progress) {
+    if (currentJob?.isActive && currentJob.progress && isPrintAdvancing(printerStatus.state)) {
       const progress = currentJob.progress;
       let etaDisplay = '--:--';
 

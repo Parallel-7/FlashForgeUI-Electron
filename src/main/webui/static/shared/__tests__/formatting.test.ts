@@ -14,6 +14,7 @@ import {
   colorsDiffer,
   formatElapsedSeconds,
   formatETA,
+  isPrintAdvancing,
   formatETAFromString,
   formatJobPrintingTime,
   formatLifetimeFilament,
@@ -114,5 +115,31 @@ describe('webui formatting helpers', () => {
       hour12: true,
     });
     expect(formatETAFromString('02:15')).toBe(expectedEtaFromString);
+  });
+
+  // The formatters above convert a remaining *duration* into a wall-clock time
+  // against a fresh Date.now(). That is only stable while the firmware is
+  // counting `estimatedTime` down. It freezes the field the moment the print
+  // stops advancing, so callers must suppress the display rather than let it
+  // step forward a minute every minute.
+  // 'Heating' is not advancing: the pre-print warmup does not move the job on
+  // either, so it drifts the same way, just for minutes instead of hours.
+  it('reports print advancement only for states that count estimatedTime down', () => {
+    expect(isPrintAdvancing('Printing')).toBe(true);
+
+    for (const state of [
+      'Heating',
+      'Paused',
+      'Pausing',
+      'Ready',
+      'Error',
+      'Completed',
+      'Cancelled',
+      'Busy',
+      'Calibrating',
+    ]) {
+      expect(isPrintAdvancing(state)).toBe(false);
+    }
+    expect(isPrintAdvancing(undefined)).toBe(false);
   });
 });

@@ -19,6 +19,7 @@ import {
   formatLifetimeFilament,
   formatLifetimePrintTime,
   formatTime,
+  isPrintAdvancing,
 } from '../shared/formatting.js';
 
 export function updateConnectionStatus(connected: boolean): void {
@@ -93,8 +94,12 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
       setTextContent('elapsed-time', '--:--');
     }
 
-    // ETA — prefer firmware string
-    if (status.formattedEta && status.formattedEta !== '--:--') {
+    // ETA — prefer firmware string. Suppressed unless the print is advancing:
+    // the firmware freezes `estimatedTime` while paused, so a wall-clock
+    // completion time recomputed each poll would recede by a minute a minute.
+    if (!isPrintAdvancing(status.printerState)) {
+      setTextContent('time-remaining', '--:--');
+    } else if (status.formattedEta && status.formattedEta !== '--:--') {
       setTextContent('time-remaining', formatETAFromString(status.formattedEta));
     } else if (status.timeRemaining !== undefined && !Number.isNaN(status.timeRemaining)) {
       setTextContent('time-remaining', formatETA(status.timeRemaining));

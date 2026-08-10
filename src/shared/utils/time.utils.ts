@@ -95,6 +95,12 @@ export function formatDateTime(date: Date): string {
  * @param etaSeconds - ETA in seconds from now
  * @returns Formatted ETA string
  */
+/**
+ * Only valid while the print is advancing - guard calls with `isPrintAdvancing`
+ * from shared/types/polling.ts. The firmware freezes `estimatedTime` when the
+ * print is not progressing, so `Date.now() + etaSeconds` recomputed each poll
+ * walks forward a minute every minute rather than holding still.
+ */
 export function formatETA(etaSeconds: number): string {
   const eta = new Date(Date.now() + etaSeconds * 1000);
   const now = new Date();

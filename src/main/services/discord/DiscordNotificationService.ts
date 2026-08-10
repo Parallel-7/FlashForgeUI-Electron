@@ -39,6 +39,7 @@ import type {
 } from '@shared/types/discord.js';
 import type { ContextRemovedEvent } from '@shared/types/PrinterContext.js';
 import type { PrinterState, PrinterStatus } from '@shared/types/polling.js';
+import { isPrintAdvancing } from '@shared/types/polling.js';
 import { EventEmitter } from 'events';
 import { type ConfigManager, getConfigManager } from '../../managers/ConfigManager.js';
 import {
@@ -673,8 +674,11 @@ export class DiscordNotificationService extends EventEmitter {
         });
       }
 
-      // ETA — prefer formattedEta (firmware), fall back to timeRemaining (minutes)
-      {
+      // ETA — prefer formattedEta (firmware), fall back to timeRemaining (minutes).
+      // Omitted entirely unless the print is advancing: the firmware freezes
+      // `estimatedTime` while paused, so `now() + remaining` would report a
+      // completion time that recedes by a minute every minute.
+      if (isPrintAdvancing(status.state)) {
         const { formattedEta, timeRemaining } = status.currentJob.progress;
         let etaDate: Date | null = null;
         if (formattedEta && formattedEta !== '--:--') {

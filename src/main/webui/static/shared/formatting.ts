@@ -80,6 +80,23 @@ export function formatTime(minutes: number): string {
   return `${mins}:00`;
 }
 
+/**
+ * Whether the print is advancing, i.e. whether the firmware is still counting
+ * `estimatedTime` down.
+ *
+ * Browser-side mirror of `isPrintAdvancing` in shared/types/polling.ts - the
+ * WebUI static bundle has its own module graph and cannot import from there.
+ *
+ * Outside 'Printing' the field freezes while the wall clock keeps moving, so the
+ * `now() + remaining` conversions below walk forward a minute every minute
+ * instead of holding still. Gate them on this; the remaining *duration* stays
+ * correct in every state and needs no gate. 'Heating' is excluded for the same
+ * reason as the paused states - the warmup does not advance the job either.
+ */
+export function isPrintAdvancing(printerState: string | undefined): boolean {
+  return printerState === 'Printing';
+}
+
 export function formatETA(remainingMinutes: number): string {
   const now = new Date();
   const completionTime = new Date(now.getTime() + remainingMinutes * 60 * 1000);

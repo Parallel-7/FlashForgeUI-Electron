@@ -248,6 +248,24 @@ export function isActiveState(state: PrinterState): boolean {
 }
 
 /**
+ * Check whether the print is actually advancing, i.e. whether the firmware is
+ * still counting `estimatedTime` down.
+ *
+ * Outside 'Printing' the field freezes at its last value while the wall clock
+ * keeps moving, so any `now() + remaining` conversion walks forward one minute
+ * per minute instead of holding still - a paused print appears to recede
+ * forever. Gate wall-clock ETA displays on this; the remaining *duration* stays
+ * correct in every state and needs no gate.
+ *
+ * 'Heating' is deliberately excluded. The pre-print warmup does not advance the
+ * job either, so the same drift applies - it just lasts minutes rather than
+ * hours, which is why it is easy to miss.
+ */
+export function isPrintAdvancing(state: PrinterState): boolean {
+  return state === 'Printing';
+}
+
+/**
  * Check if printer is available for new jobs (enables file selection)
  */
 
