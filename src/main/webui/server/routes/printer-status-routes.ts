@@ -46,6 +46,8 @@ interface ExtendedPrinterStatus {
   readonly cumulativeFilament?: number;
   readonly cumulativePrintTime?: number;
   readonly printEta?: string;
+  /** Library completion timestamp (raw backend value). Serialized to ISO for the response. */
+  readonly completionTime?: Date | null;
   // Creator 5 series (multi-tool) fields surfaced by Creator5Backend.getAdditionalStatusFields.
   // Raw ff-api Temperature entries use `set` (not `target`) for the target reading.
   readonly toolTemps?: ReadonlyArray<{ readonly current: number; readonly set: number }>;
@@ -79,6 +81,7 @@ export function registerPrinterStatusRoutes(router: Router, deps: RouteDependenc
       let timeElapsed: number | undefined;
       let elapsedTimeSeconds: number | undefined;
       let formattedEta: string | undefined;
+      let completionTime: string | null | undefined;
       let cumulativeFilament: number | undefined;
       let cumulativePrintTime: number | undefined;
       let toolTemps: Array<{ current: number; target: number }> | undefined;
@@ -105,6 +108,9 @@ export function registerPrinterStatusRoutes(router: Router, deps: RouteDependenc
             : undefined;
         elapsedTimeSeconds = statusResult.status.printDuration;
         formattedEta = statusResult.status.printEta;
+        completionTime = statusResult.status.completionTime
+          ? new Date(statusResult.status.completionTime).toISOString()
+          : null;
 
         if ('cumulativeFilament' in statusResult.status) {
           cumulativeFilament = statusResult.status.cumulativeFilament as number;
@@ -149,6 +155,7 @@ export function registerPrinterStatusRoutes(router: Router, deps: RouteDependenc
           cumulativeFilament,
           cumulativePrintTime,
           formattedEta,
+          completionTime,
           elapsedTimeSeconds,
           toolTemps,
           chamberTemperature,

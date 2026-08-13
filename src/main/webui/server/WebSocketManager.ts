@@ -523,6 +523,9 @@ export class WebSocketManager extends EventEmitter {
       timeElapsed: currentJob?.progress.elapsedTime ?? undefined,
       timeRemaining: currentJob?.progress.timeRemaining ?? undefined,
       formattedEta: currentJob?.progress.formattedEta !== undefined ? currentJob.progress.formattedEta : undefined,
+      completionTime: currentJob?.progress.completionTime
+        ? new Date(currentJob.progress.completionTime).toISOString()
+        : null,
       elapsedTimeSeconds:
         currentJob?.progress.elapsedTimeSeconds !== undefined ? currentJob.progress.elapsedTimeSeconds : undefined,
       filtrationMode: filtrationMode,

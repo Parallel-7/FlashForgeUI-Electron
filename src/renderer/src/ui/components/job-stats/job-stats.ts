@@ -146,16 +146,18 @@ export class JobStatsComponent extends BaseComponent {
       let etaDisplay = '--:--';
 
       try {
-        // Try to use formattedEta first (e.g., "14:30" from ff-api)
-        if (progress.formattedEta && progress.formattedEta !== '--:--') {
-          etaDisplay = this.formatETAToCompletionTime(progress.formattedEta);
-        }
-        // Fall back to timeRemaining calculation
-        else if (progress.timeRemaining && progress.timeRemaining > 0) {
-          etaDisplay = this.calculateCompletionTime(progress.timeRemaining);
+        // Library CompletionTime is the absolute completion timestamp. It is
+        // null while the print is not advancing; the gate above is belt-and-suspenders.
+        if (progress.completionTime) {
+          const completion = new Date(progress.completionTime);
+          etaDisplay = completion.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: '2-digit',
+            hour12: true,
+          });
         }
       } catch (error) {
-        console.warn('JobStatsComponent: ETA calculation error:', error);
+        console.warn('JobStatsComponent: ETA formatting error:', error);
         etaDisplay = '--:--';
       }
 
@@ -204,62 +206,6 @@ export class JobStatsComponent extends BaseComponent {
       // Clear displays when no active job
       this.setElementText('#weight', '0g');
       this.setElementText('#length', '0m');
-    }
-  }
-
-  /**
-   * Format ETA string to actual completion time
-   * Converts "HH:MM" format to actual completion time in 12-hour format
-   * @param formattedEta - ETA string from ff-api (e.g., "14:30")
-   * @returns Formatted completion time (e.g., "3:45 PM")
-   */
-  private formatETAToCompletionTime(formattedEta: string): string {
-    try {
-      // Parse the ETA time (assuming it's time remaining, not clock time)
-      const [hours, minutes] = formattedEta.split(':').map(Number);
-
-      if (isNaN(hours) || isNaN(minutes)) {
-        return '--:--';
-      }
-
-      // Calculate completion time
-      const now = new Date();
-      const completionTime = new Date(now.getTime() + (hours * 60 + minutes) * 60 * 1000);
-
-      // Format to 12-hour format
-      return completionTime.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      });
-    } catch (error) {
-      console.warn('JobStatsComponent: Error formatting ETA:', error);
-      return '--:--';
-    }
-  }
-
-  /**
-   * Calculate completion time from remaining minutes
-   * @param timeRemainingMinutes - Time remaining in minutes
-   * @returns Formatted completion time in 12-hour format
-   */
-  private calculateCompletionTime(timeRemainingMinutes: number): string {
-    try {
-      if (timeRemainingMinutes <= 0) {
-        return '--:--';
-      }
-
-      const now = new Date();
-      const completionTime = new Date(now.getTime() + timeRemainingMinutes * 60 * 1000);
-
-      return completionTime.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      });
-    } catch (error) {
-      console.warn('JobStatsComponent: Error calculating completion time:', error);
-      return '--:--';
     }
   }
 

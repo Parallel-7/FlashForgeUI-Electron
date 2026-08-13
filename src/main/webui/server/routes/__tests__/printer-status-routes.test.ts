@@ -116,6 +116,7 @@ describe('printer-status-routes', () => {
         cumulativeFilament: 321,
         cumulativePrintTime: 654,
         formattedEta: '04:48',
+        completionTime: null,
         elapsedTimeSeconds: 600,
       },
     });

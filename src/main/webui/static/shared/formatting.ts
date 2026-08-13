@@ -97,11 +97,21 @@ export function isPrintAdvancing(printerState: string | undefined): boolean {
   return printerState === 'Printing';
 }
 
-export function formatETA(remainingMinutes: number): string {
-  const now = new Date();
-  const completionTime = new Date(now.getTime() + remainingMinutes * 60 * 1000);
+/**
+ * Format a completion timestamp (Date or ISO string) as a clock time.
+ * Returns '--:--' for null/undefined/invalid input. No Date.now() dependency.
+ */
+export function formatCompletionTime(value: Date | string | null): string {
+  if (value === null || value === undefined || value === '') {
+    return '--:--';
+  }
 
-  return completionTime.toLocaleTimeString('en-US', {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '--:--';
+  }
+
+  return date.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
@@ -146,18 +156,4 @@ export function formatElapsedSeconds(seconds: number): string {
   const mm = String(m).padStart(2, '0');
   const ss = String(s).padStart(2, '0');
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
-}
-
-/**
- * Convert a firmware ETA string (HH:MM remaining) to a clock time string.
- * Mirrors the desktop's formatETAToCompletionTime in job-stats.ts.
- */
-export function formatETAFromString(hhmm: string): string {
-  const [hours, minutes] = hhmm.split(':').map(Number);
-  const completion = new Date(Date.now() + (hours * 60 + minutes) * 60_000);
-  return completion.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
 }

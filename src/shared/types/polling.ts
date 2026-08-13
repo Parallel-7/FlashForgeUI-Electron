@@ -90,6 +90,8 @@ export interface JobProgress {
   weightUsed: number; // grams
   lengthUsed: number; // meters
   formattedEta?: string; // formatted ETA from ff-api (e.g. "14:30")
+  /** Library-computed completion timestamp. Null while the print is not advancing. */
+  completionTime?: Date | null;
 }
 
 /**

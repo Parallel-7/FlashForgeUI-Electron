@@ -250,10 +250,16 @@ export class PrinterDataTransformer {
           elapsedTimeSeconds: 0,
           weightUsed: 0,
           lengthUsed: 0,
+          completionTime: null,
         },
         isActive: false,
       };
     }
+
+    // Library-computed completion timestamp (Date | null). Null while the print
+    // is not advancing. Read directly so the Date instance is preserved.
+    const completionTime: Date | null =
+      backendData.completionTime instanceof Date ? backendData.completionTime : null;
 
     // Enhanced progress data extraction with legacy printer support
     const rawProgress = safeExtractNumber(backendData, 'progress', 0);
@@ -308,6 +314,7 @@ export class PrinterDataTransformer {
       weightUsed: filamentWeight,
       lengthUsed: filamentUsed,
       formattedEta: printEta || undefined,
+      completionTime,
     };
 
     // Validate progress data for type safety

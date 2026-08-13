@@ -138,6 +138,7 @@ function createStatus(fileName: string): PrinterStatus {
         weightUsed: 10,
         lengthUsed: 2,
         formattedEta: '01:30',
+        completionTime: new Date('2026-01-01T01:30:00.000Z'),
       },
       isActive: true,
     },

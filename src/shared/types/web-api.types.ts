@@ -110,6 +110,8 @@ export interface PrinterStatusData {
   cumulativeFilament?: number;
   cumulativePrintTime?: number;
   formattedEta?: string;
+  /** Library completion timestamp, serialized to ISO. Null while the print is not advancing. */
+  completionTime?: string | null;
   elapsedTimeSeconds?: number;
   // Creator 5 series (multi-tool) fields. Undefined/empty on single-nozzle printers.
   toolTemps?: ToolTemperatureData[];
@@ -170,6 +172,8 @@ export interface PrinterStatus {
   cumulativeFilament?: number;
   cumulativePrintTime?: number;
   formattedEta?: string;
+  /** Library completion timestamp, serialized to ISO. Null while the print is not advancing. */
+  completionTime?: string | null;
   elapsedTimeSeconds?: number;
   // Creator 5 series (multi-tool) fields. Undefined/empty on single-nozzle printers.
   toolTemps?: ToolTemperatureData[];

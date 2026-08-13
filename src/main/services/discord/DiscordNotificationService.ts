@@ -674,19 +674,11 @@ export class DiscordNotificationService extends EventEmitter {
         });
       }
 
-      // ETA — prefer formattedEta (firmware), fall back to timeRemaining (minutes).
-      // Omitted entirely unless the print is advancing: the firmware freezes
-      // `estimatedTime` while paused, so `now() + remaining` would report a
-      // completion time that recedes by a minute every minute.
+      // ETA — sourced from the library CompletionTime (null while the print
+      // is not advancing). The isPrintAdvancing gate is belt-and-suspenders.
       if (isPrintAdvancing(status.state)) {
-        const { formattedEta, timeRemaining } = status.currentJob.progress;
-        let etaDate: Date | null = null;
-        if (formattedEta && formattedEta !== '--:--') {
-          const [h, m] = formattedEta.split(':').map(Number);
-          etaDate = new Date(Date.now() + (h * 60 + m) * 60_000);
-        } else if (timeRemaining != null) {
-          etaDate = new Date(Date.now() + timeRemaining * 60_000); // timeRemaining is minutes
-        }
+        const completionTime = status.currentJob.progress.completionTime;
+        const etaDate = completionTime ? new Date(completionTime) : null;
         if (etaDate) {
           const formattedETA = etaDate.toLocaleTimeString('en-US', {
             hour: 'numeric',

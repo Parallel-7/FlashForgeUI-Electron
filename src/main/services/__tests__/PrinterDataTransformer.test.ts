@@ -46,6 +46,7 @@ describe('PrinterDataTransformer', () => {
       estimatedRightLen: 2500,
       estimatedRightWeight: 78,
       printEta: '04:48',
+      completionTime: new Date('2026-01-01T04:48:00.000Z'),
     });
 
     expect(status).toEqual(
@@ -80,6 +81,7 @@ describe('PrinterDataTransformer', () => {
             weightUsed: 78,
             lengthUsed: 2500,
             formattedEta: '04:48',
+            completionTime: new Date('2026-01-01T04:48:00.000Z'),
           }),
         }),
         cumulativeStats: {

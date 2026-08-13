@@ -12,10 +12,9 @@
 import {
   buildMaterialBadgeTooltip,
   colorsDiffer,
+  formatCompletionTime,
   formatElapsedSeconds,
-  formatETA,
   isPrintAdvancing,
-  formatETAFromString,
   formatJobPrintingTime,
   formatLifetimeFilament,
   formatLifetimePrintTime,
@@ -27,15 +26,6 @@ import {
 } from '../formatting.js';
 
 describe('webui formatting helpers', () => {
-  beforeEach(() => {
-    jest.useFakeTimers();
-    jest.setSystemTime(new Date('2026-03-04T15:00:00.000Z'));
-  });
-
-  afterEach(() => {
-    jest.useRealTimers();
-  });
-
   it('identifies AD5X and multi-color job metadata', () => {
     const ad5xJob = {
       metadataType: 'ad5x',
@@ -98,32 +88,26 @@ describe('webui formatting helpers', () => {
     expect(formatLifetimeFilament(12.345)).toBe('12.35m');
   });
 
-  it('formats elapsed time and ETA values using the current clock', () => {
+  it('formats elapsed time and completion timestamps for display', () => {
     expect(formatElapsedSeconds(59)).toBe('00:59');
     expect(formatElapsedSeconds(3_661)).toBe('1:01:01');
 
-    const expectedEta = new Date(Date.now() + 90 * 60_000).toLocaleTimeString('en-US', {
+    // Fixed completion timestamp — no Date.now() dependency.
+    const completion = new Date('2026-03-04T16:30:00.000Z');
+    const expected = completion.toLocaleTimeString('en-US', {
       hour: 'numeric',
       minute: '2-digit',
       hour12: true,
     });
-    expect(formatETA(90)).toBe(expectedEta);
-
-    const expectedEtaFromString = new Date(Date.now() + (2 * 60 + 15) * 60_000).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-    expect(formatETAFromString('02:15')).toBe(expectedEtaFromString);
+    expect(formatCompletionTime(completion)).toBe(expected);
+    expect(formatCompletionTime(completion.toISOString())).toBe(expected);
+    expect(formatCompletionTime(null)).toBe('--:--');
+    expect(formatCompletionTime('not-a-date')).toBe('--:--');
   });
 
-  // The formatters above convert a remaining *duration* into a wall-clock time
-  // against a fresh Date.now(). That is only stable while the firmware is
-  // counting `estimatedTime` down. It freezes the field the moment the print
-  // stops advancing, so callers must suppress the display rather than let it
-  // step forward a minute every minute.
-  // 'Heating' is not advancing: the pre-print warmup does not move the job on
-  // either, so it drifts the same way, just for minutes instead of hours.
+  // isPrintAdvancing gates wall-clock ETA displays. The firmware freezes
+  // `estimatedTime` while the print is not progressing, and the library sets
+  // CompletionTime to null in those states. 'Heating' is excluded too.
   it('reports print advancement only for states that count estimatedTime down', () => {
     expect(isPrintAdvancing('Printing')).toBe(true);
 
