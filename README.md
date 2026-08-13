@@ -8,7 +8,7 @@
 
 ![Platforms](https://img.shields.io/badge/Platforms-Win%20%7C%20macOS%20%7C%20Linux-3178c6?style=flat)
 ![Downloads](https://img.shields.io/github/downloads/Parallel-7/FlashForgeUI-Electron/total?style=flat&color=brightgreen)
-![Version](https://img.shields.io/badge/Version-1.0.4--alpha.4-orange?style=flat)
+![Version](https://img.shields.io/badge/Version-1.0.5--alpha.11-orange?style=flat)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=flat)
 
 **Monitor and control your printer from your desktop or any device on your network &mdash; with more features than any official FlashForge software, completely free.**
@@ -75,6 +75,7 @@ It works with everything from the latest Adventurer 5M / 5M Pro / AD5X to older 
 
 | Printer | Support | Material Station | Notes |
 | --- | --- | --- | --- |
+| **Creator 5** | Full | Yes (4 slots) | Unable to start local printer files, no filtration control |
 | **AD5X** | Full | Yes (4 slots) | Multi-material 3MF printing |
 | **Adventurer 5M Pro** | Full | No | Includes filtration control |
 | **Adventurer 5M** | Full | No | |
@@ -127,9 +128,5 @@ pnpm build:linux  # package Linux artifacts
 ## License
 
 MIT License &mdash; Copyright (c) 2025 GhostTypes
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=Parallel-7/FlashForgeUI,Parallel-7/FlashForgeUI-Electron&type=Date)](https://www.star-history.com/#Parallel-7/FlashForgeUI&Parallel-7/FlashForgeUI-Electron&Date)
 
 </div>
