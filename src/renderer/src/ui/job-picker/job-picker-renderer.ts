@@ -20,7 +20,8 @@
 // Handles file grid display, selection, and thumbnail loading
 
 import { logVerbose } from '@shared/logging.js';
-import type { AD5XJobInfo } from '@shared/types/printer-backend/index.js';
+import type { AD5XJobInfo, PrinterModelType } from '@shared/types/printer-backend/index.js';
+import { isCreator5ModelType } from '../gridstack/defaults.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
 
 interface JobPickerAPI {
@@ -215,11 +216,30 @@ function initializeJobPicker(): void {
 }
 
 /**
+ * Whether the connected printer is a Creator 5 series tool-changer. Mirrors the
+ * desktop controls-grid guard: resident local/recent jobs cannot be started on
+ * these models because the firmware accepts no material mappings over the local
+ * API. The IPC-supplied model type is a loose string on the wire, so it is cast
+ * to the authoritative {@link PrinterModelType} before the centralized check.
+ */
+function isCreator5Series(): boolean {
+  return isCreator5ModelType(selectedPrinterModel as PrinterModelType | null);
+}
+
+/**
  * Initialize dialog by checking capabilities and loading jobs
  * @param isRecentFiles - Whether to load recent files or local files
  */
 async function initializeDialog(isRecentFiles: boolean): Promise<void> {
   await checkPrinterCapabilities();
+
+  // Defensive: Creator 5 series cannot start resident local/recent jobs. The
+  // desktop controls-grid disables the entry buttons; this catches a picker
+  // reached via stale IPC and avoids opening an unusable file list.
+  if (isCreator5Series()) {
+    showMessage('Local job management is not available on this printer.');
+    return;
+  }
 
   // Load the appropriate type of jobs based on the parameter
 
@@ -229,7 +249,7 @@ async function initializeDialog(isRecentFiles: boolean): Promise<void> {
     await loadLocalJobs();
   } else {
     // Show appropriate message for unsupported features
-    showCapabilityMessage(isRecentFiles);
+    showCapabilityMessage();
   }
 }
 
@@ -621,6 +641,12 @@ async function handleSelectJob(): Promise<void> {
     return;
   }
 
+  // Defensive: Creator 5 series cannot start resident local/recent jobs.
+  if (isCreator5Series()) {
+    showMessage('Local job management is not available on this printer.');
+    return;
+  }
+
   // Check if job starting is supported
   if (!printerCapabilities?.startJobs) {
     showMessage('Job starting is not available for your printer model');
@@ -832,11 +858,8 @@ async function loadRecentJobs(): Promise<void> {
 /**
  * Show capability message when feature is not supported
  */
-function showCapabilityMessage(isRecentFiles: boolean): void {
-  const message = isRecentFiles
-    ? 'Recent job management is not available for your printer model'
-    : 'Local job management is not available for your printer model';
-  showErrorState(message);
+function showCapabilityMessage(): void {
+  showErrorState('Local job management is not available on this printer.');
 }
 
 /**

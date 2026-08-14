@@ -420,8 +420,20 @@ function updateButtonStates(printerState: string): void {
   const localBtn = $('btn-start-local') as HTMLButtonElement | null;
   const homeAxesBtn = $('btn-home-axes') as HTMLButtonElement | null;
 
-  if (recentBtn) recentBtn.disabled = !isReadyForNewJob;
-  if (localBtn) localBtn.disabled = !isReadyForNewJob;
+  // Creator 5 series firmware neither sends nor accepts material mappings over
+  // the local API, so starting a previously-uploaded resident job dead-ends at
+  // material selection. Disable the local/recent job entry buttons for those
+  // models (fresh 3mf upload+start still works). hasMultiTool is true for BOTH
+  // creator-5 and creator-5-pro.
+  const isCreator5Series = Boolean(state.printerFeatures?.hasMultiTool);
+  if (recentBtn) {
+    recentBtn.disabled = !isReadyForNewJob || isCreator5Series;
+    recentBtn.title = isCreator5Series ? 'Local job management is not available on this printer.' : '';
+  }
+  if (localBtn) {
+    localBtn.disabled = !isReadyForNewJob || isCreator5Series;
+    localBtn.title = isCreator5Series ? 'Local job management is not available on this printer.' : '';
+  }
   // Home Axes (~G28) is a raw G-code command. HTTP-only printers (Creator 5
   // series) expose no TCP/G-code passthrough, so disable the button while printing
   // OR when the active printer explicitly reports G-code commands unavailable.

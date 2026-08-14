@@ -460,7 +460,12 @@ function initializePollingListeners(): void {
             // Add any other update data fields as needed by components
             printerState: pollingData.printerStatus?.state,
             connectionState: pollingData.isConnected,
-            backendCapabilities: { gcodeAvailable: activeGcodeAvailable },
+            backendCapabilities: {
+              gcodeAvailable: activeGcodeAvailable,
+              // Plumb the active model type so the controls-grid component can
+              // gate model-specific buttons (e.g. Creator 5 local/recent jobs).
+              modelType: activeRebootInfo.modelType,
+            },
           };
 
           // Update all components with centralized manager

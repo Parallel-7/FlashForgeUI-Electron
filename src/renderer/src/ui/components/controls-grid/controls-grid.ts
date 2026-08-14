@@ -29,8 +29,10 @@
  *   controlsGrid.update({ printerState: 'Printing', connectionState: true });
  */
 
+import type { PrinterModelType } from '@shared/types/printer-backend/index.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
+import { isCreator5ModelType } from '../../gridstack/defaults.js';
 import './controls-grid.css';
 
 /**
@@ -233,6 +235,8 @@ export class ControlsGridComponent extends BaseComponent {
     isActiveJob?: boolean;
     canControlPrint?: boolean;
     gcodeAvailable?: boolean;
+    /** PID-derived model type; gates Creator 5 series local/recent job buttons. */
+    modelType?: PrinterModelType;
   } = {};
 
   /**
@@ -303,6 +307,7 @@ export class ControlsGridComponent extends BaseComponent {
         isActiveJob: this.determineActiveJobState(data.printerState),
         canControlPrint: this.determineControlPrintCapability(data.printerState),
         gcodeAvailable: (data.backendCapabilities?.gcodeAvailable as boolean) ?? true,
+        modelType: data.backendCapabilities?.modelType as PrinterModelType | undefined,
       };
 
       // Update internal state
@@ -466,6 +471,16 @@ export class ControlsGridComponent extends BaseComponent {
         if (this.currentState.gcodeAvailable === false) {
           shouldDisable = true;
           reason = 'G-code unavailable (HTTP-only printer)';
+        }
+      } else if (mapping.id === 'btn-start-recent' || mapping.id === 'btn-start-local') {
+        // Creator 5 series firmware neither sends nor accepts material mappings
+        // over the local API, so starting a previously-uploaded resident job
+        // dead-ends at material selection. Disable the local/recent job entry
+        // buttons for those models; fresh 3mf upload+start still works (parsed
+        // locally rather than via resident-file material mapping).
+        if (isCreator5ModelType(this.currentState.modelType)) {
+          shouldDisable = true;
+          reason = 'Local job management is not available on this printer.';
         }
       }
 
