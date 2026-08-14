@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Local and recent job start is now disabled for the Creator 5 series.** The Creator 5 / Creator 5 Pro firmware neither sends nor accepts material mappings over the HTTP API, so starting a previously uploaded local or recent job dead-ended at material selection — only a fresh `.3mf` upload and start works. **Start Recent** and **Start Local** are now disabled with the message "Local job management is not available on this printer." The message is the same everywhere: the desktop controls, the job picker, and the embedded WebUI. Fresh uploads are unaffected.
+
+- **Home Axes no longer shows as available on the Creator 5 series.** Two bugs kept the button wrongly enabled on these HTTP-only printers. The shared backend base class hardcoded G-code availability in `buildFeatureSet()`, silently discarding the Creator 5 backend's "unavailable" declaration. And the renderer learned G-code availability from an event whose context guard dropped the boot-time payload in a race. The feature set builder now honors each backend's declaration, and the renderer derives the capability from the active printer's model, so it stays correct across printer switches. **Home Axes** requires the TCP G-code passthrough these printers do not have.
+
+### Testing & CI
+
+- The emulator end-to-end track now covers four printers: Adventurer 5M Pro, AD5X, Creator 5, and Creator 5 Pro (the two Creator 5 models require a [flashforge-emulator-v2](https://github.com/GhostTypes/flashforge-emulator-v2) build with Creator 5 support). A new spec pins the gating above per model — **Start Recent** / **Start Local** disabled with the exact message on the Creator 5 series, enabled on every other model, and **Home Axes** still disabled on the series — and it caught both fixed bugs above on its first run. The out-of-band test client now also accepts the Creator 5 firmware's bare file-name `/gcodeList` responses (no per-file detail), so upload verification covers both response shapes. `docs/TESTING.md` updated: 31 tests plus 2 conditional skips.
+
 ## [1.0.5-alpha.11] - 2026-08-10
 
 ### Fixed
