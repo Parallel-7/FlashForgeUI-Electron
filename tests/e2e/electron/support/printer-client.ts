@@ -25,8 +25,8 @@ export interface PrinterDetail {
 
 export interface GcodeListEntry {
   gcodeFileName: string;
-  gcodeToolCnt: number;
-  useMatlStation: boolean;
+  gcodeToolCnt?: number;
+  useMatlStation?: boolean;
 }
 
 /** Machine statuses that mean material is actively being laid down or prepared. */
@@ -69,8 +69,14 @@ export class PrinterClient {
   }
 
   async getGcodeList(): Promise<GcodeListEntry[]> {
-    const payload = await this.#post<{ gcodeListDetail?: GcodeListEntry[] }>('/gcodeList');
-    return payload.gcodeListDetail ?? [];
+    const payload = await this.#post<{ gcodeList?: string[]; gcodeListDetail?: GcodeListEntry[] }>('/gcodeList');
+    // AD5X (and the emulator for 5M-family models) reports rich per-file detail;
+    // the Creator 5 series firmware returns bare file names only. Fall back to the
+    // names array so upload verification works against both shapes.
+    if (payload.gcodeListDetail && payload.gcodeListDetail.length > 0) {
+      return payload.gcodeListDetail;
+    }
+    return (payload.gcodeList ?? []).map((name) => ({ gcodeFileName: name }));
   }
 
   async hasFile(fileName: string): Promise<boolean> {

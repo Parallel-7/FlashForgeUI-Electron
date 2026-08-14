@@ -16,8 +16,8 @@
  * - createHardwareTarget(): resolve a configured real printer as a target
  */
 
-import type { SeededPrinter } from './electron-app';
 import { type EmulatorModel, startEmulatorInstance } from '../helpers/emulator-harness';
+import type { SeededPrinter } from './electron-app';
 import { type HardwarePrinterConfig, resolveHardwarePrinter } from './hardware-config';
 import { PrinterClient } from './printer-client';
 import { deleteRemoteFile, remoteGcodeDirFor, waitForRemoteFile } from './sftp';
@@ -78,6 +78,10 @@ const emulatorModelToManualType = (model: EmulatorModel): PrinterTarget['manualC
       return 'adventurer-5m-pro';
     case 'adventurer-5x':
       return 'ad5x';
+    case 'creator-5':
+      return 'creator-5';
+    case 'creator-5-pro':
+      return 'creator-5-pro';
     default:
       // adventurer-3 / adventurer-4 are genuine legacy printers with no product ID.
       return 'legacy';
@@ -92,6 +96,10 @@ const emulatorModelToPrinterModel = (model: EmulatorModel): string => {
       return 'Adventurer 5M Pro';
     case 'adventurer-5x':
       return 'AD5X';
+    case 'creator-5':
+      return 'Creator 5';
+    case 'creator-5-pro':
+      return 'Creator 5 Pro';
     case 'adventurer-3':
       return 'Adventurer 3';
     case 'adventurer-4':
@@ -228,7 +236,12 @@ export const createHardwareTarget = async (config: HardwarePrinterConfig): Promi
         );
       }
       return await waitForRemoteFile(
-        { host: resolved.ipAddress, port: config.ssh.port, username: config.ssh.username, password: config.ssh.password },
+        {
+          host: resolved.ipAddress,
+          port: config.ssh.port,
+          username: config.ssh.username,
+          password: config.ssh.password,
+        },
         remoteGcodeDirFor(config.kind),
         fileName,
         timeoutMs
@@ -239,7 +252,12 @@ export const createHardwareTarget = async (config: HardwarePrinterConfig): Promi
         return;
       }
       await deleteRemoteFile(
-        { host: resolved.ipAddress, port: config.ssh.port, username: config.ssh.username, password: config.ssh.password },
+        {
+          host: resolved.ipAddress,
+          port: config.ssh.port,
+          username: config.ssh.username,
+          password: config.ssh.password,
+        },
         remoteGcodeDirFor(config.kind),
         fileName
       );

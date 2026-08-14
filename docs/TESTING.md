@@ -1,6 +1,6 @@
 # Testing Guide
 
-**Last Updated:** 2026-07-31
+**Last Updated:** 2026-08-14
 
 This document describes every automated test surface in FlashForgeUI, what each one
 actually proves, and where the gaps are. Read it before adding tests so new coverage
@@ -50,8 +50,11 @@ zero tests (`describeTrackSkipReason()`).
 
 The manual connect form collects IP + type + serial + check code but no ports, so it
 always dials the firmware defaults `8899`/`8898`. Real printers always listen there.
+The HTTP-only Creator 5 series answers on those same defaults in the single-printer
+specs, so manual connect applies to it as well.
 Only one emulator instance per machine can, so the multi-printer descriptors shift
-every instance after the first by +100 (`8999`/`8998`). Shifted instances stay
+every instance after the first by +100 per position (`8999`/`8998`, then
+`9099`/`9098`, …). Shifted instances stay
 reachable by discovery and by a seeded profile — both carry explicit ports — but not by
 the manual form, so that one case skips itself with an explanatory message.
 
@@ -62,20 +65,29 @@ the manual form, so that one case skips itself with an explanatory message.
 **Command:** `pnpm test:e2e:electron:emulator` (builds first, then runs
 `tests/e2e/electron/specs`)
 
-**Printers:** two instances booted per describe block, from
+**Printers:** four models, one instance booted per printer describe block, from
 [`flashforge-emulator-v2`](https://github.com/GhostTypes/flashforge-emulator-v2):
 
 | Label | Model | Serial | Ports | Material station |
 | --- | --- | --- | --- | --- |
 | Adventurer 5M Pro (emulated) | `adventurer-5m-pro` | `E2E-SN-5MPRO` | 8899 / 8898 | no |
 | AD5X (emulated) | `adventurer-5x` | `E2E-SN-AD5X` | 8899 / 8898 | yes |
+| Creator 5 (emulated) | `creator-5` | `E2E-SN-CREATOR5` | 8899 / 8898 | yes |
+| Creator 5 Pro (emulated) | `creator-5-pro` | `E2E-SN-CREATOR5PRO` | 8899 / 8898 | yes |
 
 Check code is `123`. Simulation runs in `manual` mode so nothing advances on its own.
+
+The Creator 5 series instances are **HTTP-only**: the emulator binds no TCP server for
+them, neither on the defaults nor on the shifted multi-printer ports. It still
+advertises a `tcpPort` in discovery, because real Creator 5 firmware does the same and
+the suite must see the real behavior, not a tidied-up one. This needs the emulator
+commit that added the models (`6563d9f`); older checkouts reject them.
 
 **Emulator location:** defaults to `../flashforge-emulator-v2` beside this checkout;
 override with `FF_EMULATOR_ROOT`. CI checks the public repo out into `emulator/`.
 
-**Current size:** 13 tests, ~3 minutes, one worker.
+**Current size:** 31 tests run + 2 conditional skips (33 collected), ~6 minutes,
+one worker.
 
 ### Process-group teardown (do not "simplify" this)
 
@@ -155,6 +167,11 @@ profile, so it refuses to continue. **Do not relax that assertion.**
   must **never** appear on 5M-series. Requirement-row count matches the filament count
   the parser reported.
 
+Out-of-band verification reads `/gcodeList` through the test client. The client prefers
+`gcodeListDetail` and falls back to bare `gcodeList` names when that field is absent.
+Real Creator 5 firmware returns names only, and the emulator matches that shape, so the
+same assertion verifies uploads against both response shapes.
+
 Fixtures are real slicer output (`tests/fixtures/print-files/`), not synthetic stubs,
 because the upload path parses embedded metadata and per-tool filament data. Their
 tool counts were read from the parser, not from upstream file names — those names are
@@ -166,6 +183,28 @@ On → off → on, with every assertion reading `lightStatus` back from the prin
 `/detail` endpoint rather than the button's rendered state. A button that toggles its
 own styling while the command never reaches the printer is exactly the failure this
 catches, so trusting the UI here would defeat the purpose. Ends with the LED back on.
+
+### `specs/creator5-gating.spec.ts` — 1 test per printer, +1 Creator 5-only
+
+Pins the Creator 5 series gating contract from commit `58717fb`. Creator 5 / Creator 5
+Pro firmware cannot exchange material mappings over the local API, so starting a local
+or recent job dead-ends at material selection. On the series, the renderer disables
+`#btn-start-recent` and `#btn-start-local` with the title `Disabled: Local job
+management is not available on this printer.` Every other model keeps both enabled.
+A Creator 5-only test also pins `#btn-home-axes` as disabled with a title matching
+`Disabled: G-code unavailable` — the series is HTTP-only and offers no G-code
+passthrough. That second test skips itself on the other two printers, which is exactly
+where the run's two conditional skips come from.
+
+The spec paid for itself on its first run by catching two real bugs:
+
+- `BasePrinterBackend.buildFeatureSet()` hardcoded `gcodeCommands` and
+  `statusMonitoring` as always available, and silently discarded the child backend's
+  own declarations. `Creator5Backend`'s `available: false` never reached the renderer.
+- The renderer's `gcodeAvailable` only propagated through `backend-initialized`, whose
+  `contextId` guard dropped the boot-time payload — the context event that sets
+  `activeContextId` races it. `modelType` traveled via context events and was correct;
+  `gcodeAvailable` was not.
 
 ### `specs/multi-printer.spec.ts` — 1 test
 
@@ -329,35 +368,31 @@ Ordered by what would most likely catch a real regression.
 
 ### Medium value
 
-7. **Creator 5 / Creator 5 Pro are absent from the emulator**, so the entire HTTP-only
-   connection path (no TCP on 8899, `isHttpOnlyModel()`, stale `forceLegacyMode`
-   healing) has zero automated coverage. Adding those two models upstream would extend
-   every existing spec to them for free.
-8. **Legacy printers are never exercised.** The emulator supports Adventurer 3 and 4,
+7. **Legacy printers are never exercised.** The emulator supports Adventurer 3 and 4,
    and `track.ts` already maps them to the legacy manual-connect type, but no descriptor
    enables them. The legacy backend and the TCP `M115` probe path are untested.
-9. **No camera coverage anywhere.** go2rtc lifecycle, the authenticated
+8. **No camera coverage anywhere.** go2rtc lifecycle, the authenticated
    `CameraStreamProxy`, and WebRTC/MSE negotiation are unit-tested in isolation but
    never driven end to end. The proxy is a security boundary (issue #76), and the browser
    suite now has a real server to drive it against — the missing piece is a camera source
    the emulator can offer.
-10. **No grid layout coverage.** Adding, removing, and rearranging widgets, plus layout
+9. **No grid layout coverage.** Adding, removing, and rearranging widgets, plus layout
     persistence across restarts, is untested — and `gridController.ts` has already
     regressed once with blank tiles and missing delete buttons (issue #77).
-11. **No update/notification coverage.** Neither the desktop notification path nor
+10. **No update/notification coverage.** Neither the desktop notification path nor
     electron-updater channel selection is tested.
-12. **`removeUploadedFile()` is a no-op on the emulator**, so nothing verifies deletion
+11. **`removeUploadedFile()` is a no-op on the emulator**, so nothing verifies deletion
     on that track. Emulator state is discarded at teardown, which is fine, but it means
     the delete path is hardware-only.
 
 ### Low value / cheap wins
 
-13. **The `#` slot-colour regression can't be covered** because the emulator always
+12. **The `#` slot-colour regression can't be covered** because the emulator always
     emits a prefixed colour. Teaching it to emit an unprefixed one would let CI pin
     that fix.
-14. **No spec asserts the WebUI and desktop show the same data** for the same printer.
-15. **Retries are off and workers are pinned to 1** on both Playwright configs. Correct
+13. **No spec asserts the WebUI and desktop show the same data** for the same printer.
+14. **Retries are off and workers are pinned to 1** on both Playwright configs. Correct
     for hardware, and correct for the emulator given fixed ports — but it means one
     flaky network hiccup fails the whole run with no retry.
-16. **No coverage thresholds** are enforced in `jest.config.cjs`, so unit coverage can
+15. **No coverage thresholds** are enforced in `jest.config.cjs`, so unit coverage can
     silently decline.

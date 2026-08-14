@@ -283,15 +283,18 @@ export abstract class BasePrinterBackend extends EventEmitter {
         reason: baseFeatures.filtration.reason,
       },
       gcodeCommands: {
-        available: true, // Always available
-        usesLegacyAPI: true, // G-code always uses legacy API
-        supportedCommands: this.getSupportedGCodeCommands(),
+        // Honor the backend's own declaration: HTTP-only models (Creator 5
+        // series) expose no G-code passthrough and set available=false in
+        // getChildBaseFeatures(). Default to true for backends that don't care.
+        available: baseFeatures.gcodeCommands?.available ?? true,
+        usesLegacyAPI: baseFeatures.gcodeCommands?.usesLegacyAPI ?? true,
+        supportedCommands: baseFeatures.gcodeCommands?.supportedCommands ?? this.getSupportedGCodeCommands(),
       },
       statusMonitoring: {
-        available: true, // Always available
-        usesNewAPI: this.supportsNewAPI(),
-        usesLegacyAPI: true, // Always available as fallback
-        realTimeUpdates: this.supportsNewAPI(),
+        available: baseFeatures.statusMonitoring?.available ?? true,
+        usesNewAPI: baseFeatures.statusMonitoring?.usesNewAPI ?? this.supportsNewAPI(),
+        usesLegacyAPI: baseFeatures.statusMonitoring?.usesLegacyAPI ?? true,
+        realTimeUpdates: baseFeatures.statusMonitoring?.realTimeUpdates ?? this.supportsNewAPI(),
       },
       jobManagement: {
         localJobs: this.supportsLocalJobs(),

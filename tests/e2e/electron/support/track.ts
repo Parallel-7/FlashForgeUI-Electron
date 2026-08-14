@@ -79,6 +79,24 @@ const EMULATOR_PRINTERS: ReadonlyArray<{
     httpPort: 8898,
     hasMaterialStation: true,
   },
+  {
+    label: 'Creator 5 (emulated)',
+    model: 'creator-5',
+    serial: 'E2E-SN-CREATOR5',
+    machineName: 'E2E-Creator5',
+    tcpPort: 8899,
+    httpPort: 8898,
+    hasMaterialStation: true,
+  },
+  {
+    label: 'Creator 5 Pro (emulated)',
+    model: 'creator-5-pro',
+    serial: 'E2E-SN-CREATOR5PRO',
+    machineName: 'E2E-Creator5Pro',
+    tcpPort: 8899,
+    httpPort: 8898,
+    hasMaterialStation: true,
+  },
 ];
 
 const EMULATOR_CHECK_CODE = '123';

@@ -38,7 +38,6 @@ import {
   saveLayoutForSerial,
   saveShortcutsForSerial,
 } from './renderer/perPrinterStorage.js';
-import { isCreator5ModelType } from './ui/gridstack/defaults.js';
 // Existing service imports
 import { getGlobalStateTracker, STATE_EVENTS } from './renderer/services/printer-state.js';
 import { handleUIError, resetUI } from './renderer/services/ui-updater.js';
@@ -46,6 +45,7 @@ import { ShortcutButtonController } from './renderer/shortcutButtons.js';
 import { getLucideIcons, initializeLucideIcons } from './renderer/utils/icons.js';
 // Component system imports
 import { type ComponentUpdateData, componentManager, PrinterTabsComponent } from './ui/components/index.js';
+import { isCreator5ModelType } from './ui/gridstack/defaults.js';
 import { editModeController } from './ui/gridstack/EditModeController.js';
 // GridStack system imports
 import { gridStackManager } from './ui/gridstack/GridStackManager.js';
@@ -154,11 +154,7 @@ let activeGcodeAvailable = true;
 
 /** Whether a model type supports remote reboot (5M / 5M Pro / AD5X only). */
 function isRebootSupportedModel(modelType: string | undefined): boolean {
-  return (
-    modelType === 'adventurer-5m' ||
-    modelType === 'adventurer-5m-pro' ||
-    modelType === 'ad5x'
-  );
+  return modelType === 'adventurer-5m' || modelType === 'adventurer-5m-pro' || modelType === 'ad5x';
 }
 
 /** Recompute Reboot menu item visibility from the active context state. */
@@ -461,7 +457,11 @@ function initializePollingListeners(): void {
             printerState: pollingData.printerStatus?.state,
             connectionState: pollingData.isConnected,
             backendCapabilities: {
-              gcodeAvailable: activeGcodeAvailable,
+              // Model-derived and authoritative: HTTP-only models (Creator 5 series)
+              // expose no G-code passthrough. activeRebootInfo.modelType tracks the
+              // ACTIVE context via context events, so this stays correct across
+              // context switches even when the backend-initialized event raced boot.
+              gcodeAvailable: isCreator5ModelType(activeRebootInfo.modelType) ? false : activeGcodeAvailable,
               // Plumb the active model type so the controls-grid component can
               // gate model-specific buttons (e.g. Creator 5 local/recent jobs).
               modelType: activeRebootInfo.modelType,
@@ -535,7 +535,12 @@ function initializeStateAndEventListeners(): void {
 
       // A ready backend means the active context is connected; confirm its
       // model/name so the Reboot item can surface for supported printers.
-      if (!data.contextId || data.contextId === activeContextId) {
+      // At boot the renderer's activeContextId can still be unset when this event
+      // lands (the context event that sets it races this one), so an unset active
+      // context must also accept the payload - otherwise gcodeAvailable (and the
+      // reboot info) silently keep their optimistic defaults.
+      const activeContextUnset = !activeContextId;
+      if (!data.contextId || data.contextId === activeContextId || activeContextUnset) {
         activeRebootInfo = {
           modelType: data.modelType && data.modelType !== 'unknown' ? data.modelType : activeRebootInfo.modelType,
           name: data.printerName ?? activeRebootInfo.name,

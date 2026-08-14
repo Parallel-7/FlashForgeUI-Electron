@@ -17,7 +17,14 @@ const DEFAULT_HTTP_TIMEOUT_MS = 10_000;
 const HEALTH_POLL_INTERVAL_MS = 250;
 const PROCESS_EXIT_TIMEOUT_MS = 5_000;
 
-export type EmulatorModel = 'adventurer-3' | 'adventurer-4' | 'adventurer-5m' | 'adventurer-5m-pro' | 'adventurer-5x';
+export type EmulatorModel =
+  | 'adventurer-3'
+  | 'adventurer-4'
+  | 'adventurer-5m'
+  | 'adventurer-5m-pro'
+  | 'adventurer-5x'
+  | 'creator-5'
+  | 'creator-5-pro';
 
 type SimulationMode = 'auto' | 'manual';
 
