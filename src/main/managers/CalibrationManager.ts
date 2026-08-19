@@ -2,8 +2,6 @@
  * @fileoverview Central manager for calibration operations.
  * Coordinates between parsers, analysis engines, and UI components.
  * Provides a unified interface for all calibration functionality.
- *
- * @module main/managers/CalibrationManager
  */
 
 import { app } from 'electron';

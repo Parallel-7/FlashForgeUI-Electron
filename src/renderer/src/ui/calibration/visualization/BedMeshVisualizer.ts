@@ -2,8 +2,6 @@
  * @fileoverview Canvas-based bed mesh visualization component.
  * Renders 2D heatmap of bed mesh data with color-coded height values.
  * Supports interactive features like hover tooltips and click handlers.
- *
- * @module renderer/ui/calibration/visualization/BedMeshVisualizer
  */
 
 import type { AnalysisResult, BedCorners, MeshData } from '../../../../../shared/types/calibration';

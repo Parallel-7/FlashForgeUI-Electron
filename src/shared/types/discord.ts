@@ -9,8 +9,6 @@
  * - Webhook payload format for POST requests
  * - Service configuration for Discord integration settings
  * - Type safety for embed field formatting
- *
- * @module types/discord
  */
 
 /**

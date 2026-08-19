@@ -13,8 +13,6 @@
  * - Critical asset validation with comprehensive error reporting
  * - Asset manifest generation for deployment verification
  * - Graceful handling of file system errors and permission issues
- *
- * @module services/__tests__/StaticFileManager.test
  */
 
 import * as fs from 'fs/promises';

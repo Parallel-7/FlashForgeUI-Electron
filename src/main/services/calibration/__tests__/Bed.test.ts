@@ -1,8 +1,6 @@
 /**
  * @fileoverview Unit tests for the Bed model class.
  * Tests bed mesh data management, corner calculations, and statistics.
- *
- * @module main/services/calibration/__tests__/Bed.test
  */
 
 import type { BedConfig, MeshData } from '../../../../shared/types/calibration';

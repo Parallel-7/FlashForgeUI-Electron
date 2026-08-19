@@ -26,8 +26,6 @@
  * - BasePrinterBackend: Raw status data source
  * - ui-updater.ts: Direct UI element updates
  * - PrinterNotificationCoordinator: State change monitoring
- *
- * @module types/polling
  */
 
 import type { PrinterModelType } from './printer-backend/backend-operations.js';

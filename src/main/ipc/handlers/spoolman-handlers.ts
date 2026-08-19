@@ -15,8 +15,6 @@
  * - `spoolman:open-dialog` - Open spool selection dialog
  * - `spoolman:search-spools` - Search for spools matching query
  * - `spoolman:select-spool` - Broadcast selected spool to renderers
- *
- * @module ipc/handlers/spoolman-handlers
  */
 
 import type { ActiveSpoolData, SpoolSearchQuery } from '@shared/types/spoolman.js';

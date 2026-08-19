@@ -2,8 +2,6 @@
  * @fileoverview Shared type definitions for the Calibration Assistant module.
  * These types are used across main process, renderer, and WebUI for bed leveling,
  * input shaper analysis, and calibration workflow operations.
- *
- * @module shared/types/calibration
  */
 
 // ============================================================================

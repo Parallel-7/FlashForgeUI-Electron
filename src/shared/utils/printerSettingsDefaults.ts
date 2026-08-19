@@ -23,8 +23,6 @@
  *   await savePrinter(detailsWithDefaults);
  * }
  * ```
- *
- * @module shared/utils/printerSettingsDefaults
  */
 
 import type { PrinterDetails } from '../types/printer.js';

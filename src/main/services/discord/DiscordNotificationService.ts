@@ -27,8 +27,6 @@
  * - Event-driven: Immediate updates on print complete, printer cooled, idle transition
  * - Idle logic: Only send idle notification when transitioning FROM active TO idle
  * - Skip idle on timers: Timer updates skip idle printers, only send when printing
- *
- * @module services/discord/DiscordNotificationService
  */
 
 import type {

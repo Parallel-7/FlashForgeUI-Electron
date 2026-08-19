@@ -1,8 +1,6 @@
 /**
  * @fileoverview Preload script for the Calibration Assistant dialog.
  * Exposes calibration IPC methods to the renderer process via context bridge.
- *
- * @module renderer/ui/calibration-dialog/calibration-dialog-preload
  */
 
 import { contextBridge, ipcRenderer } from 'electron';

@@ -11,8 +11,6 @@
  *
  * Data source: `pollingData.printerStatus` — `toolTemps[]`, `temperatures.bed`,
  * and `temperatures.chamber`.
- *
- * @module ui/components/creator5-temperature
  */
 
 import type { PrinterState, PrinterStatus, TemperatureData } from '@shared/types/polling.js';

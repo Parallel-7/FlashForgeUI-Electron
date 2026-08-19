@@ -15,8 +15,6 @@
  * - material-handlers.ts: Material mapping validation
  * - BasePrinterBackend: Upload method parameter validation
  * - Preload script: Type-safe API method signatures
- *
- * @module types/ipc
  */
 
 import type { AD5XMaterialMapping } from '@ghosttypes/ff-api';

@@ -9,8 +9,6 @@
  * Data source: `pollingData.printerStatus.toolTemps` (one entry per nozzle).
  * Single-nozzle printers don't report this, so the card shows an "unavailable"
  * state for them.
- *
- * @module ui/components/tool-temps
  */
 
 import type { PrinterStatus, TemperatureData } from '@shared/types/polling.js';

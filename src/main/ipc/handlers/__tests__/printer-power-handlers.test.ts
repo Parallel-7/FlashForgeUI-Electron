@@ -11,8 +11,6 @@
  *
  * Heavy main-process deps (SSH/connection/window singletons, electron) are
  * mocked so importing the handler module is lightweight.
- *
- * @module ipc/handlers/__tests__/printer-power-handlers.test
  */
 
 jest.mock('electron', () => ({ ipcMain: { handle: jest.fn() } }));

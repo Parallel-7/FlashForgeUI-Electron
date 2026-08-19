@@ -2,8 +2,6 @@
  * @fileoverview Exports for the calibration engine module.
  * Provides core calibration functionality including bed modeling,
  * deviation analysis, screw/tape calculations, and workflow orchestration.
- *
- * @module main/services/calibration/engine
  */
 
 export type { MeshStats } from './Bed';

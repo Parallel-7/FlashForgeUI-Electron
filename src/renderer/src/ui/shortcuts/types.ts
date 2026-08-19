@@ -9,9 +9,6 @@
  * - SlotNumber: Type-safe slot identifiers (1, 2, 3)
  * - ShortcutButtonConfig: Storage schema for shortcut configuration
  * - SlotAssignment: Rendering metadata for a shortcut slot
- *
- * @author FlashForgeUI Team
- * @module ui/shortcuts/types
  */
 
 /**

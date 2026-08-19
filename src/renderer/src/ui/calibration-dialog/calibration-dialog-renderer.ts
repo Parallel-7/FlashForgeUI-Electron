@@ -1,8 +1,6 @@
 /**
  * @fileoverview Main renderer script for the Calibration Assistant dialog.
  * Handles UI interactions, tab navigation, and calibration workflow.
- *
- * @module renderer/ui/calibration-dialog/calibration-dialog-renderer
  */
 
 import { createIcons, icons } from 'lucide';

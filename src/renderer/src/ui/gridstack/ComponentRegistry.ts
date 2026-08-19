@@ -25,8 +25,6 @@
  *   console.log(camera.defaultSize); // { w: 6, h: 6 }
  * }
  * ```
- *
- * @module ui/gridstack/ComponentRegistry
  */
 
 import { COMPONENT_REGISTRY_DATA } from '@shared/component-definitions.js';

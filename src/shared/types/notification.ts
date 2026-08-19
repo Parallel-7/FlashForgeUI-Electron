@@ -29,8 +29,6 @@
  * - NotificationService: OS notification delivery
  * - PrinterPollingService: Real-time state monitoring
  * - ConfigManager: User notification preferences
- *
- * @module types/notification
  */
 
 import type { AppConfig } from './config.js';

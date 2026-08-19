@@ -13,8 +13,6 @@
  * - Active slot highlighting
  * - Per-context availability (printers with a material station: AD5X + Creator 5 / 5 Pro)
  * - Per-model fixed palette in the slot editor (AD5X vs Creator 5 — see @shared/palette)
- *
- * @module ui/components/material-station
  */
 
 import { getPaletteForModel, type Palette } from '@shared/palette.js';

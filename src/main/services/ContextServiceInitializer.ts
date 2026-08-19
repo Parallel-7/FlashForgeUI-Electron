@@ -10,8 +10,6 @@
  *
  * This helper keeps GUI and headless initialization paths aligned without changing
  * the underlying service responsibilities.
- *
- * @module services/ContextServiceInitializer
  */
 
 import { getPrinterContextManager } from '../managers/PrinterContextManager.js';

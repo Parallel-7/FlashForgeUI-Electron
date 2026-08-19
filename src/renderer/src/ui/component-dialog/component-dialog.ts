@@ -10,9 +10,6 @@
  * - Real-time polling data updates
  * - Proper cleanup on window close
  * - Dialog header customization based on component type
- *
- * @author FlashForgeUI Team
- * @module ui/component-dialog/component-dialog
  */
 
 /// <reference types="../../types/global.d.ts" />

@@ -28,8 +28,6 @@
  * Key exports:
  * - TrayService class: singleton managing the tray lifecycle
  * - getTrayService(): singleton accessor
- *
- * @module services/TrayService
  */
 
 import path from 'node:path';

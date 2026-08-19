@@ -2,8 +2,6 @@
  * @fileoverview Main exports for the calibration module.
  * Provides access to all calibration services including engine components,
  * parsers, SSH connectivity, and input shaper analysis.
- *
- * @module main/services/calibration
  */
 
 // Engine exports

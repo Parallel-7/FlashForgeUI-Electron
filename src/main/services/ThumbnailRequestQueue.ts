@@ -22,8 +22,6 @@
  *
  * Singleton Pattern:
  * Access via getThumbnailRequestQueue() factory function.
- *
- * @module services/ThumbnailRequestQueue
  */
 
 import type { PrinterModelType } from '@shared/types/printer-backend/index.js';

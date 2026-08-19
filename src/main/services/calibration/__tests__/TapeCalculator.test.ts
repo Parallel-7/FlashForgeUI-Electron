@@ -1,8 +1,6 @@
 /**
  * @fileoverview Unit tests for the TapeCalculator class.
  * Tests tape compensation calculations for bed leveling.
- *
- * @module main/services/calibration/__tests__/TapeCalculator.test
  */
 
 import type { BedConfig, TapeConfig } from '../../../../shared/types/calibration';

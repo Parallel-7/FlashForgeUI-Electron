@@ -5,8 +5,6 @@
  * requires mapping its old id on load (see `LEGACY_COMPONENT_ID_RENAMES`). These
  * tests lock in the `ifs-station` -> `material-station` rename so an existing
  * user's saved layout keeps its material-station widget instead of orphaning it.
- *
- * @module ui/gridstack/__tests__/defaults.migration
  */
 
 import {

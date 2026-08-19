@@ -13,8 +13,6 @@
  * reporting) can bypass the capture and avoid feedback loops.
  *
  * Main process only - renderer console output is not captured here.
- *
- * @module utils/ConsoleCapture
  */
 
 import * as util from 'util';

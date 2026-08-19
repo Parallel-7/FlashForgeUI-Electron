@@ -17,9 +17,6 @@
  * - Component is instantiated in dialog renderer
  * - Dialog listens to same 'polling-update' channel as main window
  * - ComponentManager in dialog distributes updates to component
- *
- * @author FlashForgeUI Team
- * @module windows/factories/ComponentDialogWindowFactory
  */
 
 import { BrowserWindow } from 'electron';

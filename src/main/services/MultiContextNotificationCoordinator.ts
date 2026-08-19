@@ -26,8 +26,6 @@
  * // Coordinators are created automatically when contexts are created
  * // and polling services are attached
  * ```
- *
- * @module services/MultiContextNotificationCoordinator
  */
 
 import { EventEmitter } from 'events';

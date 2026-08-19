@@ -7,8 +7,6 @@
  * (Electron safeStorage mock with a real enc:/decrypt round-trip), per-serial
  * isolation, private-key precedence in buildConnectionConfig, and the
  * "default values are stored as unset" rule.
- *
- * @module services/__tests__/SSHSettingsService.test
  */
 
 // Mutable Electron app mock: getPath('userData') is re-pointed at a fresh tmp

@@ -1,8 +1,6 @@
 /**
  * @fileoverview IPC handlers for calibration operations.
  * Exposes calibration functionality to renderer processes through IPC.
- *
- * @module main/ipc/handlers/calibration-handlers
  */
 
 import { dialog, ipcMain } from 'electron';

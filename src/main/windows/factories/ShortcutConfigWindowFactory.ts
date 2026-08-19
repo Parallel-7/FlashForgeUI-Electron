@@ -17,9 +17,6 @@
  * - Promise-based result handling
  * - Sends updated configuration to main window on save
  * - Proper cleanup of IPC handlers on close
- *
- * @author FlashForgeUI Team
- * @module windows/factories/ShortcutConfigWindowFactory
  */
 
 import { BrowserWindow, ipcMain } from 'electron';

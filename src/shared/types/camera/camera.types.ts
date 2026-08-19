@@ -19,8 +19,6 @@
  * 2. OEM printer camera (if reported by the printer)
  * 3. Intelligent fallback (known OEM MJPEG endpoint when firmware omits the URL)
  * 4. None (camera unavailable with reason tracking)
- *
- * @module types/camera/camera.types
  */
 
 import { PrinterFeatureSet } from '../printer-backend/index.js';

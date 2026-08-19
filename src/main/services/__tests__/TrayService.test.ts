@@ -6,8 +6,6 @@
  * creation failed (stock GNOME has no StatusNotifierItem host). Also covers tray lifecycle
  * (create/destroy, empty-icon and throwing-constructor paths), window surfacing, and the one-shot
  * "still running in the tray" hint.
- *
- * @module services/__tests__/TrayService.test
  */
 
 // Mutable Electron mocks so individual tests can configure return values.

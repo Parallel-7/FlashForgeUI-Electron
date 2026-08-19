@@ -10,8 +10,6 @@
  * {@link getPaletteForModel}. When Spoolman is configured, the editor also offers a
  * "Set from Spoolman" shortcut that pre-fills the selections (snapped to the fixed
  * palette) for review before applying. Mirrors the desktop FlashForgeUI card.
- *
- * @module webui/static/features/material-station
  */
 
 import type {

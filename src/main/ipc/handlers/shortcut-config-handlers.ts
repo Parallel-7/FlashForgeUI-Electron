@@ -10,9 +10,6 @@
  * - shortcut-config:get-current: Returns current shortcut configuration
  * - shortcut-config:save: Saves new configuration and notifies main window
  * - shortcut-config:get-available-components: Returns component list with pinned status
- *
- * @author FlashForgeUI Team
- * @module ipc/handlers/shortcut-config-handlers
  */
 
 import type { ShortcutButtonConfig } from '@shared/types/shortcut-config.js';

@@ -13,8 +13,6 @@
  * - Click-to-open spool selection dialog
  * - Real-time spool data updates from main process
  * - Works even if component not on grid (state in main process)
- *
- * @module ui/components/spoolman
  */
 
 import type { AppConfig } from '@shared/types/config.js';

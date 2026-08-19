@@ -2,8 +2,6 @@
  * @fileoverview Calculator for tape compensation recommendations.
  * Identifies low spots on the bed that need tape shims and calculates
  * the number of layers needed to compensate for height differences.
- *
- * @module main/services/calibration/engine/TapeCalculator
  */
 
 import type { TapeConfig, TapeRecommendation } from '../../../../shared/types/calibration';

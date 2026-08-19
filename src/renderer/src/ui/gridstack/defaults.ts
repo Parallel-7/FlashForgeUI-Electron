@@ -20,8 +20,6 @@
  * - Right middle: Model preview (6w×3h, columns 6-11, rows 3-5)
  * - Right bottom: Job stats (6w×2h, columns 6-11, rows 6-7)
  * - Bottom: Status bar (4 components, 3w×1h each, row 8)
- *
- * @module ui/gridstack/defaults
  */
 
 import type { PrinterModelType } from '@shared/types/printer-backend/index.js';

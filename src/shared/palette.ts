@@ -5,8 +5,6 @@
  * resolves which fixed palette applies to a given printer model. Consumers (the
  * material-station slot-editor UI and the material-config IPC handlers) should import from here
  * and call {@link getPaletteForModel} rather than hard-coding a model's palette.
- *
- * @module shared/palette
  */
 
 import type { PrinterModelType } from './types/printer-backend/backend-operations.js';

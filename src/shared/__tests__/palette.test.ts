@@ -8,8 +8,6 @@
  * distance gets wrong), hex-format variants, and each model's material matrix.
  * Also checks `getPaletteForModel` selection and that the two palettes really
  * differ. All fixtures are static; nothing here contacts a Spoolman instance.
- *
- * @module shared/__tests__/palette
  */
 
 import { AD5X_COLORS, AD5X_MATERIALS, AD5X_PALETTE } from '../ad5x-palette.js';

@@ -21,8 +21,6 @@
  *
  * Singleton Pattern:
  * Access via getThumbnailCacheService() factory function.
- *
- * @module services/ThumbnailCacheService
  */
 
 import * as crypto from 'crypto';

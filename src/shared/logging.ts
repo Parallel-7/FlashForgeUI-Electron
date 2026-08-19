@@ -10,8 +10,6 @@
  * In the main process, console output (including logVerbose) is mirrored to
  * the console log file by DebugLogService's console capture when debug mode
  * is enabled. Renderer-process output is not captured to file.
- *
- * @module shared/logging
  */
 
 type VerboseFlagContainer = {

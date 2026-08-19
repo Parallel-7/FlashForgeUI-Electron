@@ -9,8 +9,6 @@
  * snapped to the nearest recognized swatch (CIEDE2000). The Creator 5 series uses a
  * different, newer palette than the AD5X — resolve per model via
  * {@link getPaletteForModel}.
- *
- * @module webui/static/shared/palette
  */
 
 export interface PaletteColor {

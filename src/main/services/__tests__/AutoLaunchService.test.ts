@@ -8,8 +8,6 @@
  * `%%` escaping), deferral of the initial apply until the config has loaded, wasLaunchedHidden()
  * detection across platforms, and that unpackaged (development) builds skip OS registration while
  * honoring toggles.
- *
- * @module services/__tests__/AutoLaunchService.test
  */
 
 // Mutable Electron app mock so individual tests can configure return values.

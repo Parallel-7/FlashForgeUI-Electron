@@ -2,8 +2,6 @@
  * @fileoverview Input shaper analyzer for Klipper resonance compensation.
  * Evaluates different shaper types and recommends optimal configurations.
  * Based on Klipper's input shaping algorithms.
- *
- * @module main/services/calibration/shaper/ShaperAnalyzer
  */
 
 import type {

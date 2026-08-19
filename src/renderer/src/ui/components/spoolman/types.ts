@@ -3,8 +3,6 @@
  *
  * Defines UI-specific types for the Spoolman filament tracker component,
  * including simplified spool data structures optimized for display.
- *
- * @module ui/components/spoolman/types
  */
 
 /**

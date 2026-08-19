@@ -11,8 +11,6 @@
  * - Multiple view states: loading, error, empty, grid
  * - Click-to-select spool interaction
  * - Keyboard navigation (Escape to close)
- *
- * @module ui/spoolman-dialog/spoolman-dialog-renderer
  */
 
 /// <reference types="../../types/global.d.ts" />

@@ -16,8 +16,6 @@
  * and `creator5-palette.ts`, both firmware-confirmed. The matching algorithm here
  * is identical for every model and is ported verbatim from the validated reference
  * implementation (`IfsPalette.kt`).
- *
- * @module shared/palette-core
  */
 
 export interface PaletteColor {

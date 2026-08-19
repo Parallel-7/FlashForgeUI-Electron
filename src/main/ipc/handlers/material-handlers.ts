@@ -17,8 +17,6 @@
  *   printer's fixed palette and apply it to a slot via the printer's `msConfig_cmd`.
  * - `material:set-slot` - Apply an explicit material + color (already chosen from
  *   the fixed palette by the renderer) to a slot. Spoolman-independent.
- *
- * @module ipc/handlers/material-handlers
  */
 
 import { getPaletteForModel } from '@shared/palette.js';

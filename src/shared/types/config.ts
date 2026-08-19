@@ -23,8 +23,6 @@
  * - Themes: DesktopTheme, WebUITheme
  * - Advanced: CustomLeds
  * - Auto-Update: CheckForUpdatesOnLaunch, UpdateChannel, AutoDownloadUpdates
- *
- * @module types/config
  */
 
 /**

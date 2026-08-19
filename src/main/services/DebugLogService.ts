@@ -24,8 +24,6 @@
  *   const debugLog = DebugLogService.getInstance();
  *   debugLog.log('MyService', 'Application started');
  *   debugLog.logNetwork('Connection', 'Connected to 192.168.1.100', { port: 8080 });
- *
- * @module services/DebugLogService
  */
 
 import { app } from 'electron';

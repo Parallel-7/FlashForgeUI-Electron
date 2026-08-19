@@ -2,8 +2,6 @@
  * @fileoverview Multi-stage calibration workflow orchestration engine.
  * Computes sequential calibration stages (belt sync, screw adjust, tape, thermal)
  * and aggregates results for UI consumption.
- *
- * @module main/services/calibration/engine/WorkflowEngine
  */
 
 import type {

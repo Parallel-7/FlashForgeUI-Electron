@@ -15,8 +15,6 @@
  * AD5X Detection Logic:
  * - Firmware PID via the library (`FiveMClient.isAD5X`, derived from `/detail` pid), OR
  * - Material station capability flag (materialStation.available === true) as a fallback
- *
- * @module services/SpoolmanIntegrationService
  */
 
 import { FiveMClient } from '@ghosttypes/ff-api';

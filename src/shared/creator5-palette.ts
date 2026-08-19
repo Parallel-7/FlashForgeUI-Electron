@@ -11,8 +11,6 @@
  * The matching machinery is shared from `palette-core.ts` ({@link Palette}); only the
  * data below differs. Swatch names are assigned by positional analogy to the AD5X
  * palette (the hue progression is identical); the firmware stores hex values only.
- *
- * @module shared/creator5-palette
  */
 
 import { Palette, type PaletteColor } from './palette-core.js';

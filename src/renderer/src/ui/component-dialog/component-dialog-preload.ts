@@ -10,8 +10,6 @@
  * components instantiated inside the dialog have access to the same IPC helpers
  * (send/receive/invoke, camera API, input dialogs, etc.). Channel validation is
  * preserved to maintain security guarantees.
- *
- * @module ui/component-dialog/component-dialog-preload
  */
 
 import type { CameraProxyStatus } from '@shared/types/camera/camera.types.js';

@@ -11,9 +11,6 @@
  * - Handle slot assignment changes
  * - Validate no duplicate assignments
  * - Save configuration and close dialog
- *
- * @author FlashForgeUI Team
- * @module ui/shortcut-config-dialog/shortcut-config-dialog
  */
 
 /// <reference types="../../types/global.d.ts" />

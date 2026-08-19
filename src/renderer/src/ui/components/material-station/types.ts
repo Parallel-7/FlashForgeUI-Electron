@@ -4,8 +4,6 @@
  * Type definitions for the material-station component (AD5X IFS + Creator 5 / 5
  * Pro). Defines layout modes for responsive display and re-exports material
  * station types from the shared polling module.
- *
- * @module ui/components/material-station/types
  */
 
 import type { MaterialSlot, MaterialStationStatus } from '@shared/types/polling.js';

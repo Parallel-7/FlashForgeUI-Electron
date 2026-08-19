@@ -9,8 +9,6 @@
  * The 14 materials, 24 colors, and matching algorithm are ported verbatim from the
  * validated reference implementation (`IfsPalette.kt`) and verified against all 24
  * swatches plus live-Spoolman fixtures.
- *
- * @module shared/ad5x-palette
  */
 
 import { Palette, type PaletteColor } from './palette-core.js';
