@@ -37,7 +37,6 @@ import {
 } from './ipc/printer-context-handlers.js';
 import type { PollingData, PrinterStatus } from '@shared/types/polling.js';
 import type { AppConfig } from '@shared/types/config.js';
-// import { getMainProcessPollingCoordinator } from './services/MainProcessPollingCoordinator';
 import { getMultiContextPollingCoordinator } from './services/MultiContextPollingCoordinator.js';
 import { getMultiContextPrintStateMonitor } from './services/MultiContextPrintStateMonitor.js';
 import { getMultiContextNotificationCoordinator } from './services/MultiContextNotificationCoordinator.js';

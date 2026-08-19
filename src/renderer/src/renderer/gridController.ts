@@ -496,10 +496,8 @@ export class RendererGridController {
       return;
     }
 
-    // Use the canonical factory so every component (incl. material-station and
-    // tool-temps) is instantiated. The stale duplicate factory below previously
-    // returned null for these and rendered blank tiles on context switch.
-    // See issue #77.
+    // Use createComponentForGrid so every component type (incl. material-station
+    // and tool-temps) are instantiated. See issue #77.
     const component = this.createComponentForGrid(componentId, contentContainer);
     if (!component) {
       return;

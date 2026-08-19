@@ -104,15 +104,11 @@ export const getWindowDimensions = (windowType: keyof typeof WINDOW_SIZES): Wind
 };
 
 /**
- * Setup development tools for a window if in development mode
- * Centralizes dev tools configuration logic
+ * Setup development tools for a window
  */
 export const setupDevTools = (_window: BrowserWindow): void => {
-  // DevTools auto-open is now handled explicitly by the caller (e.g. main window)
-  // to prevent spamming dev tools for every dialog.
-  // if (process.env.NODE_ENV === 'development') {
-  //   window.webContents.openDevTools();
-  // }
+  // Intentional no-op, kept for API compatibility. Callers that want DevTools
+  // (e.g. the main window) open them explicitly.
 };
 
 /**

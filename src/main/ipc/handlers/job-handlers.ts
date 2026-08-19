@@ -460,8 +460,8 @@ export function registerJobHandlers(backendManager: PrinterBackendManager, windo
   // Job selected handler
   ipcMain.on('job-selected', (_, data) => {
     console.log('Job selected:', data);
-    // TODO: Implement actual job handling logic
-    // For now, just close the dialog
+    // TODO: handle the selected job. The handler currently logs the selection
+    // and closes the picker without using the job data.
     const jobPickerWindow = windowManager.getJobPickerWindow();
     if (jobPickerWindow) {
       jobPickerWindow.close();

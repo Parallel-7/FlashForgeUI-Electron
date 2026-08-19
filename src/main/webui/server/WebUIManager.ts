@@ -145,12 +145,10 @@ export class WebUIManager extends EventEmitter {
     // Monitor printer connection status
     this.connectionManager.on('connected', () => {
       this.emit('printer-connected');
-      // Web UI no longer controls polling - it just receives updates
     });
 
     this.connectionManager.on('disconnected', () => {
       this.emit('printer-disconnected');
-      // Web UI no longer controls polling
     });
   }
 

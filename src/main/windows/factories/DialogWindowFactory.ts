@@ -50,13 +50,8 @@
  * - Global handlers for reusable dialogs to prevent duplicate registrations
  *
  * Window Specifications:
- * - Input Dialog: 420x300 (min 380x280), non-resizable, frameless, transparent
- * - Material Matching: 700x650 (min 600x550), non-resizable, frameless, transparent
- * - Single Color Confirmation: 450x500 (min 400x450), non-resizable, frameless, transparent
- * - Material Info: 600x500 (min 450x400), non-resizable, frameless, transparent
- * - Auto-Connect Choice: 500x480 (min 450x420), non-resizable, frameless, transparent
- * - Connect Choice: 480x450 (min 450x400), non-resizable, frameless, transparent
- * - Printer Connected Warning: 450x380 (min 400x350), non-resizable, frameless, transparent
+ * - WINDOW_SIZES (WindowTypes.ts) defines width, height, and minimum size for each dialog
+ * - This factory creates every dialog with `resizable: true` and `frame: false`
  *
  * @exports createInputDialog - Create input dialog for user text input
  * @exports createManualConnectDialog - Create the multi-field manual connect form

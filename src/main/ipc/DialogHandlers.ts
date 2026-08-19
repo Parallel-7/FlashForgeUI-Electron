@@ -14,7 +14,7 @@
  * - Printer connected warning dialog for connection switching
  *
  * Note: Most domain-specific dialog handlers have been moved to modular handlers in
- * src/ipc/handlers/ (job-handlers, material-handlers, etc.). This file primarily handles
+ * src/main/ipc/handlers/ (job-handlers, material-handlers, etc.). This file primarily handles
  * connection flow and loading overlay operations.
  */
 

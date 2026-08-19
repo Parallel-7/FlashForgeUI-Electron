@@ -194,7 +194,5 @@ export function registerPaletteHandlers(): void {
     }
   });
 
-  // Drag forwarding no longer required with button-based workflow
-
   console.log('[Palette Handlers] Palette IPC handlers registered successfully');
 }
