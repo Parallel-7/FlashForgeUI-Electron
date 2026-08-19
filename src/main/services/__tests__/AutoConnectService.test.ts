@@ -1,14 +1,9 @@
 /**
  * @fileoverview Tests for AutoConnectService decision-making across single-match,
- * multi-match, and no-match saved-printer scenarios.
+ * multi-match, and no-match saved-printer scenarios, including the startup
+ * connection handoff.
  */
 
-/**
- * @fileoverview Jest coverage for `AutoConnectService`.
- *
- * Verifies saved-printer prioritization, auto-connect gating, and the
- * connection handoff logic used during desktop startup flows.
- */
 const consoleLogSpy = jest.spyOn(console, 'log').mockImplementation(() => {});
 
 import { AutoConnectService } from '../AutoConnectService.js';

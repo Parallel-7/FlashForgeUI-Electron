@@ -5,12 +5,6 @@
  * camera and Spoolman response shapes, and client/server WebSocket messages
  * shared by the WebUI server routes and static client modules.
  */
-/**
- * @fileoverview Shared type definitions for the authenticated WebUI HTTP and websocket APIs.
- *
- * Defines request/response payloads, status snapshots, Spoolman data, context switching
- * payloads, and related transport shapes used by both the WebUI server and static client.
- */
 
 import type { RebootStatusPayload } from './printer-power.js';
 

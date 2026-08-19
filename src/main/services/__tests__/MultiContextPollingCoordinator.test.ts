@@ -3,12 +3,6 @@
  * rebinding, disposal, and event fan-out across printer contexts.
  */
 
-/**
- * @fileoverview Jest coverage for `MultiContextPollingCoordinator`.
- *
- * Tests per-context polling registration, active context changes, and cleanup
- * behavior while coordinating shared polling services across multiple printers.
- */
 import { EventEmitter } from 'events';
 
 const mockLogVerbose = jest.fn();

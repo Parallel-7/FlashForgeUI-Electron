@@ -3,12 +3,6 @@
  * auth-sensitive behavior, and go2rtc-backed camera availability.
  */
 
-/**
- * @fileoverview Jest coverage for WebUI camera route handlers.
- *
- * Tests route-level camera status/proxy responses, validation, and error
- * handling around the shared camera services exposed to the WebUI.
- */
 import express from 'express';
 import { getConfigManager } from '../../../../managers/ConfigManager.js';
 import { getPrinterContextManager } from '../../../../managers/PrinterContextManager.js';

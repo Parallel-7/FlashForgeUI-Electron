@@ -9,10 +9,6 @@
  * registry, and initialization of the default icon set expected by WebUI
  * dialogs and controls.
  */
-/**
- * @fileoverview JSDOM tests for shared WebUI icon helpers that translate data-lucide
- * markup into hydrated Lucide SVG icons.
- */
 
 import { hydrateLucideIcons, initializeLucideIcons, toPascalCase } from '../icons.js';
 

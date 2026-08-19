@@ -9,10 +9,6 @@
  * surfaces invalid stream configuration cleanly, and tears down camera UI when
  * printer capabilities indicate no camera support.
  */
-/**
- * @fileoverview JSDOM tests for WebUI camera initialization, proxy-config handling,
- * and fallback UI states when streams are unavailable.
- */
 
 const mockApiRequest = jest.fn();
 const mockState: {

@@ -3,13 +3,6 @@
  * initialization flow, and printer-info handshake handling.
  */
 
-/**
- * @fileoverview Jest coverage for `ConnectionEstablishmentService`.
- *
- * Exercises direct and discovery connection flows, ff-api client selection,
- * pairing-code handling, and the printer detail normalization returned to the
- * rest of the connection pipeline.
- */
 const flashForgeClientConfigs: any[] = [];
 const flashForgeClientInstances: any[] = [];
 const fiveMClientConfigs: any[] = [];

@@ -9,10 +9,6 @@
  * unauthenticated flows, post-login loading work, and the context/layout hooks
  * that trigger downstream camera, feature, and Spoolman refreshes.
  */
-/**
- * @fileoverview JSDOM tests for the built WebUI app bootstrap flow, including
- * auth gating, initial data fetches, and context-switch side effects.
- */
 
 const mockGetCurrentSettings = jest.fn().mockReturnValue({
   visibleComponents: ['status'],

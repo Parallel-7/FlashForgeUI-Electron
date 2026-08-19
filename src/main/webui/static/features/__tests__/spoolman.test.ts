@@ -8,10 +8,6 @@
  * Exercises config loading, active spool refresh, search fallback behavior,
  * modal rendering, and spool selection flows coordinated by `spoolman.js`.
  */
-/**
- * @fileoverview JSDOM tests for WebUI Spoolman helpers covering config refresh,
- * active-spool updates, and panel state synchronization.
- */
 
 const mockApiRequest = jest.fn();
 const mockShowToast = jest.fn();

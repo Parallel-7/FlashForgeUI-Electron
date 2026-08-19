@@ -9,10 +9,6 @@
  * the API/status requests triggered by `context-switching.js` when users swap
  * between saved printer contexts.
  */
-/**
- * @fileoverview JSDOM tests for WebUI printer context switching, including API calls,
- * layout persistence, and active-context state updates.
- */
 
 const mockApiRequest = jest.fn();
 const mockSendCommand = jest.fn();

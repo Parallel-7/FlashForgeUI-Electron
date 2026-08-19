@@ -3,12 +3,6 @@
  * selection, and active-spool state responses.
  */
 
-/**
- * @fileoverview Jest coverage for WebUI Spoolman route handlers.
- *
- * Tests Spoolman configuration and spool-status API behavior, including route
- * validation and failure handling for the WebUI filament integration surface.
- */
 import express from 'express';
 import { registerSpoolmanRoutes } from '../spoolman-routes.js';
 import { startTestServer } from '../test-server.js';
