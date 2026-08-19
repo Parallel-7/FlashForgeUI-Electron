@@ -1,18 +1,16 @@
 /**
  * @fileoverview Creator 5 / Creator 5 Pro material/color palette (firmware-confirmed).
  *
- * The Creator 5 series does NOT reuse the AD5X palette. Ghidra RE of `firmwareExe`
- * (C5 Pro 1.7.8, cross-checked byte-identical in 1.9.2) shows its own newer 24-color
- * picker palette (the authoritative `#RRGGBB` string table loaded by C++ static init,
- * matching live `/detail` output — e.g. a slot reported `#4CAAF8`) and an expanded
- * 21-material list. Every color differs from the AD5X equivalent except pure white,
- * so reusing the AD5X palette would snap to slightly-wrong values.
+ * The Creator 5 series does NOT reuse the AD5X palette. The Creator 5 Pro firmware
+ * (1.7.8, cross-checked byte-identical in 1.9.2) defines its own newer 24-color
+ * picker palette (the authoritative `#RRGGBB` string table, matching live `/detail`
+ * output — e.g. a slot reported `#4CAAF8`) and an expanded 21-material list. Every
+ * color differs from the AD5X equivalent except pure white, so reusing the AD5X
+ * palette would snap to slightly-wrong values.
  *
  * The matching machinery is shared from `palette-core.ts` ({@link Palette}); only the
  * data below differs. Swatch names are assigned by positional analogy to the AD5X
  * palette (the hue progression is identical); the firmware stores hex values only.
- *
- * Source: `workspace/creator5-analysis/11-creator5-filament-palette.md`.
  *
  * @module shared/creator5-palette
  */

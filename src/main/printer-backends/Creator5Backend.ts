@@ -77,7 +77,7 @@ export class Creator5Backend extends MaterialStationBackend {
       ...features,
       // The Creator 5 series is HTTP-only and exposes NO raw G-code / M-code
       // passthrough: the firmware's only command surface is the HTTP /control command
-      // set (Ghidra RE of firmwareExe 1.9.2 — creator5-analysis §5).
+      // set. Behavior confirmed against Creator 5 firmware (1.9.2).
       gcodeCommands: {
         available: false,
         usesLegacyAPI: false,
