@@ -45,6 +45,7 @@ import {
   createRequestLogger,
 } from './auth-middleware.js';
 import { registerPublicThemeRoutes } from './routes/theme-routes.js';
+import { disposeUploadStaging } from './upload-staging.js';
 import { createSecurityMiddleware } from './security-middleware.js';
 import { createWebUIStaticAssetOptions } from './static-asset-options.js';
 import { getWebSocketManager } from './WebSocketManager.js';
@@ -437,6 +438,10 @@ export class WebUIManager extends EventEmitter {
       this.webSocketManager.shutdown();
       this.cameraStreamProxy?.shutdown();
       this.cameraStreamProxy = null;
+
+      // Scratch files for staged job uploads are worthless once the server that
+      // handed out their handles is gone.
+      await disposeUploadStaging();
 
       this.expressApp = null;
       this.isRunning = false;

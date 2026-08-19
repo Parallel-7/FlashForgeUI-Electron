@@ -244,6 +244,122 @@
         </div>
       </div>
 
+      <!-- Job Upload Modal (mirrors the desktop Upload Job dialog) -->
+      <div id="job-upload-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="job-upload-title">
+        <div class="modal-content large job-upload">
+          <div class="modal-header">
+            <h2 id="job-upload-title">Upload Job</h2>
+            <button id="job-upload-close" class="close-btn" type="button" aria-label="Close job uploader">&times;</button>
+          </div>
+          <div class="modal-body">
+            <div class="job-upload-file-section">
+              <div class="job-upload-file-path" id="job-upload-file-path">No file selected...</div>
+              <input type="file" id="job-upload-file-input" accept=".gcode,.gx,.3mf" class="hidden">
+              <button id="job-upload-browse" class="secondary-btn" type="button">Browse...</button>
+            </div>
+
+            <div class="job-upload-options">
+              <label class="checkbox-label">
+                <input type="checkbox" id="job-upload-start-now" checked>
+                <span>Start Now</span>
+              </label>
+              <label class="checkbox-label">
+                <input type="checkbox" id="job-upload-auto-level">
+                <span>Auto Level</span>
+              </label>
+            </div>
+
+            <div class="job-upload-content">
+              <div class="job-upload-preview">
+                <div class="job-upload-thumbnail" id="job-upload-thumbnail">
+                  <span class="job-upload-no-preview">No Preview</span>
+                </div>
+              </div>
+
+              <div class="job-upload-metadata">
+                <div class="job-upload-meta-group">
+                  <h4 class="job-upload-meta-title">Printer Model:</h4>
+                  <div class="job-upload-meta-value" id="job-upload-meta-printer">-</div>
+                </div>
+                <div class="job-upload-meta-group">
+                  <h4 class="job-upload-meta-title">Filament Type:</h4>
+                  <div class="job-upload-meta-value" id="job-upload-meta-filament-type">-</div>
+                </div>
+                <div class="job-upload-meta-group">
+                  <h4 class="job-upload-meta-title">Filament Used:</h4>
+                  <div class="job-upload-meta-value" id="job-upload-meta-filament-len">-</div>
+                </div>
+                <div class="job-upload-meta-group">
+                  <h4 class="job-upload-meta-title">Sliced by:</h4>
+                  <div class="job-upload-meta-value" id="job-upload-meta-slicer-name">-</div>
+                </div>
+                <div class="job-upload-meta-group">
+                  <h4 class="job-upload-meta-title">Version:</h4>
+                  <div class="job-upload-meta-value" id="job-upload-meta-slicer-ver">-</div>
+                </div>
+                <div class="job-upload-meta-group">
+                  <h4 class="job-upload-meta-title">Date:</h4>
+                  <div class="job-upload-meta-value" id="job-upload-meta-slice-date">-</div>
+                </div>
+                <div class="job-upload-meta-group">
+                  <h4 class="job-upload-meta-title">Time:</h4>
+                  <div class="job-upload-meta-value" id="job-upload-meta-slice-time">-</div>
+                </div>
+                <div class="job-upload-meta-group print-time-highlight">
+                  <h4 class="job-upload-meta-title">Estimated Print Time:</h4>
+                  <div class="job-upload-meta-value print-time-value" id="job-upload-meta-eta">-</div>
+                </div>
+                <div class="job-upload-meta-group">
+                  <h4 class="job-upload-meta-title">First Layer Time:</h4>
+                  <div class="job-upload-meta-value" id="job-upload-meta-first-layer-time">-</div>
+                </div>
+                <div class="job-upload-meta-group">
+                  <h4 class="job-upload-meta-title">Layer Height:</h4>
+                  <div class="job-upload-meta-value" id="job-upload-meta-layer-height">-</div>
+                </div>
+                <div class="job-upload-meta-group">
+                  <h4 class="job-upload-meta-title">Infill Density:</h4>
+                  <div class="job-upload-meta-value" id="job-upload-meta-infill">-</div>
+                </div>
+                <div class="job-upload-meta-group">
+                  <h4 class="job-upload-meta-title">Layers:</h4>
+                  <div class="job-upload-meta-value" id="job-upload-meta-layers">-</div>
+                </div>
+                <div class="job-upload-meta-group">
+                  <h4 class="job-upload-meta-title">Support Used:</h4>
+                  <div class="job-upload-meta-value" id="job-upload-meta-support">-</div>
+                </div>
+                <div class="job-upload-meta-group hidden" id="job-upload-warnings-container">
+                  <h4 class="job-upload-meta-title">Warnings:</h4>
+                  <div class="job-upload-meta-value job-upload-warnings" id="job-upload-meta-warnings">-</div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="job-upload-cancel" class="secondary-btn" type="button">Cancel</button>
+            <button id="job-upload-ok" class="primary-btn" type="button" disabled>OK</button>
+          </div>
+
+          <div id="job-upload-loading" class="job-upload-overlay hidden">
+            <span id="job-upload-loading-text">Parsing file...</span>
+          </div>
+
+          <div id="job-upload-progress-overlay" class="job-upload-overlay hidden">
+            <div class="job-upload-progress">
+              <div class="job-upload-progress-header">
+                <span>Uploading Job</span>
+                <span id="job-upload-progress-percentage">0%</span>
+              </div>
+              <div class="job-upload-progress-track">
+                <div class="job-upload-progress-bar" id="job-upload-progress-bar"></div>
+              </div>
+              <div class="job-upload-progress-status" id="job-upload-progress-status">Preparing upload...</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- Material Matching Modal -->
       <div id="material-matching-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="material-matching-title">
         <div class="modal-content material-matching">

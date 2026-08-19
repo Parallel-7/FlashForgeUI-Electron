@@ -19,6 +19,7 @@ import { registerDebugRoutes } from './routes/debug-routes.js';
 import { registerFileManagerRoutes } from './routes/file-manager-routes.js';
 import { registerFiltrationRoutes } from './routes/filtration-routes.js';
 import { registerJobRoutes } from './routes/job-routes.js';
+import { registerJobUploadRoutes } from './routes/job-upload-routes.js';
 import { registerPrinterControlRoutes } from './routes/printer-control-routes.js';
 import { registerPrinterPowerRoutes } from './routes/printer-power-routes.js';
 import { registerPrinterStatusRoutes } from './routes/printer-status-routes.js';
@@ -46,6 +47,7 @@ export function createAPIRoutes(deps: RouteDependencies = buildRouteDependencies
   registerTemperatureRoutes(router, deps);
   registerFiltrationRoutes(router, deps);
   registerJobRoutes(router, deps);
+  registerJobUploadRoutes(router, deps);
   registerCameraRoutes(router, deps);
   registerCalibrationRoutes(router, deps);
   registerFileManagerRoutes(router, deps);

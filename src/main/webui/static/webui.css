@@ -3384,3 +3384,277 @@ body {
   background-color: var(--theme-secondary);
 }
 
+
+/* ==========================================================================
+   Job Upload Modal
+   Port of the desktop Upload Job dialog (job-uploader.css) onto the WebUI's
+   modal shell. Layout, field order and the two overlays match the desktop.
+   ========================================================================== */
+
+.modal-content.job-upload {
+  max-width: 860px;
+  /* Anchors the loading and progress overlays to the dialog, as on desktop. */
+  position: relative;
+}
+
+.modal-content.job-upload .modal-footer {
+  justify-content: flex-end;
+}
+
+.job-upload-file-section {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 16px;
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.job-upload-file-path {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background-color: var(--dark-bg);
+  color: var(--text-color);
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.job-upload-options {
+  display: flex;
+  flex-direction: row;
+  gap: 32px;
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.job-upload-content {
+  display: grid;
+  grid-template-columns: 1fr 180px;
+  gap: 20px;
+}
+
+.job-upload-preview {
+  grid-column: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 16px;
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.job-upload-thumbnail {
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background-color: var(--dark-bg);
+}
+
+.job-upload-thumbnail img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.job-upload-no-preview {
+  font-size: 13px;
+  font-style: italic;
+  text-align: center;
+  color: var(--text-color-muted);
+}
+
+.job-upload-metadata {
+  grid-column: 1;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px 24px;
+  padding: 20px;
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.job-upload-meta-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.job-upload-meta-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-color-secondary);
+}
+
+.job-upload-meta-value {
+  font-size: 14px;
+  color: var(--text-color);
+  word-break: break-word;
+}
+
+.job-upload-meta-group.print-time-highlight {
+  align-items: center;
+  justify-content: center;
+  min-height: 60px;
+  padding: 16px;
+  text-align: center;
+  border: 1px solid var(--primary-alpha-40);
+  border-radius: 8px;
+  background-color: var(--primary-alpha-15);
+}
+
+.job-upload-meta-group.print-time-highlight .job-upload-meta-title {
+  margin-bottom: 8px;
+}
+
+.job-upload-meta-value.print-time-value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.job-upload-warnings {
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.job-upload-warning-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border-color-light);
+}
+
+.job-upload-warning-item:last-child {
+  border-bottom: none;
+}
+
+.job-upload-warning-icon {
+  flex-shrink: 0;
+  font-size: 14px;
+}
+
+.job-upload-warning-icon.level-info {
+  color: var(--accent-color);
+}
+
+.job-upload-warning-icon.level-warning {
+  color: var(--warning-color);
+}
+
+.job-upload-warning-icon.level-error {
+  color: var(--error-color);
+}
+
+.job-upload-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background-color: var(--overlay-bg);
+  font-size: 14px;
+  font-style: italic;
+  color: var(--text-color);
+}
+
+.job-upload-overlay.hidden {
+  display: none;
+}
+
+.job-upload-progress {
+  min-width: 320px;
+  padding: 30px;
+  text-align: center;
+  font-style: normal;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background-color: var(--card-bg);
+  box-shadow: var(--shadow-lg);
+}
+
+.job-upload-progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color);
+}
+
+#job-upload-progress-percentage {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--theme-primary);
+}
+
+.job-upload-progress-track {
+  width: 100%;
+  height: 10px;
+  margin-bottom: 16px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background-color: var(--dark-bg);
+}
+
+.job-upload-progress-bar {
+  width: 0%;
+  height: 100%;
+  border-radius: 5px;
+  background-color: var(--accent-color);
+  transition: width var(--transition-normal);
+}
+
+.job-upload-progress-status {
+  font-size: 14px;
+  font-style: italic;
+  color: var(--text-color-secondary);
+}
+
+@media (max-width: 768px) {
+  .job-upload-content {
+    grid-template-columns: 1fr;
+  }
+
+  .job-upload-preview,
+  .job-upload-metadata {
+    grid-column: 1;
+  }
+
+  .job-upload-preview {
+    order: -1;
+  }
+
+  .job-upload-metadata {
+    grid-template-columns: 1fr;
+  }
+
+  .job-upload-file-section,
+  .job-upload-options {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+}

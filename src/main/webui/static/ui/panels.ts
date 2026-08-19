@@ -434,6 +434,13 @@ function updateButtonStates(printerState: string): void {
     localBtn.disabled = !isReadyForNewJob || isCreator5Series;
     localBtn.title = isCreator5Series ? 'Local job management is not available on this printer.' : '';
   }
+  // Uploading a fresh file works on every model, Creator 5 series included -
+  // the 3mf is parsed here, so material mappings are available on upload even
+  // where the resident-job lists are not.
+  const uploadJobBtn = $('btn-upload-job') as HTMLButtonElement | null;
+  if (uploadJobBtn) {
+    uploadJobBtn.disabled = !isReadyForNewJob;
+  }
   // Home Axes (~G28) is a raw G-code command. HTTP-only printers (Creator 5
   // series) expose no TCP/G-code passthrough, so disable the button while printing
   // OR when the active printer explicitly reports G-code commands unavailable.

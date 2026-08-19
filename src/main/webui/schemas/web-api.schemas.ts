@@ -13,6 +13,7 @@
  * - WebSocket schemas: WebSocketCommandSchema, WebSocketCommandTypeSchema
  * - Command validation: PrinterCommandSchema, CommandDataValidators
  * - Temperature/Job schemas: TemperatureSetRequestSchema, JobStartRequestSchema, GCodeCommandRequestSchema
+ * - Job upload schemas: JobUploadStartRequestSchema, JobUploadCancelRequestSchema
  * - Helper functions: validateWebSocketCommand, extractBearerToken, createValidationError
  * - Type exports: ValidatedLoginRequest, ValidatedWebSocketCommand, ValidatedPrinterCommand
  */
@@ -114,6 +115,29 @@ export const JobStartRequestSchema = z.object({
     .array(MaterialMappingSchema)
     .min(1, 'materialMappings must contain at least one mapping')
     .optional(),
+});
+
+/**
+ * Job upload start request validation.
+ *
+ * `uploadId` refers to a file already staged via POST /api/jobs/upload/stage, so
+ * no filename is accepted here - the server only ever prints the name it wrote.
+ */
+export const JobUploadStartRequestSchema = z.object({
+  uploadId: z.string().uuid('uploadId must be a valid upload handle'),
+  startNow: z.boolean().optional().default(true),
+  autoLevel: z.boolean().optional().default(false),
+  materialMappings: z
+    .array(MaterialMappingSchema)
+    .min(1, 'materialMappings must contain at least one mapping')
+    .optional(),
+});
+
+/**
+ * Job upload cancel/discard request validation.
+ */
+export const JobUploadCancelRequestSchema = z.object({
+  uploadId: z.string().uuid('uploadId must be a valid upload handle'),
 });
 
 /**

@@ -53,6 +53,7 @@ import {
   confirmMaterialMatching,
   setupMaterialMatchingHandlers,
 } from './features/material-matching.js';
+import { setupJobUpload } from './features/job-upload.js';
 import { refreshMaterialStationCard, setupMaterialStationCard } from './features/material-station.js';
 import { refreshFileManagerButton, setupFileManager } from './features/file-manager.js';
 import { refreshRebootButton, setupReboot } from './features/reboot.js';
@@ -275,6 +276,60 @@ export interface MaterialMapping {
   slotMaterialColor: string;
 }
 
+// Job upload types (mirror src/shared/types/web-api.types.ts)
+
+/** A single slicer warning extracted from a 3MF. */
+export interface UploadSliceWarning {
+  level: number;
+  message: string;
+}
+
+/** Per-tool filament entry parsed out of a staged upload. */
+export interface UploadFilamentInfo {
+  type: string | null;
+  color: string | null;
+  usedM: string | null;
+  usedG: string | null;
+}
+
+/**
+ * Slicer metadata for a staged upload, already resolved by the server through
+ * the same fallback chains the desktop job uploader applies while rendering.
+ */
+export interface UploadJobMetadata {
+  printerModel: string | null;
+  filamentType: string | null;
+  filamentLengthM: number | null;
+  filamentWeightG: number | null;
+  supportUsed: boolean | null;
+  slicerName: string | null;
+  slicerVersion: string | null;
+  sliceDate: string | null;
+  sliceTime: string | null;
+  printEta: string | null;
+  layerHeight: number | null;
+  infillDensity: number | null;
+  layerCount: number | null;
+  firstLayerTime: number | null;
+  warnings: UploadSliceWarning[];
+  /** Base64 PNG without a data URL prefix. */
+  thumbnail: string | null;
+  filaments: UploadFilamentInfo[];
+}
+
+export interface JobUploadStageResponse extends ApiResponse {
+  uploadId?: string;
+  fileName?: string;
+  metadata?: UploadJobMetadata;
+  /** True when the printer has a material station and the file is a 3MF. */
+  requiresMaterialMatching?: boolean;
+}
+
+export interface JobUploadStartResponse extends ApiResponse {
+  fileName?: string;
+  started?: boolean;
+}
+
 export interface PendingJobStart {
   filename: string;
   leveling: boolean;
@@ -398,6 +453,7 @@ async function initialize(): Promise<void> {
   setupDialogEventHandlers(dialogHandlers);
   setupJobControlEventHandlers();
   setupMaterialMatchingHandlers();
+  setupJobUpload();
   setupSpoolmanHandlers();
   setupMaterialStationCard();
   setupFileManager();

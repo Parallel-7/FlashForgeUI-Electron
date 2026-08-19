@@ -246,3 +246,71 @@ export interface SpoolSearchResponse extends StandardAPIResponse {
 export interface SpoolSelectResponse extends StandardAPIResponse {
   spool: ActiveSpoolData;
 }
+
+// ============================================================================
+// JOB UPLOAD API TYPES
+// ============================================================================
+
+/** A single slicer warning extracted from a 3MF, mirroring slicer-meta's SliceWarning. */
+export interface UploadSliceWarning {
+  readonly level: number;
+  readonly message: string;
+}
+
+/**
+ * Per-tool filament entry parsed out of the staged file. Feeds the material
+ * matching modal on material-station printers (AD5X, Creator 5 / 5 Pro).
+ */
+export interface UploadFilamentInfo {
+  readonly type: string | null;
+  readonly color: string | null;
+  readonly usedM: string | null;
+  readonly usedG: string | null;
+}
+
+/**
+ * Normalized slicer metadata for a staged upload.
+ *
+ * The desktop job uploader reads the raw `ParseResult` and applies a chain of
+ * fallbacks between `file`, `threeMf` and `slicer` while rendering. The WebUI
+ * cannot parse locally, so the server applies the exact same fallbacks here and
+ * ships the resolved values; the browser only formats them.
+ */
+export interface UploadJobMetadata {
+  readonly printerModel: string | null;
+  readonly filamentType: string | null;
+  /** Resolved filament length in meters (file.filaments → threeMf.filaments → filamentUsedMM). */
+  readonly filamentLengthM: number | null;
+  /** Resolved filament weight in grams; only rendered when a length is known. */
+  readonly filamentWeightG: number | null;
+  /** Null when the file carries no 3MF section (the desktop renders "-"). */
+  readonly supportUsed: boolean | null;
+  readonly slicerName: string | null;
+  readonly slicerVersion: string | null;
+  readonly sliceDate: string | null;
+  readonly sliceTime: string | null;
+  readonly printEta: string | null;
+  readonly layerHeight: number | null;
+  readonly infillDensity: number | null;
+  readonly layerCount: number | null;
+  /** First layer time in seconds (3MF only). */
+  readonly firstLayerTime: number | null;
+  readonly warnings: readonly UploadSliceWarning[];
+  /** Base64 PNG (no data URL prefix) from the 3MF plate image or G-code thumbnail. */
+  readonly thumbnail: string | null;
+  readonly filaments: readonly UploadFilamentInfo[];
+}
+
+export interface JobUploadStageResponse extends StandardAPIResponse {
+  /** Handle used to reference the staged file on the follow-up start/cancel calls. */
+  readonly uploadId?: string;
+  readonly fileName?: string;
+  readonly metadata?: UploadJobMetadata;
+  /** True when the active printer has a material station and the file is a 3MF. */
+  readonly requiresMaterialMatching?: boolean;
+}
+
+export interface JobUploadStartResponse extends StandardAPIResponse {
+  readonly fileName?: string;
+  readonly started?: boolean;
+}

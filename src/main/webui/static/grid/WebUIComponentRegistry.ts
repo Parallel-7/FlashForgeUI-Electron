@@ -137,6 +137,9 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
             <button id="btn-start-local" class="control-btn">Local Files</button>
             <button id="btn-refresh" class="control-btn">Refresh Status</button>
           </div>
+          <div class="btn-row">
+            <button id="btn-upload-job" class="control-btn">Upload Job</button>
+          </div>
         </div>
       </div>
     `,
