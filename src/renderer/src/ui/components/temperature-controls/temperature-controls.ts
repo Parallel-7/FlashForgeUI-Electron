@@ -92,10 +92,7 @@ export class TemperatureControlsComponent extends BaseComponent {
     });
   }
 
-  /**
-   * Update component with new polling data
-   * @param data - Component update data containing polling information
-   */
+  /** {@inheritDoc BaseComponent.update} */
   public update(data: ComponentUpdateData): void {
     this.assertInitialized();
 

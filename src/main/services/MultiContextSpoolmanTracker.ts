@@ -78,13 +78,11 @@ export class MultiContextSpoolmanTracker extends EventEmitter {
    * @param printStateMonitor - Print state monitor to attach to tracker
    */
   public createTrackerForContext(contextId: string, printStateMonitor: PrintStateMonitor): void {
-    // Check if tracker already exists
     if (this.trackers.has(contextId)) {
       console.warn(`[MultiContextSpoolmanTracker] Tracker already exists for context ${contextId}`);
       return;
     }
 
-    // Create new tracker for this context
     const tracker = new SpoolmanUsageTracker(contextId);
 
     // Wire print state monitor
@@ -93,12 +91,10 @@ export class MultiContextSpoolmanTracker extends EventEmitter {
     // Forward events from this tracker
     this.setupTrackerEventForwarding(tracker);
 
-    // Store tracker
     this.trackers.set(contextId, tracker);
 
     console.log(`[MultiContextSpoolmanTracker] Created tracker for context ${contextId}`);
 
-    // Emit event
     this.emit('tracker-created', { contextId });
   }
 
@@ -141,15 +137,12 @@ export class MultiContextSpoolmanTracker extends EventEmitter {
       return;
     }
 
-    // Dispose tracker
     tracker.dispose();
 
-    // Remove from map
     this.trackers.delete(contextId);
 
     console.log(`[MultiContextSpoolmanTracker] Removed tracker for context ${contextId}`);
 
-    // Emit event
     this.emit('tracker-removed', { contextId });
   }
 
@@ -187,16 +180,13 @@ export class MultiContextSpoolmanTracker extends EventEmitter {
   public dispose(): void {
     console.log('[MultiContextSpoolmanTracker] Disposing all trackers...');
 
-    // Dispose all trackers
     for (const [contextId, tracker] of this.trackers) {
       tracker.dispose();
       console.log(`[MultiContextSpoolmanTracker] Disposed tracker for context ${contextId}`);
     }
 
-    // Clear map
     this.trackers.clear();
 
-    // Remove all event listeners
     this.removeAllListeners();
 
     if (this.isInitialized) {

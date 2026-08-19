@@ -49,18 +49,12 @@ export class AdditionalInfoComponent extends BaseComponent {
     </div>
   `;
 
-  /**
-   * Setup event listeners for additional info component
-   * No interactive elements, so this is a no-op
-   */
+  /** {@inheritDoc BaseComponent.setupEventListeners} */
   protected async setupEventListeners(): Promise<void> {
     // No event listeners needed for display-only component
   }
 
-  /**
-   * Update component with new polling data
-   * @param data - Component update data containing polling information
-   */
+  /** {@inheritDoc BaseComponent.update} */
   public update(data: ComponentUpdateData): void {
     this.assertInitialized();
 

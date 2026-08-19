@@ -81,28 +81,23 @@ export class MultiContextNotificationCoordinator extends EventEmitter {
     pollingService: PrinterPollingService,
     printStateMonitor: PrintStateMonitor
   ): void {
-    // Check if coordinator already exists
     if (this.coordinators.has(contextId)) {
       console.warn(`[MultiContextNotificationCoordinator] Coordinator already exists for context ${contextId}`);
       return;
     }
 
-    // Create new coordinator for this context
     const coordinator = new PrinterNotificationCoordinator(this.notificationService);
 
     // Wire dependencies
     coordinator.setPollingService(pollingService);
     coordinator.setPrintStateMonitor(printStateMonitor);
 
-    // Store coordinator
     this.coordinators.set(contextId, coordinator);
 
-    // Update context manager reference
     this.contextManager.updateNotificationCoordinator(contextId, coordinator);
 
     console.log(`[MultiContextNotificationCoordinator] Created coordinator for context ${contextId}`);
 
-    // Emit event
     this.emit('coordinator-created', { contextId });
   }
 
@@ -125,18 +120,14 @@ export class MultiContextNotificationCoordinator extends EventEmitter {
       return;
     }
 
-    // Dispose coordinator
     coordinator.dispose();
 
-    // Remove from map
     this.coordinators.delete(contextId);
 
-    // Update context manager reference
     this.contextManager.updateNotificationCoordinator(contextId, null);
 
     console.log(`[MultiContextNotificationCoordinator] Removed coordinator for context ${contextId}`);
 
-    // Emit event
     this.emit('coordinator-removed', { contextId });
   }
 
@@ -174,16 +165,13 @@ export class MultiContextNotificationCoordinator extends EventEmitter {
   public dispose(): void {
     console.log('[MultiContextNotificationCoordinator] Disposing all coordinators...');
 
-    // Dispose all coordinators
     for (const [contextId, coordinator] of this.coordinators) {
       coordinator.dispose();
       console.log(`[MultiContextNotificationCoordinator] Disposed coordinator for context ${contextId}`);
     }
 
-    // Clear map
     this.coordinators.clear();
 
-    // Remove all event listeners
     this.removeAllListeners();
 
     if (this.isInitialized) {
