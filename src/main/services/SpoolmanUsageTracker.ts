@@ -1,38 +1,9 @@
 /**
- * @fileoverview Spoolman usage tracker for updating filament usage when prints complete.
- *
- * This service tracks filament usage and updates Spoolman immediately when prints complete, extracted from
- * PrinterNotificationCoordinator to enable functionality in both GUI and headless modes.
- *
- * Key Features:
- * - Listens to PrintStateMonitor 'print-completed' events
- * - Extracts usage data from printer status (weight/length based on config)
- * - Updates Spoolman via SpoolmanService API
- * - Persists updated spool data via SpoolmanIntegrationService
- * - Per-context tracking with duplicate prevention
- * - Works in both GUI and headless modes
- *
- * Core Responsibilities:
- * - Monitor print state for completion events
- * - Verify Spoolman is enabled and configured
- * - Resolve context ID and active spool assignment
- * - Extract filament usage from print job data
- * - Update Spoolman server with usage data
- * - Update local active spool state
- * - Prevent duplicate updates for the same print
- *
- * Usage Flow:
- * 1. Print completes
- * 2. PrintStateMonitor emits 'print-completed' event
- * 3. SpoolmanUsageTracker receives event
- * 4. Checks if usage already recorded for this print
- * 5. Verifies Spoolman configuration and active spool
- * 6. Extracts usage data from printer status
- * 7. Calls SpoolmanService.updateUsage() API
- * 8. Updates local state via SpoolmanIntegrationService
- * 9. Marks usage as recorded
- *
- * @exports SpoolmanUsageTracker - Main tracker class
+ * @fileoverview SpoolmanUsageTracker records filament usage in Spoolman when
+ * a print completes, in both GUI and headless modes. It listens for
+ * PrintStateMonitor 'print-completed' events, pulls the used weight or
+ * length from the print status, pushes the usage to Spoolman, and marks the
+ * print as recorded so a completion is never counted twice.
  */
 
 import type { PrinterStatus } from '@shared/types/polling.js';

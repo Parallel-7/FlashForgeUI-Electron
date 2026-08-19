@@ -1,50 +1,13 @@
 /**
- * @fileoverview Manages multiple printer contexts for simultaneous multi-printer connections.
+ * @fileoverview PrinterContextManager is the singleton that owns one context
+ * per connected printer. A context bundles everything a live connection
+ * needs: backend, polling service, notification coordinator, camera proxy
+ * port, and connection state. One context is marked active; UI and API
+ * operations target it by default.
  *
- * The PrinterContextManager is a singleton service that coordinates multiple printer
- * connections by maintaining separate contexts for each printer. Each context contains
- * all the state needed for a complete printer connection: backend, polling service,
- * camera proxy, and connection state.
- *
- * Key Responsibilities:
- * - Create and manage printer contexts with unique IDs
- * - Track the active context for UI/API operations
- * - Provide context switching with proper event notifications
- * - Clean up resources when contexts are removed
- * - Emit events for UI synchronization
- *
- * Architecture:
- * - Uses EventEmitter pattern for loose coupling with UI/services
- * - Maintains Map of contexts indexed by unique string IDs
- * - Tracks single active context ID for default operations
- * - Delegates resource cleanup to context owners (backends, services)
- *
- * Usage:
- * ```typescript
- * const manager = PrinterContextManager.getInstance();
- *
- * // Create new context for a printer
- * const contextId = manager.createContext(printerDetails);
- *
- * // Switch to a different context
- * manager.switchContext(contextId);
- *
- * // Get active context for operations
- * const context = manager.getActiveContext();
- * if (context?.backend) {
- *   await context.backend.sendGCode('M105');
- * }
- * ```
- *
- * Events:
- * - 'context-created': (contextId: string) - New context created
- * - 'context-removed': (contextId: string) - Context removed and cleaned up
- * - 'context-switched': (contextId: string, previousId: string | null) - Active context changed
- *
- * Related:
- * - PrinterBackendManager: Manages backends within contexts
- * - PrinterPollingService: Per-context polling service
- * - Go2rtcService: Unified camera streaming via go2rtc
+ * Emits 'context-created', 'context-removed', and 'context-switched' events
+ * that other services react to. See also PrinterBackendManager and
+ * PrinterPollingService.
  */
 
 import type {

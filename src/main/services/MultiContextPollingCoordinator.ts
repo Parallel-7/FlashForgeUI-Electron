@@ -1,48 +1,10 @@
 /**
- * @fileoverview Multi-context polling coordinator for managing polling across multiple printer contexts.
- *
- * This service coordinates multiple PrinterPollingService instances, one per printer context,
- * with dynamic polling frequency based on whether a context is active or inactive.
- * Active contexts poll every 3 seconds, inactive contexts poll every 30 seconds to reduce
- * load while maintaining status awareness across all connected printers.
- *
- * Key Responsibilities:
- * - Create and manage polling service instances per context
- * - Adjust polling frequencies based on active/inactive context state
- * - Forward polling events with context identification
- * - Clean up polling services when contexts are removed
- * - Listen to PrinterContextManager events for automatic coordination
- *
- * Architecture:
- * - Singleton pattern for centralized polling coordination
- * - Event-driven integration with PrinterContextManager
- * - Map-based storage of polling services indexed by context ID
- * - Automatic frequency adjustment on context switch
- *
- * Usage:
- * ```typescript
- * const coordinator = MultiContextPollingCoordinator.getInstance();
- *
- * // Start polling for a context
- * coordinator.startPollingForContext(contextId);
- *
- * // Context switching automatically adjusts polling frequencies
- * // via PrinterContextManager event listeners
- *
- * // Stop polling for a context
- * coordinator.stopPollingForContext(contextId);
- * ```
- *
- * Events:
- * - 'polling-data': (contextId: string, data: PollingData) - Polling data updated for a context
- * - 'polling-error': (contextId: string, error: string) - Polling error occurred
- * - 'polling-started': (contextId: string) - Polling started for context
- * - 'polling-stopped': (contextId: string) - Polling stopped for context
- *
- * Related:
- * - PrinterPollingService: Per-context polling service
- * - PrinterContextManager: Context lifecycle management
- * - PrinterBackendManager: Backend instances for polling
+ * @fileoverview MultiContextPollingCoordinator runs one PrinterPollingService
+ * per printer context and retunes the intervals on context switch: the active
+ * context polls fast, inactive ones poll slowly (see the interval constants
+ * below). It listens to PrinterContextManager events, forwards each context's
+ * polling data and error events with its context ID, and stops the service
+ * when a context is removed.
  */
 
 import { logVerbose } from '@shared/logging.js';

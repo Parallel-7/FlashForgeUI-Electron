@@ -1,66 +1,13 @@
 /**
- * @fileoverview DialogWindowFactory handles all modal dialog window creation with user interaction
- * and promise-based result handling.
+ * @fileoverview DialogWindowFactory creates the interactive modal dialogs.
+ * Each create function returns a promise that resolves with the user's
+ * answer, or null/false when the dialog is cancelled.
  *
- * This factory module provides creation functions for interactive modal dialogs that require user
- * input and return results via promises. It manages complex IPC communication patterns using unique
- * dialog IDs, response channels, and proper handler cleanup to prevent memory leaks and race conditions.
- * All dialogs are created as modal children of the main window or job picker window with standardized
- * lifecycle management and comprehensive error handling throughout the dialog interaction lifecycle.
- *
- * Key Features:
- * - Promise-based dialog results for clean async/await patterns in calling code
- * - Unique dialog ID generation for each dialog instance to prevent channel conflicts
- * - Dynamic IPC response channel creation and cleanup per dialog instance
- * - Global IPC handler management with duplicate registration prevention
- * - Proper cleanup of IPC handlers on dialog close to prevent memory leaks
- * - Race condition prevention with immediate window destruction on response
- * - Window data storage pattern using typed extensions of BrowserWindow
- * - Parent window validation with fallback to job picker or main window
- * - Initialization data passing via IPC events on did-finish-load
- *
- * Core Responsibilities:
- * - Create input dialogs with text/password/hidden input types and return user input as promise
- * - Create material matching dialogs for printer material configuration and return material mappings
- * - Create single color confirmation dialogs for print job validation and return boolean confirmation
- * - Create material info dialogs for displaying material station slot information (void return)
- * - Create auto-connect choice dialogs for saved printer selection and return user choice
- * - Create connect choice dialogs for connection method selection and return selected method
- * - Create printer connected warning dialogs when attempting to connect while already connected
- * - Manage unique dialog IDs and response channels for each dialog instance
- * - Handle proper IPC handler registration, invocation, and cleanup
- * - Prevent race conditions during dialog close and result handling
- *
- * Dialog Types and Return Values:
- * - Input Dialog: Promise<string | null> - Returns user input or null if cancelled
- * - Material Matching Dialog: Promise<unknown[] | null> - Returns material mappings or null if cancelled
- * - Single Color Confirmation: Promise<boolean> - Returns true if confirmed, false if cancelled
- * - Material Info Dialog: void - Display-only, no return value
- * - Auto-Connect Choice: Promise<string | null> - Returns action choice or null if cancelled
- * - Connect Choice: Promise<string | null> - Returns action choice or null if cancelled
- * - Printer Connected Warning: Promise<boolean> - Returns true to continue, false to cancel
- *
- * IPC Communication Patterns:
- * - Generate unique dialog ID using timestamp + random string
- * - Create response channel name: `dialog-result-${dialogId}`
- * - Register IPC handler for response channel using ipcMain.handle()
- * - Send initialization data to renderer via webContents.send()
- * - Renderer invokes response channel with result
- * - Handler processes result, cleans up, closes window, and resolves promise
- * - Global handlers for reusable dialogs to prevent duplicate registrations
- *
- * Window Specifications:
- * - WINDOW_SIZES (WindowTypes.ts) defines width, height, and minimum size for each dialog
- * - This factory creates every dialog with `resizable: true` and `frame: false`
- *
- * @exports createInputDialog - Create input dialog for user text input
- * @exports createManualConnectDialog - Create the multi-field manual connect form
- * @exports createMaterialMatchingDialog - Create material matching dialog for printer configuration
- * @exports createSingleColorConfirmationDialog - Create single color confirmation for print validation
- * @exports createMaterialInfoDialog - Create material info dialog for slot information
- * @exports createAutoConnectChoiceDialog - Create auto-connect choice dialog for saved printers
- * @exports createConnectChoiceDialog - Create connect choice dialog for connection method
- * @exports createPrinterConnectedWarningDialog - Create warning dialog for existing connections
+ * IPC pattern: each dialog instance gets a unique dialog ID and a
+ * `dialog-result-${id}` response channel, and removes its ipcMain handler
+ * when it closes. The parent is the job picker window when one is open, else
+ * the main window. The auto-connect and connect-choice dialogs also register
+ * a global response-channel handler, once, for renderer reuse.
  */
 
 import { BrowserWindow, ipcMain } from 'electron';

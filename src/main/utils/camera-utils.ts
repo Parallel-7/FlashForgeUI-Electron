@@ -1,38 +1,11 @@
 /**
- * @fileoverview Camera configuration resolution and validation utilities implementing priority-based
- * camera URL selection logic. Supports both OEM printer cameras and custom camera URLs (MJPEG/RTSP),
- * with context-aware settings retrieval for multi-printer environments. Provides stream type detection,
- * URL validation, and human-readable status messaging.
- *
- * Key Features:
- * - Priority-based camera resolution: custom camera > OEM camera > intelligent fallback > none
- * - MJPEG and RTSP stream type detection and validation
- * - Context-aware camera configuration (per-printer or global settings)
- * - Settings normalization for stale custom-camera configurations
- * - Comprehensive URL validation (protocol, hostname, format)
- * - Camera availability checking with detailed unavailability reasons
- * - Proxy URL formatting for client consumption
- *
- * Resolution Priority:
- * 1. Custom camera (if enabled): Uses explicit user-provided URL only
- * 2. OEM camera: Uses the runtime stream URL reported by the printer
- * 3. Intelligent fallback: Uses the known OEM MJPEG endpoint when firmware omits the URL
- * 4. No camera: Returns unavailable status with reason
- *
- * Stream Types Supported:
- * - MJPEG (Motion JPEG over HTTP/HTTPS)
- * - RTSP (Real-Time Streaming Protocol)
- *
- * Context Awareness:
- * - Supports per-printer camera settings when contextId is provided
- * - Falls back to global configuration for backward compatibility
- * - Integrates with PrinterContextManager for multi-printer camera configurations
- *
- * Usage:
- * - resolveCameraConfig(): Main resolution function with comprehensive config object
- * - validateCameraUrl(): Standalone URL validation with detailed error messages
- * - getCameraUserConfig(): Context-aware settings retrieval
- * - isCameraFeatureAvailable(): Boolean availability check
+ * @fileoverview Camera URL resolution and validation. resolveCameraConfig()
+ * picks the camera source by priority: an enabled custom camera URL first,
+ * then the printer's OEM camera, then the known OEM MJPEG fallback endpoint;
+ * with no source it reports unavailable with a reason. Settings are
+ * per-printer (by context) with a global fallback, and stale custom-camera
+ * settings are normalized. Detects MJPEG and RTSP streams and validates
+ * URLs.
  */
 
 import {

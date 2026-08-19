@@ -1,44 +1,13 @@
 /**
- * @fileoverview Auto launch service managing OS login-item registration for start-at-boot and start-minimized behavior.
- *
- * Provides centralized, platform-aware management of the "Start with system" (StartAtBoot)
- * and "Start minimized" (StartMinimized) preferences introduced in issue #75:
- * - Reads StartAtBoot / StartMinimized from ConfigManager and re-applies on per-key changes
- * - Registers the application as an OS login item. On Windows/macOS this uses Electron's NATIVE
- *   app.setLoginItemSettings (openAtLogin, openAsHidden on macOS, and a `--hidden` launch argument
- *   for minimized starts). Electron's setLoginItemSettings is a no-op on Linux (macOS/Windows only),
- *   so on Linux the service writes a freedesktop autostart `.desktop` file instead (see below).
- * - Skips OS registration in development (unpackaged) builds where electron.exe cannot be a login item,
- *   while still honoring live config toggles and persistence (ConfigManager owns persistence)
- * - Reports whether the current process was launched hidden via the `--hidden` flag so the main
- *   window can start minimized/hidden instead of flashing on screen
- *
- * Linux autostart:
- * - Follows the freedesktop.org Desktop Entry / Autostart specification, honored across all major
- *   desktop environments (GNOME, KDE, XFCE, Cinnamon, MATE, etc.): a `.desktop` file placed in
- *   `$XDG_CONFIG_HOME/autostart/` (defaulting to `~/.config/autostart/`).
- * - The `Exec=` line must reference a path that stays valid across reboots. For an AppImage,
- *   `process.execPath` is unstable — it points into the ephemeral `/tmp/.mount_XXXXXX/` FUSE mount
- *   that changes every launch and vanishes on exit — so the AppImage runtime instead exports the
- *   real, fixed `.AppImage` location in `process.env.APPIMAGE`; that is what we write. For non-AppImage
- *   packaging (.deb/.rpm) there is no FUSE mount and `process.execPath` already IS the stable installed
- *   binary path (e.g. `/opt/FlashForgeUI/flashforgeui`), and no APPIMAGE var is set — so falling back to
- *   `process.execPath` there is correct. In short: prefer APPIMAGE when set, else process.execPath -
- *   minus the `.bin` suffix the packaged Linux launcher wrapper introduces (see resolveLinuxExecPath).
- * - The entry also carries TryExec (so a moved or uninstalled binary makes the entry a silent no-op
- *   rather than a failing launch) and Icon (so KDE's Autostart panel renders the row properly).
- * - Disabling start-at-boot removes the `.desktop` file.
- *
- * Key exports:
- * - AutoLaunchService class: singleton service mirroring AutoUpdateService structure
- * - getAutoLaunchService(): singleton accessor
- *
- * The service intentionally avoids the `auto-launch` npm package: on Windows/macOS Electron's
- * built-in setLoginItemSettings is the correct native path (Windows registry run keys, macOS
- * SMAppService), and on Linux a hand-written freedesktop autostart entry is simpler, dependency-free,
- * and works across every distro without shelling out.
- *
- * @module services/AutoLaunchService
+ * @fileoverview AutoLaunchService applies the StartAtBoot and StartMinimized
+ * preferences (issue #75). On Windows/macOS it uses Electron's
+ * setLoginItemSettings, with a `--hidden` launch argument for minimized
+ * starts. On Linux it writes a freedesktop autostart .desktop file instead,
+ * because setLoginItemSettings is a no-op there. Development builds skip OS
+ * registration but still persist the toggle. wasLaunchedHidden() lets the
+ * main window start minimized. The AppImage path handling and .desktop entry
+ * details live on the methods that build them. Deliberately avoids the
+ * `auto-launch` npm package.
  */
 
 import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs';

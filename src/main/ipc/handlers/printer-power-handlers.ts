@@ -1,38 +1,16 @@
 /**
- * @fileoverview IPC handler + shared core for the remote "Reboot Printer" feature.
+ * @fileoverview Remote "Reboot Printer" for 5M-family printers, run over the
+ * root SSH surface. The renderer hides the command for unsupported models;
+ * this handler re-validates the model anyway (defense in depth).
  *
- * Reboots an Adventurer 5M / 5M Pro / AD5X over the flashforge-easyssh root SSH
- * surface. The renderer hides the menu item for unsupported models; this handler
- * re-validates the model (defense-in-depth) before dispatching the command.
- *
- * Lifecycle (driven over the 'printer:reboot-status' push channel):
- *  1. Confirm               - handled in the renderer dropdown (no IPC).
- *  2. rebooting             - emitted once the SSH reboot command has been accepted.
- *  3. reconnecting          - emitted when polling starts failing (printer going down).
- *  4. reconnecting-services - emitted once polling resumes; waits for
- *                             REBOOT_STABLE_POLLS_REQUIRED consecutive stable polls
- *                             so the TCP command socket and camera stream can catch up.
- *  5. success               - emitted after the consecutive-poll threshold (fully back).
- *  6. timeout               - emitted after REBOOT_RECONNECT_TIMEOUT_MS with no reconnect.
- *  7. failed                - emitted if the context is removed mid-reboot.
- *
- * The reboot command is fire-and-forget: the AD5X BusyBox 'reboot' applet
- * SIGTERMs every process (including our SSH session), so the exec channel is
- * expected to drop. dispatchRebootCommand() races the exec against a short
- * timeout and treats a channel-drop / error as success.
- *
- * Status updates fan out to BOTH the desktop renderer (push channel) and WebUI
- * WebSocket clients (REBOOT_STATUS broadcast), so a reboot triggered from one
- * surface is visible on the other.
- *
- * Key exports:
- * - registerPrinterPowerHandlers(): registers the 'printer:reboot' handler.
- * - startPrinterReboot(): shared validate/dispatch/monitor core (also used by
- *   the WebUI printer-power route).
- * - dispatchRebootCommand(): fire-and-forget reboot exec (testable).
- * - REBOOT_COMMAND: the exact shell string dispatched to the printer.
- * - REBOOT_STABLE_POLLS_REQUIRED: consecutive polls needed to declare success.
- * - createStablePollCounter(): pure streak counter for the recovery window (unit-tested).
+ * Progress is pushed on 'printer:reboot-status': rebooting -> reconnecting
+ * (polling fails while the printer is down) -> reconnecting-services (waits
+ * for REBOOT_STABLE_POLLS_REQUIRED stable polls so the command socket and
+ * camera catch up) -> success; or timeout after REBOOT_RECONNECT_TIMEOUT_MS,
+ * or failed if the context is removed. The reboot command is fire-and-forget
+ * — the printer SIGTERMs our SSH session too, so dispatchRebootCommand()
+ * treats a channel drop as success. Status reaches both the desktop renderer
+ * and the WebUI WebSocket clients.
  */
 
 import { ipcMain } from 'electron';

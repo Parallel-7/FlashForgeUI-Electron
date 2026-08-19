@@ -1,39 +1,9 @@
 /**
- * @fileoverview Preload script for Component Palette window
- *
- * Securely exposes IPC communication APIs to the palette window renderer process
- * via Electron's contextBridge. Provides type-safe methods for component queries,
- * window control, and status updates with proper sandboxing and security.
- *
- * Exposed APIs (window.paletteAPI):
- * - close(): Close palette window
- * - getAvailableComponents(): Query component registry for all available components
- * - notifyOpened(): Signal palette window opened to main process
- * - onUpdateStatus(callback): Listen for grid status updates from main window
- * - notifyComponentRemove(componentId): Request component removal from grid
- * - notifyComponentAdd(componentId): Request component addition to grid
- *
- * Component Status Updates:
- * The main window broadcasts status updates to the palette when components are
- * added or removed from the grid, allowing the palette to update its UI to reflect
- * which components are currently in use and which are available for addition.
- *
- * Security:
- * - Uses Electron contextBridge for sandboxed renderer communication
- * - Validates IPC channel names and data formats
- * - Type-safe interfaces for all API methods
- * - Error handling with graceful fallbacks
- * - No direct access to Node.js APIs from renderer
- *
- * IPC Channels:
- * - palette:close (send): Close button handler
- * - palette:get-components (invoke): Query component definitions
- * - palette:opened (send): Palette window opened notification
- * - palette:update-status (receive): Component status updates
- * - palette:remove-component (send): Component removal request
- * - palette:add-component (send): Component addition request
- *
- * @module ui/palette/palette-preload
+ * @fileoverview Preload for the Component Palette window. Exposes
+ * window.paletteAPI through Electron's contextBridge: component queries,
+ * open/close signals, add/remove requests, and grid-status updates pushed
+ * from the main window. This is the palette renderer's only bridge to
+ * main-process APIs.
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
