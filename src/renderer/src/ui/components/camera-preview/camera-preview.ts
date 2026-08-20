@@ -17,11 +17,11 @@
  * @see src/main/services/Go2rtcService.ts for the streaming gateway
  */
 
+import { VideoRTC } from '@shared/lib/video-rtc.js';
 import { logVerbose } from '@shared/logging.js';
 import type { Go2rtcCameraStreamConfig, ResolvedCameraConfig } from '@shared/types/camera/camera.types.js';
 import type { PrinterContextInfo } from '@shared/types/PrinterContext.js';
 import type { CurrentJobInfo, PollingData, PrinterState } from '@shared/types/polling.js';
-import { VideoRTC } from '../../../lib/video-rtc.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
 import './camera-preview.css';

@@ -1,9 +1,9 @@
 /**
- * @fileoverview Vendored `VideoRTC` custom element for WebUI camera playback.
+ * @fileoverview Vendored `VideoRTC` custom element — single copy shared by all UI surfaces.
  *
- * Provides go2rtc-backed WebRTC, MSE, HLS, MP4, and MJPEG playback in the
- * browser-facing WebUI bundle. This copy is version-stamped into static assets
- * and should stay behaviorally aligned with the mirrored renderer copy.
+ * Provides go2rtc-backed WebRTC, MSE, HLS, MP4, and MJPEG camera playback. The
+ * desktop renderer imports it as `@shared/lib/video-rtc.js`; the WebUI build
+ * vendors it into the static bundle via `scripts/copy-webui-assets.cjs`.
  */
 
 /**
@@ -464,7 +464,6 @@ export class VideoRTC extends HTMLElement {
             sb.appendBuffer(data);
             bufLen = 0;
           } catch (e) {
-            // console.debug(e);
           }
         }
 
@@ -481,7 +480,6 @@ export class VideoRTC extends HTMLElement {
           }
           const gap = end - this.video.currentTime;
           this.video.playbackRate = gap > 0.1 ? gap : 0.1;
-          // console.debug('VideoRTC.buffered', gap, this.video.playbackRate, this.video.readyState);
         }
       });
 
@@ -493,12 +491,10 @@ export class VideoRTC extends HTMLElement {
           const b = new Uint8Array(data);
           buf.set(b, bufLen);
           bufLen += b.byteLength;
-          // console.debug('VideoRTC.buffer', b.byteLength, bufLen);
         } else {
           try {
             sb.appendBuffer(data);
           } catch (e) {
-            // console.debug(e);
           }
         }
       };
