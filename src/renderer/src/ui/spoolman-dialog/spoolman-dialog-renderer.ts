@@ -13,8 +13,6 @@
  * - Keyboard navigation (Escape to close)
  */
 
-/// <reference types="../../types/global.d.ts" />
-
 import type { ThemeColors } from '@shared/types/config.js';
 import type { ActiveSpoolData, SpoolResponse, SpoolSearchQuery } from '@shared/types/spoolman.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';

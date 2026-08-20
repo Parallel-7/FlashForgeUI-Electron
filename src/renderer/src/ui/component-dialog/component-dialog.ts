@@ -12,8 +12,6 @@
  * - Dialog header customization based on component type
  */
 
-/// <reference types="../../types/global.d.ts" />
-
 // Component system imports
 import './component-dialog.css' with { type: 'css' };
 import type { ThemeColors } from '@shared/types/config.js';

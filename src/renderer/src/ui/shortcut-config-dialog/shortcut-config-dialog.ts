@@ -13,8 +13,6 @@
  * - Save configuration and close dialog
  */
 
-/// <reference types="../../types/global.d.ts" />
-
 import type { ThemeColors } from '@shared/types/config.js';
 import type {
   ShortcutButtonConfig,
