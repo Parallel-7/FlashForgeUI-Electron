@@ -26,7 +26,6 @@
     "build:ci:win:raw": "npm run build:clean && electron-builder --win --publish never --config electron-builder-config.cjs && rimraf dist/win-unpacked",
     "build:ci:mac": "tsx scripts/platform-build-wrapper.ts --platform mac --ci",
     "build:ci:mac:raw": "npm run build:clean && electron-builder --mac --publish never --config electron-builder-config.cjs",
-    "ui:shot": "node scripts/ui-shot.mjs",
     "lint": "biome lint .",
     "lint:fix": "biome check --write .",
     "format": "biome format --write .",
