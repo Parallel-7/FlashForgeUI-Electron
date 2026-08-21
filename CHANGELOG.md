@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5-alpha.12] - 2026-08-21
+
 ### Added
 
 - **The built-in WebUI can now upload a job.** Until now, **Upload Job** existed only in the desktop window, so a phone or a remote browser could start files already on the printer but could not send a new one. The WebUI dialog is a 1:1 port of the desktop one: file picker, **Start Now** and **Auto Level**, the plate thumbnail, and the same metadata grid — printer model, filament type and use, slicer name and version, slice date, print time, first layer time, layer height, infill, layer count, support, and slice warnings. Every warning and error message is the desktop text, word for word. The **Upload Job** button sits with the other job controls and turns on whenever the printer is ready for a new job.
