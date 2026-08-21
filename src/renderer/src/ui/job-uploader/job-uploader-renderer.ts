@@ -73,6 +73,8 @@ interface DialogElements {
   firstLayerTime: HTMLElement | null;
   warningsContainer: HTMLElement | null;
   warningsList: HTMLElement | null;
+  mappingSummary: HTMLElement | null;
+  mappingSummaryList: HTMLElement | null;
   okButton: HTMLButtonElement | null;
   cancelButton: HTMLButtonElement | null;
   closeButton: HTMLButtonElement | null;
@@ -173,6 +175,8 @@ document.addEventListener('DOMContentLoaded', (): void => {
     firstLayerTime: document.getElementById('meta-first-layer-time'),
     warningsContainer: document.getElementById('warnings-container'),
     warningsList: document.getElementById('meta-warnings'),
+    mappingSummary: document.getElementById('mapping-summary'),
+    mappingSummaryList: document.getElementById('mapping-summary-list'),
     okButton: document.getElementById('btn-ok') as HTMLButtonElement,
     cancelButton: document.getElementById('btn-cancel') as HTMLButtonElement,
     closeButton: document.getElementById('btn-close') as HTMLButtonElement,
@@ -206,6 +210,7 @@ document.addEventListener('DOMContentLoaded', (): void => {
   // Initialize UI state
   resetMetadata(elements);
   setOKButtonState(elements, false);
+  updatePrimaryButtonLabel(elements);
 
   console.log('Job Uploader Dialog initialized successfully');
 });
@@ -226,6 +231,13 @@ function setupEventHandlers(elements: DialogElements, api: JobUploaderAPI): void
   if (elements.okButton) {
     elements.okButton.addEventListener('click', (): void => {
       void handleUploadJob(elements, api);
+    });
+  }
+
+  // "Start Now" decides whether the primary button sends or prints
+  if (elements.startNowCheckbox) {
+    elements.startNowCheckbox.addEventListener('change', (): void => {
+      updatePrimaryButtonLabel(elements);
     });
   }
 
@@ -277,6 +289,7 @@ function handleFileSelected(elements: DialogElements, filePath: string | null): 
 
   // Clear any previously saved material mappings when a new file is selected
   savedMaterialMappings = null;
+  renderMappingSummary(elements);
 
   if (filePath) {
     currentFilePath = filePath;
@@ -370,10 +383,12 @@ async function handleMetadataResult(
             savedMaterialMappings = mappings;
             console.log('Material mappings saved:', mappings);
             // Enable OK button now that mappings are confirmed
+            renderMappingSummary(elements);
             setOKButtonState(elements, true);
           } else {
             // User cancelled - disable OK button
             console.log('Material matching cancelled by user');
+            renderMappingSummary(elements);
             setOKButtonState(elements, false);
           }
           return; // Don't enable OK button here, handled above
@@ -643,6 +658,10 @@ function resetMetadata(elements: DialogElements): void {
     }
   });
 
+  // A reset display has no file behind it, so any mappings are stale
+  savedMaterialMappings = null;
+  renderMappingSummary(elements);
+
   // Reset warnings container
   if (elements.warningsContainer) {
     elements.warningsContainer.style.display = 'none';
@@ -672,6 +691,65 @@ function setOKButtonState(elements: DialogElements, enabled: boolean): void {
   if (elements.okButton) {
     elements.okButton.disabled = !enabled;
   }
+}
+
+/**
+ * Name the primary button after what pressing it does: with "Start Now" ticked
+ * the printer begins the job, otherwise the file is only transferred. Both web
+ * UIs carry the same labels.
+ */
+function updatePrimaryButtonLabel(elements: DialogElements): void {
+  if (elements.okButton) {
+    elements.okButton.textContent = elements.startNowCheckbox?.checked ? 'Start Print' : 'Send File';
+  }
+}
+
+/**
+ * Show the confirmed tool -> slot pairs on the main screen so they can be
+ * checked at a glance before the job is sent.
+ */
+function renderMappingSummary(elements: DialogElements): void {
+  const { mappingSummary, mappingSummaryList } = elements;
+  if (!mappingSummary || !mappingSummaryList) {
+    return;
+  }
+
+  mappingSummaryList.textContent = '';
+
+  if (!savedMaterialMappings || savedMaterialMappings.length === 0) {
+    mappingSummary.style.display = 'none';
+    return;
+  }
+
+  savedMaterialMappings.forEach((mapping) => {
+    const chip = document.createElement('div');
+    chip.className = 'mapping-chip';
+
+    chip.appendChild(createMappingSwatch(mapping.toolMaterialColor));
+    chip.appendChild(createMappingText('mapping-chip-label', `Tool ${mapping.toolId + 1}`));
+    chip.appendChild(createMappingText('mapping-chip-arrow', '→'));
+    chip.appendChild(createMappingSwatch(mapping.slotMaterialColor));
+    chip.appendChild(createMappingText('mapping-chip-label', `Slot ${mapping.slotId}`));
+    chip.appendChild(createMappingText('mapping-chip-material', mapping.materialName || 'Unknown'));
+
+    mappingSummaryList.appendChild(chip);
+  });
+
+  mappingSummary.style.display = 'block';
+}
+
+function createMappingSwatch(color: string): HTMLSpanElement {
+  const swatch = document.createElement('span');
+  swatch.className = 'mapping-chip-swatch';
+  swatch.style.backgroundColor = color || '#cccccc';
+  return swatch;
+}
+
+function createMappingText(className: string, text: string): HTMLSpanElement {
+  const element = document.createElement('span');
+  element.className = className;
+  element.textContent = text;
+  return element;
 }
 
 /**

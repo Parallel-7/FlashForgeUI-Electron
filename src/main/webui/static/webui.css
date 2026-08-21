@@ -1037,6 +1037,38 @@ body {
   color: var(--warning-color);
 }
 
+.material-matching-warning-card {
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  border: 1px solid var(--warning-alpha-40, var(--border-color));
+  border-radius: 10px;
+  background-color: var(--surface-muted);
+}
+
+.material-matching-warning-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--warning-color, var(--text-color-secondary));
+}
+
+.material-matching-warning-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 0;
+  font-size: 14px;
+  color: var(--text-color);
+}
+
+.material-matching-warning-item::before {
+  content: "⚠";
+  color: var(--warning-color, var(--text-color-secondary));
+  flex-shrink: 0;
+}
+
 .material-matching-layout {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
@@ -1208,6 +1240,21 @@ body {
 .material-mapping-item.warning {
   border-color: var(--warning-alpha-40);
   background-color: var(--warning-alpha-10);
+}
+
+.material-mapping-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.material-mapping-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .material-mapping-text {
@@ -3437,14 +3484,66 @@ body {
   border-radius: 10px;
 }
 
+.job-upload-mappings {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.job-upload-mappings-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-color-secondary);
+}
+
+.job-upload-mappings-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.job-upload-mapping-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background-color: var(--theme-surface);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  font-size: 14px;
+  color: var(--theme-text);
+}
+
+.job-upload-mapping-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.job-upload-mapping-arrow,
+.job-upload-mapping-material {
+  color: var(--text-color-secondary);
+}
+
 .job-upload-content {
   display: grid;
+  /* Named areas: auto-placement would otherwise push the metadata card onto a
+     second row, leaving an empty cell beside the preview. */
   grid-template-columns: 1fr 180px;
+  grid-template-areas: "metadata preview";
+  align-items: start;
   gap: 20px;
 }
 
 .job-upload-preview {
-  grid-column: 2;
+  grid-area: preview;
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -3480,10 +3579,10 @@ body {
 }
 
 .job-upload-metadata {
-  grid-column: 1;
+  grid-area: metadata;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px 24px;
+  gap: 14px 20px;
   padding: 20px;
   background-color: var(--surface-muted);
   border: 1px solid var(--border-color);
@@ -3511,18 +3610,35 @@ body {
 }
 
 .job-upload-meta-group.print-time-highlight {
-  align-items: center;
+  /* A full-width banner at the top of the card: as a normal cell its taller box
+     forced a deep gap into the neighbouring column. */
+  grid-column: 1 / -1;
+  order: -1;
+  flex-direction: row;
+  align-items: baseline;
   justify-content: center;
-  min-height: 60px;
-  padding: 16px;
-  text-align: center;
+  gap: 10px;
+  padding: 10px 16px;
   border: 1px solid var(--primary-alpha-40);
   border-radius: 8px;
   background-color: var(--primary-alpha-15);
 }
 
-.job-upload-meta-group.print-time-highlight .job-upload-meta-title {
-  margin-bottom: 8px;
+.job-upload-warnings-card {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background-color: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+}
+
+.job-upload-warnings-card-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-color-secondary);
 }
 
 .job-upload-meta-value.print-time-value {
@@ -3636,25 +3752,28 @@ body {
 @media (max-width: 768px) {
   .job-upload-content {
     grid-template-columns: 1fr;
-  }
-
-  .job-upload-preview,
-  .job-upload-metadata {
-    grid-column: 1;
+    grid-template-areas:
+      "preview"
+      "metadata";
   }
 
   .job-upload-preview {
-    order: -1;
+    justify-self: stretch;
   }
 
   .job-upload-metadata {
     grid-template-columns: 1fr;
   }
 
-  .job-upload-file-section,
-  .job-upload-options {
+  .job-upload-file-section {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
+  }
+
+  /* The options stay on one line - two short labels fit even on a phone. */
+  .job-upload-options {
+    flex-wrap: wrap;
+    gap: 20px;
   }
 }

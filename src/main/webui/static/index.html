@@ -269,6 +269,16 @@
               </label>
             </div>
 
+            <div id="job-upload-mappings" class="job-upload-mappings hidden">
+              <h4 class="job-upload-mappings-title">Material Mappings</h4>
+              <div id="job-upload-mappings-list" class="job-upload-mappings-list"></div>
+            </div>
+
+            <div id="job-upload-warnings-container" class="job-upload-warnings-card hidden">
+              <h4 class="job-upload-warnings-card-title">Warnings</h4>
+              <div id="job-upload-meta-warnings" class="job-upload-warnings">-</div>
+            </div>
+
             <div class="job-upload-content">
               <div class="job-upload-preview">
                 <div class="job-upload-thumbnail" id="job-upload-thumbnail">
@@ -329,16 +339,12 @@
                   <h4 class="job-upload-meta-title">Support Used:</h4>
                   <div class="job-upload-meta-value" id="job-upload-meta-support">-</div>
                 </div>
-                <div class="job-upload-meta-group hidden" id="job-upload-warnings-container">
-                  <h4 class="job-upload-meta-title">Warnings:</h4>
-                  <div class="job-upload-meta-value job-upload-warnings" id="job-upload-meta-warnings">-</div>
-                </div>
               </div>
             </div>
           </div>
           <div class="modal-footer">
             <button id="job-upload-cancel" class="secondary-btn" type="button">Cancel</button>
-            <button id="job-upload-ok" class="primary-btn" type="button" disabled>OK</button>
+            <button id="job-upload-ok" class="primary-btn" type="button" disabled>Start Print</button>
           </div>
 
           <div id="job-upload-loading" class="job-upload-overlay hidden">
@@ -372,7 +378,10 @@
               Match each material used in your print to the corresponding material station slot. Material types must match (for example, PLA to PLA).
             </p>
             <div id="material-matching-error" class="material-matching-message error hidden" role="alert"></div>
-            <div id="material-matching-warning" class="material-matching-message warning hidden" role="status"></div>
+            <div id="material-matching-warning" class="material-matching-warning-card hidden" role="status">
+              <h4 class="material-matching-warning-title">Color Mismatch</h4>
+              <div id="material-matching-warning-list" class="material-matching-warning-list"></div>
+            </div>
             <div class="material-matching-layout">
               <section class="material-column">
                 <h3>Job Requirements</h3>
@@ -390,7 +399,7 @@
           </div>
           <div class="modal-footer">
             <button id="material-matching-cancel" class="secondary-btn" type="button">Cancel</button>
-            <button id="material-matching-confirm" class="primary-btn" type="button" disabled>Start Print</button>
+            <button id="material-matching-confirm" class="primary-btn" type="button" disabled>Confirm</button>
           </div>
         </div>
       </div>

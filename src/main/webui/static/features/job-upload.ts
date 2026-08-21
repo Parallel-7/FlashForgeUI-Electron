@@ -121,6 +121,7 @@ export function openJobUploadModal(): void {
   setFilePathDisplay('No file selected...', '');
   resetMetadata();
   setOkButtonState(false);
+  updatePrimaryButtonLabel();
   showLoading(false);
   showUploadProgress(false);
   showElement('job-upload-modal');
@@ -164,6 +165,7 @@ async function discardStagedFile(): Promise<void> {
 async function handleFileSelected(file: File | null): Promise<void> {
   // A new selection invalidates whatever the previous one produced.
   savedMaterialMappings = null;
+  renderMappingSummary();
   await discardStagedFile();
 
   if (!file) {
@@ -245,12 +247,9 @@ async function handleFileSelected(file: File | null): Promise<void> {
   // The desktop always shows material matching for a material-station 3MF,
   // single-colour files included.
   const mappings = await requestMaterialMappings(stagedFileName, filaments);
-  if (mappings) {
-    savedMaterialMappings = mappings;
-    setOkButtonState(true);
-  } else {
-    setOkButtonState(false);
-  }
+  savedMaterialMappings = mappings;
+  renderMappingSummary();
+  setOkButtonState(Boolean(mappings));
 }
 
 /**
@@ -616,6 +615,10 @@ function resetMetadata(): void {
 
   renderWarnings([]);
   renderThumbnail(null);
+
+  // A cleared display has no file behind it, so any mappings are stale.
+  savedMaterialMappings = null;
+  renderMappingSummary();
 }
 
 // ============================================================================
@@ -635,6 +638,66 @@ function setOkButtonState(enabled: boolean): void {
   if (button) {
     button.disabled = !enabled;
   }
+}
+
+/**
+ * Name the primary button after what pressing it does: with "Start Now" ticked
+ * the printer begins the job, otherwise the file is only transferred. The
+ * desktop uploader uses the same two labels.
+ */
+function updatePrimaryButtonLabel(): void {
+  const button = $('job-upload-ok') as HTMLButtonElement | null;
+  if (button) {
+    button.textContent = getStartNow() ? 'Start Print' : 'Send File';
+  }
+}
+
+/**
+ * Show the confirmed tool -> slot pairs on the upload dialog so they can be
+ * checked at a glance before the job is sent.
+ */
+function renderMappingSummary(): void {
+  const list = $('job-upload-mappings-list');
+  if (!list) {
+    return;
+  }
+
+  list.textContent = '';
+
+  if (!savedMaterialMappings || savedMaterialMappings.length === 0) {
+    hideElement('job-upload-mappings');
+    return;
+  }
+
+  savedMaterialMappings.forEach((mapping) => {
+    const chip = document.createElement('div');
+    chip.className = 'job-upload-mapping-chip';
+
+    chip.appendChild(createMappingSwatch(mapping.toolMaterialColor));
+    chip.appendChild(createMappingText('job-upload-mapping-label', `Tool ${mapping.toolId + 1}`));
+    chip.appendChild(createMappingText('job-upload-mapping-arrow', '→'));
+    chip.appendChild(createMappingSwatch(mapping.slotMaterialColor));
+    chip.appendChild(createMappingText('job-upload-mapping-label', `Slot ${mapping.slotId}`));
+    chip.appendChild(createMappingText('job-upload-mapping-material', mapping.materialName || 'Unknown'));
+
+    list.appendChild(chip);
+  });
+
+  showElement('job-upload-mappings');
+}
+
+function createMappingSwatch(color: string): HTMLSpanElement {
+  const swatch = document.createElement('span');
+  swatch.className = 'job-upload-mapping-swatch';
+  swatch.style.backgroundColor = color || '#cccccc';
+  return swatch;
+}
+
+function createMappingText(className: string, text: string): HTMLSpanElement {
+  const element = document.createElement('span');
+  element.className = className;
+  element.textContent = text;
+  return element;
 }
 
 function showLoading(show: boolean, text = 'Parsing file...'): void {
@@ -695,6 +758,10 @@ export function setupJobUpload(): void {
 
   input?.addEventListener('change', () => {
     void handleFileSelected(input.files?.[0] ?? null);
+  });
+
+  $('job-upload-start-now')?.addEventListener('change', () => {
+    updatePrimaryButtonLabel();
   });
 
   $('job-upload-ok')?.addEventListener('click', () => {

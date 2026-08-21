@@ -5,7 +5,7 @@
  * material station slots. Validates material type compatibility, warns on color differences,
  * and prevents invalid mappings (empty slots, type mismatches, duplicate assignments). Provides
  * visual feedback through color swatches, selection states, and real-time mapping display.
- * Context-aware button text (Start Print vs Confirm) based on workflow origin.
+ * Confirms mappings only - the caller decides whether the job is sent or started.
  *
  * Key features:
  * - Dual-panel selection: print requirements and available IFS slots
@@ -60,8 +60,9 @@ function validateMaterialCompatibility(tool: FFGcodeToolData, slot: MaterialSlot
   return tool.materialName === slot.materialType;
 }
 
+/** Shared wording - keep in step with the two web UIs. */
 function createColorDifferenceWarning(toolId: number, toolColor: string, slotId: number, slotColor: string): string {
-  return `Color difference detected: Tool ${toolId + 1} expects ${toolColor} but Slot ${slotId} has ${slotColor}. This is allowed but may affect print appearance.`;
+  return `Tool ${toolId + 1} expects ${toolColor} but Slot ${slotId} has ${slotColor}.`;
 }
 
 function createMaterialMismatchError(
@@ -90,7 +91,7 @@ interface MaterialMatchingInitData {
   readonly fileName: string;
   readonly toolDatas: readonly FFGcodeToolData[];
   readonly leveling: boolean;
-  readonly context?: 'job-start' | 'file-upload'; // Context to determine button text
+  readonly context?: 'job-start' | 'file-upload'; // Which flow opened the dialog
 }
 
 let cachedMaterialMatchingAPI: MaterialMatchingDialogAPI | null = null;
@@ -177,13 +178,10 @@ function setupIpcListeners(api: MaterialMatchingDialogAPI): void {
     console.log('Material matching: Received init data', data);
     initData = data;
 
-    // Set button text based on context
+    // The label is the same in every flow and on every UI surface: this dialog
+    // only confirms mappings, the caller decides what happens with them.
     if (confirmButton) {
-      if (data.context === 'file-upload') {
-        confirmButton.textContent = 'Confirm';
-      } else {
-        confirmButton.textContent = 'Start Print'; // Default for job-start context
-      }
+      confirmButton.textContent = 'Confirm';
     }
 
     await loadMaterialStation(api);
@@ -414,12 +412,7 @@ function createMapping(): void {
     return;
   }
 
-  // Check for color differences
-  if (hasColorDifference(tool.materialColor, slot.materialColor)) {
-    showWarning(createColorDifferenceWarning(tool.toolId, tool.materialColor, selectedSlot, slot.materialColor || ''));
-  }
-
-  // Add mapping
+  // Add mapping - the colour warnings are rebuilt from the whole set below
   currentMappings.set(tool.toolId, mapping);
 
   // Reset selections
@@ -438,6 +431,7 @@ function updateAllDisplays(): void {
   displayIFSSlots();
   updateMappingsDisplay();
   updateConfirmButton();
+  refreshColorWarnings();
 }
 
 /**
@@ -551,17 +545,41 @@ function showError(message: string): void {
   if (!errorMessageElement) return;
   errorMessageElement.textContent = message;
   errorMessageElement.style.display = 'block';
-  if (warningMessageElement) warningMessageElement.style.display = 'none';
 }
 
 /**
- * Show warning message
+ * One line per mapping whose tool color does not match the slot it was mapped
+ * to. Rebuilt from the current mappings on every change, so the card always
+ * reflects the whole set rather than the last click.
  */
-function showWarning(message: string): void {
-  if (!warningMessageElement) return;
-  warningMessageElement.textContent = message;
+function refreshColorWarnings(): void {
+  const list = document.getElementById('warning-message-list');
+  if (!warningMessageElement || !list) return;
+
+  list.textContent = '';
+
+  const mismatched = Array.from(currentMappings.values()).filter((mapping) =>
+    hasColorDifference(mapping.toolMaterialColor, mapping.slotMaterialColor)
+  );
+
+  if (mismatched.length === 0) {
+    warningMessageElement.style.display = 'none';
+    return;
+  }
+
+  mismatched.forEach((mapping) => {
+    const item = document.createElement('div');
+    item.className = 'warning-card-item';
+    item.textContent = createColorDifferenceWarning(
+      mapping.toolId,
+      mapping.toolMaterialColor,
+      mapping.slotId,
+      mapping.slotMaterialColor
+    );
+    list.appendChild(item);
+  });
+
   warningMessageElement.style.display = 'block';
-  if (errorMessageElement) errorMessageElement.style.display = 'none';
 }
 
 /**
@@ -569,7 +587,7 @@ function showWarning(message: string): void {
  */
 function hideMessages(): void {
   if (errorMessageElement) errorMessageElement.style.display = 'none';
-  if (warningMessageElement) warningMessageElement.style.display = 'none';
+  refreshColorWarnings();
 }
 
 /**

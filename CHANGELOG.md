@@ -17,6 +17,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   The same port landed in the standalone [FlashForgeWebUI](https://github.com/Parallel-7/FlashForgeWebUI) (issue #19). The two web UIs stay in step.
 
+### Changed
+
+- **Material matching and the upload dialog were reworked for clarity.** The matching dialog's confirm button now always reads **Confirm** — it confirms the tool-to-slot mappings, and the flow that opened the dialog decides what happens next. It previously read **Start Print** in both web UIs, and on the desktop it flipped between the two labels depending on which flow opened the dialog; either way it promised an action the dialog itself does not perform. The mismatch wording is now identical on all three surfaces — the desktop dialog, the built-in WebUI, and the standalone FlashForgeWebUI.
+
+  Color mismatches now have a card of their own, above the two lists. It carries one line per mismatched mapping, rebuilt on every change, so it always reflects the whole set — previously only the most recent mismatch produced a warning, so mapping a second tool hid the first problem. Each mapping row also gained a color swatch on both sides, so the expected color and the loaded color sit beside the text that compares them.
+
+  After matching is confirmed, the upload dialog shows the mappings as chips — tool, slot, and material name, with a color swatch for each side — so the set can be checked at a glance before the job is sent. The dialog's primary button is now named after what it does: **Start Print** with **Start Now** ticked, **Send File** otherwise (it read **OK** before). Slice warnings moved out of the metadata grid into their own card, and the print-time highlight became a full-width banner across the top of the grid. On a phone the built-in WebUI stacks the preview above the metadata and keeps the **Start Now** / **Auto Level** checkboxes on one line.
+
+  The desktop job uploader window is taller and its minimum height was raised, to fit the new cards. The metadata pane now shows a slim scrollbar instead of none — the pane clips its content in a window that cannot be resized, and a hidden scrollbar left no hint there was more to read. The stacked narrow-width layout no longer applies at the window's own width, and the file row and its two checkboxes stay on one line instead of stacking.
+
 ### Fixed
 
 - **Local and recent job start is now disabled for the Creator 5 series.** The Creator 5 / Creator 5 Pro firmware neither sends nor accepts material mappings over the HTTP API, so starting a previously uploaded local or recent job dead-ended at material selection — only a fresh `.3mf` upload and start works. **Start Recent** and **Start Local** are now disabled with the message "Local job management is not available on this printer." The message is the same everywhere: the desktop controls, the job picker, and the embedded WebUI. Fresh uploads are unaffected.

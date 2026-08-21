@@ -133,3 +133,6 @@ debug_logs/*
 hook_debug_log.txt
 __pycache__/
 .pi/session-memory.json
+
+# Headless UI screenshots (scripts/ui-shot.mjs)
+.ui-shots/

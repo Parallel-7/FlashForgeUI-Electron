@@ -19,6 +19,13 @@
     </div>
     
     <div class="dialog-content">
+      <div id="error-message" class="error-message" style="display: none;"></div>
+
+      <div id="warning-message" class="warning-card" style="display: none;">
+        <h4 class="warning-card-title">Color Mismatch</h4>
+        <div id="warning-message-list" class="warning-card-list"></div>
+      </div>
+
       <div class="matching-container">
         <!-- Print requirements section -->
         <div class="requirements-section">
@@ -44,14 +51,11 @@
           </div>
         </div>
       </div>
-      
-      <div id="error-message" class="error-message" style="display: none;"></div>
-      <div id="warning-message" class="warning-message" style="display: none;"></div>
     </div>
     
     <div class="dialog-footer">
       <button class="dialog-button cancel" id="btn-cancel">Cancel</button>
-      <button class="dialog-button primary" id="btn-confirm" disabled>Start Print</button>
+      <button class="dialog-button primary" id="btn-confirm" disabled>Confirm</button>
     </div>
   </div>
   

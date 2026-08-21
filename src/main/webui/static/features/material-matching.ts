@@ -43,34 +43,81 @@ function getMaterialMessageElement(type: MaterialMessageType): HTMLDivElement | 
 }
 
 export function clearMaterialMessages(): void {
-  (['error', 'warning'] as const).forEach((type) => {
-    const messageEl = getMaterialMessageElement(type);
-    if (messageEl) {
-      messageEl.classList.add('hidden');
-      messageEl.textContent = '';
-    }
-  });
+  const errorEl = getMaterialMessageElement('error');
+  if (errorEl) {
+    errorEl.classList.add('hidden');
+    errorEl.textContent = '';
+  }
+  hideMaterialWarnings();
+}
+
+function hideMaterialWarnings(): void {
+  const warningEl = getMaterialMessageElement('warning');
+  const list = getMaterialMatchingElement<HTMLDivElement>('material-matching-warning-list');
+  if (list) {
+    list.textContent = '';
+  }
+  warningEl?.classList.add('hidden');
 }
 
 export function showMaterialError(text: string): void {
   const errorEl = getMaterialMessageElement('error');
-  const warningEl = getMaterialMessageElement('warning');
-  if (warningEl) {
-    warningEl.classList.add('hidden');
-    warningEl.textContent = '';
-  }
   if (errorEl) {
     errorEl.textContent = text;
     errorEl.classList.remove('hidden');
   }
 }
 
-export function showMaterialWarning(text: string): void {
+/**
+ * One line per mapping whose tool colour does not match the slot it was mapped
+ * to. Rebuilt from the current mappings on every change, so the card always
+ * reflects the whole set rather than the last click. The wording is shared with
+ * the desktop dialog.
+ */
+export function refreshColorWarnings(): void {
+  const matchingState = getMaterialMatchingState();
   const warningEl = getMaterialMessageElement('warning');
-  if (warningEl) {
-    warningEl.textContent = text;
-    warningEl.classList.remove('hidden');
+  const list = getMaterialMatchingElement<HTMLDivElement>('material-matching-warning-list');
+  if (!warningEl || !list) {
+    return;
   }
+
+  list.textContent = '';
+
+  const mismatched = matchingState
+    ? Array.from(matchingState.mappings.values()).filter((mapping) =>
+        colorsDiffer(mapping.toolMaterialColor, mapping.slotMaterialColor)
+      )
+    : [];
+
+  if (mismatched.length === 0) {
+    warningEl.classList.add('hidden');
+    return;
+  }
+
+  mismatched.forEach((mapping) => {
+    const item = document.createElement('div');
+    item.className = 'material-matching-warning-item';
+    item.textContent = colorMismatchMessage(
+      mapping.toolId,
+      mapping.toolMaterialColor,
+      mapping.slotId,
+      mapping.slotMaterialColor
+    );
+    list.appendChild(item);
+  });
+
+  warningEl.classList.remove('hidden');
+}
+
+/** Shared wording - keep in step with the desktop material matching dialog. */
+export function colorMismatchMessage(
+  toolId: number,
+  toolColor: string,
+  slotId: number,
+  slotColor: string
+): string {
+  return `Tool ${toolId + 1} expects ${toolColor} but Slot ${slotId} has ${slotColor}.`;
 }
 
 export function updateMaterialMatchingConfirmState(): void {
@@ -115,9 +162,21 @@ export function renderMaterialMappings(): void {
       item.classList.add('warning');
     }
 
+    // Swatches on both sides, as the desktop dialog shows them: the tool colour
+    // and the slot colour are what a mismatch is actually about.
+    const content = document.createElement('span');
+    content.className = 'material-mapping-content';
+
     const text = document.createElement('span');
     text.className = 'material-mapping-text';
-    text.innerHTML = `Tool ${mapping.toolId + 1} <span class="material-mapping-arrow">&rarr;</span> Slot ${mapping.slotId}`;
+    const arrow = document.createElement('span');
+    arrow.className = 'material-mapping-arrow';
+    arrow.textContent = '→';
+    text.append(`Tool ${mapping.toolId + 1} `, arrow, ` Slot ${mapping.slotId}`);
+
+    content.appendChild(createMappingSwatch(mapping.toolMaterialColor));
+    content.appendChild(text);
+    content.appendChild(createMappingSwatch(mapping.slotMaterialColor));
 
     const removeBtn = document.createElement('button');
     removeBtn.className = 'material-mapping-remove';
@@ -128,10 +187,17 @@ export function renderMaterialMappings(): void {
       handleRemoveMapping(mapping.toolId);
     });
 
-    item.appendChild(text);
+    item.appendChild(content);
     item.appendChild(removeBtn);
     container.appendChild(item);
   });
+}
+
+function createMappingSwatch(color: string): HTMLSpanElement {
+  const swatch = document.createElement('span');
+  swatch.className = 'material-mapping-swatch';
+  swatch.style.backgroundColor = color || DEFAULT_SLOT_GREY;
+  return swatch;
 }
 
 function handleRemoveMapping(toolId: number): void {
@@ -146,6 +212,7 @@ function handleRemoveMapping(toolId: number): void {
   renderMaterialMappings();
   updateMaterialMatchingConfirmState();
   clearMaterialMessages();
+  refreshColorWarnings();
 }
 
 export function renderMaterialRequirements(job: WebUIJobFile | undefined): void {
@@ -382,13 +449,8 @@ function handleSlotSelection(slotInfo: MaterialSlotInfo): void {
   matchingState.mappings.set(tool.toolId, mapping);
   matchingState.selectedToolId = null;
 
-  if (colorsDiffer(tool.materialColor, slotInfo.materialColor || '')) {
-    showMaterialWarning(
-      `Tool ${tool.toolId + 1} color (${tool.materialColor}) does not match Slot ${slotInfo.slotId} color (${slotInfo.materialColor || 'unknown'}). The print will succeed, but appearance may differ.`
-    );
-  } else {
-    clearMaterialMessages();
-  }
+  clearMaterialMessages();
+  refreshColorWarnings();
 
   renderMaterialRequirements(job);
   renderMaterialSlots(matchingState.materialStation);

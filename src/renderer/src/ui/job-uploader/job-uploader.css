@@ -74,6 +74,77 @@
   color: var(--theme-text);
 }
 
+/* Warnings Card */
+.warnings-card {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.warnings-card-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: color-mix(in srgb, var(--theme-text) 70%, transparent);
+}
+
+/* Material Mapping Summary */
+.mapping-summary {
+  margin-bottom: 20px;
+  padding: 12px 16px;
+  background: var(--surface-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+}
+
+.mapping-summary-title {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--theme-text-secondary, var(--theme-text));
+}
+
+.mapping-summary-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mapping-chip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: var(--surface-muted);
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  font-size: 13px;
+  color: var(--theme-text);
+}
+
+.mapping-chip-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.mapping-chip-arrow {
+  opacity: 0.7;
+}
+
+.mapping-chip-material {
+  padding-left: 4px;
+  opacity: 0.7;
+}
+
 input[type="checkbox"] {
   cursor: pointer;
   accent-color: var(--theme-primary);
@@ -189,15 +260,25 @@ input[type="checkbox"] {
   padding: 20px;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  grid-template-rows: repeat(4, auto);
-  gap: 16px 24px;
+  gap: 14px 20px;
+  align-content: start;
   overflow-y: auto;
-  scrollbar-width: none;
-  -ms-overflow-style: none;
+  /* A slim but visible scrollbar: the pane clips its content in a window the
+     user cannot resize, so hiding it left no sign there was more to read. */
+  scrollbar-width: thin;
 }
 
 .metadata-section::-webkit-scrollbar {
-  display: none;
+  width: 8px;
+}
+
+.metadata-section::-webkit-scrollbar-thumb {
+  background: var(--border-color-light);
+  border-radius: 4px;
+}
+
+.metadata-section::-webkit-scrollbar-track {
+  background: transparent;
 }
 
 .metadata-group {
@@ -219,23 +300,25 @@ input[type="checkbox"] {
   word-break: break-word;
 }
 
-/* Print Time Highlight in Metadata Grid */
+/* Print Time Highlight - full-width banner at the top of the metadata card */
 .print-time-highlight {
+  grid-column: 1 / -1;
+  order: -1;
   background: color-mix(in srgb, var(--theme-primary) 10%, transparent);
   border: 1px solid color-mix(in srgb, var(--theme-primary) 30%, transparent);
   border-radius: 6px;
-  padding: 16px;
-  text-align: center;
+  padding: 10px 16px;
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
+  align-items: baseline;
   justify-content: center;
-  min-height: 60px;
+  gap: 10px;
 }
 
 .print-time-highlight .group-title {
   color: color-mix(in srgb, var(--theme-text) 70%, transparent);
   font-size: 13px;
-  margin-bottom: 8px;
+  margin-bottom: 0;
   font-weight: 500;
 }
 
@@ -400,25 +483,39 @@ input[type="checkbox"] {
 }
 
 /* Responsive design */
-@media (max-width: 950px) {
+/* The window itself is 950px wide (min 875), so this breakpoint sits below it:
+   at 950px the stacked layout was applying to every normal-sized dialog. */
+@media (max-width: 860px) {
   .content {
     grid-template-columns: 1fr;
-    grid-template-rows: auto auto auto auto;
+    grid-template-rows: auto auto;
     gap: 12px;
+  }
+
+  .preview-section {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .metadata-section {
+    grid-column: 1;
+    grid-row: 2;
+    grid-template-columns: 1fr;
   }
 
   .column {
     padding: 12px;
   }
 
+  /* The file row and the options row stay inline - stacking them wasted a
+     full-width button on "Browse..." and turned two checkboxes into a list. */
   .file-section {
-    flex-direction: column;
     gap: 8px;
   }
 
   .options-section {
-    flex-direction: column;
-    gap: 12px;
+    flex-wrap: wrap;
+    gap: 20px;
   }
 
   .preview-column .thumbnail {

@@ -167,9 +167,9 @@ export const WINDOW_SIZES = {
   },
   JOB_UPLOADER: {
     width: createWindowWidth(950),
-    height: createWindowHeight(720),
+    height: createWindowHeight(820),
     minWidth: createWindowMinWidth(875),
-    minHeight: createWindowMinHeight(650),
+    minHeight: createWindowMinHeight(700),
   },
   PRINTER_SELECTION: {
     width: createWindowWidth(500),
