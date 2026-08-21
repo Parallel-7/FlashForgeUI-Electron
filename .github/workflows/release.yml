@@ -269,6 +269,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ env.VERSION_TAG }}
+          # Anchor the tag to the dispatched commit. Without this, GitHub creates a
+          # missing tag at the repository DEFAULT branch (main) rather than the ref
+          # the workflow ran on, so releases cut from `alpha` were tagged against
+          # main and did not contain the code that was actually built and shipped.
+          target_commitish: ${{ github.sha }}
           name: ${{ env.RELEASE_NAME }}
           body_path: ${{ env.RELEASE_NOTES_PATH }}
           draft: false
