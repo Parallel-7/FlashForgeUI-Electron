@@ -5,6 +5,13 @@ on:
     branches: [main, alpha]
   pull_request:
     branches: [main, alpha]
+  workflow_dispatch:
+    inputs:
+      emulator-ref:
+        description: 'flashforge-emulator-v2 git ref to run the E2E track against'
+        required: false
+        default: 'v0.2.0'
+        type: string
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -65,11 +72,14 @@ jobs:
         uses: actions/checkout@v4
 
       # The emulator lives in a separate public repo and provides the printers this
-      # track drives, so no real hardware is needed.
+      # track drives, so no real hardware is needed. Pinned to a release tag so an
+      # emulator change cannot silently break or silently change this CI; bump the
+      # tag (or dispatch with emulator-ref) to pick up a new emulator release.
       - name: Checkout flashforge-emulator-v2
         uses: actions/checkout@v4
         with:
           repository: GhostTypes/flashforge-emulator-v2
+          ref: ${{ inputs.emulator-ref || 'v0.2.0' }}
           path: emulator
 
       - name: Setup pnpm
@@ -101,6 +111,11 @@ jobs:
       - name: Install emulator dependencies
         working-directory: emulator
         run: npm ci
+        env:
+          # Only the emulator's headless runtime is used here; skip the ~110 MB
+          # Electron binary download. The app-under-test gets its Electron from
+          # this repo's node_modules, not the emulator's.
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
 
       # The browser track needs the chromium binary itself, not just its system libraries.
       - name: Install Playwright chromium
