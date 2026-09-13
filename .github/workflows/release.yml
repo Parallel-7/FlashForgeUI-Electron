@@ -31,20 +31,10 @@ jobs:
           node-version: 22
           cache: 'pnpm'
 
-      - name: Configure GitHub Packages Authentication
-        shell: bash
-        run: |
-          echo "@ghosttypes:registry=https://npm.pkg.github.com" >> .npmrc
-          echo "@parallel-7:registry=https://npm.pkg.github.com" >> .npmrc
-          echo "//npm.pkg.github.com/:_authToken=${{ secrets.GITHUB_TOKEN }}" >> .npmrc
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install dependencies
         shell: bash
         run: pnpm install --frozen-lockfile
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Type check
         run: pnpm type-check
