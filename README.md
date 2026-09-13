@@ -109,7 +109,7 @@ Full setup walkthroughs and troubleshooting live in the **[Wiki](https://github.
 
 </div>
 
-This project uses [pnpm](https://pnpm.io/).
+This project uses [pnpm](https://pnpm.io/). All dependencies — including the `@ghosttypes` and `@parallel-7` scoped packages — are public on npm: no `.npmrc`, token, or GitHub Packages access is needed to build from source.
 
 ```bash
 pnpm install      # install dependencies
