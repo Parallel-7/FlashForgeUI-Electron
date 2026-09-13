@@ -22,6 +22,7 @@
 import { type ChildProcessByStdio, spawn } from 'node:child_process';
 import { createRequire } from 'node:module';
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises';
+import * as fs from 'node:fs';
 import { createServer } from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -93,6 +94,18 @@ export interface StartHeadlessWebUIOptions {
   password?: string;
   /** Number of printers the app must have connected before tests start. */
   requireConnectedPrinters?: number;
+  /**
+   * Flat AppConfig overrides written into the seeded config.json before the
+   * app boots (e.g. Spoolman integration settings for tracking specs).
+   * Merged over the app's DEFAULT_CONFIG by ConfigManager on load.
+   */
+  configOverrides?: Record<string, unknown>;
+  /**
+   * Simulation mode for the spawned emulators. Defaults to 'manual' (specs
+   * drive everything); 'auto' lets emulators heat up and reach printing so a
+   * spec can freeze progress with pause + jump-to-percent.
+   */
+  emulatorSimulationMode?: 'manual' | 'auto';
 }
 
 /**
@@ -175,7 +188,16 @@ const seedProfile = async (userDataPath: string, printers: readonly HeadlessPrin
       SerialNumber: printer.serial,
       CheckCode: printer.checkCode,
       ClientType: 'new',
-      printerModel: printer.model === 'adventurer-5x' ? 'AD5X' : 'Adventurer 5M Pro',
+      printerModel:
+        printer.model === 'adventurer-5x'
+          ? 'AD5X'
+          : printer.model === 'creator-5'
+            ? 'Creator 5'
+            : printer.model === 'creator-5-pro'
+              ? 'Creator 5 Pro'
+              : printer.model === 'adventurer-5m'
+                ? 'Adventurer 5M'
+                : 'Adventurer 5M Pro',
       commandPort: printer.tcpPort,
       httpPort: printer.httpPort,
       webUIEnabled: true,
@@ -186,6 +208,20 @@ const seedProfile = async (userDataPath: string, printers: readonly HeadlessPrin
   await writeFile(
     path.join(userDataPath, 'printer_details.json'),
     `${JSON.stringify({ lastUsedPrinterSerial: printers[0]?.serial ?? null, printers: entries }, null, 2)}\n`,
+    'utf-8'
+  );
+};
+
+/**
+ * Writes a flat AppConfig JSON the app merges over its defaults on boot.
+ * Used to pre-configure features that normally need interactive setup
+ * (e.g. pointing Spoolman at an e2e sidecar).
+ */
+const seedConfig = async (userDataPath: string, overrides: Record<string, unknown>): Promise<void> => {
+  await mkdir(userDataPath, { recursive: true });
+  await writeFile(
+    path.join(userDataPath, 'config.json'),
+    `${JSON.stringify(overrides, null, 2)}\n`,
     'utf-8'
   );
 };
@@ -221,6 +257,13 @@ const spawnHeadlessApp = (params: { userDataPath: string; port: number; password
     logLines.push(line);
     if (logLines.length > 400) {
       logLines.shift();
+    }
+    if (process.env.FFUI_E2E_LOG_FILE) {
+      try {
+        fs.appendFileSync(process.env.FFUI_E2E_LOG_FILE, `${line}\n`, 'utf-8');
+      } catch {
+        /* best effort debug dump */
+      }
     }
   };
 
@@ -321,6 +364,7 @@ export const startHeadlessWebUI = async (options: StartHeadlessWebUIOptions = {}
   const printers = options.printers ?? DEFAULT_HEADLESS_PRINTERS;
   const password = options.password ?? WEBUI_TEST_PASSWORD;
   const requiredPrinters = options.requireConnectedPrinters ?? printers.length;
+  const configOverrides = options.configOverrides;
 
   const emulators: Array<{ stop: () => Promise<void> }> = [];
   let appDataRoot: string | null = null;
@@ -351,7 +395,7 @@ export const startHeadlessWebUI = async (options: StartHeadlessWebUIOptions = {}
           tcpPort: printer.tcpPort,
           httpPort: printer.httpPort,
           discoveryEnabled: true,
-          simulationMode: 'manual',
+          simulationMode: options.emulatorSimulationMode ?? 'manual',
           simulationSpeed: 100,
         },
       });
@@ -367,6 +411,9 @@ export const startHeadlessWebUI = async (options: StartHeadlessWebUIOptions = {}
     appDataRoot = await mkdtemp(path.join(os.tmpdir(), 'ffui-webui-e2e-'));
     const userDataPath = path.join(appDataRoot, 'FlashForgeUI');
     await seedProfile(userDataPath, printers, printerIp);
+    if (configOverrides) {
+      await seedConfig(userDataPath, configOverrides);
+    }
 
     const port = await findFreePort();
     const baseUrl = `http://127.0.0.1:${port}`;

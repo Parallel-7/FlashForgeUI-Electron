@@ -324,10 +324,23 @@ export function updateSpoolmanPanelState(): void {
   const disabled = $('spoolman-disabled');
   const noSpool = $('spoolman-no-spool');
   const active = $('spoolman-active');
+  const station = $('spoolman-station');
 
   if (!disabled || !noSpool || !active) {
     return;
   }
+
+  // Material-station contexts: estimate-based tracking view instead of the
+  // single active-spool view.
+  if (station && state.spoolmanConfig?.station) {
+    hideElement('spoolman-disabled');
+    hideElement('spoolman-no-spool');
+    hideElement('spoolman-active');
+    showElement('spoolman-station');
+    renderStationTracking(state.spoolmanConfig.station);
+    return;
+  }
+  hideElement('spoolman-station');
 
   if (!isSpoolmanAvailableForCurrentContext()) {
     showElement('spoolman-disabled');
@@ -390,6 +403,61 @@ export function updateSpoolmanPanelState(): void {
   }
 }
 
+/** Station tracking payload mirrored from the config response. */
+interface StationTrackingView {
+  readonly supported: boolean;
+  readonly note: string;
+  readonly slotAssignments: ReadonlyArray<{ slotId: number; spoolId: number | null }>;
+  readonly lastDeduction: {
+    readonly fileName: string;
+    readonly terminal: 'completed' | 'cancelled' | 'error';
+    readonly fraction: number;
+    readonly deductedCount: number;
+    readonly skippedCount: number;
+  } | null;
+}
+
+/**
+ * Render the estimate-based tracking view for material-station contexts:
+ * honest copy, per-slot spool assignments, and the last deduction summary.
+ */
+function renderStationTracking(station: StationTrackingView): void {
+  const note = $('spoolman-station-note');
+  if (note) {
+    note.textContent = station.note;
+  }
+
+  const slots = $('spoolman-station-slots');
+  if (slots) {
+    if (station.slotAssignments.length === 0) {
+      slots.innerHTML =
+        '<div class="stat-row"><span>No spools assigned yet</span><span>use \u201cSet from Spoolman\u201d in the Material Station panel</span></div>';
+    } else {
+      slots.innerHTML = station.slotAssignments
+        .map(
+          (assignment) =>
+            `<div class="stat-row"><span>Slot ${assignment.slotId}:</span><span>Spool #${assignment.spoolId}</span></div>`
+        )
+        .join('');
+    }
+  }
+
+  const summary = $('spoolman-station-summary');
+  if (summary) {
+    if (!station.lastDeduction) {
+      summary.textContent = 'No deduction recorded this session.';
+    } else {
+      const deduction = station.lastDeduction;
+      const percent = Math.round(deduction.fraction * 100);
+      const terminal =
+        deduction.terminal === 'completed' ? 'completed' : `stopped (${deduction.terminal})`;
+      summary.textContent =
+        `${deduction.fileName} ${terminal} at ${percent}%: ` +
+        `${deduction.deductedCount} tool(s) deducted` +
+        (deduction.skippedCount > 0 ? `, ${deduction.skippedCount} skipped` : '');
+    }
+  }
+}
 function updateButtonStates(printerState: string): void {
   const isPrintingActive =
     printerState === 'Printing' ||

@@ -18,3 +18,21 @@ export interface ActiveSpoolData {
   remainingWeight: number; // grams
   remainingLength: number; // mm
 }
+
+/**
+ * Estimate-based tracking view payload for material-station contexts
+ * (mirrors spoolman:get-status's `station` field).
+ */
+export interface SpoolmanStationStatus {
+  supported: boolean;
+  note: string;
+  slotAssignments: Array<{ slotId: number; spoolId: number | null }>;
+  lastDeduction: {
+    fileName: string;
+    terminal: 'completed' | 'cancelled' | 'error';
+    fraction: number;
+    deductedCount: number;
+    skippedCount: number;
+    at: string;
+  } | null;
+}

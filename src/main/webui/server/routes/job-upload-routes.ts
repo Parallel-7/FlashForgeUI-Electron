@@ -30,12 +30,21 @@ import type {
 import express, { type Response, type Router } from 'express';
 import { toAppError } from '../../../utils/error.utils.js';
 import {
+  type Ad5xToolFileData,
+  captureEstimateForStationUpload,
+} from '../../../services/station-estimate.js';
+import {
   createValidationError,
   JobUploadCancelRequestSchema,
   JobUploadStartRequestSchema,
 } from '../../schemas/web-api.schemas.js';
 import type { AuthenticatedRequest } from '../auth-middleware.js';
-import { discardStagedUpload, getStagedUpload, isAllowedJobFileName, stageUpload } from '../upload-staging.js';
+import {
+  discardStagedUpload,
+  getStagedUpload,
+  isAllowedJobFileName,
+  stageUpload,
+} from '../upload-staging.js';
 import { type RouteDependencies, resolveContext, sendErrorResponse } from './route-helpers.js';
 
 /**
@@ -197,6 +206,33 @@ async function handleStartRequest(
             startNow,
           });
 
+      // Stage 1 of Spoolman estimate tracking for station printers: capture
+      // per-tool estimates (3mf filament data; AD5X per-tool grams fallback)
+      // for uploads that carry tool→slot mappings. Best effort only — a
+      // capture failure must never fail the upload.
+      if (hasMaterialStation && result.success && materialMappings?.length) {
+        try {
+          await captureEstimateForStationUpload(
+            contextResult.contextId,
+            {
+              fileName: result.fileName || staged.fileName,
+              filePath: staged.filePath,
+              mappings: materialMappings,
+            },
+            {
+              parseSlicerFile,
+              fetchAd5xToolWeights: (contextId, fileName) =>
+                fetchAd5xToolWeights(deps, contextId, fileName),
+            }
+          );
+        } catch (captureError) {
+          console.warn(
+            '[job-upload-routes] Spoolman estimate capture failed (upload continues):',
+            captureError instanceof Error ? captureError.message : captureError
+          );
+        }
+      }
+
       const response: JobUploadStartResponse = {
         success: result.success,
         fileName: result.fileName || staged.fileName,
@@ -204,6 +240,7 @@ async function handleStartRequest(
         message: result.success ? `Uploaded ${result.fileName || staged.fileName}` : undefined,
         error: result.error,
       };
+
       return res.status(result.success ? 200 : 500).json(response);
     } finally {
       // The backend has read the file by now either way; keeping it around only
@@ -323,4 +360,36 @@ function normalizeThumbnail(thumbnail: string | null): string | null {
     return null;
   }
   return thumbnail.replace(/^data:image\/\w+;base64,/, '');
+}
+
+/**
+ * AD5X fallback for {@link captureEstimateForStationUpload}: the printer's
+ * own file listing carries per-tool slicer weights (grams) for files the 3mf
+ * itself lacks filament data for.
+ */
+async function fetchAd5xToolWeights(
+  deps: RouteDependencies,
+  contextId: string,
+  fileName: string
+): Promise<Ad5xToolFileData[]> {
+  try {
+    const listing = await deps.backendManager.getRecentJobs(contextId);
+    if (!listing.success) {
+      return [];
+    }
+    for (const job of listing.jobs) {
+      if (job._type !== 'ad5x' || job.fileName !== fileName || !job.toolDatas?.length) {
+        continue;
+      }
+      return job.toolDatas
+        .filter((tool) => Number.isFinite(tool.filamentWeight) && tool.filamentWeight > 0)
+        .map((tool) => ({ toolId: tool.toolId, filamentWeight: tool.filamentWeight }));
+    }
+  } catch (error) {
+    console.warn(
+      '[job-upload-routes] AD5X tool weight lookup failed:',
+      error instanceof Error ? error.message : error
+    );
+  }
+  return [];
 }

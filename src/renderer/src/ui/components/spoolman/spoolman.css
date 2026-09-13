@@ -155,3 +155,48 @@
   color: var(--text-color-muted);
   text-align: center;
 }
+
+/* ============================================================================
+   MATERIAL STATION (ESTIMATE-BASED TRACKING) STATE
+   ============================================================================ */
+
+.spoolman-station {
+  text-align: center;
+  gap: 6px;
+  padding: 8px 4px;
+}
+
+.spoolman-station-note {
+  color: var(--text-color-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.spoolman-station-slots {
+  width: 100%;
+}
+
+.spoolman-station-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-color);
+  padding: 2px 0;
+}
+
+.spoolman-station-row span:last-child {
+  color: var(--text-color-muted);
+}
+
+.spoolman-station-summary {
+  color: var(--text-color-muted);
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 4px 0 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}

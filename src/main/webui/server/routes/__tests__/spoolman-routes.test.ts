@@ -33,6 +33,8 @@ describe('spoolman-routes', () => {
       spoolmanService: {
         isGloballyEnabled: jest.fn().mockReturnValue(true),
         isContextSupported: jest.fn().mockReturnValue(true),
+        isStationContext: jest.fn().mockReturnValue(false),
+        getSlotSpoolMap: jest.fn().mockReturnValue(new Map()),
         getDisabledReason: jest.fn().mockReturnValue(null),
         getServerUrl: jest.fn().mockReturnValue('http://spoolman.local'),
         getUpdateMode: jest.fn().mockReturnValue('weight'),
@@ -129,7 +131,44 @@ describe('spoolman-routes', () => {
       serverUrl: 'http://spoolman.local',
       updateMode: 'weight',
       contextId: 'context-1',
+      // Non-station contexts carry no estimate-based tracking view.
+      station: null,
     });
+  });
+
+  it('embeds the station tracking view for material-station contexts', async () => {
+    const deps = createDependencies({
+      spoolmanService: {
+        ...createDependencies().spoolmanService,
+        isStationContext: jest.fn().mockReturnValue(true),
+        getSlotSpoolMap: jest.fn().mockReturnValue(
+          new Map([
+            [1, 101],
+            [2, 102],
+          ])
+        ),
+      },
+    });
+    const server = await startTestServer((app) => {
+      const router = express.Router();
+      registerSpoolmanRoutes(router, deps);
+      app.use('/api', router);
+    });
+
+    const response = await fetch(`${server.baseUrl}/api/spoolman/config`);
+    const body = await response.json();
+
+    await server.close();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(body.station?.supported).toBe(true);
+    expect(body.station?.note).toContain('estimated from files uploaded through this app');
+    expect(body.station?.slotAssignments).toEqual([
+      { slotId: 1, spoolId: 101 },
+      { slotId: 2, spoolId: 102 },
+    ]);
+    expect(body.station?.lastDeduction).toBeNull();
   });
 
   it('maps fetched spools into the WebUI search payload', async () => {
@@ -168,7 +207,7 @@ describe('spoolman-routes', () => {
     });
   });
 
-  it('returns a conflict when spoolman is disabled for a specific printer context', async () => {
+  it('returns a conflict when the context has no Spoolman support', async () => {
     const server = await startTestServer((app) => {
       const router = express.Router();
       registerSpoolmanRoutes(
@@ -191,9 +230,72 @@ describe('spoolman-routes', () => {
     expect(response.status).toBe(409);
     expect(body).toEqual({
       success: false,
-      error: 'Spoolman integration is disabled for this printer (AD5X with material station)',
+      error: 'Spoolman integration is not available for this printer',
       spool: null,
     });
+  });
+
+  it('assigns a slot spool for station contexts', async () => {
+    const deps = createDependencies({
+      spoolmanService: {
+        ...createDependencies().spoolmanService,
+        isStationContext: jest.fn().mockReturnValue(true),
+        setSpoolForSlot: jest.fn(),
+      },
+    });
+    const server = await startTestServer((app) => {
+      const router = express.Router();
+      registerSpoolmanRoutes(router, deps);
+      app.use('/api', router);
+    });
+
+    const response = await fetch(`${server.baseUrl}/api/spoolman/slot-spool`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slotId: 2, spoolId: 102 }),
+    });
+    const body = await response.json();
+
+    await server.close();
+
+    expect(response.status).toBe(200);
+    // The spool is validated before the assignment is persisted.
+    expect(deps.spoolmanService.getSpoolById).toHaveBeenCalledWith(102);
+    expect(deps.spoolmanService.setSpoolForSlot).toHaveBeenCalledWith('context-1', 2, 102);
+    expect(body).toEqual({
+      success: true,
+      contextId: 'context-1',
+      slotId: 2,
+      spoolId: 102,
+    });
+  });
+
+  it('rejects slot spool assignment for non-station contexts', async () => {
+    const deps = createDependencies({
+      spoolmanService: {
+        ...createDependencies().spoolmanService,
+        isStationContext: jest.fn().mockReturnValue(false),
+        setSpoolForSlot: jest.fn(),
+      },
+    });
+    const server = await startTestServer((app) => {
+      const router = express.Router();
+      registerSpoolmanRoutes(router, deps);
+      app.use('/api', router);
+    });
+
+    const response = await fetch(`${server.baseUrl}/api/spoolman/slot-spool`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slotId: 1, spoolId: 5 }),
+    });
+    const body = await response.json();
+
+    await server.close();
+
+    expect(response.status).toBe(409);
+    expect(body.error).toBe('Slot→spool assignments require a printer with a material station');
+    expect(deps.spoolmanService.setSpoolForSlot).not.toHaveBeenCalled();
   });
 
   it('selects an active spool for the resolved context', async () => {

@@ -279,8 +279,13 @@ function openSlotEditor(slot: MaterialSlotInfo): void {
   });
   document.addEventListener('keydown', onKey, true);
 
+  let selectedSpoolId: number | null = null;
+
   overlay.querySelector('.ms-editor-spoolman')?.addEventListener('click', () => {
     openSpoolPicker((spool: SpoolSummary) => {
+      // Remember the spool so Apply can persist the slot→spool assignment
+      // used by estimate-based Spoolman deduction.
+      selectedSpoolId = spool.id;
       if (spool.material) {
         const matched = palette.nearestMaterial(spool.material);
         if (matched) {
@@ -298,11 +303,43 @@ function openSlotEditor(slot: MaterialSlotInfo): void {
 
   applyBtn.addEventListener('click', () => {
     if (selectedHex) {
-      void applyManualSlot(displaySlotId, selectedMaterial, selectedHex, close);
+      const spoolIdToApply = selectedSpoolId;
+      void applyManualSlot(displaySlotId, selectedMaterial, selectedHex, () => {
+        // Persist the slot→spool assignment after the slot config lands.
+        if (spoolIdToApply !== null) {
+          void assignSlotSpool(displaySlotId, spoolIdToApply);
+        }
+        close();
+      });
     }
   });
 
   updatePreview();
+}
+
+/**
+ * Persist a material-station slot→spool assignment (Stage 2 of estimate-based
+ * Spoolman tracking). Best effort: failures only log.
+ */
+async function assignSlotSpool(slotId: number, spoolId: number): Promise<void> {
+  try {
+    const result = await apiRequest<ApiResponse>('/api/spoolman/slot-spool', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contextId: getCurrentContextId(),
+        slotId,
+        spoolId,
+      }),
+    });
+    if (result.success) {
+      console.log(`[MaterialStation] Slot ${slotId} tracks Spoolman spool #${spoolId}`);
+    } else {
+      console.warn(`[MaterialStation] Slot spool assignment failed: ${result.error ?? 'unknown error'}`);
+    }
+  } catch (error) {
+    console.error('[MaterialStation] Failed to assign slot spool:', error);
+  }
 }
 
 /**

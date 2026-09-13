@@ -18,9 +18,11 @@
  */
 
 import type { ActiveSpoolData, SpoolSearchQuery } from '@shared/types/spoolman.js';
+import type { SpoolmanStationStatus } from '@shared/types/spoolman-tracking';
 import { BrowserWindow, ipcMain } from 'electron';
 import { getConfigManager } from '../../managers/ConfigManager.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
+import { getMultiContextSpoolmanTracker } from '../../services/MultiContextSpoolmanTracker.js';
 import { getSpoolmanHealthMonitor } from '../../services/SpoolmanHealthMonitor.js';
 import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegrationService.js';
 import { SpoolmanService } from '../../services/SpoolmanService.js';
@@ -208,11 +210,75 @@ export function registerSpoolmanHandlers(): void {
       enabled: true,
       contextId: targetContextId,
       disabledReason: null,
+      // Material-station contexts (Creator 5 series, AD5X with station) use
+      // the estimate-based tracking view instead of the single active spool.
+      station: service.isStationContext(targetContextId)
+        ? buildStationStatus(targetContextId)
+        : null,
     };
+  });
+
+  // Slot→spool assignment for material-station contexts (estimate-based
+  // Spoolman tracking). spoolId null clears the assignment.
+  ipcMain.handle('spoolman:set-slot-spool', async (_event, params: unknown) => {
+    const slotId = (params as { slotId?: unknown } | null | undefined)?.slotId;
+    const spoolId = (params as { spoolId?: unknown } | null | undefined)?.spoolId;
+    const contextId = (params as { contextId?: unknown } | null | undefined)?.contextId;
+
+    if (typeof slotId !== 'number' || !Number.isInteger(slotId) || slotId < 1 || slotId > 4) {
+      throw new Error('slotId must be an integer between 1 and 4');
+    }
+    if (
+      spoolId !== null &&
+      (typeof spoolId !== 'number' || !Number.isInteger(spoolId) || spoolId <= 0)
+    ) {
+      throw new Error('spoolId must be a positive integer or null');
+    }
+
+    const service = getSpoolmanIntegrationService();
+    const contextManager = getPrinterContextManager();
+    const targetContextId =
+      typeof contextId === 'string' && contextId ? contextId : contextManager.getActiveContextId();
+
+    if (!targetContextId || !service.isContextSupported(targetContextId)) {
+      throw new Error('Spoolman integration is not available for this printer');
+    }
+    if (!service.isStationContext(targetContextId)) {
+      throw new Error('Slot→spool assignments require a printer with a material station');
+    }
+
+    if (spoolId !== null) {
+      // Validate the spool exists before persisting the assignment.
+      await service.getSpoolById(spoolId);
+    }
+    service.setSpoolForSlot(targetContextId, slotId, spoolId);
+    return { success: true, slotId, spoolId };
   });
 
   ipcMain.handle('spoolman:retry-connection', async () => {
     const monitor = getSpoolmanHealthMonitor();
     return await monitor.manualRetry();
   });
+}
+
+/** Copy shown in the desktop Spoolman widget for station contexts. */
+const STATION_TRACKING_NOTE =
+  'Consumption is estimated from files uploaded through this app. ' +
+  'Prints started on the printer itself are not tracked.';
+
+/**
+ * Station tracking view payload for material-station contexts: per-slot
+ * spool assignments plus the most recent terminal-state deduction.
+ */
+function buildStationStatus(contextId: string): SpoolmanStationStatus {
+  const service = getSpoolmanIntegrationService();
+  const slotAssignments = [...service.getSlotSpoolMap(contextId).entries()]
+    .map(([slotId, spoolId]) => ({ slotId, spoolId }))
+    .sort((a, b) => a.slotId - b.slotId);
+  return {
+    supported: true,
+    note: STATION_TRACKING_NOTE,
+    slotAssignments,
+    lastDeduction: getMultiContextSpoolmanTracker().getLastDeduction(contextId),
+  };
 }

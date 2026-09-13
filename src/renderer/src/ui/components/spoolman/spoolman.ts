@@ -19,7 +19,7 @@ import type { AppConfig } from '@shared/types/config.js';
 import { initializeUniversalLucideIcons } from '../../../renderer/utils/icons.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
-import type { ActiveSpoolData } from './types.js';
+import type { ActiveSpoolData, SpoolmanStationStatus } from './types.js';
 import './spoolman.css';
 
 /**
@@ -56,6 +56,13 @@ export class SpoolmanComponent extends BaseComponent {
         <div class="spool-name"></div>
         <div class="spool-info"></div>
       </div>
+
+      <!-- Material station (estimate-based tracking) state -->
+      <div class="spoolman-state spoolman-station">
+        <p class="spoolman-station-note"></p>
+        <div class="spoolman-station-slots"></div>
+        <p class="spoolman-station-summary"></p>
+      </div>
     </div>
   `;
 
@@ -64,6 +71,8 @@ export class SpoolmanComponent extends BaseComponent {
   private contextId: string | null = null;
   private contextEnabled = false;
   private disabledReason: string | null = null;
+  /** Estimate-based tracking view payload (material-station contexts). */
+  private stationStatus: SpoolmanStationStatus | null = null;
 
   // DOM references
   private disabledView: HTMLElement | null = null;
@@ -75,6 +84,10 @@ export class SpoolmanComponent extends BaseComponent {
   private setSpoolButton: HTMLElement | null = null;
   private settingsButton: HTMLElement | null = null;
   private disabledMessageEl: HTMLElement | null = null;
+  private stationView: HTMLElement | null = null;
+  private stationNoteEl: HTMLElement | null = null;
+  private stationSlotsEl: HTMLElement | null = null;
+  private stationSummaryEl: HTMLElement | null = null;
 
   /**
    * Setup event listeners for spool selection and IPC events
@@ -90,6 +103,10 @@ export class SpoolmanComponent extends BaseComponent {
     this.setSpoolButton = this.findElementByClass('btn-set-spool');
     this.settingsButton = this.findElementByClass('btn-settings');
     this.disabledMessageEl = this.findElementByClass('spoolman-message');
+    this.stationView = this.findElementByClass('spoolman-station');
+    this.stationNoteEl = this.findElementByClass('spoolman-station-note');
+    this.stationSlotsEl = this.findElementByClass('spoolman-station-slots');
+    this.stationSummaryEl = this.findElementByClass('spoolman-station-summary');
 
     // "Set Active Spool" button
     if (this.setSpoolButton) {
@@ -188,6 +205,16 @@ export class SpoolmanComponent extends BaseComponent {
     if (this.disabledView) this.disabledView.style.display = 'none';
     if (this.noSpoolView) this.noSpoolView.style.display = 'none';
     if (this.activeSpoolView) this.activeSpoolView.style.display = 'none';
+    if (this.stationView) this.stationView.style.display = 'none';
+
+    // Material-station contexts: estimate-based tracking view. The single
+    // active-spool concept does not apply — slots are assigned via the
+    // Material Station editor's "Set from Spoolman" flow.
+    if (this.contextEnabled && this.stationStatus) {
+      if (this.stationView) this.stationView.style.display = 'flex';
+      this.renderStationView();
+      return;
+    }
 
     // Show appropriate state
     const disabled = !this.isEnabled || !this.contextEnabled;
@@ -232,6 +259,47 @@ export class SpoolmanComponent extends BaseComponent {
     const remaining = Math.round(this.activeSpool.remainingWeight);
     if (this.spoolInfoText) {
       this.spoolInfoText.textContent = `${material} - ${remaining}g remaining`;
+    }
+  }
+
+  /**
+   * Render the estimate-based tracking view for material-station contexts.
+   */
+  private renderStationView(): void {
+    const station = this.stationStatus;
+    if (!station) return;
+
+    if (this.stationNoteEl) {
+      this.stationNoteEl.textContent = station.note;
+    }
+
+    if (this.stationSlotsEl) {
+      if (station.slotAssignments.length === 0) {
+        this.stationSlotsEl.innerHTML =
+          '<div class="spoolman-station-row"><span>No spools assigned yet</span><span>use \u201cSet from Spoolman\u201d in the Material Station editor</span></div>';
+      } else {
+        this.stationSlotsEl.innerHTML = station.slotAssignments
+          .map(
+            (assignment) =>
+              `<div class="spoolman-station-row"><span>Slot ${assignment.slotId}:</span><span>Spool #${assignment.spoolId}</span></div>`
+          )
+          .join('');
+      }
+    }
+
+    if (this.stationSummaryEl) {
+      const deduction = station.lastDeduction;
+      if (!deduction) {
+        this.stationSummaryEl.textContent = 'No deduction recorded this session.';
+      } else {
+        const percent = Math.round(deduction.fraction * 100);
+        const terminal =
+          deduction.terminal === 'completed' ? 'completed' : `stopped (${deduction.terminal})`;
+        this.stationSummaryEl.textContent =
+          `${deduction.fileName} ${terminal} at ${percent}%: ` +
+          `${deduction.deductedCount} tool(s) deducted` +
+          (deduction.skippedCount > 0 ? `, ${deduction.skippedCount} skipped` : '');
+      }
     }
   }
 
@@ -297,10 +365,17 @@ export class SpoolmanComponent extends BaseComponent {
       const status = await window.api.spoolman.getStatus(this.contextId || undefined);
       this.contextEnabled = status.enabled;
       this.disabledReason = status.disabledReason ?? null;
+      this.stationStatus = status.station ?? null;
 
       if (status.enabled) {
-        await this.loadState();
+        if (this.stationStatus) {
+          this.activeSpool = null;
+          this.updateView();
+        } else {
+          await this.loadState();
+        }
       } else {
+        this.stationStatus = null;
         this.activeSpool = null;
         this.updateView();
       }

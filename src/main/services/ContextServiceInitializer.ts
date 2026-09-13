@@ -51,7 +51,7 @@ export function initializeContextServices(contextId: string): void {
   }
 
   const spoolmanTracker = getMultiContextSpoolmanTracker();
-  spoolmanTracker.createTrackerForContext(contextId, stateMonitor);
+  spoolmanTracker.createTrackerForContext(contextId, stateMonitor, pollingService);
 
   const notificationCoordinator = getMultiContextNotificationCoordinator();
   notificationCoordinator.createCoordinatorForContext(contextId, pollingService, stateMonitor);

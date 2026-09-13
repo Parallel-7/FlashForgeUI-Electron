@@ -29,6 +29,7 @@ import type { CameraProxyStatus } from '@shared/types/camera/camera.types.js';
 import { isValidConfig } from '@shared/types/config.js';
 import type { AppConfig, ThemeColors } from '@shared/types/config.js';
 import type { RebootResult, RebootStatusPayload } from '@shared/types/printer-power.js';
+import type { SpoolmanStatusPayload } from '@shared/types/spoolman-tracking';
 import type {
   ISettingsAPI,
   IAutoUpdateAPI,
@@ -152,7 +153,8 @@ interface SpoolmanAPI {
   setActiveSpool: (spool: unknown, contextId?: string) => Promise<void>;
   getStatus: (
     contextId?: string
-  ) => Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
+  ) => Promise<SpoolmanStatusPayload>;
+  setSlotSpool: (slotId: number, spoolId: number | null, contextId?: string) => Promise<void>;
   onSpoolSelected: (callback: (spool: unknown) => void) => void;
   onSpoolUpdated?: (callback: (spool: unknown) => void) => void;
   onSpoolPickedForSlot: (callback: (spool: unknown) => void) => EventDisposer;
@@ -669,6 +671,7 @@ const electronAPI: ElectronAPI = {
       'spoolman:get-active-spool',
       'spoolman:set-active-spool',
       'spoolman:get-status',
+      'spoolman:set-slot-spool',
       'material:configure-slot',
       'material:set-slot',
       'printer:reboot',
@@ -850,14 +853,16 @@ const electronAPI: ElectronAPI = {
       await ipcRenderer.invoke('spoolman:set-active-spool', spool, contextId);
     },
 
-    getStatus: async (
-      contextId?: string
-    ): Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }> => {
+    getStatus: async (contextId?: string): Promise<SpoolmanStatusPayload> => {
       const result: unknown = await ipcRenderer.invoke('spoolman:get-status', contextId);
       if (!isSpoolmanStatusResponse(result)) {
         return { enabled: false, disabledReason: 'Invalid response', contextId: null };
       }
       return result;
+    },
+
+    setSlotSpool: async (slotId: number, spoolId: number | null, contextId?: string): Promise<void> => {
+      await ipcRenderer.invoke('spoolman:set-slot-spool', { slotId, spoolId, contextId });
     },
 
     onSpoolSelected: (callback: (spool: unknown) => void) => {

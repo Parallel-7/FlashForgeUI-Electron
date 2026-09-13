@@ -15,6 +15,7 @@
 import type { CameraProxyStatus } from '@shared/types/camera/camera.types.js';
 import type { AppConfig, ThemeColors } from '@shared/types/config.js';
 import type {} from '@shared/types/global.d.ts';
+import type { SpoolmanStatusPayload } from '@shared/types/spoolman-tracking';
 import { contextBridge, ipcRenderer } from 'electron';
 
 // ---------------------------------------------------------------------------
@@ -76,9 +77,8 @@ interface DialogSpoolmanAPI {
   openSpoolSelection: (purpose?: 'active' | 'slot-config') => Promise<void>;
   getActiveSpool: (contextId?: string) => Promise<unknown>;
   setActiveSpool: (spool: unknown, contextId?: string) => Promise<void>;
-  getStatus: (
-    contextId?: string
-  ) => Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
+  getStatus: (contextId?: string) => Promise<SpoolmanStatusPayload>;
+  setSlotSpool: (slotId: number, spoolId: number | null, contextId?: string) => Promise<void>;
   onSpoolSelected: (callback: (spool: unknown) => void) => void;
   onSpoolUpdated: (callback: (spool: unknown) => void) => void;
   onSpoolPickedForSlot: (callback: (spool: unknown) => void) => DialogEventDisposer;
@@ -338,6 +338,7 @@ const validInvokeChannels = [
   'spoolman:open-dialog',
   'spoolman:get-active-spool',
   'spoolman:set-active-spool',
+  'spoolman:set-slot-spool',
   'material:configure-slot',
   'material:set-slot',
 ];
@@ -543,14 +544,11 @@ contextBridge.exposeInMainWorld('api', {
     setActiveSpool: async (spool: unknown, contextId?: string): Promise<void> => {
       await ipcRenderer.invoke('spoolman:set-active-spool', spool, contextId);
     },
-    getStatus: async (
-      contextId?: string
-    ): Promise<{ enabled: boolean; contextId: string | null; disabledReason: string | null }> => {
-      return (await ipcRenderer.invoke('spoolman:get-status', contextId)) as {
-        enabled: boolean;
-        contextId: string | null;
-        disabledReason: string | null;
-      };
+    getStatus: async (contextId?: string): Promise<SpoolmanStatusPayload> => {
+      return (await ipcRenderer.invoke('spoolman:get-status', contextId)) as SpoolmanStatusPayload;
+    },
+    setSlotSpool: async (slotId: number, spoolId: number | null, contextId?: string): Promise<void> => {
+      await ipcRenderer.invoke('spoolman:set-slot-spool', { slotId, spoolId, contextId });
     },
     onSpoolSelected: (callback: (spool: unknown) => void) => {
       const wrapped: DialogIPCListener = (_event: unknown, spool: unknown) => callback(spool);

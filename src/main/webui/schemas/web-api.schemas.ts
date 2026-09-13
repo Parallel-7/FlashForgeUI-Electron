@@ -302,6 +302,24 @@ export const SlotConfigRequestSchema = z.object({
     .regex(/^#?[0-9a-fA-F]{6}$/, 'A valid 6-digit hex color is required'),
 });
 
+/**
+ * Slot→spool assignment for material-station printers (Creator 5 series,
+ * AD5X with station). Slot is 1-based; a null spoolId clears the assignment.
+ */
+export const SlotSpoolSetRequestSchema = z.object({
+  contextId: z.string().optional(),
+  slotId: z
+    .number()
+    .int('slotId must be an integer')
+    .min(1, 'slotId must be at least 1')
+    .max(4, 'slotId must be at most 4'),
+  spoolId: z
+    .number()
+    .int('spoolId must be an integer')
+    .positive('spoolId must be a positive integer')
+    .nullable(),
+});
+
 // ============================================================================
 // THEME PROFILE SCHEMAS
 // ============================================================================
@@ -356,3 +374,4 @@ export type ValidatedPrinterCommand = z.infer<typeof PrinterCommandSchema>;
 export type ValidatedPrinterFeatures = z.infer<typeof PrinterFeaturesSchema>;
 export type ValidatedSpoolSelectRequest = z.infer<typeof SpoolSelectRequestSchema>;
 export type ValidatedSpoolClearRequest = z.infer<typeof SpoolClearRequestSchema>;
+export type ValidatedSlotSpoolSetRequest = z.infer<typeof SlotSpoolSetRequestSchema>;

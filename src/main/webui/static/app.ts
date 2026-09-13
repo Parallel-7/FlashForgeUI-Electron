@@ -368,8 +368,24 @@ export interface SpoolmanConfigResponse extends ApiResponse {
   serverUrl: string;
   updateMode: 'length' | 'weight';
   contextId: string | null;
+  /** Present (non-null) on material-station contexts: estimate-based tracking view. */
+  readonly station?: SpoolmanStationTracking | null;
 }
 
+/** Estimate-based tracking info for material-station contexts. */
+export interface SpoolmanStationTracking {
+  readonly supported: boolean;
+  readonly note: string;
+  readonly slotAssignments: Array<{ slotId: number; spoolId: number | null }>;
+  readonly lastDeduction: {
+    readonly fileName: string;
+    readonly terminal: 'completed' | 'cancelled' | 'error';
+    readonly fraction: number;
+    readonly deductedCount: number;
+    readonly skippedCount: number;
+    readonly at: string;
+  } | null;
+}
 export interface ActiveSpoolResponse extends ApiResponse {
   spool: ActiveSpoolData | null;
 }

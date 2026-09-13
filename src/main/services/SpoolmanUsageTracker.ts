@@ -151,7 +151,13 @@ export class SpoolmanUsageTracker extends EventEmitter {
         return;
       }
 
-      if (!integrationService.isGloballyEnabled() || !integrationService.isContextSupported(this.contextId)) {
+      // Station contexts are routed to the estimate-based StationUsageTracker;
+      // they must never ALSO log through the single-spool path (defense in depth
+      // — routing happens in MultiContextSpoolmanTracker.createTrackerForContext).
+      if (
+        !integrationService.isGloballyEnabled() ||
+        !integrationService.isUsageTrackingEligible(this.contextId)
+      ) {
         console.log(`[SpoolmanUsageTracker] Context ${this.contextId} is not eligible for usage updates`);
         return;
       }

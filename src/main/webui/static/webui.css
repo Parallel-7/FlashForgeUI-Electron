@@ -3777,3 +3777,17 @@ body {
     gap: 20px;
   }
 }
+
+/* Spoolman station (estimate-based tracking) view */
+.spoolman-state .spool-stats .stat-row span:last-child,
+#spoolman-station .stat-row span:last-child {
+  color: var(--text-color-secondary);
+}
+
+#spoolman-station .spoolman-message {
+  margin-bottom: 8px;
+}
+
+#spoolman-station-summary {
+  margin-top: 8px;
+}

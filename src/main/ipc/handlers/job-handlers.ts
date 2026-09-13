@@ -26,13 +26,49 @@
 import { parseSlicerFile } from '@parallel-7/slicer-meta';
 import type { AD5XUploadParams, SlicerMetadata, UploadJobPayload } from '@shared/types/ipc.js';
 import { dialog, ipcMain } from 'electron';
+import * as path from 'path';
 import type { PrinterBackendManager } from '../../managers/PrinterBackendManager.js';
+import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
+import {
+  type Ad5xToolFileData,
+  captureEstimateForStationUpload,
+} from '../../services/station-estimate.js';
 import { getThumbnailCacheService } from '../../services/ThumbnailCacheService.js';
 import { getThumbnailRequestQueue } from '../../services/ThumbnailRequestQueue.js';
 import type { getWindowManager } from '../../windows/WindowManager.js';
 
 type WindowManager = ReturnType<typeof getWindowManager>;
+
+/**
+ * AD5X fallback for the desktop upload path's Spoolman estimate capture: the
+ * printer's own file listing carries per-tool slicer weights (grams).
+ */
+async function fetchAd5xToolWeightsViaBackend(
+  contextId: string,
+  fileName: string
+): Promise<Ad5xToolFileData[]> {
+  try {
+    const listing = await getPrinterBackendManager().getRecentJobs(contextId);
+    if (!listing.success) {
+      return [];
+    }
+    for (const job of listing.jobs) {
+      if (job._type !== 'ad5x' || job.fileName !== fileName || !job.toolDatas?.length) {
+        continue;
+      }
+      return job.toolDatas
+        .filter((tool) => Number.isFinite(tool.filamentWeight) && tool.filamentWeight > 0)
+        .map((tool) => ({ toolId: tool.toolId, filamentWeight: tool.filamentWeight }));
+    }
+  } catch (error) {
+    console.warn(
+      '[job-handlers] AD5X tool weight lookup failed:',
+      error instanceof Error ? error.message : error
+    );
+  }
+  return [];
+}
 
 /**
  * Register all job-related IPC handlers
@@ -249,6 +285,31 @@ export function registerJobHandlers(backendManager: PrinterBackendManager, windo
           status: 'Upload complete',
           stage: 'completed',
         });
+
+        // Spoolman estimate tracking (station printers): capture per-tool
+        // estimates for uploads carrying tool→slot mappings. Best effort
+        // only — a capture failure must never fail the upload.
+        if (materialMappings?.length) {
+          try {
+            await captureEstimateForStationUpload(
+              contextId,
+              {
+                fileName: result.fileName || path.basename(filePath),
+                filePath,
+                mappings: materialMappings,
+              },
+              {
+                parseSlicerFile,
+                fetchAd5xToolWeights: fetchAd5xToolWeightsViaBackend,
+              }
+            );
+          } catch (captureError) {
+            console.warn(
+              '[job-handlers] Spoolman estimate capture failed (upload continues):',
+              captureError instanceof Error ? captureError.message : captureError
+            );
+          }
+        }
 
         // Send completion event
         event.sender.send('uploader:upload-complete', {

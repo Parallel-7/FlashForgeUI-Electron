@@ -128,6 +128,8 @@ export class MaterialStationComponent extends BaseComponent {
   private pendingSlot: number | null = null;
   /** Disposer for the active one-shot "spool picked" listener. */
   private spoolPickedDisposer: (() => void) | null = null;
+  /** Spoolman spool id picked for the open slot editor (slot→spool assignment). */
+  private pickedSpoolId: number | null = null;
   /** Currently open slot editor dialog (backdrop) element, if any. */
   private dialogEl: HTMLElement | null = null;
   /** Escape-key handler for the open dialog, if any. */
@@ -619,6 +621,8 @@ export class MaterialStationComponent extends BaseComponent {
     const material = this.dialogMaterial;
     const hex = this.dialogColorHex;
     const colorName = this.palette.colors.find((c) => c.hex === hex)?.name ?? hex;
+    const spoolIdToAssign = this.pickedSpoolId;
+    this.pickedSpoolId = null;
     this.closeSlotDialog();
 
     try {
@@ -628,6 +632,19 @@ export class MaterialStationComponent extends BaseComponent {
         return;
       }
       window.api?.loading?.showSuccess(`Slot ${slot} → ${material} · ${colorName}`, 4000);
+
+      // Persist the slot→spool assignment (Stage 2 of estimate-based
+      // Spoolman tracking). Best effort: failures only log.
+      if (spoolIdToAssign !== null) {
+        try {
+          await window.api?.spoolman?.setSlotSpool(slot, spoolIdToAssign, this.contextId || undefined);
+        } catch (assignError) {
+          console.warn(
+            `[MaterialStation] Slot ${slot} spool assignment failed:`,
+            assignError instanceof Error ? assignError.message : assignError
+          );
+        }
+      }
     } catch (error) {
       console.error('[MaterialStation] Failed to set slot:', error);
       window.api?.loading?.showError(
@@ -668,6 +685,10 @@ export class MaterialStationComponent extends BaseComponent {
    */
   private prefillFromSpool(spool: PickedSpool): void {
     if (!this.dialogEl || this.pendingSlot === null || !spool) return;
+
+    // Remember the spool so Apply can persist the slot→spool assignment
+    // used by estimate-based Spoolman deduction.
+    this.pickedSpoolId = typeof spool.id === 'number' ? spool.id : null;
 
     if (spool.material) {
       const matched = this.palette.nearestMaterial(spool.material);
