@@ -34,6 +34,7 @@ import {
   type Ad5xToolFileData,
   captureEstimateForStationUpload,
 } from '../../services/station-estimate.js';
+import { captureStoredFileEstimate } from '../../services/stored-file-estimate.js';
 import { getThumbnailCacheService } from '../../services/ThumbnailCacheService.js';
 import { getThumbnailRequestQueue } from '../../services/ThumbnailRequestQueue.js';
 import type { getWindowManager } from '../../windows/WindowManager.js';
@@ -155,6 +156,18 @@ export function registerJobHandlers(backendManager: PrinterBackendManager, windo
           startNow: options.startNow,
           additionalParams: options.materialMappings ? { materialMappings: options.materialMappings } : undefined,
         });
+
+        if (result.success && options.startNow !== false) {
+          // capture only when the print actually starts -- select-without-start
+          // must not write an estimate record (option may be omitted; default start).
+          // Best-effort estimate capture for stored files: never blocks or
+          // fails the IPC reply. captureStoredFileEstimate resolves (it
+          // rejects nothing by contract), but guard anyway so a future
+          // regression cannot produce an unhandled rejection.
+          void captureStoredFileEstimate(contextId, fileName).catch((error: unknown) => {
+            console.warn('[spoolman] stored-file estimate capture failed:', error);
+          });
+        }
 
         return { success: result.success, error: result.error };
       } catch (error) {

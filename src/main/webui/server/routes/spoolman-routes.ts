@@ -281,8 +281,9 @@ export function registerSpoolmanRoutes(router: Router, deps: RouteDependencies):
 
 /** Copy shown in the Spoolman panel for station contexts. */
 const STATION_TRACKING_NOTE =
-  'Consumption is estimated from files uploaded through this app. ' +
-  'Prints started on the printer itself are not tracked.';
+  'Consumption is estimated from files uploaded through this app, and from ' +
+  'single-material files started through this app when exactly one slot has a ' +
+  'spool assigned. Prints started on the printer itself are not tracked.';
 
 /**
  * Assemble estimate-based tracking info for a context, or null when the

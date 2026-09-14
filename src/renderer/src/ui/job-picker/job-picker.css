@@ -126,6 +126,16 @@
   max-width: 100%;
 }
 
+/* Spoolman tracked/untracked indicator for stored files (station printers). */
+.spoolman-track-hint--tracked {
+  color: var(--theme-success, #4caf50);
+}
+
+.spoolman-track-hint--untracked {
+  color: color-mix(in srgb, var(--theme-text) 55%, transparent);
+  cursor: help;
+}
+
 /* Template provides: .dialog-footer styles */
 
 .options {

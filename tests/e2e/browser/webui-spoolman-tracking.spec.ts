@@ -2,7 +2,10 @@
  * @fileoverview E2E coverage for estimate-based Spoolman tracking on the
  * headless WebUI: per-slot deduction at terminal states on material-station
  * printers (Creator 5), exactly-once across completion/cancel, pause/resume
- * neutrality, untracked jobs, station-model parity, and the single-spool
+ * neutrality, untracked jobs, station-model parity, single-material
+ * printer-metadata capture for AD5X stored files started through the app
+ * (single-material deducts the printer-reported weight; multi-material and
+ * ambiguous spool assignments stay untracked), and the single-spool
  * regression for 5M-series printers.
  *
  * Runs against real flashforge-emulator-v2 instances plus the Spoolman
@@ -12,7 +15,8 @@
  * Expected amounts are hand-computed from the fixture's slicer metadata
  * (tests/fixtures/print-files/creator5-two-tool.3mf):
  * tool 0 = 11.28 g, tool 1 = 8.64 g — assert both PUTs carry exactly those
- * numbers on completion, 40% of them on a cancel pinned at 40%.
+ * numbers on completion, 40% of them on a cancel pinned at 40%. Stored-file
+ * scenarios assert the literal printer-reported weight (130 g) or zero PUTs.
  */
 
 import * as fs from 'fs/promises';
@@ -20,6 +24,7 @@ import * as path from 'path';
 import { expect, test } from '@playwright/test';
 import { fetchApiToken, postJson, postRaw, readEmulatorDetail } from './helpers/api';
 import {
+  DEFAULT_HEADLESS_PRINTERS,
   type HeadlessPrinter,
   type HeadlessWebUI,
   startHeadlessWebUI,
@@ -150,7 +155,7 @@ const assignSlotSpool = async (
   token: string,
   contextId: string,
   slotId: number,
-  spoolId: number
+  spoolId: number | null
 ): Promise<void> => {
   const payload = await postJson<{ success?: boolean; error?: string }>(
     webui,
@@ -543,6 +548,181 @@ test.describe('Spoolman station tracking (station model parity)', () => {
       await clearPlatform(printer);
     });
   }
+});
+
+// ============================================================================
+// AD5X — printer-metadata tracking for single-material stored files (#p-3ejfg).
+// Files started through the app from the printer's own storage get a
+// printer-metadata estimate at start; deduction resolves to the sole assigned
+// slot's spool. Ambiguous (multi-material / spool-count) cases stay untracked.
+// ============================================================================
+
+test.describe('Spoolman printer-metadata tracking (AD5X stored files)', () => {
+  const printer = DEFAULT_HEADLESS_PRINTERS.find(
+    (candidate) => candidate.serial === 'E2E-WEBUI-AD5X'
+  ) as HeadlessPrinter;
+
+  /**
+   * Seed a printer-resident file exactly like the emulator would report it in
+   * gcodeListDetail (GcodeFileEntry metadata), without any app upload. The
+   * scenario fileName registers the file in the emulator store so the start
+   * command can find it.
+   */
+  const seedStoredFile = async (
+    fileName: string,
+    metadata: { gcodeToolCnt: number; totalFilamentWeight: number; useMatlStation: boolean }
+  ): Promise<void> => {
+    const response = await fetch(`http://127.0.0.1:${String(printer.httpPort)}/__scenario`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        scenario: {
+          machineStatus: 'idle',
+          fileName,
+          currentFileMetadata: metadata,
+        },
+      }),
+    });
+    expect(response.ok).toBe(true);
+  };
+
+  /** Drive the running print to completion and wait for the terminal state. */
+  const completePrint = async (): Promise<void> => {
+    await emulatorSimulate(printer, { action: 'jump', percent: 100 });
+    await expect.poll(async () => emulatorStatus(printer), { timeout: 30_000 }).toBe('completed');
+    // One polling cycle of headroom so the tracker reacts to the terminal state.
+    await sleep(POLL_CYCLE_MS);
+  };
+
+  /** Start a stored (printer-resident) file through the app's job-start route. */
+  const startStoredJobViaApp = async (contextId: string, fileName: string): Promise<void> => {
+    const payload = await postJson<Record<string, unknown>>(
+      webui!,
+      token,
+      `/api/jobs/start?contextId=${contextId}`,
+      { filename: fileName, startNow: true, leveling: false }
+    );
+    expect(payload.error).toBeUndefined();
+  };
+
+  test.skip(!sidecarAvailable, sidecarSkipReason);
+  test.describe.configure({ mode: 'serial' });
+
+  let sidecar: SpoolmanSidecar;
+  let webui: HeadlessWebUI | null = null;
+  let token = '';
+
+  test.beforeAll(async () => {
+    sidecar = await startSpoolmanSidecar();
+    webui = await startHeadlessWebUI({
+      printers: [printer],
+      configOverrides: {
+        SpoolmanEnabled: true,
+        SpoolmanServerUrl: sidecar.baseUrl,
+        SpoolmanUpdateMode: 'weight',
+      },
+      emulatorSimulationMode: 'auto',
+    });
+    token = await fetchApiToken(webui);
+  });
+
+  test.afterAll(async () => {
+    await webui?.stop();
+    await sidecar.stop();
+  });
+
+  test('tracks single-material stored prints with one PUT of the printer-reported weight', async () => {
+    await sidecar.reset();
+    const contextId = await resolveContextId(webui!, token, printer.serial);
+    await waitForAppReady(webui!, token, contextId);
+
+    await assignSlotSpool(webui!, token, contextId, 1, SLOT_1_SPOOL);
+
+    await seedStoredFile('stored-single.3mf', {
+      gcodeToolCnt: 1,
+      totalFilamentWeight: 130,
+      useMatlStation: true,
+    });
+    await startStoredJobViaApp(contextId, 'stored-single.3mf');
+
+    await driveToPrinting(printer);
+    await completePrint();
+
+    const bySpool = await waitForSidecarCalls(sidecar, 1, webui);
+    expect(Math.abs((bySpool.get(SLOT_1_SPOOL) ?? 0) - 130)).toBeLessThanOrEqual(G_TOLERANCE);
+
+    await clearPlatform(printer);
+  });
+
+  test('leaves multi-material stored prints untracked', async () => {
+    await sidecar.reset();
+    const contextId = await resolveContextId(webui!, token, printer.serial);
+    await waitForAppReady(webui!, token, contextId);
+
+    await assignSlotSpool(webui!, token, contextId, 1, SLOT_1_SPOOL);
+
+    await seedStoredFile('stored-multi.3mf', {
+      gcodeToolCnt: 2,
+      totalFilamentWeight: 190,
+      useMatlStation: true,
+    });
+    await startStoredJobViaApp(contextId, 'stored-multi.3mf');
+
+    await driveToPrinting(printer);
+    await completePrint();
+
+    const sidecarRequests = await sidecar.requests();
+    expect(sidecarRequests).toHaveLength(0);
+
+    await clearPlatform(printer);
+  });
+
+  test('leaves stored prints untracked when no slot has a spool assigned', async () => {
+    await sidecar.reset();
+    const contextId = await resolveContextId(webui!, token, printer.serial);
+    await waitForAppReady(webui!, token, contextId);
+
+    await assignSlotSpool(webui!, token, contextId, 1, null);
+
+    await seedStoredFile('stored-nospool.3mf', {
+      gcodeToolCnt: 1,
+      totalFilamentWeight: 130,
+      useMatlStation: true,
+    });
+    await startStoredJobViaApp(contextId, 'stored-nospool.3mf');
+
+    await driveToPrinting(printer);
+    await completePrint();
+
+    const sidecarRequests = await sidecar.requests();
+    expect(sidecarRequests).toHaveLength(0);
+
+    await clearPlatform(printer);
+  });
+
+  test('leaves stored prints untracked when two slots have spools assigned', async () => {
+    await sidecar.reset();
+    const contextId = await resolveContextId(webui!, token, printer.serial);
+    await waitForAppReady(webui!, token, contextId);
+
+    await assignSlotSpool(webui!, token, contextId, 1, SLOT_1_SPOOL);
+    await assignSlotSpool(webui!, token, contextId, 2, SLOT_2_SPOOL);
+
+    await seedStoredFile('stored-twospools.3mf', {
+      gcodeToolCnt: 1,
+      totalFilamentWeight: 130,
+      useMatlStation: true,
+    });
+    await startStoredJobViaApp(contextId, 'stored-twospools.3mf');
+
+    await driveToPrinting(printer);
+    await completePrint();
+
+    const sidecarRequests = await sidecar.requests();
+    expect(sidecarRequests).toHaveLength(0);
+
+    await clearPlatform(printer);
+  });
 });
 
 // ============================================================================

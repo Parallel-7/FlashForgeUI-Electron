@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Single-material prints started from the printer's own file list are now Spoolman-tracked on the AD5X with a material station.** The capture runs when the job is started through the app — desktop job picker or built-in WebUI — and records the printer-reported total filament weight (falling back to the single tool's filamentWeight when the file reports none), deducted to the sole assigned slot's spool at terminal state. Ambiguous cases stay untracked: multi-material stored prints (per-tool attribution still needs an app upload), Creator 5 (its file list reports names only), and any assignment count other than exactly one spool. The stored-file list in the WebUI file modal and the desktop job picker now shows a tracked/untracked hint per file, and one delayed retry absorbs the recent-list propagation lag without ever delaying the start. (Ported from the standalone [FlashForgeWebUI](https://github.com/Parallel-7/FlashForgeWebUI).)
+
 ## [1.0.5-alpha.12] - 2026-08-21
 
 ### Added

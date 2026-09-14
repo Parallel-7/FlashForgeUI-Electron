@@ -10,6 +10,7 @@
 import type { ApiResponse, FileListResponse, WebUIJobFile } from '../app.js';
 import { state } from '../core/AppState.js';
 import { apiRequest } from '../core/Transport.js';
+import { loadSpoolmanConfig } from '../features/spoolman.js';
 import { $, hideElement, showElement, showToast } from '../shared/dom.js';
 import {
   buildMaterialBadgeTooltip,
@@ -17,6 +18,7 @@ import {
   isAD5XJobFile,
   isMultiColorJobFile,
 } from '../shared/formatting.js';
+import { describeStoredFileTracking } from '../shared/stored-file-tracking.js';
 
 /**
  * A settable heater target. Single-nozzle printers use `bed`/`extruder`; the
@@ -90,6 +92,12 @@ export async function loadFileList(source: 'recent' | 'local'): Promise<void> {
   if (state.printerFeatures?.hasMultiTool) {
     showToast('Local job management is not available on this printer.', 'error');
     return;
+  }
+
+  // The stored-file tracking indicator needs the Spoolman slot assignments;
+  // fetch them lazily if the Spoolman panel has never loaded the config.
+  if (state.spoolmanConfig === null) {
+    void loadSpoolmanConfig();
   }
 
   try {
@@ -200,6 +208,26 @@ export function showFileModal(files: WebUIJobFile[], source: 'recent' | 'local')
       });
 
       meta.appendChild(requirementSummary);
+    }
+
+    const trackingHint = describeStoredFileTracking(file, {
+      spoolmanEnabled: state.spoolmanConfig?.enabled === true,
+      hasStation: state.printerFeatures?.hasMaterialStation === true,
+      assignedSpoolSlotIds:
+        state.spoolmanConfig?.station?.slotAssignments
+          ?.filter((assignment) => assignment.spoolId !== null)
+          .map((assignment) => assignment.slotId) ?? [],
+    });
+    if (trackingHint) {
+      const hint = document.createElement('span');
+      hint.className = `file-meta-item spoolman-track-hint spoolman-track-hint--${
+        trackingHint.tracked ? '' : 'un'
+      }tracked`;
+      hint.textContent = trackingHint.label;
+      if (trackingHint.tooltip) {
+        hint.title = trackingHint.tooltip;
+      }
+      meta.appendChild(hint);
     }
 
     if (meta.childElementCount > 0) {

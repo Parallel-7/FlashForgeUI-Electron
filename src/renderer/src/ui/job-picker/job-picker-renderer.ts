@@ -23,6 +23,7 @@ import { logVerbose } from '@shared/logging.js';
 import type { AD5XJobInfo, PrinterModelType } from '@shared/types/printer-backend/index.js';
 import { isCreator5ModelType } from '../gridstack/defaults.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { describeStoredFileTracking } from './stored-file-tracking.js';
 
 interface JobPickerAPI {
   readonly onInit: (callback: (data: JobPickerInitData) => void) => void;
@@ -32,6 +33,7 @@ interface JobPickerAPI {
   readonly selectJob: (data: JobSelectionData) => void;
   readonly requestThumbnail: (filename: string) => void;
   readonly getFeatures: () => Promise<unknown>;
+  readonly getSpoolmanStatus: () => Promise<unknown>;
   readonly getLocalJobs: () => Promise<{ success: boolean; jobs: readonly unknown[]; error?: string }>;
   readonly getRecentJobs: () => Promise<{ success: boolean; jobs: readonly unknown[]; error?: string }>;
   readonly startJob: (
@@ -105,6 +107,12 @@ let selectedPrinterModel: string | null = null;
 // (AD5X, Creator 5 / 5 Pro, and any future model) is handled the same way.
 let hasMaterialStation = false;
 let currentJobsData: readonly unknown[] = []; // Store full job data for AD5X
+// Spoolman tracking inputs for the stored-file indicator (null until the
+// status IPC resolves; the indicator is hidden when Spoolman is disabled).
+let spoolmanStatusInputs: {
+  readonly spoolmanEnabled: boolean;
+  readonly assignedSpoolSlotIds: readonly number[];
+} | null = null;
 
 // Type definitions for printer features
 interface PrinterFeatures {
@@ -172,6 +180,20 @@ function isAD5XJobInfo(value: unknown): value is AD5XJobInfo {
 
 function isMultiColorJob(job: AD5XJobInfo): boolean {
   return !!(job.toolDatas && job.toolDatas.length > 0);
+}
+
+/** Minimal shape of the `spoolman:get-status` payload used by the indicator. */
+interface SpoolmanStatusShape {
+  readonly enabled: boolean;
+  readonly station?: {
+    readonly slotAssignments?: readonly { readonly slotId: number; readonly spoolId: number }[];
+  } | null;
+}
+
+function isSpoolmanStatus(value: unknown): value is SpoolmanStatusShape {
+  if (!value || typeof value !== 'object') return false;
+  const obj = value as Record<string, unknown>;
+  return 'enabled' in obj && typeof obj.enabled === 'boolean';
 }
 
 // DOM element references
@@ -287,6 +309,29 @@ async function checkPrinterCapabilities(): Promise<void> {
 
       // Capability-based material-station detection (AD5X, Creator 5 / 5 Pro, …).
       hasMaterialStation = features.materialStation?.available === true;
+
+      // Spoolman inputs for the stored-file tracking indicator. Best-effort:
+      // a missing/unavailable status simply hides the indicator.
+      try {
+        const spoolmanStatus = await api.getSpoolmanStatus();
+        if (isSpoolmanStatus(spoolmanStatus)) {
+          spoolmanStatusInputs = {
+            spoolmanEnabled: spoolmanStatus.enabled === true,
+            assignedSpoolSlotIds: (spoolmanStatus.station?.slotAssignments ?? []).map(
+              (assignment) => assignment.slotId
+            ),
+          };
+          logDebug(
+            'Job picker: Spoolman status loaded (enabled:',
+            spoolmanStatusInputs.spoolmanEnabled,
+            ', assigned slots:',
+            spoolmanStatusInputs.assignedSpoolSlotIds.length,
+            ')'
+          );
+        }
+      } catch (spoolmanError) {
+        logDebug('Job picker: Spoolman status unavailable', spoolmanError);
+      }
 
       logDebug('Job picker: Printer capabilities loaded', printerCapabilities);
       logDebug('Job picker: Printer model type:', selectedPrinterModel);
@@ -531,6 +576,29 @@ function createFileItem(filename: string): HTMLElement {
   fileItem.appendChild(header);
   fileItem.appendChild(thumbnail);
   fileItem.appendChild(filenameElement);
+
+  // Spoolman tracked/untracked indicator for stored files (station printers).
+  // Mirrors the file modal in the WebUI: hidden when Spoolman is disabled or
+  // the printer has no material station; see stored-file-tracking.ts.
+  const trackingHint = describeStoredFileTracking(
+    isAD5XJobInfo(jobData) ? jobData : undefined,
+    {
+      spoolmanEnabled: spoolmanStatusInputs?.spoolmanEnabled === true,
+      hasStation: hasMaterialStation,
+      assignedSpoolSlotIds: spoolmanStatusInputs?.assignedSpoolSlotIds ?? [],
+    }
+  );
+  if (trackingHint) {
+    const trackingElement = document.createElement('div');
+    trackingElement.className = `spoolman-track-hint spoolman-track-hint--${
+      trackingHint.tracked ? '' : 'un'
+    }tracked`;
+    trackingElement.textContent = trackingHint.label;
+    if (trackingHint.tooltip) {
+      trackingElement.title = trackingHint.tooltip;
+    }
+    fileItem.appendChild(trackingElement);
+  }
 
   // Add click handler for selection
   fileItem.addEventListener('click', () => handleFileSelection(filename, fileItem));

@@ -18,7 +18,12 @@
  */
 
 import type { FilamentInfo, ParseResult } from '@parallel-7/slicer-meta';
-import type { JobEstimateRecord, ToolEstimate, ToolSlotMapping } from '@shared/types/spoolman-tracking';
+import type {
+  JobEstimateRecord,
+  JobEstimateSource,
+  ToolEstimate,
+  ToolSlotMapping,
+} from '@shared/types/spoolman-tracking';
 import { getJobEstimateStore } from './JobEstimateStore';
 import { resolveStationStoreKey } from './station-store-key';
 
@@ -91,24 +96,27 @@ export function toToolSlotMappings(
 }
 
 /**
- * Capture (persist) the estimate record for a station upload. Failures are
- * logged and swallowed: capture must never break the upload flow.
+ * Capture (persist) the estimate record for a station print. Failures are
+ * logged and swallowed: capture must never break the start/upload flow.
  *
- * @param contextId - Printer context receiving the upload
+ * @param contextId - Printer context receiving the print
  * @param fileName - Final file name on the printer
  * @param mappings - toolId→slotId mappings from the Material Station UI
  * @param perTool - per-tool estimates from {@link buildToolEstimates}
+ * @param source - estimate provenance (defaults to the upload flow)
  */
 export function captureStationEstimate(
   contextId: string,
   fileName: string,
   mappings: readonly ToolSlotMapping[],
-  perTool: readonly ToolEstimate[]
+  perTool: readonly ToolEstimate[],
+  source?: JobEstimateSource
 ): void {
   const record: JobEstimateRecord = {
     fileName,
     mappings,
     perTool,
+    source,
     capturedAt: new Date().toISOString(),
   };
   getJobEstimateStore().captureEstimate(resolveStationStoreKey(contextId), record);

@@ -49,6 +49,9 @@ const jobPickerAPI = {
   getFeatures: async (): Promise<unknown> => {
     return await ipcRenderer.invoke('printer:get-features');
   },
+  getSpoolmanStatus: async (): Promise<unknown> => {
+    return await ipcRenderer.invoke('spoolman:get-status');
+  },
   getLocalJobs: async (): Promise<{ success: boolean; jobs: readonly unknown[]; error?: string }> => {
     return (await ipcRenderer.invoke('job-picker:get-local-jobs')) as {
       success: boolean;

@@ -6,6 +6,7 @@ import type { AD5XJobInfo, BasicJobInfo } from '@shared/types/printer-backend/ba
 import { StandardAPIResponse } from '@shared/types/web-api.types.js';
 import type { Response, Router } from 'express';
 import { isAD5XJobInfo } from '../../../printer-backends/ad5x/ad5x-utils.js';
+import { captureStoredFileEstimate } from '../../../services/stored-file-estimate.js';
 import { getThumbnailCacheService } from '../../../services/ThumbnailCacheService.js';
 import { toAppError } from '../../../utils/error.utils.js';
 import { createValidationError, JobStartRequestSchema } from '../../schemas/web-api.schemas.js';
@@ -77,6 +78,21 @@ export function registerJobRoutes(router: Router, deps: RouteDependencies): void
         leveling: validation.data.leveling,
         additionalParams: materialMappings && materialMappings.length > 0 ? { materialMappings } : undefined,
       });
+
+      if (result.success && validation.data.startNow) {
+        // capture only when the print actually starts -- select-without-start
+        // must not write an estimate record (schema defaults startNow true).
+        // Best-effort estimate capture for stored files: never blocks or fails
+        // the start response. captureStoredFileEstimate resolves (it rejects
+        // nothing by contract), but guard anyway so a future regression cannot
+        // produce an unhandled rejection.
+        void captureStoredFileEstimate(
+          contextResult.contextId,
+          validation.data.filename
+        ).catch((error: unknown) => {
+          console.warn('[spoolman] stored-file estimate capture failed:', error);
+        });
+      }
 
       const response: StandardAPIResponse = {
         success: result.success,

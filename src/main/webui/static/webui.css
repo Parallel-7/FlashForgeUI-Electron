@@ -1651,6 +1651,16 @@ body {
   gap: 6px;
 }
 
+/* Spoolman tracked/untracked indicator for stored files (station printers). */
+.spoolman-track-hint--tracked {
+  color: var(--success-color, #4caf50);
+}
+
+.spoolman-track-hint--untracked {
+  color: var(--text-muted, var(--text-color-secondary));
+  cursor: help;
+}
+
 .material-preview {
   display: flex;
   flex-wrap: wrap;

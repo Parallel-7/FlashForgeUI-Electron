@@ -36,15 +36,29 @@ export interface ToolEstimate {
 }
 
 /**
- * Persisted estimate record for one uploaded file on one printer context.
- * Keyed by the final file name as reported by the printer while printing.
+ * Where a {@link JobEstimateRecord} came from.
+ *
+ * - `upload-3mf`: per-filament data parsed from a 3mf at app-upload time
+ * - `upload-tooldata`: AD5X printer-reported per-tool weights at app-upload time
+ * - `printer-metadata`: printer file-list metadata for stored files (single
+ *   material only; resolved to the one assigned slot's spool)
+ */
+export type JobEstimateSource = 'upload-3mf' | 'upload-tooldata' | 'printer-metadata';
+
+/**
+ * Persisted estimate record for one print file on one printer context,
+ * captured at app-upload time or from printer-reported metadata for a stored
+ * file started through the app. Keyed by the final file name as reported by
+ * the printer while printing.
  */
 export interface JobEstimateRecord {
   readonly fileName: string;
   readonly mappings: readonly ToolSlotMapping[];
   readonly perTool: readonly ToolEstimate[];
-  /** ISO 8601 timestamp of when the upload was captured. */
+  /** ISO 8601 timestamp of when the estimate was captured. */
   readonly capturedAt: string;
+  /** Provenance for observability; older records have none. */
+  readonly source?: JobEstimateSource;
 }
 
 /** Terminal print state that triggers a deduction attempt. */
