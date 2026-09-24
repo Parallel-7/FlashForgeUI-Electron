@@ -1,24 +1,27 @@
 /**
- * @fileoverview E2E coverage for estimate-based Spoolman tracking on the
- * headless WebUI: per-slot deduction at terminal states on material-station
- * printers (Creator 5), exactly-once across completion/cancel, pause/resume
- * neutrality, untracked jobs, station-model parity, single-material
- * printer-metadata capture for AD5X stored files started through the app
- * (single-material deducts the printer-reported weight; multi-material and
- * ambiguous spool assignments stay untracked), and the single-spool
- * regression for 5M-series printers.
+ * @fileoverview E2E coverage for per-job Spoolman tracking on the headless
+ * WebUI (GitHub FlashForgeWebUI#21).
+ *
+ * The user picks a spool for each tool in the matching dialog; the choice
+ * belongs to that one print. Scenarios on material-station printers:
+ * - Completion charges each chosen spool its full slicer estimate.
+ * - Cancel at 40% charges each tool from the per-tool usage curve of the
+ *   fixture's gcode (tool 0 prints the first half of the file, tool 2 the
+ *   second half, so tool 2 is charged nothing).
+ * - Pause/resume charges nothing; completion afterwards charges in full.
+ * - "Do not track", an upload without spool choices, and a reprint started
+ *   on the printer itself charge nothing for those tools.
+ * - Creator 5 Pro and AD5X parity; AD5X stored files started through the
+ *   matching dialog are charged from the printer's per-tool data.
+ * - 5M Pro regression: the single-spool flow is unchanged.
  *
  * Runs against real flashforge-emulator-v2 instances plus the Spoolman
  * sidecar from the emulator checkout. Skips when the sidecar script is
- * unavailable (CI pins an emulator tag without it).
- *
- * Expected amounts are hand-computed from the fixture's slicer metadata
- * (tests/fixtures/print-files/creator5-two-tool.3mf):
- * tool 0 = 11.28 g, tool 1 = 8.64 g — assert both PUTs carry exactly those
- * numbers on completion, 40% of them on a cancel pinned at 40%. Stored-file
- * scenarios assert the literal printer-reported weight (130 g) or zero PUTs.
+ * unavailable. Expected amounts come from two-tool-toolchange.expected.json,
+ * which the fixture generator computes independently of the app.
  */
 
+import { readFileSync } from 'fs';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { expect, test } from '@playwright/test';
@@ -40,36 +43,36 @@ const sidecarAvailable = isSpoolmanSidecarAvailable();
 const sidecarSkipReason = SPOOLMAN_SIDECAR_SKIP_MESSAGE;
 
 const FIXTURES_DIR = path.resolve(process.cwd(), 'tests', 'fixtures', 'print-files');
-const TWO_TOOL_FIXTURE = 'creator5-two-tool.3mf';
+const TWO_TOOL_FIXTURE = 'two-tool-toolchange.3mf';
 const SINGLE_TOOL_GCODE = 'adventurer5m-single-color.gcode';
 
-/** Hand-computed from the fixture's slicer metadata. */
-const TOOL_0_G = 11.28;
-const TOOL_1_G = 8.64;
-const SLOT_1_SPOOL = 1;
-const SLOT_2_SPOOL = 2;
+interface ExpectedTool {
+  usedG: number;
+  gramsAt40: number;
+}
+const EXPECTED = JSON.parse(
+  readFileSync(path.join(FIXTURES_DIR, 'two-tool-toolchange.expected.json'), 'utf8')
+) as { tools: Record<'0' | '2', ExpectedTool> };
+const TOOL_0 = EXPECTED.tools['0'];
+const TOOL_2 = EXPECTED.tools['2'];
+
+const SPOOL_A = 1;
+const SPOOL_B = 2;
 /** Emulator's fixed total filament weight for the single-tool regression. */
 const EMULATOR_FULL_WEIGHT_G = 96;
 const EMULATOR_HALF_WEIGHT_G = EMULATOR_FULL_WEIGHT_G * 0.5;
 const G_TOLERANCE = 0.15;
 const POLL_CYCLE_MS = 4500;
 
-/** Two-tool mapping payload the Material Station UI would send. */
-const TWO_TOOL_MAPPINGS = [
-  {
-    toolId: 0,
-    slotId: 1,
-    materialName: 'PLA',
-    toolMaterialColor: '#808000',
-    slotMaterialColor: '#808000',
-  },
-  {
-    toolId: 1,
-    slotId: 2,
-    materialName: 'PLA',
-    toolMaterialColor: '#808080',
-    slotMaterialColor: '#808080',
-  },
+/** Tool→slot mapping the matching dialog sends: filaments 1 and 3 print with T0 and T2. */
+const MAPPINGS = [
+  { toolId: 0, slotId: 1, materialName: 'PLA', toolMaterialColor: '#4DA3FF', slotMaterialColor: '#4DA3FF' },
+  { toolId: 2, slotId: 2, materialName: 'PETG', toolMaterialColor: '#FF8A3D', slotMaterialColor: '#FF8A3D' },
+];
+
+const BOTH_SPOOLS = [
+  { toolId: 0, spoolId: SPOOL_A },
+  { toolId: 2, spoolId: SPOOL_B },
 ];
 
 interface StagePayload {
@@ -129,6 +132,8 @@ const driveToPrinting = async (printer: HeadlessPrinter): Promise<void> => {
   // Freeze progress immediately; each scenario then jumps to the exact
   // percent it wants to pin, and the tracker must use what it observed.
   await emulatorSimulate(printer, { action: 'pause' });
+  // Let one app poll cycle see the job print, as a real print always does.
+  await sleep(POLL_CYCLE_MS);
 };
 
 const resolveContextId = async (
@@ -150,29 +155,18 @@ const resolveContextId = async (
   return match.id;
 };
 
-const assignSlotSpool = async (
-  webui: HeadlessWebUI,
-  token: string,
-  contextId: string,
-  slotId: number,
-  spoolId: number | null
-): Promise<void> => {
-  const payload = await postJson<{ success?: boolean; error?: string }>(
-    webui,
-    token,
-    '/api/spoolman/slot-spool',
-    { contextId, slotId, spoolId }
-  );
-  expect(payload.error).toBeUndefined();
-};
-
 const uploadAndStart = async (
   webui: HeadlessWebUI,
   token: string,
   contextId: string,
-  fileName: string,
-  materialMappings?: unknown
-): Promise<void> => {
+  options: {
+    fileName?: string;
+    materialMappings?: unknown;
+    spoolAssignments?: ReadonlyArray<{ toolId: number; spoolId: number | null }>;
+    startNow?: boolean;
+  } = {}
+): Promise<string> => {
+  const fileName = options.fileName ?? TWO_TOOL_FIXTURE;
   const stage = await postRaw<StagePayload>(
     webui,
     token,
@@ -181,18 +175,38 @@ const uploadAndStart = async (
     fileName
   );
   expect(stage.error).toBeUndefined();
-  const start = await postJson<StartPayload>(
-    webui,
-    token,
-    `/api/jobs/upload/start?contextId=${contextId}`,
-    {
-      uploadId: stage.uploadId,
-      startNow: true,
-      autoLevel: false,
-      ...(materialMappings ? { materialMappings } : {}),
-    }
-  );
+  const start = await postJson<StartPayload>(webui, token, `/api/jobs/upload/start?contextId=${contextId}`, {
+    uploadId: stage.uploadId,
+    startNow: options.startNow ?? true,
+    autoLevel: false,
+    ...(options.materialMappings ? { materialMappings: options.materialMappings } : {}),
+    ...(options.spoolAssignments ? { spoolAssignments: options.spoolAssignments } : {}),
+  });
   expect(start.error).toBeUndefined();
+  return start.fileName ?? fileName;
+};
+
+/** Start a file already on the printer directly, bypassing the app. */
+const startOnPrinter = async (printer: HeadlessPrinter, fileName: string): Promise<void> => {
+  const response = await fetch(`http://127.0.0.1:${String(printer.httpPort)}/printGcode`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      serialNumber: printer.serial,
+      checkCode: printer.checkCode,
+      fileName,
+      levelingBeforePrint: false,
+    }),
+  });
+  expect(response.ok).toBe(true);
+  expect(((await response.json()) as { code?: number }).code).toBe(0);
+};
+
+const expectCharge = (charges: Map<number, number>, spoolId: number, grams: number): void => {
+  const charged = charges.get(spoolId) ?? 0;
+  expect(Math.abs(charged - grams), `spool ${String(spoolId)}: charged ${String(charged)} g`).toBeLessThanOrEqual(
+    G_TOLERANCE
+  );
 };
 
 const waitForSidecarCalls = async (
@@ -285,10 +299,35 @@ const waitForAppReady = async (
 };
 
 // ============================================================================
-// Creator 5 — the canonical two-tool station scenarios
+// Creator 5 — per-job scenarios
 // ============================================================================
 
-test.describe('Spoolman station tracking (Creator 5)', () => {
+const startSuite = async (printers: HeadlessPrinter[]) => {
+  const sidecar = await startSpoolmanSidecar();
+  const webui = await startHeadlessWebUI({
+    printers,
+    configOverrides: {
+      SpoolmanEnabled: true,
+      SpoolmanServerUrl: sidecar.baseUrl,
+      SpoolmanUpdateMode: 'weight',
+    },
+    emulatorSimulationMode: 'auto',
+  });
+  const token = await fetchApiToken(webui);
+  return { sidecar, webui, token };
+};
+
+const cancelPrint = async (webui: HeadlessWebUI, token: string, contextId: string): Promise<void> => {
+  const cancel = await postJson<{ success?: boolean; error?: string }>(
+    webui,
+    token,
+    `/api/printer/control/cancel?contextId=${contextId}`,
+    {}
+  );
+  expect(cancel.error).toBeUndefined();
+};
+
+test.describe('Spoolman per-job tracking (Creator 5)', () => {
   test.skip(!sidecarAvailable, sidecarSkipReason);
   test.describe.configure({ mode: 'serial' });
 
@@ -305,19 +344,11 @@ test.describe('Spoolman station tracking (Creator 5)', () => {
   let sidecar: SpoolmanSidecar;
   let webui: HeadlessWebUI | null = null;
   let token = '';
+  let contextId = '';
 
   test.beforeAll(async () => {
-    sidecar = await startSpoolmanSidecar();
-    webui = await startHeadlessWebUI({
-      printers: [printer],
-      configOverrides: {
-        SpoolmanEnabled: true,
-        SpoolmanServerUrl: sidecar.baseUrl,
-        SpoolmanUpdateMode: 'weight',
-      },
-      emulatorSimulationMode: 'auto',
-    });
-    token = await fetchApiToken(webui);
+    ({ sidecar, webui, token } = await startSuite([printer]));
+    contextId = await resolveContextId(webui, token, printer.serial);
   });
 
   test.afterAll(async () => {
@@ -325,158 +356,115 @@ test.describe('Spoolman station tracking (Creator 5)', () => {
     await sidecar?.stop();
   });
 
-  test('two-tool completion deducts both slot spools at full estimates', async () => {
+  test('completion charges each chosen spool its full estimate', async () => {
     await sidecar.reset();
-    const contextId = await resolveContextId(webui!, token, printer.serial);
     await waitForAppReady(webui!, token, contextId);
-
-    await assignSlotSpool(webui!, token, contextId, 1, SLOT_1_SPOOL);
-    await assignSlotSpool(webui!, token, contextId, 2, SLOT_2_SPOOL);
-
-    await uploadAndStart(webui!, token, contextId, TWO_TOOL_FIXTURE, TWO_TOOL_MAPPINGS);
-
+    await uploadAndStart(webui!, token, contextId, { materialMappings: MAPPINGS, spoolAssignments: BOTH_SPOOLS });
     await driveToPrinting(printer);
     await emulatorSimulate(printer, { action: 'jump', percent: 100 });
 
-    const bySpool = await waitForSidecarCalls(sidecar, 2, webui);
-    expect(Math.abs((bySpool.get(SLOT_1_SPOOL) ?? 0) - TOOL_0_G)).toBeLessThanOrEqual(G_TOLERANCE);
-    expect(Math.abs((bySpool.get(SLOT_2_SPOOL) ?? 0) - TOOL_1_G)).toBeLessThanOrEqual(G_TOLERANCE);
-
+    const charges = await waitForSidecarCalls(sidecar, 2, webui);
+    expectCharge(charges, SPOOL_A, TOOL_0.usedG);
+    expectCharge(charges, SPOOL_B, TOOL_2.usedG);
     await clearPlatform(printer);
   });
 
-  test('cancel at a pinned fraction deducts that fraction of the estimates', async () => {
+  test('cancel at 40% charges each tool from its own usage curve', async () => {
     await sidecar.reset();
-    const contextId = await resolveContextId(webui!, token, printer.serial);
     await waitForAppReady(webui!, token, contextId);
-
-    await assignSlotSpool(webui!, token, contextId, 1, SLOT_1_SPOOL);
-    await assignSlotSpool(webui!, token, contextId, 2, SLOT_2_SPOOL);
-
-    await uploadAndStart(webui!, token, contextId, TWO_TOOL_FIXTURE, TWO_TOOL_MAPPINGS);
-
+    await uploadAndStart(webui!, token, contextId, { materialMappings: MAPPINGS, spoolAssignments: BOTH_SPOOLS });
     await driveToPrinting(printer);
     await emulatorSimulate(printer, { action: 'jump', percent: 40 });
-    // Let one polling cycle observe the pinned 40%.
     await sleep(POLL_CYCLE_MS);
+    await cancelPrint(webui!, token, contextId);
 
-    const cancel = await postJson<{ success?: boolean; error?: string }>(
-      webui!,
-      token,
-      `/api/printer/control/cancel?contextId=${contextId}`,
-      {}
-    );
-    expect(cancel.error).toBeUndefined();
-
-    const bySpool = await waitForSidecarCalls(sidecar, 2, webui);
-    expect(Math.abs((bySpool.get(SLOT_1_SPOOL) ?? 0) - TOOL_0_G * 0.4)).toBeLessThanOrEqual(
-      G_TOLERANCE
-    );
-    expect(Math.abs((bySpool.get(SLOT_2_SPOOL) ?? 0) - TOOL_1_G * 0.4)).toBeLessThanOrEqual(
-      G_TOLERANCE
-    );
-
+    // Tool 2 prints only the second half of the file: nothing to charge.
+    const charges = await waitForSidecarCalls(sidecar, 1, webui);
+    expectCharge(charges, SPOOL_A, TOOL_0.gramsAt40);
+    expect(charges.has(SPOOL_B)).toBe(false);
     await clearPlatform(printer);
   });
 
-  test('pause and resume deduct nothing; the later completion deducts exactly once', async () => {
+  test('pause and resume charge nothing; completion afterwards charges in full', async () => {
     await sidecar.reset();
-    const contextId = await resolveContextId(webui!, token, printer.serial);
     await waitForAppReady(webui!, token, contextId);
-
-    await assignSlotSpool(webui!, token, contextId, 1, SLOT_1_SPOOL);
-    await assignSlotSpool(webui!, token, contextId, 2, SLOT_2_SPOOL);
-
-    await uploadAndStart(webui!, token, contextId, TWO_TOOL_FIXTURE, TWO_TOOL_MAPPINGS);
-
+    await uploadAndStart(webui!, token, contextId, { materialMappings: MAPPINGS, spoolAssignments: BOTH_SPOOLS });
     await driveToPrinting(printer);
+    await emulatorSimulate(printer, { action: 'jump', percent: 25 });
 
-    // Real pause via the app, wait for the emulator to settle, then resume.
-    const pause = await postJson<{ success?: boolean; error?: string }>(
-      webui!,
-      token,
-      `/api/printer/control/pause?contextId=${contextId}`,
-      {}
-    );
+    const pause = await postJson<{ error?: string }>(webui!, token, `/api/printer/control/pause?contextId=${contextId}`, {});
     expect(pause.error).toBeUndefined();
     await waitForAppState(webui!, token, contextId, 'paused');
-
-    const resume = await postJson<{ success?: boolean; error?: string }>(
-      webui!,
-      token,
-      `/api/printer/control/resume?contextId=${contextId}`,
-      {}
-    );
+    const resume = await postJson<{ error?: string }>(webui!, token, `/api/printer/control/resume?contextId=${contextId}`, {});
     expect(resume.error).toBeUndefined();
     await waitForAppState(webui!, token, contextId, 'printing');
-    // Give the polling stream one full cycle to deliver the resumed Printing
-    // sample to the state monitor (its print-started arms a fresh exactly-once
-    // job key for the completion below).
     await sleep(POLL_CYCLE_MS);
-
-    // The ledger must still be empty: pause/resume is not a terminal state.
     expect(await sidecar.requests()).toHaveLength(0);
 
-    await emulatorSimulate(printer, { action: 'pause' });
     await emulatorSimulate(printer, { action: 'jump', percent: 100 });
-
-    const bySpool = await waitForSidecarCalls(sidecar, 2, webui);
-    expect(Math.abs((bySpool.get(SLOT_1_SPOOL) ?? 0) - TOOL_0_G)).toBeLessThanOrEqual(G_TOLERANCE);
-    expect(Math.abs((bySpool.get(SLOT_2_SPOOL) ?? 0) - TOOL_1_G)).toBeLessThanOrEqual(G_TOLERANCE);
-
+    const charges = await waitForSidecarCalls(sidecar, 2, webui);
+    expectCharge(charges, SPOOL_A, TOOL_0.usedG);
+    expectCharge(charges, SPOOL_B, TOOL_2.usedG);
     await clearPlatform(printer);
   });
 
-  test('job started on the printer itself (untracked) deducts nothing', async () => {
+  test('"Do not track" leaves that tool uncharged', async () => {
     await sidecar.reset();
-    expect(await sidecar.requests()).toHaveLength(0);
-
-    // Upload straight to the emulator, bypassing the app entirely — the app
-    // never sees tool→slot mappings for this job.
-    const bytes = await fs.readFile(path.join(FIXTURES_DIR, TWO_TOOL_FIXTURE));
-    const form = new FormData();
-    form.append('gcodeFile', new Blob([new Uint8Array(bytes)]), 'untracked-job.3mf');
-    const upload = await fetch(`http://127.0.0.1:${String(printer.httpPort)}/uploadGcode`, {
-      method: 'POST',
-      headers: {
-        SerialNumber: printer.serial,
-        CheckCode: printer.checkCode,
-      },
-      body: form,
+    await waitForAppReady(webui!, token, contextId);
+    await uploadAndStart(webui!, token, contextId, {
+      materialMappings: MAPPINGS,
+      spoolAssignments: [
+        { toolId: 0, spoolId: SPOOL_A },
+        { toolId: 2, spoolId: null },
+      ],
     });
-    expect(upload.ok).toBe(true);
-    await upload.body?.cancel();
-
-    const start = await fetch(`http://127.0.0.1:${String(printer.httpPort)}/printGcode`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        serialNumber: printer.serial,
-        checkCode: printer.checkCode,
-        fileName: 'untracked-job.3mf',
-        levelingBeforePrint: false,
-      }),
-    });
-    expect(start.ok).toBe(true);
-    const startBody = (await start.json()) as { code?: number; message?: string };
-    expect(startBody.code).toBe(0);
-
     await driveToPrinting(printer);
     await emulatorSimulate(printer, { action: 'jump', percent: 100 });
 
-    // Give the terminal event + a polling cycle time, then assert empty.
+    const charges = await waitForSidecarCalls(sidecar, 1, webui);
+    expectCharge(charges, SPOOL_A, TOOL_0.usedG);
+    await clearPlatform(printer);
+  });
+
+  test('an upload without spool choices is not tracked', async () => {
+    await sidecar.reset();
+    await waitForAppReady(webui!, token, contextId);
+    await uploadAndStart(webui!, token, contextId, { materialMappings: MAPPINGS });
+    await driveToPrinting(printer);
+    await emulatorSimulate(printer, { action: 'jump', percent: 100 });
     await sleep(POLL_CYCLE_MS * 2);
     expect(await sidecar.requests()).toHaveLength(0);
+    await clearPlatform(printer);
+  });
 
+  test('a reprint of a tracked file started on the printer charges nothing', async () => {
+    await sidecar.reset();
+    await waitForAppReady(webui!, token, contextId);
+    const fileName = await uploadAndStart(webui!, token, contextId, {
+      materialMappings: MAPPINGS,
+      spoolAssignments: BOTH_SPOOLS,
+    });
+    await driveToPrinting(printer);
+    await emulatorSimulate(printer, { action: 'jump', percent: 100 });
+    await waitForSidecarCalls(sidecar, 2, webui);
+    await clearPlatform(printer);
+
+    await sidecar.reset();
+    await waitForAppReady(webui!, token, contextId);
+    await startOnPrinter(printer, fileName);
+    await driveToPrinting(printer);
+    await emulatorSimulate(printer, { action: 'jump', percent: 100 });
+    await sleep(POLL_CYCLE_MS * 2);
+    expect(await sidecar.requests()).toHaveLength(0);
     await clearPlatform(printer);
   });
 });
 
 // ============================================================================
-// Other station profiles — gating parity for the estimate-based path
+// Other station models
 // ============================================================================
 
-test.describe('Spoolman station tracking (station model parity)', () => {
+test.describe('Spoolman per-job tracking (station model parity)', () => {
   test.skip(!sidecarAvailable, sidecarSkipReason);
   test.describe.configure({ mode: 'serial' });
 
@@ -506,17 +494,7 @@ test.describe('Spoolman station tracking (station model parity)', () => {
   let token = '';
 
   test.beforeAll(async () => {
-    sidecar = await startSpoolmanSidecar();
-    webui = await startHeadlessWebUI({
-      printers,
-      configOverrides: {
-        SpoolmanEnabled: true,
-        SpoolmanServerUrl: sidecar.baseUrl,
-        SpoolmanUpdateMode: 'weight',
-      },
-      emulatorSimulationMode: 'auto',
-    });
-    token = await fetchApiToken(webui);
+    ({ sidecar, webui, token } = await startSuite(printers));
   });
 
   test.afterAll(async () => {
@@ -525,202 +503,108 @@ test.describe('Spoolman station tracking (station model parity)', () => {
   });
 
   for (const printer of printers) {
-    test(`two-tool completion deducts both spools (${printer.label})`, async () => {
+    test(`two-tool completion charges both spools (${printer.label})`, async () => {
       await sidecar.reset();
       const contextId = await resolveContextId(webui!, token, printer.serial);
-
-      await assignSlotSpool(webui!, token, contextId, 1, SLOT_1_SPOOL);
-      await assignSlotSpool(webui!, token, contextId, 2, SLOT_2_SPOOL);
-
-      await uploadAndStart(webui!, token, contextId, TWO_TOOL_FIXTURE, TWO_TOOL_MAPPINGS);
-
+      await waitForAppReady(webui!, token, contextId);
+      await uploadAndStart(webui!, token, contextId, { materialMappings: MAPPINGS, spoolAssignments: BOTH_SPOOLS });
       await driveToPrinting(printer);
       await emulatorSimulate(printer, { action: 'jump', percent: 100 });
 
-      const bySpool = await waitForSidecarCalls(sidecar, 2, webui);
-      expect(Math.abs((bySpool.get(SLOT_1_SPOOL) ?? 0) - TOOL_0_G)).toBeLessThanOrEqual(
-        G_TOLERANCE
-      );
-      expect(Math.abs((bySpool.get(SLOT_2_SPOOL) ?? 0) - TOOL_1_G)).toBeLessThanOrEqual(
-        G_TOLERANCE
-      );
-
+      const charges = await waitForSidecarCalls(sidecar, 2, webui);
+      expectCharge(charges, SPOOL_A, TOOL_0.usedG);
+      expectCharge(charges, SPOOL_B, TOOL_2.usedG);
       await clearPlatform(printer);
     });
   }
 });
 
 // ============================================================================
-// AD5X — printer-metadata tracking for single-material stored files (#p-3ejfg).
-// Files started through the app from the printer's own storage get a
-// printer-metadata estimate at start; deduction resolves to the sole assigned
-// slot's spool. Ambiguous (multi-material / spool-count) cases stay untracked.
+// AD5X stored files — started through the matching dialog
 // ============================================================================
 
-test.describe('Spoolman printer-metadata tracking (AD5X stored files)', () => {
-  const printer = DEFAULT_HEADLESS_PRINTERS.find(
-    (candidate) => candidate.serial === 'E2E-WEBUI-AD5X'
-  ) as HeadlessPrinter;
-
-  /**
-   * Seed a printer-resident file exactly like the emulator would report it in
-   * gcodeListDetail (GcodeFileEntry metadata), without any app upload. The
-   * scenario fileName registers the file in the emulator store so the start
-   * command can find it.
-   */
-  const seedStoredFile = async (
-    fileName: string,
-    metadata: { gcodeToolCnt: number; totalFilamentWeight: number; useMatlStation: boolean }
-  ): Promise<void> => {
-    const response = await fetch(`http://127.0.0.1:${String(printer.httpPort)}/__scenario`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        scenario: {
-          machineStatus: 'idle',
-          fileName,
-          currentFileMetadata: metadata,
-        },
-      }),
-    });
-    expect(response.ok).toBe(true);
-  };
-
-  /** Drive the running print to completion and wait for the terminal state. */
-  const completePrint = async (): Promise<void> => {
-    await emulatorSimulate(printer, { action: 'jump', percent: 100 });
-    await expect.poll(async () => emulatorStatus(printer), { timeout: 30_000 }).toBe('completed');
-    // One polling cycle of headroom so the tracker reacts to the terminal state.
-    await sleep(POLL_CYCLE_MS);
-  };
-
-  /** Start a stored (printer-resident) file through the app's job-start route. */
-  const startStoredJobViaApp = async (contextId: string, fileName: string): Promise<void> => {
-    const payload = await postJson<Record<string, unknown>>(
-      webui!,
-      token,
-      `/api/jobs/start?contextId=${contextId}`,
-      { filename: fileName, startNow: true, leveling: false }
-    );
-    expect(payload.error).toBeUndefined();
-  };
-
+test.describe('Spoolman per-job tracking (AD5X stored files)', () => {
   test.skip(!sidecarAvailable, sidecarSkipReason);
   test.describe.configure({ mode: 'serial' });
+
+  const printer: HeadlessPrinter = {
+    label: 'AD5X (emulated)',
+    model: 'adventurer-5x',
+    serial: 'E2E-SPOOL-AD5X-STORED',
+    checkCode: '123',
+    machineName: 'E2E-Spool-AD5X-Stored',
+    tcpPort: 8899,
+    httpPort: 8898,
+  };
 
   let sidecar: SpoolmanSidecar;
   let webui: HeadlessWebUI | null = null;
   let token = '';
+  let contextId = '';
+  let storedFile = '';
 
   test.beforeAll(async () => {
-    sidecar = await startSpoolmanSidecar();
-    webui = await startHeadlessWebUI({
-      printers: [printer],
-      configOverrides: {
-        SpoolmanEnabled: true,
-        SpoolmanServerUrl: sidecar.baseUrl,
-        SpoolmanUpdateMode: 'weight',
-      },
-      emulatorSimulationMode: 'auto',
-    });
-    token = await fetchApiToken(webui);
+    ({ sidecar, webui, token } = await startSuite([printer]));
+    contextId = await resolveContextId(webui, token, printer.serial);
+    // Put the file on the printer without starting it; the emulator reports
+    // the slicer's per-tool weights for it, as AD5X firmware does.
+    storedFile = await uploadAndStart(webui, token, contextId, { materialMappings: MAPPINGS, startNow: false });
   });
 
   test.afterAll(async () => {
     await webui?.stop();
-    await sidecar.stop();
+    await sidecar?.stop();
   });
 
-  test('tracks single-material stored prints with one PUT of the printer-reported weight', async () => {
+  const startStored = async (
+    spoolAssignments?: ReadonlyArray<{ toolId: number; spoolId: number | null }>
+  ): Promise<void> => {
+    const payload = await postJson<{ success?: boolean; error?: string }>(
+      webui!,
+      token,
+      `/api/jobs/start?contextId=${contextId}`,
+      { filename: storedFile, startNow: true, leveling: false, materialMappings: MAPPINGS, spoolAssignments }
+    );
+    expect(payload.error).toBeUndefined();
+    expect(payload.success).toBe(true);
+  };
+
+  test('completion charges the printer-reported weight of each tool', async () => {
     await sidecar.reset();
-    const contextId = await resolveContextId(webui!, token, printer.serial);
     await waitForAppReady(webui!, token, contextId);
-
-    await assignSlotSpool(webui!, token, contextId, 1, SLOT_1_SPOOL);
-
-    await seedStoredFile('stored-single.3mf', {
-      gcodeToolCnt: 1,
-      totalFilamentWeight: 130,
-      useMatlStation: true,
-    });
-    await startStoredJobViaApp(contextId, 'stored-single.3mf');
-
+    await startStored(BOTH_SPOOLS);
     await driveToPrinting(printer);
-    await completePrint();
+    await emulatorSimulate(printer, { action: 'jump', percent: 100 });
 
-    const bySpool = await waitForSidecarCalls(sidecar, 1, webui);
-    expect(Math.abs((bySpool.get(SLOT_1_SPOOL) ?? 0) - 130)).toBeLessThanOrEqual(G_TOLERANCE);
-
+    const charges = await waitForSidecarCalls(sidecar, 2, webui);
+    expectCharge(charges, SPOOL_A, TOOL_0.usedG);
+    expectCharge(charges, SPOOL_B, TOOL_2.usedG);
     await clearPlatform(printer);
   });
 
-  test('leaves multi-material stored prints untracked', async () => {
+  test('cancel charges linearly by progress (no gcode on hand)', async () => {
     await sidecar.reset();
-    const contextId = await resolveContextId(webui!, token, printer.serial);
     await waitForAppReady(webui!, token, contextId);
-
-    await assignSlotSpool(webui!, token, contextId, 1, SLOT_1_SPOOL);
-
-    await seedStoredFile('stored-multi.3mf', {
-      gcodeToolCnt: 2,
-      totalFilamentWeight: 190,
-      useMatlStation: true,
-    });
-    await startStoredJobViaApp(contextId, 'stored-multi.3mf');
-
+    await startStored(BOTH_SPOOLS);
     await driveToPrinting(printer);
-    await completePrint();
+    await emulatorSimulate(printer, { action: 'jump', percent: 40 });
+    await sleep(POLL_CYCLE_MS);
+    await cancelPrint(webui!, token, contextId);
 
-    const sidecarRequests = await sidecar.requests();
-    expect(sidecarRequests).toHaveLength(0);
-
+    const charges = await waitForSidecarCalls(sidecar, 2, webui);
+    expectCharge(charges, SPOOL_A, TOOL_0.usedG * 0.4);
+    expectCharge(charges, SPOOL_B, TOOL_2.usedG * 0.4);
     await clearPlatform(printer);
   });
 
-  test('leaves stored prints untracked when no slot has a spool assigned', async () => {
+  test('a stored-file start without spool choices is not tracked', async () => {
     await sidecar.reset();
-    const contextId = await resolveContextId(webui!, token, printer.serial);
     await waitForAppReady(webui!, token, contextId);
-
-    await assignSlotSpool(webui!, token, contextId, 1, null);
-
-    await seedStoredFile('stored-nospool.3mf', {
-      gcodeToolCnt: 1,
-      totalFilamentWeight: 130,
-      useMatlStation: true,
-    });
-    await startStoredJobViaApp(contextId, 'stored-nospool.3mf');
-
+    await startStored(undefined);
     await driveToPrinting(printer);
-    await completePrint();
-
-    const sidecarRequests = await sidecar.requests();
-    expect(sidecarRequests).toHaveLength(0);
-
-    await clearPlatform(printer);
-  });
-
-  test('leaves stored prints untracked when two slots have spools assigned', async () => {
-    await sidecar.reset();
-    const contextId = await resolveContextId(webui!, token, printer.serial);
-    await waitForAppReady(webui!, token, contextId);
-
-    await assignSlotSpool(webui!, token, contextId, 1, SLOT_1_SPOOL);
-    await assignSlotSpool(webui!, token, contextId, 2, SLOT_2_SPOOL);
-
-    await seedStoredFile('stored-twospools.3mf', {
-      gcodeToolCnt: 1,
-      totalFilamentWeight: 130,
-      useMatlStation: true,
-    });
-    await startStoredJobViaApp(contextId, 'stored-twospools.3mf');
-
-    await driveToPrinting(printer);
-    await completePrint();
-
-    const sidecarRequests = await sidecar.requests();
-    expect(sidecarRequests).toHaveLength(0);
-
+    await emulatorSimulate(printer, { action: 'jump', percent: 100 });
+    await sleep(POLL_CYCLE_MS * 2);
+    expect(await sidecar.requests()).toHaveLength(0);
     await clearPlatform(printer);
   });
 });
@@ -780,7 +664,7 @@ test.describe('Spoolman single-tool regression (Adventurer 5M Pro)', () => {
     );
     expect(select.error).toBeUndefined();
 
-    await uploadAndStart(webui!, token, contextId, SINGLE_TOOL_GCODE);
+    await uploadAndStart(webui!, token, contextId, { fileName: SINGLE_TOOL_GCODE });
 
     await driveToPrinting(printer);
     // Pin a known progress so the backend's filament-usage cache captures a

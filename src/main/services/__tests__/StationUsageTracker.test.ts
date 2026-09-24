@@ -1,29 +1,33 @@
 /**
- * @fileoverview Unit tests for StationUsageTracker: terminal-state deduction
- * math (full, fraction, exactly-once across paths, skip paths), the
- * slow-Spoolman exactly-once race (rapid distinct terminals), restart
- * persistence, and progress-fraction edge cases (0%, unknown, stale).
+ * @fileoverview Unit tests for StationUsageTracker: per-job deduction on
+ * completion and cancel (with and without a per-tool usage profile), the
+ * at-most-once guarantee, pause/resume, jobs that never start, recovery after
+ * an app restart, and Spoolman failure handling.
  */
 
+import { describe, expect, it } from '@jest/globals';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { EventEmitter } from 'events';
 import type { PrinterStatus } from '@shared/types/polling';
-import type { DeductionSummary } from '@shared/types/spoolman-tracking';
-import type { SpoolmanService } from '../SpoolmanService';
-import type { SpoolmanIntegrationService } from '../SpoolmanIntegrationService';
-import type { PrinterPollingService } from '../PrinterPollingService';
-import { JobEstimateStore } from '../JobEstimateStore';
-import { SlotSpoolStore } from '../SlotSpoolStore';
+import type { DeductionSummary, ToolUsageProfile, TrackedJob } from '@shared/types/spoolman-tracking';
+import { EventEmitter } from 'events';
 import { PrintStateMonitor } from '../PrintStateMonitor';
-import { planDeductionFraction, StationUsageTracker } from '../StationUsageTracker';
+import type { SpoolmanIntegrationService } from '../SpoolmanIntegrationService';
+import type { SpoolmanService } from '../SpoolmanService';
+import { ARM_TIMEOUT_MS, jobNameKey, sameJob, StationUsageTracker } from '../StationUsageTracker';
+import { TrackedJobStore } from '../TrackedJobStore';
 
 /** Recorded Spoolman usage update. */
 interface UsageCall {
   spoolId: number;
   usage: { use_weight?: number; use_length?: number };
 }
+
+class FakePollingService extends EventEmitter {}
+
+const KEY = 'SERIAL-1';
+const FILE = 'benchy.3mf';
 
 function makeService(calls: UsageCall[], shouldFail = false): SpoolmanService {
   return {
@@ -32,532 +36,319 @@ function makeService(calls: UsageCall[], shouldFail = false): SpoolmanService {
         throw new Error('spoolman unreachable');
       }
       calls.push({ spoolId, usage });
-      return {} as Awaited<ReturnType<SpoolmanService['updateUsage']>>;
+      return {};
     },
   } as unknown as SpoolmanService;
 }
 
 function makeIntegration(mode: 'weight' | 'length' = 'weight'): SpoolmanIntegrationService {
-  return {
-    getUpdateMode: () => mode,
-  } as unknown as SpoolmanIntegrationService;
+  return { getUpdateMode: () => mode } as unknown as SpoolmanIntegrationService;
 }
 
 function status(state: string, currentJob?: { fileName: string; percent: number }): PrinterStatus {
   return {
     state,
     currentJob: currentJob
-      ? {
-          fileName: currentJob.fileName,
-          progress: { percentage: currentJob.percent },
-        }
-      : undefined,
+      ? { fileName: currentJob.fileName, progress: { percentage: currentJob.percent } }
+      : null,
   } as unknown as PrinterStatus;
+}
+
+/** Tool 0 prints the first half of the file, tool 1 the second half. */
+const SPLIT_PROFILE: ToolUsageProfile = {
+  sampleCount: 4,
+  perTool: {
+    '0': [0, 0.5, 1, 1, 1],
+    '1': [0, 0, 0, 0.5, 1],
+  },
+};
+
+function trackedJob(overrides: Partial<TrackedJob> = {}): TrackedJob {
+  return {
+    fileName: FILE,
+    source: 'upload-3mf',
+    tools: [
+      { toolId: 0, slotId: 1, spoolId: 11, usedG: 10, usedM: 3 },
+      { toolId: 1, slotId: 3, spoolId: 22, usedG: 20, usedM: 6 },
+    ],
+    usageProfile: null,
+    armedAt: new Date(1_000_000).toISOString(),
+    startedAt: null,
+    lastProgress: null,
+    lastProgressAt: null,
+    ...overrides,
+  };
 }
 
 interface Harness {
   tracker: StationUsageTracker;
-  monitor: PrintStateMonitor;
-  polling: EventEmitter;
-  estimates: JobEstimateStore;
-  slots: SlotSpoolStore;
+  polling: FakePollingService;
+  store: TrackedJobStore;
   calls: UsageCall[];
   summaries: DeductionSummary[];
+  clock: { now: number };
 }
 
 function makeHarness(options?: {
+  job?: TrackedJob;
   mode?: 'weight' | 'length';
   serviceFailure?: boolean;
-  estimates?: Array<{ toolId: number; usedG: number | null; usedM?: number | null }>;
+  store?: TrackedJobStore;
+  prime?: boolean;
 }): Harness {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'station-tracker-test-'));
-  const estimates = new JobEstimateStore(path.join(dir, 'estimates.json'));
-  const slots = new SlotSpoolStore(path.join(dir, 'slots.json'));
+  const store = options?.store ?? new TrackedJobStore(path.join(dir, 'jobs.json'));
+  if (options?.job) {
+    store.setJob(KEY, options.job);
+  }
   const calls: UsageCall[] = [];
   const summaries: DeductionSummary[] = [];
-
-  if (options?.estimates) {
-    estimates.captureEstimate('ctx-1', {
-      fileName: 'benchy.3mf',
-      mappings: options.estimates.map((tool) => ({ toolId: tool.toolId, slotId: tool.toolId + 1 })),
-      perTool: options.estimates.map((tool) => ({
-        toolId: tool.toolId,
-        slotId: tool.toolId + 1,
-        usedG: tool.usedG,
-        usedM: tool.usedM !== undefined ? tool.usedM : tool.usedG !== null ? tool.usedG / 4 : null,
-      })),
-      capturedAt: new Date().toISOString(),
-    });
-  }
+  const clock = { now: 1_000_000 };
 
   const tracker = new StationUsageTracker({
     contextId: 'ctx-1',
-    estimates,
-    slots,
+    jobs: store,
     createSpoolmanService: () => makeService(calls, options?.serviceFailure ?? false),
     integrationService: makeIntegration(options?.mode ?? 'weight'),
     onSummary: (summary) => summaries.push(summary),
+    resolveStoreKey: () => KEY,
+    now: () => clock.now,
   });
 
   const monitor = new PrintStateMonitor('ctx-1');
-  const polling = new EventEmitter();
-  monitor.setPollingService(polling as unknown as PrinterPollingService);
-  tracker.setMonitors(monitor, polling as unknown as PrinterPollingService);
-  // Prime the monitor's initial state (its first status only records state;
-  // lifecycle events fire on transitions, exactly like real polling).
-  polling.emit('status-updated', status('Ready'));
-
-  return { tracker, monitor, polling, estimates, slots, calls, summaries };
+  const polling = new FakePollingService();
+  monitor.setPollingService(polling as never);
+  tracker.setMonitors(monitor, polling as never);
+  if (options?.prime !== false) {
+    // The monitor records its first status without emitting; lifecycle
+    // events fire on transitions, exactly like real polling.
+    polling.emit('status-updated', status('Ready'));
+  }
+  return { tracker, polling, store, calls, summaries, clock };
 }
 
-/** Let async terminal handlers settle. */
+/** Let async deduction settle. */
 function settle(): Promise<void> {
   return new Promise((resolve) => setImmediate(resolve));
 }
 
-describe('planDeductionFraction', () => {
-  it('always plans a full deduction on completion', () => {
-    expect(planDeductionFraction('completed', null, null)).toEqual({ fraction: 1 });
-    expect(planDeductionFraction('completed', { fileName: 'x', percent: 3, at: 0 }, 'x')).toEqual({
-      fraction: 1,
-    });
-  });
+function bySpool(calls: UsageCall[]): Map<number, number> {
+  return new Map(calls.map((call) => [call.spoolId, call.usage.use_weight ?? call.usage.use_length ?? 0]));
+}
 
-  it('refuses to guess when no progress was observed', () => {
-    const plan = planDeductionFraction('cancelled', null, null);
-    expect(plan.fraction).toBeNull();
-    expect(plan.reason).toMatch(/no printer-reported progress/i);
-  });
-
-  it('refuses to guess when progress was zero', () => {
-    const plan = planDeductionFraction('cancelled', { fileName: 'x', percent: 0, at: 1 }, 'x');
-    expect(plan.fraction).toBeNull();
-  });
-
-  it('treats a progress signal for a different file as stale', () => {
-    const plan = planDeductionFraction('cancelled', { fileName: 'a', percent: 40, at: 1 }, 'b');
-    expect(plan.fraction).toBeNull();
-    expect(plan.reason).toMatch(/different job/);
-  });
-
-  it('uses the observed percentage as the fraction', () => {
-    expect(planDeductionFraction('cancelled', { fileName: 'x', percent: 40, at: 1 }, 'x').fraction).toBe(0.4);
-    expect(planDeductionFraction('error', { fileName: 'x', percent: 12.5, at: 1 }, 'x').fraction).toBe(0.125);
-  });
-
-  it('clamps fractions above 100%', () => {
-    expect(planDeductionFraction('cancelled', { fileName: 'x', percent: 250, at: 1 }, 'x').fraction).toBe(1);
+describe('job name matching', () => {
+  it('ignores directory, extension and case', () => {
+    expect(jobNameKey('/usr/data/gcodes/Benchy.3MF')).toBe('benchy');
+    expect(sameJob('benchy.3mf', 'Benchy.gcode')).toBe(true);
+    expect(sameJob('benchy.3mf', 'other.3mf')).toBe(false);
+    expect(sameJob(null, 'benchy.3mf')).toBe(false);
   });
 });
 
 describe('StationUsageTracker', () => {
-  describe('completion path', () => {
-    it('deducts the full per-tool estimates on completion (weight mode)', async () => {
-      const harness = makeHarness({
-        estimates: [
-          { toolId: 0, usedG: 11.28 },
-          { toolId: 1, usedG: 8.64 },
-        ],
-      });
-      harness.slots.setSpoolForSlot('ctx-1', 1, 101);
-      harness.slots.setSpoolForSlot('ctx-1', 2, 102);
-
-      harness.polling.emit('status-updated', status('Printing', { fileName: 'benchy.3mf', percent: 10 }));
-      harness.polling.emit('status-updated', status('Completed', { fileName: 'benchy.3mf', percent: 100 }));
-      await settle();
-
-      expect(harness.calls).toHaveLength(2);
-      expect(harness.calls[0]).toEqual({ spoolId: 101, usage: { use_weight: 11.28 } });
-      expect(harness.calls[1]).toEqual({ spoolId: 102, usage: { use_weight: 8.64 } });
-      expect(harness.summaries[0]?.deductedCount).toBe(2);
-      expect(harness.summaries[0]?.skippedCount).toBe(0);
-    });
-
-    it('deducts millimetres in length mode', async () => {
-      const harness = makeHarness({
-        mode: 'length',
-        estimates: [{ toolId: 0, usedG: 4, usedM: 3 }],
-      });
-      harness.slots.setSpoolForSlot('ctx-1', 1, 7);
-
-      harness.polling.emit('status-updated', status('Printing', { fileName: 'benchy.3mf', percent: 50 }));
-      harness.polling.emit('status-updated', status('Completed', { fileName: 'benchy.3mf', percent: 100 }));
-      await settle();
-
-      expect(harness.calls).toEqual([{ spoolId: 7, usage: { use_length: 3000 } }]);
-    });
-  });
-
-  describe('cancel path', () => {
-    it('deducts the observed fraction of the estimates', async () => {
-      const harness = makeHarness({
-        estimates: [
-          { toolId: 0, usedG: 11.28 },
-          { toolId: 1, usedG: 8.64 },
-        ],
-      });
-      harness.slots.setSpoolForSlot('ctx-1', 1, 101);
-      harness.slots.setSpoolForSlot('ctx-1', 2, 102);
-
-      harness.polling.emit('status-updated', status('Printing', { fileName: 'benchy.3mf', percent: 40 }));
-      // Cancel strips the job the same way the transformer does for real printers.
-      harness.polling.emit('status-updated', status('Cancelled'));
-      await settle();
-
-      expect(harness.calls).toHaveLength(2);
-      expect(harness.calls[0]?.usage.use_weight).toBeCloseTo(4.51, 2); // 11.28 × 0.4
-      expect(harness.calls[1]?.usage.use_weight).toBeCloseTo(3.46, 2); // 8.64 × 0.4
-    });
-
-    it('deducts nothing without a progress signal', async () => {
-      const harness = makeHarness({ estimates: [{ toolId: 0, usedG: 11.28 }] });
-      harness.slots.setSpoolForSlot('ctx-1', 1, 101);
-
-      harness.polling.emit('status-updated', status('Cancelled'));
-      await settle();
-
-      expect(harness.calls).toHaveLength(0);
-      // No job name and no progress were ever observed, so there is nothing
-      // trustworthy to deduct from.
-      expect(harness.summaries.every((summary) => summary.deductedCount === 0)).toBe(true);
-    });
-
-    it('deducts nothing when the observed progress was 0%', async () => {
-      const harness = makeHarness({ estimates: [{ toolId: 0, usedG: 11.28 }] });
-      harness.slots.setSpoolForSlot('ctx-1', 1, 101);
-
-      harness.polling.emit('status-updated', status('Printing', { fileName: 'benchy.3mf', percent: 0 }));
-      harness.polling.emit('status-updated', status('Cancelled'));
-      await settle();
-
-      expect(harness.calls).toHaveLength(0);
-    });
-
-    it('ignores a stale progress snapshot from a different job', async () => {
-      const harness = makeHarness({ estimates: [{ toolId: 0, usedG: 11.28 }] });
-      harness.slots.setSpoolForSlot('ctx-1', 1, 101);
-
-      // Progress seen for an older file, then a terminal event that names a
-      // different job: no trustworthy signal → no deduction.
-      harness.polling.emit('status-updated', status('Printing', { fileName: 'old.3mf', percent: 40 }));
-      harness.polling.emit('status-updated', status('Cancelled'));
-      await settle();
-
-      expect(harness.calls).toHaveLength(0);
-    });
-  });
-
-  describe('pause/resume path', () => {
-    it('deducts nothing for pause and resume transitions', async () => {
-      const harness = makeHarness({ estimates: [{ toolId: 0, usedG: 11.28 }] });
-      harness.slots.setSpoolForSlot('ctx-1', 1, 101);
-
-      harness.polling.emit('status-updated', status('Printing', { fileName: 'benchy.3mf', percent: 20 }));
-      harness.polling.emit('status-updated', status('Paused', { fileName: 'benchy.3mf', percent: 20 }));
-      harness.polling.emit('status-updated', status('Printing', { fileName: 'benchy.3mf', percent: 30 }));
-      await settle();
-
-      expect(harness.calls).toHaveLength(0);
-      expect(harness.summaries).toHaveLength(0);
-    });
-  });
-
-  describe('exactly-once across terminal paths', () => {
-    it('does not deduct again when completion follows a cancel attempt', async () => {
-      const harness = makeHarness({ estimates: [{ toolId: 0, usedG: 10 }] });
-      harness.slots.setSpoolForSlot('ctx-1', 1, 5);
-
-      harness.polling.emit('status-updated', status('Printing', { fileName: 'benchy.3mf', percent: 30 }));
-      harness.polling.emit('status-updated', status('Cancelled'));
-      await settle();
-      // A late Completed poll for the same job must not re-deduct.
-      harness.polling.emit('status-updated', status('Completed', { fileName: 'benchy.3mf', percent: 100 }));
-      await settle();
-
-      expect(harness.calls).toHaveLength(1);
-    });
-
-    it('keeps exactly-once across repeated identical terminal polls', async () => {
-      const harness = makeHarness({ estimates: [{ toolId: 0, usedG: 10 }] });
-      harness.slots.setSpoolForSlot('ctx-1', 1, 5);
-
-      harness.polling.emit('status-updated', status('Printing', { fileName: 'benchy.3mf', percent: 5 }));
-      harness.polling.emit('status-updated', status('Completed', { fileName: 'benchy.3mf', percent: 100 }));
-      await settle();
-      // The printer keeps reporting Completed on subsequent polls; only the
-      // transition fires, and the ledger guards even that.
-      harness.polling.emit('status-updated', status('Completed', { fileName: 'benchy.3mf', percent: 100 }));
-      await settle();
-
-      expect(harness.calls).toHaveLength(1);
-    });
-
-    it('re-deductions a re-printed file as a new job key', async () => {
-      const harness = makeHarness({ estimates: [{ toolId: 0, usedG: 10 }] });
-      harness.slots.setSpoolForSlot('ctx-1', 1, 5);
-
-      harness.polling.emit('status-updated', status('Completed', { fileName: 'benchy.3mf', percent: 100 }));
-      await settle();
-      // New print of the same file: new startedAt marker → deductible again.
-      harness.polling.emit('status-updated', status('Ready'));
-      harness.polling.emit('status-updated', status('Printing', { fileName: 'benchy.3mf', percent: 1 }));
-      harness.polling.emit('status-updated', status('Completed', { fileName: 'benchy.3mf', percent: 100 }));
-      await settle();
-
-      expect(harness.calls).toHaveLength(2);
-    });
-
-    it('survives a tracker restart mid-print and deducts exactly once at completion', async () => {
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'station-restart-test-'));
-      const estimates = new JobEstimateStore(path.join(dir, 'estimates.json'));
-      const slots = new SlotSpoolStore(path.join(dir, 'slots.json'));
-      estimates.captureEstimate('ctx-1', {
-        fileName: 'benchy.3mf',
-        mappings: [{ toolId: 0, slotId: 1 }],
-        perTool: [{ toolId: 0, slotId: 1, usedG: 10, usedM: 2.5 }],
-        capturedAt: new Date().toISOString(),
-      });
-      slots.setSpoolForSlot('ctx-1', 1, 5);
-
-      const calls: UsageCall[] = [];
-      const buildTracker = (): StationUsageTracker =>
-        new StationUsageTracker({
-          contextId: 'ctx-1',
-          estimates,
-          slots,
-          createSpoolmanService: () => makeService(calls),
-          integrationService: makeIntegration('weight'),
-        });
-
-      // Phase 1: print observed at 25%, no terminal event yet.
-      const first = buildTracker();
-      const monitor = new PrintStateMonitor('ctx-1');
-      const polling = new EventEmitter();
-      monitor.setPollingService(polling as unknown as PrinterPollingService);
-      first.setMonitors(monitor, polling as unknown as PrinterPollingService);
-      polling.emit('status-updated', status('Ready'));
-      polling.emit('status-updated', status('Printing', { fileName: 'benchy.3mf', percent: 25 }));
-      await settle();
-      expect(calls).toHaveLength(0);
-
-      // Phase 2 ("restart"): fresh tracker + monitor over the same persisted
-      // stores; the still-running print completes.
-      const second = buildTracker();
-      const monitor2 = new PrintStateMonitor('ctx-1');
-      const polling2 = new EventEmitter();
-      monitor2.setPollingService(polling2 as unknown as PrinterPollingService);
-      second.setMonitors(monitor2, polling2 as unknown as PrinterPollingService);
-      polling2.emit('status-updated', status('Printing', { fileName: 'benchy.3mf', percent: 90 }));
-      polling2.emit('status-updated', status('Completed', { fileName: 'benchy.3mf', percent: 100 }));
-      await settle();
-
-      expect(calls).toHaveLength(1);
-      expect(calls[0]?.usage.use_weight).toBe(10);
-    });
-
-    it('holds exactly-once while a slow Spoolman call is in flight (rapid distinct terminals)', async () => {
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'station-tracker-race-'));
-      const estimates = new JobEstimateStore(path.join(dir, 'estimates.json'));
-      const slots = new SlotSpoolStore(path.join(dir, 'slots.json'));
-      estimates.captureEstimate('ctx-1', {
-        fileName: 'benchy.3mf',
-        mappings: [
-          { toolId: 0, slotId: 1 },
-          { toolId: 1, slotId: 2 },
-        ],
-        perTool: [
-          { toolId: 0, slotId: 1, usedG: 11.28, usedM: 2.8 },
-          { toolId: 1, slotId: 2, usedG: 8.64, usedM: 2.2 },
-        ],
-        capturedAt: new Date().toISOString(),
-      });
-      slots.setSpoolForSlot('ctx-1', 1, 101);
-      slots.setSpoolForSlot('ctx-1', 2, 102);
-
-      const calls: UsageCall[] = [];
-      // Spoolman is SLOW: every updateUsage parks on a deferred we control,
-      // so the deduction stays in-flight across the two terminal emits.
-      const parked: Array<() => void> = [];
-      const slowService: SpoolmanService = {
-        async updateUsage(
-          spoolId: number,
-          usage: { use_weight?: number; use_length?: number }
-        ) {
-          calls.push({ spoolId, usage });
-          await new Promise<void>((resolve) => {
-            parked.push(resolve);
-          });
-          return {};
-        },
-      } as unknown as SpoolmanService;
-
-      const summaries: DeductionSummary[] = [];
-      const tracker = new StationUsageTracker({
-        contextId: 'ctx-1',
-        estimates,
-        slots,
-        createSpoolmanService: () => slowService,
-        integrationService: makeIntegration('weight'),
-        onSummary: (summary) => summaries.push(summary),
-      });
-      const monitor = new PrintStateMonitor('ctx-1');
-      const polling = new EventEmitter();
-      monitor.setPollingService(polling as unknown as PrinterPollingService);
-      tracker.setMonitors(monitor, polling as unknown as PrinterPollingService);
-      polling.emit('status-updated', status('Ready'));
-
-      polling.emit('status-updated', status('Printing', { fileName: 'benchy.3mf', percent: 40 }));
-      // Two RAPID distinct terminal transitions (Cancelled → Error) while the
-      // Cancelled-path Spoolman call is still parked in flight.
-      polling.emit('status-updated', status('Cancelled'));
-      polling.emit('status-updated', status('Error'));
-
-      // The Cancelled deduction is in flight; the Error path must already
-      // have been rejected by the synchronously reserved ledger entry.
-      expect(calls).toHaveLength(1);
-      expect(parked).toHaveLength(1);
-
-      // Release parked calls; sequential per-tool calls park again, so loop
-      // until the whole deduction has drained.
-      for (let round = 0; round < 6 && parked.length > 0; round++) {
-          for (const resolve of parked.splice(0)) {
-            resolve();
-          }
-          await settle();
-      }
-
-      // Exactly one deduction set lands: each tool once, never duplicated.
-      expect(calls).toHaveLength(2);
-      expect(calls[0]?.spoolId).toBe(101);
-      expect(calls[1]?.spoolId).toBe(102);
-      expect(calls[0]?.usage.use_weight).toBe(4.51); // 11.28 × 0.4, rounded
-      expect(calls[1]?.usage.use_weight).toBe(3.46); // 8.64 × 0.4, rounded
-      expect(summaries).toHaveLength(1);
-      expect(summaries[0]?.terminal).toBe('cancelled');
-      expect(summaries[0]?.deductedCount).toBe(2);
-    });
-  });
-
-  describe('skip paths', () => {
-    it('skips tools with no spool assigned to their slot', async () => {
-      const harness = makeHarness({
-        estimates: [
-          { toolId: 0, usedG: 11.28 },
-          { toolId: 1, usedG: 8.64 },
-        ],
-      });
-      harness.slots.setSpoolForSlot('ctx-1', 1, 101);
-      // Slot 2 unassigned.
-
-      harness.polling.emit('status-updated', status('Completed', { fileName: 'benchy.3mf', percent: 100 }));
-      await settle();
-
-      expect(harness.calls).toHaveLength(1);
-      const summary = harness.summaries[0];
-      expect(summary?.deductedCount).toBe(1);
-      expect(summary?.skippedCount).toBe(1);
-      expect(summary?.tools[1]?.reason).toMatch(/no spool assigned to slot 2/i);
-    });
-
-    it('skips tools with unknown estimates', async () => {
-      const harness = makeHarness({
-        estimates: [
-          { toolId: 0, usedG: null },
-          { toolId: 1, usedG: 8.64 },
-        ],
-      });
-      harness.slots.setSpoolForSlot('ctx-1', 1, 101);
-      harness.slots.setSpoolForSlot('ctx-1', 2, 102);
-
-      harness.polling.emit('status-updated', status('Completed', { fileName: 'benchy.3mf', percent: 100 }));
-      await settle();
-
-      expect(harness.calls).toHaveLength(1);
-      expect(harness.summaries[0]?.tools[0]?.reason).toMatch(/no grams estimate/i);
-    });
-
-    it('skips grams-only tools in length mode instead of guessing density', async () => {
-      const harness = makeHarness({
-        mode: 'length',
-        estimates: [{ toolId: 0, usedG: 11.28, usedM: null }],
-      });
-      harness.slots.setSpoolForSlot('ctx-1', 1, 101);
-
-      harness.polling.emit('status-updated', status('Completed', { fileName: 'benchy.3mf', percent: 100 }));
-      await settle();
-
-      expect(harness.calls).toHaveLength(0);
-      expect(harness.summaries[0]?.skippedCount).toBe(1);
-    });
-
-    it('records a spoolman API failure as a skipped tool without throwing', async () => {
-      const harness = makeHarness({ estimates: [{ toolId: 0, usedG: 10 }], serviceFailure: true });
-      harness.slots.setSpoolForSlot('ctx-1', 1, 5);
-
-      harness.polling.emit('status-updated', status('Completed', { fileName: 'benchy.3mf', percent: 100 }));
-      await settle();
-
-      expect(harness.calls).toHaveLength(0);
-      expect(harness.summaries[0]?.tools[0]?.reason).toMatch(/spoolman update failed/i);
-    });
-
-    it('makes no deduction for untracked jobs (no estimate record)', async () => {
-      const harness = makeHarness();
-      harness.slots.setSpoolForSlot('ctx-1', 1, 5);
-
-      harness.polling.emit('status-updated', status('Printing', { fileName: 'mystery.gcode', percent: 50 }));
-      harness.polling.emit('status-updated', status('Completed', { fileName: 'mystery.gcode', percent: 100 }));
-      await settle();
-
-      expect(harness.calls).toHaveLength(0);
-      // The untracked job is still surfaced (empty summary) for the panel.
-      expect(harness.summaries).toHaveLength(1);
-      expect(harness.summaries[0]?.fileName).toBe('mystery.gcode');
-      expect(harness.summaries[0]?.deductedCount).toBe(0);
-    });
-
-    it('makes no deduction when spoolman is not configured', async () => {
-      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'station-unconfigured-'));
-      const estimates = new JobEstimateStore(path.join(dir, 'e.json'));
-      const slots = new SlotSpoolStore(path.join(dir, 's.json'));
-      estimates.captureEstimate('ctx-1', {
-        fileName: 'benchy.3mf',
-        mappings: [{ toolId: 0, slotId: 1 }],
-        perTool: [{ toolId: 0, slotId: 1, usedG: 10, usedM: 2 }],
-        capturedAt: new Date().toISOString(),
-      });
-      slots.setSpoolForSlot('ctx-1', 1, 5);
-
-      const calls: UsageCall[] = [];
-      const tracker = new StationUsageTracker({
-        contextId: 'ctx-1',
-        estimates,
-        slots,
-        createSpoolmanService: () => null,
-        integrationService: makeIntegration('weight'),
-      });
-      const monitor = new PrintStateMonitor('ctx-1');
-      const polling = new EventEmitter();
-      monitor.setPollingService(polling as unknown as PrinterPollingService);
-      tracker.setMonitors(monitor, polling as unknown as PrinterPollingService);
-
-      polling.emit('status-updated', status('Completed', { fileName: 'benchy.3mf', percent: 100 }));
-      await settle();
-
-      expect(calls).toHaveLength(0);
-    });
-  });
-
-  it('exposes the last summary and slot assignments for the panel', async () => {
-    const harness = makeHarness({ estimates: [{ toolId: 0, usedG: 10 }] });
-    harness.slots.setSpoolForSlot('ctx-1', 1, 33);
-
-    expect(harness.tracker.getSlotAssignments().get(1)).toBe(33);
-    expect(harness.tracker.getLastSummary()).toBeNull();
-
-    harness.polling.emit('status-updated', status('Completed', { fileName: 'benchy.3mf', percent: 100 }));
+  it('charges each spool its full estimate when the job completes', async () => {
+    const h = makeHarness({ job: trackedJob() });
+    h.polling.emit('status-updated', status('Printing', { fileName: FILE, percent: 50 }));
+    h.polling.emit('status-updated', status('Completed', { fileName: FILE, percent: 100 }));
     await settle();
 
-    expect(harness.tracker.getLastSummary()?.fileName).toBe('benchy.3mf');
+    expect(bySpool(h.calls)).toEqual(new Map([[11, 10], [22, 20]]));
+    expect(h.summaries).toHaveLength(1);
+    expect(h.summaries[0]).toMatchObject({ terminal: 'completed', progress: 100, approximate: false });
+    expect(h.store.getJob(KEY)).toBeNull();
+  });
+
+  it('charges a cancelled job per tool from the usage profile', async () => {
+    const h = makeHarness({ job: trackedJob({ usageProfile: SPLIT_PROFILE }) });
+    h.polling.emit('status-updated', status('Printing', { fileName: FILE, percent: 40 }));
+    h.polling.emit('status-updated', status('Cancelled'));
+    await settle();
+
+    // 40% of the bytes: tool 0 is 80% done, tool 1 has not started.
+    expect(bySpool(h.calls)).toEqual(new Map([[11, 8]]));
+    const summary = h.summaries[0];
+    expect(summary.terminal).toBe('cancelled');
+    expect(summary.deductedCount).toBe(1);
+    expect(summary.tools.find((tool) => tool.toolId === 1)).toMatchObject({
+      status: 'skipped',
+      fraction: 0,
+    });
+  });
+
+  it('charges a cancelled job linearly when there is no usage profile', async () => {
+    const h = makeHarness({ job: trackedJob() });
+    h.polling.emit('status-updated', status('Printing', { fileName: FILE, percent: 40 }));
+    h.polling.emit('status-updated', status('Error'));
+    await settle();
+
+    expect(bySpool(h.calls)).toEqual(new Map([[11, 4], [22, 8]]));
+    expect(h.summaries[0].terminal).toBe('error');
+  });
+
+  it('charges nothing for a cancel before any progress was seen', async () => {
+    const h = makeHarness({ job: trackedJob() });
+    h.polling.emit('status-updated', status('Printing', { fileName: FILE, percent: 0 }));
+    h.polling.emit('status-updated', status('Cancelled'));
+    await settle();
+
+    expect(h.calls).toHaveLength(0);
+    expect(h.summaries[0].skippedCount).toBe(2);
+    expect(h.store.getJob(KEY)).toBeNull();
+  });
+
+  it('charges nothing on pause and resume, then in full on completion', async () => {
+    const h = makeHarness({ job: trackedJob() });
+    h.polling.emit('status-updated', status('Printing', { fileName: FILE, percent: 25 }));
+    h.polling.emit('status-updated', status('Paused', { fileName: FILE, percent: 25 }));
+    h.polling.emit('status-updated', status('Heating', { fileName: '', percent: 25 }));
+    h.polling.emit('status-updated', status('Printing', { fileName: FILE, percent: 30 }));
+    await settle();
+    expect(h.calls).toHaveLength(0);
+    expect(h.store.getJob(KEY)?.lastProgress).toBe(30);
+
+    h.polling.emit('status-updated', status('Completed', { fileName: FILE, percent: 100 }));
+    await settle();
+    expect(bySpool(h.calls)).toEqual(new Map([[11, 10], [22, 20]]));
+  });
+
+  it('charges a job at most once when two end events arrive', async () => {
+    const h = makeHarness({ job: trackedJob() });
+    h.polling.emit('status-updated', status('Printing', { fileName: FILE, percent: 50 }));
+    await h.tracker.deductTrackedJob('cancelled', false);
+    await h.tracker.deductTrackedJob('error', false);
+    h.polling.emit('status-updated', status('Cancelled'));
+    await settle();
+
+    expect(h.calls).toHaveLength(2);
+    expect(h.summaries).toHaveLength(1);
+  });
+
+  it('drops the spool choice when the printer prints a different file', async () => {
+    const h = makeHarness({ job: trackedJob() });
+    h.polling.emit('status-updated', status('Printing', { fileName: 'other.3mf', percent: 10 }));
+    h.polling.emit('status-updated', status('Completed', { fileName: 'other.3mf', percent: 100 }));
+    await settle();
+
+    expect(h.store.getJob(KEY)).toBeNull();
+    expect(h.calls).toHaveLength(0);
+  });
+
+  it('ignores the end of an earlier print while the tracked job waits to start', async () => {
+    const h = makeHarness({ job: trackedJob(), prime: false });
+    h.polling.emit('status-updated', status('Printing', { fileName: '', percent: 90 }));
+    h.polling.emit('status-updated', status('Completed', { fileName: '', percent: 100 }));
+    await settle();
+
+    expect(h.calls).toHaveLength(0);
+    expect(h.store.getJob(KEY)).not.toBeNull();
+  });
+
+  it('drops a job that does not start within the arm timeout', () => {
+    const h = makeHarness({ job: trackedJob() });
+    h.clock.now += ARM_TIMEOUT_MS + 1;
+    h.polling.emit('status-updated', status('Ready'));
+    expect(h.store.getJob(KEY)).toBeNull();
+  });
+
+  it('keeps a started job through a heating status without a file name', async () => {
+    const h = makeHarness({ job: trackedJob() });
+    h.polling.emit('status-updated', status('Printing', { fileName: FILE, percent: 60 }));
+    h.polling.emit('status-updated', status('Heating'));
+    await settle();
+    expect(h.store.getJob(KEY)).not.toBeNull();
+    expect(h.calls).toHaveLength(0);
+  });
+
+  it('charges the last progress when a started job is found idle', async () => {
+    const h = makeHarness({ job: trackedJob() });
+    h.polling.emit('status-updated', status('Printing', { fileName: FILE, percent: 60 }));
+    h.polling.emit('status-updated', status('Ready'));
+    await settle();
+
+    expect(bySpool(h.calls)).toEqual(new Map([[11, 6], [22, 12]]));
+    expect(h.summaries[0]).toMatchObject({ terminal: 'interrupted', approximate: true, progress: 60 });
+  });
+
+  it('matches a job the printer reports by its gcode name', async () => {
+    const h = makeHarness({ job: trackedJob() });
+    h.polling.emit('status-updated', status('Printing', { fileName: 'benchy.gcode', percent: 50 }));
+    h.polling.emit('status-updated', status('Completed', { fileName: 'benchy.gcode', percent: 100 }));
+    await settle();
+    expect(h.calls).toHaveLength(2);
+  });
+
+  it('uses millimetres in length mode', async () => {
+    const h = makeHarness({ job: trackedJob(), mode: 'length' });
+    h.polling.emit('status-updated', status('Printing', { fileName: FILE, percent: 50 }));
+    h.polling.emit('status-updated', status('Cancelled'));
+    await settle();
+    expect(h.calls.map((call) => call.usage)).toEqual([{ use_length: 1500 }, { use_length: 3000 }]);
+  });
+
+  it('reports Spoolman failures as skipped tools and still ends the job', async () => {
+    const h = makeHarness({ job: trackedJob(), serviceFailure: true });
+    h.polling.emit('status-updated', status('Printing', { fileName: FILE, percent: 50 }));
+    h.polling.emit('status-updated', status('Completed', { fileName: FILE, percent: 100 }));
+    await settle();
+
+    expect(h.summaries[0].skippedCount).toBe(2);
+    expect(h.summaries[0].tools[0].reason).toContain('spoolman update failed');
+    expect(h.store.getJob(KEY)).toBeNull();
+  });
+
+  it('skips tools without an estimate', async () => {
+    const job = trackedJob();
+    const h = makeHarness({
+      job: { ...job, tools: [{ ...job.tools[0], usedG: null }, job.tools[1]] },
+    });
+    h.polling.emit('status-updated', status('Printing', { fileName: FILE, percent: 50 }));
+    h.polling.emit('status-updated', status('Completed', { fileName: FILE, percent: 100 }));
+    await settle();
+    expect(bySpool(h.calls)).toEqual(new Map([[22, 20]]));
+  });
+
+  describe('after an app restart', () => {
+    function restartedStore(lastProgress: number): TrackedJobStore {
+      const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'station-restart-test-'));
+      const file = path.join(dir, 'jobs.json');
+      const before = new TrackedJobStore(file);
+      before.setJob(
+        KEY,
+        trackedJob({
+          startedAt: new Date(900_000).toISOString(),
+          lastProgress,
+          lastProgressAt: new Date(950_000).toISOString(),
+        })
+      );
+      return new TrackedJobStore(file);
+    }
+
+    it('charges the saved progress when the printer is idle', async () => {
+      const h = makeHarness({ store: restartedStore(55), prime: false });
+      h.polling.emit('status-updated', status('Ready'));
+      await settle();
+      expect(bySpool(h.calls)).toEqual(new Map([[11, 5.5], [22, 11]]));
+      expect(h.summaries[0]).toMatchObject({ terminal: 'interrupted', approximate: true });
+    });
+
+    it('charges in full when the printer reports the job completed', async () => {
+      const h = makeHarness({ store: restartedStore(80), prime: false });
+      h.polling.emit('status-updated', status('Completed', { fileName: FILE, percent: 100 }));
+      await settle();
+      expect(bySpool(h.calls)).toEqual(new Map([[11, 10], [22, 20]]));
+      expect(h.summaries[0]).toMatchObject({ terminal: 'completed', approximate: true });
+    });
+
+    it('keeps tracking when the printer still prints the job', async () => {
+      const h = makeHarness({ store: restartedStore(40), prime: false });
+      h.polling.emit('status-updated', status('Printing', { fileName: FILE, percent: 45 }));
+      await settle();
+      expect(h.calls).toHaveLength(0);
+      expect(h.store.getJob(KEY)?.lastProgress).toBe(45);
+
+      h.polling.emit('status-updated', status('Completed', { fileName: FILE, percent: 100 }));
+      await settle();
+      expect(h.summaries[0]).toMatchObject({ terminal: 'completed', approximate: false });
+    });
   });
 });

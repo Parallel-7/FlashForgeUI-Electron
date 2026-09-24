@@ -151,7 +151,7 @@ export class SpoolmanUsageTracker extends EventEmitter {
         return;
       }
 
-      // Station contexts are routed to the estimate-based StationUsageTracker;
+      // Station contexts are routed to the per-job StationUsageTracker;
       // they must never ALSO log through the single-spool path (defense in depth
       // — routing happens in MultiContextSpoolmanTracker.createTrackerForContext).
       if (

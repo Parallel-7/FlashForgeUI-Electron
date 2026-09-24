@@ -106,15 +106,29 @@ interface PrinterSettingsAPI {
 
 // Spoolman API interface
 
-/** Station tracking view payload (material-station contexts). */
+/** Station tracking view payload (material-station contexts, per-job tracking). */
 interface SpoolmanStationStatus {
   supported: boolean;
   note: string;
-  slotAssignments: Array<{ slotId: number; spoolId: number | null }>;
+  activeJob: {
+    fileName: string;
+    started: boolean;
+    lastProgress: number | null;
+    hasUsageProfile: boolean;
+    tools: Array<{ toolId: number; slotId: number; spoolId: number; usedG: number | null; usedM: number | null }>;
+  } | null;
   lastDeduction: {
     fileName: string;
-    terminal: 'completed' | 'cancelled' | 'error';
-    fraction: number;
+    terminal: 'completed' | 'cancelled' | 'error' | 'interrupted';
+    progress: number;
+    approximate: boolean;
+    tools: Array<{
+      toolId: number;
+      spoolId: number | null;
+      amount: number | null;
+      mode: 'weight' | 'length';
+      status: 'deducted' | 'skipped';
+    }>;
     deductedCount: number;
     skippedCount: number;
     at: string;
@@ -136,7 +150,6 @@ interface SpoolmanAPI {
   getStatus(
     contextId?: string
   ): Promise<SpoolmanStatusInfo>;
-  setSlotSpool(slotId: number, spoolId: number | null, contextId?: string): Promise<void>;
   onSpoolSelected(callback: (spool: unknown) => void): void;
   onSpoolUpdated(callback: (spool: unknown) => void): void;
   onSpoolPickedForSlot(callback: (spool: unknown) => void): () => void;

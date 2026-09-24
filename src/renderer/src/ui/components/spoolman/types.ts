@@ -20,17 +20,31 @@ export interface ActiveSpoolData {
 }
 
 /**
- * Estimate-based tracking view payload for material-station contexts
+ * Per-job tracking view payload for material-station contexts
  * (mirrors spoolman:get-status's `station` field).
  */
 export interface SpoolmanStationStatus {
   supported: boolean;
   note: string;
-  slotAssignments: Array<{ slotId: number; spoolId: number | null }>;
+  activeJob: {
+    fileName: string;
+    started: boolean;
+    lastProgress: number | null;
+    hasUsageProfile: boolean;
+    tools: Array<{ toolId: number; slotId: number; spoolId: number; usedG: number | null; usedM: number | null }>;
+  } | null;
   lastDeduction: {
     fileName: string;
-    terminal: 'completed' | 'cancelled' | 'error';
-    fraction: number;
+    terminal: 'completed' | 'cancelled' | 'error' | 'interrupted';
+    progress: number;
+    approximate: boolean;
+    tools: Array<{
+      toolId: number;
+      spoolId: number | null;
+      amount: number | null;
+      mode: 'weight' | 'length';
+      status: 'deducted' | 'skipped';
+    }>;
     deductedCount: number;
     skippedCount: number;
     at: string;

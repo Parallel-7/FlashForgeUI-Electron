@@ -286,6 +286,8 @@ export interface UploadSliceWarning {
 
 /** Per-tool filament entry parsed out of a staged upload. */
 export interface UploadFilamentInfo {
+  /** Gcode tool index (0-based) this filament prints with. */
+  toolId: number;
   type: string | null;
   color: string | null;
   usedM: string | null;
@@ -368,24 +370,60 @@ export interface SpoolmanConfigResponse extends ApiResponse {
   serverUrl: string;
   updateMode: 'length' | 'weight';
   contextId: string | null;
-  /** Present (non-null) on material-station contexts: estimate-based tracking view. */
+  /** Present (non-null) on material-station contexts: per-job tracking view. */
   readonly station?: SpoolmanStationTracking | null;
 }
 
-/** Estimate-based tracking info for material-station contexts. */
+/** Per-job tracking info for material-station contexts. */
 export interface SpoolmanStationTracking {
   readonly supported: boolean;
   readonly note: string;
-  readonly slotAssignments: Array<{ slotId: number; spoolId: number | null }>;
-  readonly lastDeduction: {
-    readonly fileName: string;
-    readonly terminal: 'completed' | 'cancelled' | 'error';
-    readonly fraction: number;
-    readonly deductedCount: number;
-    readonly skippedCount: number;
-    readonly at: string;
-  } | null;
+  readonly activeJob: SpoolmanTrackedJobView | null;
+  readonly lastDeduction: DeductionSummary | null;
 }
+
+export interface SpoolmanTrackedJobView {
+  fileName: string;
+  started: boolean;
+  lastProgress: number | null;
+  hasUsageProfile: boolean;
+  tools: Array<{
+    toolId: number;
+    slotId: number;
+    spoolId: number;
+    usedG: number | null;
+    usedM: number | null;
+  }>;
+}
+
+/** Spool chosen for one tool in the matching dialog (null = do not track). */
+export interface SpoolAssignment {
+  toolId: number;
+  spoolId: number | null;
+}
+
+export interface DeductionSummary {
+  fileName: string;
+  terminal: 'completed' | 'cancelled' | 'error' | 'interrupted';
+  progress: number;
+  approximate: boolean;
+  tools: ToolDeduction[];
+  deductedCount: number;
+  skippedCount: number;
+  at: string;
+}
+
+export interface ToolDeduction {
+  toolId: number;
+  slotId: number;
+  spoolId: number | null;
+  amount: number | null;
+  mode: 'weight' | 'length';
+  fraction: number;
+  status: 'deducted' | 'skipped';
+  reason?: string;
+}
+
 export interface ActiveSpoolResponse extends ApiResponse {
   spool: ActiveSpoolData | null;
 }

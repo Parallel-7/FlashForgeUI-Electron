@@ -213,10 +213,6 @@ export function showFileModal(files: WebUIJobFile[], source: 'recent' | 'local')
     const trackingHint = describeStoredFileTracking(file, {
       spoolmanEnabled: state.spoolmanConfig?.enabled === true,
       hasStation: state.printerFeatures?.hasMaterialStation === true,
-      assignedSpoolSlotIds:
-        state.spoolmanConfig?.station?.slotAssignments
-          ?.filter((assignment) => assignment.spoolId !== null)
-          .map((assignment) => assignment.slotId) ?? [],
     });
     if (trackingHint) {
       const hint = document.createElement('span');

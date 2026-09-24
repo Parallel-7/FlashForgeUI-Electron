@@ -78,7 +78,6 @@ interface DialogSpoolmanAPI {
   getActiveSpool: (contextId?: string) => Promise<unknown>;
   setActiveSpool: (spool: unknown, contextId?: string) => Promise<void>;
   getStatus: (contextId?: string) => Promise<SpoolmanStatusPayload>;
-  setSlotSpool: (slotId: number, spoolId: number | null, contextId?: string) => Promise<void>;
   onSpoolSelected: (callback: (spool: unknown) => void) => void;
   onSpoolUpdated: (callback: (spool: unknown) => void) => void;
   onSpoolPickedForSlot: (callback: (spool: unknown) => void) => DialogEventDisposer;
@@ -338,7 +337,6 @@ const validInvokeChannels = [
   'spoolman:open-dialog',
   'spoolman:get-active-spool',
   'spoolman:set-active-spool',
-  'spoolman:set-slot-spool',
   'material:configure-slot',
   'material:set-slot',
 ];
@@ -546,9 +544,6 @@ contextBridge.exposeInMainWorld('api', {
     },
     getStatus: async (contextId?: string): Promise<SpoolmanStatusPayload> => {
       return (await ipcRenderer.invoke('spoolman:get-status', contextId)) as SpoolmanStatusPayload;
-    },
-    setSlotSpool: async (slotId: number, spoolId: number | null, contextId?: string): Promise<void> => {
-      await ipcRenderer.invoke('spoolman:set-slot-spool', { slotId, spoolId, contextId });
     },
     onSpoolSelected: (callback: (spool: unknown) => void) => {
       const wrapped: DialogIPCListener = (_event: unknown, spool: unknown) => callback(spool);

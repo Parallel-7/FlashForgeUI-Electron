@@ -29,10 +29,7 @@ import type {
 } from '@shared/types/web-api.types.js';
 import express, { type Response, type Router } from 'express';
 import { toAppError } from '../../../utils/error.utils.js';
-import {
-  type Ad5xToolFileData,
-  captureEstimateForStationUpload,
-} from '../../../services/station-estimate.js';
+import { armUploadedJob, clearTrackedJob, toolIdForFilament } from '../../../services/job-tracking.js';
 import {
   createValidationError,
   JobUploadCancelRequestSchema,
@@ -167,7 +164,7 @@ async function handleStartRequest(
       return sendErrorResponse<JobUploadStartResponse>(res, 400, validationError.error);
     }
 
-    const { uploadId, startNow, autoLevel, materialMappings } = validation.data;
+    const { uploadId, startNow, autoLevel, materialMappings, spoolAssignments } = validation.data;
     const staged = getStagedUpload(uploadId);
     if (!staged) {
       return sendErrorResponse<JobUploadStartResponse>(
@@ -206,29 +203,28 @@ async function handleStartRequest(
             startNow,
           });
 
-      // Stage 1 of Spoolman estimate tracking for station printers: capture
-      // per-tool estimates (3mf filament data; AD5X per-tool grams fallback)
-      // for uploads that carry tool→slot mappings. Best effort only — a
-      // capture failure must never fail the upload.
-      if (hasMaterialStation && result.success && materialMappings?.length) {
+      // Spoolman per-job tracking: a job the app starts replaces any earlier
+      // tracked job, and is tracked itself when the user chose spools for it.
+      // Best effort only - a tracking failure must never fail the upload.
+      if (hasMaterialStation && result.success && startNow) {
         try {
-          await captureEstimateForStationUpload(
-            contextResult.contextId,
-            {
+          clearTrackedJob(contextResult.contextId);
+          if (materialMappings?.length) {
+            const armed = await armUploadedJob(contextResult.contextId, {
               fileName: result.fileName || staged.fileName,
               filePath: staged.filePath,
+              parsed: await parseSlicerFile(staged.filePath),
               mappings: materialMappings,
-            },
-            {
-              parseSlicerFile,
-              fetchAd5xToolWeights: (contextId, fileName) =>
-                fetchAd5xToolWeights(deps, contextId, fileName),
+              spoolAssignments,
+            });
+            if (!armed.armed) {
+              console.log(`[job-upload-routes] ${staged.fileName} is not Spoolman-tracked (${armed.reason}).`);
             }
-          );
-        } catch (captureError) {
+          }
+        } catch (trackingError) {
           console.warn(
-            '[job-upload-routes] Spoolman estimate capture failed (upload continues):',
-            captureError instanceof Error ? captureError.message : captureError
+            '[job-upload-routes] Spoolman job tracking failed (upload continues):',
+            trackingError instanceof Error ? trackingError.message : trackingError
           );
         }
       }
@@ -310,7 +306,8 @@ function normalizeMetadata(parsed: ParseResult): UploadJobMetadata {
     ),
     thumbnail: normalizeThumbnail(threeMf?.plateImage || file?.thumbnail || null),
     filaments: (threeMf?.filaments ?? file?.filaments ?? []).map(
-      (filament): UploadFilamentInfo => ({
+      (filament, index): UploadFilamentInfo => ({
+        toolId: toolIdForFilament(filament, index),
         type: filament.type ?? null,
         color: filament.color ?? null,
         usedM: filament.usedM ?? null,
@@ -360,36 +357,4 @@ function normalizeThumbnail(thumbnail: string | null): string | null {
     return null;
   }
   return thumbnail.replace(/^data:image\/\w+;base64,/, '');
-}
-
-/**
- * AD5X fallback for {@link captureEstimateForStationUpload}: the printer's
- * own file listing carries per-tool slicer weights (grams) for files the 3mf
- * itself lacks filament data for.
- */
-async function fetchAd5xToolWeights(
-  deps: RouteDependencies,
-  contextId: string,
-  fileName: string
-): Promise<Ad5xToolFileData[]> {
-  try {
-    const listing = await deps.backendManager.getRecentJobs(contextId);
-    if (!listing.success) {
-      return [];
-    }
-    for (const job of listing.jobs) {
-      if (job._type !== 'ad5x' || job.fileName !== fileName || !job.toolDatas?.length) {
-        continue;
-      }
-      return job.toolDatas
-        .filter((tool) => Number.isFinite(tool.filamentWeight) && tool.filamentWeight > 0)
-        .map((tool) => ({ toolId: tool.toolId, filamentWeight: tool.filamentWeight }));
-    }
-  } catch (error) {
-    console.warn(
-      '[job-upload-routes] AD5X tool weight lookup failed:',
-      error instanceof Error ? error.message : error
-    );
-  }
-  return [];
 }

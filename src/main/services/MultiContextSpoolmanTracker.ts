@@ -8,15 +8,16 @@
  *
  * Tracker routing per context:
  * - Material-station contexts (Creator 5 series, AD5X with station attached)
- *   get the estimate-based {@link StationUsageTracker}: the firmware exposes
- *   no per-tool usage over HTTP, so consumption is deducted from upload-time
- *   per-tool estimates through the slot→spool assignments.
+ *   get the per-job {@link StationUsageTracker}: the firmware exposes no
+ *   per-tool usage over HTTP, so each job the app starts carries the spool
+ *   the user chose for each tool, and the slicer estimate is charged when
+ *   the job ends.
  * - Every other context keeps the progress-based single-spool
  *   {@link SpoolmanUsageTracker}. This includes AD5X printers WITHOUT a
  *   material station, which now flow through the standard single-spool path.
  *
- * The station stores (estimates + slot assignments, both serial-keyed) are
- * pruned when their context is removed.
+ * The tracked job is kept when its context is removed, so a printer that
+ * reconnects mid-print is still tracked.
  *
  * Key Features:
  * - Creates a usage tracker for each printer context (station-aware routing)
@@ -38,7 +39,7 @@
  */
 
 import { EventEmitter } from 'events';
-import type { DeductionSummary } from '@shared/types/spoolman-tracking';
+import type { DeductionSummary, TrackedJob } from '@shared/types/spoolman-tracking';
 import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
 import { getPrinterBackendManager } from '../managers/PrinterBackendManager.js';
 import { ConfigManager } from '../managers/ConfigManager.js';
@@ -46,10 +47,9 @@ import type { PrintStateMonitor } from './PrintStateMonitor.js';
 import type { PrinterPollingService } from './PrinterPollingService.js';
 import { StationUsageTracker } from './StationUsageTracker.js';
 import { SpoolmanUsageTracker } from './SpoolmanUsageTracker.js';
-import { getJobEstimateStore } from './JobEstimateStore.js';
-import { getSlotSpoolStore } from './SlotSpoolStore.js';
 import { getSpoolmanIntegrationService } from './SpoolmanIntegrationService.js';
-import { pruneStationStores } from './station-store-key.js';
+import { forgetStationContext } from './station-store-key.js';
+import { getTrackedJobStore } from './TrackedJobStore.js';
 import { SpoolmanService } from './SpoolmanService.js';
 
 /** Events emitted by the coordinator itself. */
@@ -76,9 +76,9 @@ export class MultiContextSpoolmanTracker extends EventEmitter<MultiContextSpoolm
   private readonly trackers = new Map<string, ContextUsageTracker>();
   private readonly contextManager = getPrinterContextManager();
   private readonly handleContextRemovedBound = (event: { contextId: string }): void => {
-    // Drop the tracker and prune the serial-keyed station stores (estimates,
-    // ledger, slot→spool assignments) for the removed context.
-    pruneStationStores(event.contextId);
+    // The tracked job itself stays in the store: a printer that reconnects
+    // mid-print is still tracked under its serial.
+    forgetStationContext(event.contextId);
     this.removeTrackerForContext(event.contextId);
   };
   private isInitialized = false;
@@ -107,7 +107,7 @@ export class MultiContextSpoolmanTracker extends EventEmitter<MultiContextSpoolm
    * Create and configure a usage tracker for a context.
    * Called when print state monitor is ready for a context.
    *
-   * Material-station contexts get the estimate-based StationUsageTracker;
+   * Material-station contexts get the per-job StationUsageTracker;
    * every other context (including AD5X without a station) keeps the
    * legacy progress-based single-spool SpoolmanUsageTracker.
    *
@@ -160,12 +160,11 @@ export class MultiContextSpoolmanTracker extends EventEmitter<MultiContextSpoolm
     }
   }
 
-  /** Build the estimate-based tracker for a station context. */
+  /** Build the per-job tracker for a station context. */
   private createStationTracker(contextId: string): StationUsageTracker {
     return new StationUsageTracker({
       contextId,
-      estimates: getJobEstimateStore(),
-      slots: getSlotSpoolStore(),
+      jobs: getTrackedJobStore(),
       integrationService: getSpoolmanIntegrationService(),
       createSpoolmanService: () => {
         const config = ConfigManager.getInstance().getConfig();
@@ -238,7 +237,7 @@ export class MultiContextSpoolmanTracker extends EventEmitter<MultiContextSpoolm
   }
 
   /**
-   * Get the estimate-based station tracker for a context, if it has one.
+   * Get the per-job station tracker for a context, if it has one.
    *
    * @param contextId - Context ID
    * @returns Station tracker instance or undefined (non-station contexts)
@@ -253,6 +252,13 @@ export class MultiContextSpoolmanTracker extends EventEmitter<MultiContextSpoolm
    */
   public getLastDeduction(contextId: string): DeductionSummary | null {
     return this.getStationTracker(contextId)?.getLastSummary() ?? null;
+  }
+
+  /**
+   * The job a context's station tracker tracks now, if any.
+   */
+  public getTrackedJob(contextId: string): TrackedJob | null {
+    return this.getStationTracker(contextId)?.getTrackedJob() ?? null;
   }
 
   /**

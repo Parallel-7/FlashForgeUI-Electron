@@ -7,6 +7,15 @@ import express from 'express';
 import { registerSpoolmanRoutes } from '../spoolman-routes.js';
 import { startTestServer } from '../test-server.js';
 
+const mockTracker = {
+  getTrackedJob: jest.fn().mockReturnValue(null),
+  getLastDeduction: jest.fn().mockReturnValue(null),
+};
+
+jest.mock('../../../../services/MultiContextSpoolmanTracker.js', () => ({
+  getMultiContextSpoolmanTracker: () => mockTracker,
+}));
+
 describe('spoolman-routes', () => {
   function createDependencies(overrides: Record<string, unknown> = {}) {
     return {
@@ -34,7 +43,6 @@ describe('spoolman-routes', () => {
         isGloballyEnabled: jest.fn().mockReturnValue(true),
         isContextSupported: jest.fn().mockReturnValue(true),
         isStationContext: jest.fn().mockReturnValue(false),
-        getSlotSpoolMap: jest.fn().mockReturnValue(new Map()),
         getDisabledReason: jest.fn().mockReturnValue(null),
         getServerUrl: jest.fn().mockReturnValue('http://spoolman.local'),
         getUpdateMode: jest.fn().mockReturnValue('weight'),
@@ -131,22 +139,26 @@ describe('spoolman-routes', () => {
       serverUrl: 'http://spoolman.local',
       updateMode: 'weight',
       contextId: 'context-1',
-      // Non-station contexts carry no estimate-based tracking view.
+      // Non-station contexts carry no per-job tracking view.
       station: null,
     });
   });
 
   it('embeds the station tracking view for material-station contexts', async () => {
+    mockTracker.getTrackedJob.mockReturnValueOnce({
+      fileName: 'part.3mf',
+      source: 'upload-3mf',
+      tools: [{ toolId: 2, slotId: 1, spoolId: 101, usedG: 4.38, usedM: 1.47 }],
+      usageProfile: { sampleCount: 1, perTool: { '2': [0, 1] } },
+      armedAt: '2026-09-23T00:00:00.000Z',
+      startedAt: '2026-09-23T00:01:00.000Z',
+      lastProgress: 42,
+      lastProgressAt: '2026-09-23T00:05:00.000Z',
+    });
     const deps = createDependencies({
       spoolmanService: {
         ...createDependencies().spoolmanService,
         isStationContext: jest.fn().mockReturnValue(true),
-        getSlotSpoolMap: jest.fn().mockReturnValue(
-          new Map([
-            [1, 101],
-            [2, 102],
-          ])
-        ),
       },
     });
     const server = await startTestServer((app) => {
@@ -163,11 +175,14 @@ describe('spoolman-routes', () => {
     expect(response.status).toBe(200);
     expect(body.success).toBe(true);
     expect(body.station?.supported).toBe(true);
-    expect(body.station?.note).toContain('estimated from files uploaded through this app');
-    expect(body.station?.slotAssignments).toEqual([
-      { slotId: 1, spoolId: 101 },
-      { slotId: 2, spoolId: 102 },
-    ]);
+    expect(body.station?.note).toContain('applies to that one print only');
+    expect(body.station?.activeJob).toEqual({
+      fileName: 'part.3mf',
+      started: true,
+      lastProgress: 42,
+      hasUsageProfile: true,
+      tools: [{ toolId: 2, slotId: 1, spoolId: 101, usedG: 4.38, usedM: 1.47 }],
+    });
     expect(body.station?.lastDeduction).toBeNull();
   });
 
@@ -235,14 +250,8 @@ describe('spoolman-routes', () => {
     });
   });
 
-  it('assigns a slot spool for station contexts', async () => {
-    const deps = createDependencies({
-      spoolmanService: {
-        ...createDependencies().spoolmanService,
-        isStationContext: jest.fn().mockReturnValue(true),
-        setSpoolForSlot: jest.fn(),
-      },
-    });
+  it('no longer offers slot-to-spool assignment', async () => {
+    const deps = createDependencies();
     const server = await startTestServer((app) => {
       const router = express.Router();
       registerSpoolmanRoutes(router, deps);
@@ -254,48 +263,10 @@ describe('spoolman-routes', () => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ slotId: 2, spoolId: 102 }),
     });
-    const body = await response.json();
 
     await server.close();
 
-    expect(response.status).toBe(200);
-    // The spool is validated before the assignment is persisted.
-    expect(deps.spoolmanService.getSpoolById).toHaveBeenCalledWith(102);
-    expect(deps.spoolmanService.setSpoolForSlot).toHaveBeenCalledWith('context-1', 2, 102);
-    expect(body).toEqual({
-      success: true,
-      contextId: 'context-1',
-      slotId: 2,
-      spoolId: 102,
-    });
-  });
-
-  it('rejects slot spool assignment for non-station contexts', async () => {
-    const deps = createDependencies({
-      spoolmanService: {
-        ...createDependencies().spoolmanService,
-        isStationContext: jest.fn().mockReturnValue(false),
-        setSpoolForSlot: jest.fn(),
-      },
-    });
-    const server = await startTestServer((app) => {
-      const router = express.Router();
-      registerSpoolmanRoutes(router, deps);
-      app.use('/api', router);
-    });
-
-    const response = await fetch(`${server.baseUrl}/api/spoolman/slot-spool`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slotId: 1, spoolId: 5 }),
-    });
-    const body = await response.json();
-
-    await server.close();
-
-    expect(response.status).toBe(409);
-    expect(body.error).toBe('Slot→spool assignments require a printer with a material station');
-    expect(deps.spoolmanService.setSpoolForSlot).not.toHaveBeenCalled();
+    expect(response.status).toBe(404);
   });
 
   it('selects an active spool for the resolved context', async () => {

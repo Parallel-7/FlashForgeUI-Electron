@@ -9,7 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Single-material prints started from the printer's own file list are now Spoolman-tracked on the AD5X with a material station.** The capture runs when the job is started through the app — desktop job picker or built-in WebUI — and records the printer-reported total filament weight (falling back to the single tool's filamentWeight when the file reports none), deducted to the sole assigned slot's spool at terminal state. Ambiguous cases stay untracked: multi-material stored prints (per-tool attribution still needs an app upload), Creator 5 (its file list reports names only), and any assignment count other than exactly one spool. The stored-file list in the WebUI file modal and the desktop job picker now shows a tracked/untracked hint per file, and one delayed retry absorbs the recent-list propagation lag without ever delaying the start. (Ported from the standalone [FlashForgeWebUI](https://github.com/Parallel-7/FlashForgeWebUI).)
+- **Per-job Spoolman tracking for material-station printers (Creator 5, Creator 5 Pro, AD5X with a material station).** These printers do not report filament use per tool, so the app estimates it. When you match materials for a job the app starts, the matching dialog now also asks for the Spoolman spool in each slot, or "Do not track". This works in the desktop dialog, the built-in WebUI, and the standalone WebUI. The choice applies to that one print only. When the print ends, the slicer's estimate for each tool is charged to its spool, and the choice is deleted. The app never remembers a spool per slot or per printer, because the spools on the printer can change at any time.
+  - A completed print charges each spool its full estimate.
+  - A cancelled or failed print charges each tool for what it printed up to the last progress value. The app reads the gcode inside the 3MF when you upload it and finds how much of each tool's filament is used at each point of the file. The printer's progress is the position in that same file, so a tool that only prints the top half of a model is charged nothing if the print stops at 40%.
+  - Pause and resume charge nothing.
+  - If the app was not running when the print ended, it charges the last saved progress on the next status update and marks the result "approximate". A completed print is charged in full.
+  - Only prints the app starts are tracked. A file sent without **Start Now**, a print started on the printer, and a reprint of the same file from the printer's screen are not tracked.
+  - On the AD5X, a file already on the printer is tracked when you start it through the matching dialog. The estimate comes from the printer's file list, and a cancel is charged by progress, because the app has no gcode for that file.
+  - The Spoolman panel shows the tracked print, its spool per tool, and the result of the last charge. The per-slot spool assignment and the "Set from Spoolman" assignment in the Material Station editor are removed. "Set from Spoolman" still sets the slot's material and color.
+
+### Fixed
+
+- **Multi-material uploads now send the correct tool numbers.** A 3MF lists only the filaments a plate uses, each with its slicer number. A plate that uses filaments 1 and 3 prints with tools T0 and T2, but the desktop uploader and the built-in WebUI numbered the tools by their position in the list (T0 and T1). The printer then fed the second tool from the wrong slot. The tool number now comes from the filament number.
+- **The built-in WebUI's matching dialog waits for the material station.** Right after a connect or a printer switch, the station status can take several seconds to arrive. The dialog read it once and showed "Material station not connected" with no slots. It now keeps asking for about 15 seconds.
 
 ## [1.0.5-alpha.12] - 2026-08-21
 

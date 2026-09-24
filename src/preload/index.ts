@@ -154,7 +154,6 @@ interface SpoolmanAPI {
   getStatus: (
     contextId?: string
   ) => Promise<SpoolmanStatusPayload>;
-  setSlotSpool: (slotId: number, spoolId: number | null, contextId?: string) => Promise<void>;
   onSpoolSelected: (callback: (spool: unknown) => void) => void;
   onSpoolUpdated?: (callback: (spool: unknown) => void) => void;
   onSpoolPickedForSlot: (callback: (spool: unknown) => void) => EventDisposer;
@@ -671,7 +670,6 @@ const electronAPI: ElectronAPI = {
       'spoolman:get-active-spool',
       'spoolman:set-active-spool',
       'spoolman:get-status',
-      'spoolman:set-slot-spool',
       'material:configure-slot',
       'material:set-slot',
       'printer:reboot',
@@ -859,10 +857,6 @@ const electronAPI: ElectronAPI = {
         return { enabled: false, disabledReason: 'Invalid response', contextId: null };
       }
       return result;
-    },
-
-    setSlotSpool: async (slotId: number, spoolId: number | null, contextId?: string): Promise<void> => {
-      await ipcRenderer.invoke('spoolman:set-slot-spool', { slotId, spoolId, contextId });
     },
 
     onSpoolSelected: (callback: (spool: unknown) => void) => {

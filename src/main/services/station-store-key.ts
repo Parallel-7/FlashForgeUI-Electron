@@ -1,12 +1,11 @@
 /**
- * @fileoverview Storage-key resolution for the station tracking stores.
+ * @fileoverview Storage-key resolution for the tracked job store.
  *
- * JobEstimateStore (including its exactly-once deduction ledger) and
- * SlotSpoolStore are keyed by PRINTER SERIAL, not by context id. Context ids
- * (`context-<counter>-<timestamp>`) are regenerated on every app restart and
- * whenever a printer is re-added, while the serial is stable for the physical
- * printer — so serial-keyed estimates, slot assignments and ledger entries
- * survive mid-print restarts and printer reconnects.
+ * The TrackedJobStore is keyed by PRINTER SERIAL, not by context id. Context
+ * ids (`context-<counter>-<timestamp>`) are regenerated on every app restart
+ * and whenever a printer is re-added, while the serial is stable for the
+ * physical printer, so a job that is printing stays tracked across an app
+ * restart or a printer reconnect.
  *
  * The serial is resolved from `context.printerDetails` at call time. When it
  * is unavailable (context already gone, headless oddities), the context id is
@@ -16,10 +15,6 @@
  * @module services/station-store-key
  */
 
-import type { JobEstimateStore } from './JobEstimateStore';
-import type { SlotSpoolStore } from './SlotSpoolStore';
-import { getJobEstimateStore } from './JobEstimateStore';
-import { getSlotSpoolStore } from './SlotSpoolStore';
 import { getPrinterContextManager } from '../managers/PrinterContextManager';
 
 /** Resolves a context id to its printer serial, or undefined when unknown. */
@@ -94,39 +89,4 @@ export function stationStoreKeysForContext(contextId: string): string[] {
 export function forgetStationContext(contextId: string): void {
   resolvedSerials.delete(contextId);
   warnedFallbackContexts.delete(contextId);
-}
-
-/** Store surface needed by {@link pruneStationStores}. */
-export interface StationStorePruneTargets {
-  readonly estimates: Pick<JobEstimateStore, 'clearContext'>;
-  readonly slots: Pick<SlotSpoolStore, 'clearContext'>;
-}
-
-/**
- * Drop a removed context's station tracking data (estimates + ledger and
- * slot→spool assignments) from both stores, under every key the context may
- * have used, then forget the context's cached resolution.
- *
- * Callers pass explicit targets in tests; the default targets are the
- * process-wide store singletons.
- *
- * @param contextId - Printer context id being removed
- * @param targets - Stores to prune (defaults to the singletons)
- */
-export function pruneStationStores(contextId: string, targets?: StationStorePruneTargets): void {
-  const { estimates, slots } =
-    targets ?? { estimates: getJobEstimateStore(), slots: getSlotSpoolStore() };
-
-  let pruned = false;
-  for (const key of stationStoreKeysForContext(contextId)) {
-    pruned = estimates.clearContext(key) || pruned;
-    pruned = slots.clearContext(key) || pruned;
-  }
-  forgetStationContext(contextId);
-
-  if (pruned) {
-    console.log(
-      `[station-store-key] Pruned station tracking data for removed context ${contextId}.`
-    );
-  }
 }

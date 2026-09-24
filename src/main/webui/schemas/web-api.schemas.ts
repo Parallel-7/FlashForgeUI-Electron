@@ -104,6 +104,17 @@ const MaterialMappingSchema = z.object({
   slotMaterialColor: z.string().min(1, 'slotMaterialColor is required'),
 });
 
+/**
+ * Spoolman spool chosen for one tool in the matching dialog. A null spoolId
+ * means the user chose not to track that tool.
+ */
+const SpoolAssignmentSchema = z.object({
+  toolId: z.number().int('toolId must be an integer').min(0, 'toolId must be non-negative'),
+  spoolId: z.number().int('spoolId must be an integer').positive('spoolId must be a positive integer').nullable(),
+});
+
+const SpoolAssignmentsSchema = z.array(SpoolAssignmentSchema).max(16).optional();
+
 export const JobStartRequestSchema = z.object({
   filename: z
     .string()
@@ -115,6 +126,7 @@ export const JobStartRequestSchema = z.object({
     .array(MaterialMappingSchema)
     .min(1, 'materialMappings must contain at least one mapping')
     .optional(),
+  spoolAssignments: SpoolAssignmentsSchema,
 });
 
 /**
@@ -131,6 +143,7 @@ export const JobUploadStartRequestSchema = z.object({
     .array(MaterialMappingSchema)
     .min(1, 'materialMappings must contain at least one mapping')
     .optional(),
+  spoolAssignments: SpoolAssignmentsSchema,
 });
 
 /**
@@ -302,24 +315,6 @@ export const SlotConfigRequestSchema = z.object({
     .regex(/^#?[0-9a-fA-F]{6}$/, 'A valid 6-digit hex color is required'),
 });
 
-/**
- * Slot→spool assignment for material-station printers (Creator 5 series,
- * AD5X with station). Slot is 1-based; a null spoolId clears the assignment.
- */
-export const SlotSpoolSetRequestSchema = z.object({
-  contextId: z.string().optional(),
-  slotId: z
-    .number()
-    .int('slotId must be an integer')
-    .min(1, 'slotId must be at least 1')
-    .max(4, 'slotId must be at most 4'),
-  spoolId: z
-    .number()
-    .int('spoolId must be an integer')
-    .positive('spoolId must be a positive integer')
-    .nullable(),
-});
-
 // ============================================================================
 // THEME PROFILE SCHEMAS
 // ============================================================================
@@ -374,4 +369,3 @@ export type ValidatedPrinterCommand = z.infer<typeof PrinterCommandSchema>;
 export type ValidatedPrinterFeatures = z.infer<typeof PrinterFeaturesSchema>;
 export type ValidatedSpoolSelectRequest = z.infer<typeof SpoolSelectRequestSchema>;
 export type ValidatedSpoolClearRequest = z.infer<typeof SpoolClearRequestSchema>;
-export type ValidatedSlotSpoolSetRequest = z.infer<typeof SlotSpoolSetRequestSchema>;

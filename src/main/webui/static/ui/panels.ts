@@ -8,7 +8,7 @@
  * actions.
  */
 
-import type { PrinterStatus } from '../app.js';
+import type { DeductionSummary, PrinterStatus, SpoolmanStationTracking } from '../app.js';
 import { state } from '../core/AppState.js';
 import { isSpoolmanAvailableForCurrentContext } from '../features/layout-theme.js';
 import { $, hideElement, setTextContent, showElement } from '../shared/dom.js';
@@ -330,7 +330,7 @@ export function updateSpoolmanPanelState(): void {
     return;
   }
 
-  // Material-station contexts: estimate-based tracking view instead of the
+  // Material-station contexts: per-job tracking view instead of the
   // single active-spool view.
   if (station && state.spoolmanConfig?.station) {
     hideElement('spoolman-disabled');
@@ -403,61 +403,82 @@ export function updateSpoolmanPanelState(): void {
   }
 }
 
-/** Station tracking payload mirrored from the config response. */
-interface StationTrackingView {
-  readonly supported: boolean;
-  readonly note: string;
-  readonly slotAssignments: ReadonlyArray<{ slotId: number; spoolId: number | null }>;
-  readonly lastDeduction: {
-    readonly fileName: string;
-    readonly terminal: 'completed' | 'cancelled' | 'error';
-    readonly fraction: number;
-    readonly deductedCount: number;
-    readonly skippedCount: number;
-  } | null;
-}
-
 /**
- * Render the estimate-based tracking view for material-station contexts:
- * honest copy, per-slot spool assignments, and the last deduction summary.
+ * Render the per-job tracking view for material-station contexts: the
+ * explanation, the job tracked now with its spool per tool, and the last
+ * deduction summary.
  */
-function renderStationTracking(station: StationTrackingView): void {
+function renderStationTracking(station: SpoolmanStationTracking): void {
   const note = $('spoolman-station-note');
   if (note) {
     note.textContent = station.note;
   }
 
-  const slots = $('spoolman-station-slots');
-  if (slots) {
-    if (station.slotAssignments.length === 0) {
-      slots.innerHTML =
-        '<div class="stat-row"><span>No spools assigned yet</span><span>use \u201cSet from Spoolman\u201d in the Material Station panel</span></div>';
+  const jobView = $('spoolman-station-job');
+  if (jobView) {
+    jobView.textContent = '';
+    const job = station.activeJob;
+    if (!job) {
+      jobView.appendChild(createStatRow('Tracked print:', 'None'));
     } else {
-      slots.innerHTML = station.slotAssignments
-        .map(
-          (assignment) =>
-            `<div class="stat-row"><span>Slot ${assignment.slotId}:</span><span>Spool #${assignment.spoolId}</span></div>`
-        )
-        .join('');
+      const progress = job.started
+        ? job.lastProgress !== null
+          ? `${Math.round(job.lastProgress)}%`
+          : 'printing'
+        : 'waiting to start';
+      jobView.appendChild(createStatRow('Tracked print:', `${job.fileName} (${progress})`));
+      for (const tool of job.tools) {
+        const estimate = tool.usedG !== null ? ` · ${tool.usedG.toFixed(1)} g` : '';
+        jobView.appendChild(
+          createStatRow(`Tool ${tool.toolId + 1} (slot ${tool.slotId}):`, `Spool #${tool.spoolId}${estimate}`)
+        );
+      }
     }
   }
 
   const summary = $('spoolman-station-summary');
   if (summary) {
-    if (!station.lastDeduction) {
-      summary.textContent = 'No deduction recorded this session.';
-    } else {
-      const deduction = station.lastDeduction;
-      const percent = Math.round(deduction.fraction * 100);
-      const terminal =
-        deduction.terminal === 'completed' ? 'completed' : `stopped (${deduction.terminal})`;
-      summary.textContent =
-        `${deduction.fileName} ${terminal} at ${percent}%: ` +
-        `${deduction.deductedCount} tool(s) deducted` +
-        (deduction.skippedCount > 0 ? `, ${deduction.skippedCount} skipped` : '');
-    }
+    summary.textContent = describeDeduction(station.lastDeduction);
   }
 }
+
+function createStatRow(label: string, value: string): HTMLDivElement {
+  const row = document.createElement('div');
+  row.className = 'stat-row';
+  const labelEl = document.createElement('span');
+  labelEl.textContent = label;
+  const valueEl = document.createElement('span');
+  valueEl.textContent = value;
+  row.append(labelEl, valueEl);
+  return row;
+}
+
+function describeDeduction(deduction: DeductionSummary | null): string {
+  if (!deduction) {
+    return 'No deduction recorded this session.';
+  }
+  const ending: Record<DeductionSummary['terminal'], string> = {
+    completed: 'completed',
+    cancelled: 'was cancelled',
+    error: 'stopped with an error',
+    interrupted: 'ended while the app was not watching',
+  };
+  const approximate = deduction.approximate ? ' (approximate)' : '';
+  const charged = deduction.tools
+    .filter((tool) => tool.status === 'deducted' && tool.amount !== null)
+    .map(
+      (tool) =>
+        `#${tool.spoolId} ${tool.amount}${tool.mode === 'weight' ? ' g' : ' mm'}`
+    )
+    .join(', ');
+  return (
+    `${deduction.fileName} ${ending[deduction.terminal]} at ${Math.round(deduction.progress)}%${approximate}: ` +
+    `${deduction.deductedCount} spool(s) charged` +
+    (charged ? ` (${charged})` : '') +
+    (deduction.skippedCount > 0 ? `, ${deduction.skippedCount} skipped` : '')
+  );
+}
+
 function updateButtonStates(printerState: string): void {
   const isPrintingActive =
     printerState === 'Printing' ||

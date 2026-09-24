@@ -18,6 +18,7 @@
  */
 
 import type { AD5XMaterialMapping } from '@ghosttypes/ff-api';
+import type { ToolSpoolAssignment } from './spoolman-tracking';
 import type { ParseResult } from '@parallel-7/slicer-meta';
 
 // Upload job payload for regular printer uploads
@@ -33,6 +34,8 @@ export interface AD5XUploadParams {
   readonly startPrint: boolean;
   readonly levelingBeforePrint: boolean;
   readonly materialMappings?: readonly AD5XMaterialMapping[];
+  /** Spoolman spool chosen per tool in the matching dialog (null = do not track). */
+  readonly spoolAssignments?: readonly ToolSpoolAssignment[];
 }
 
 // Slicer metadata result extending ParseResult with error handling

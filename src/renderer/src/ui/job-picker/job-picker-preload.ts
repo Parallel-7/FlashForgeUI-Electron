@@ -68,7 +68,12 @@ const jobPickerAPI = {
   },
   startJob: async (
     fileName: string,
-    options: { leveling: boolean; startNow: boolean; materialMappings?: unknown[] }
+    options: {
+      leveling: boolean;
+      startNow: boolean;
+      materialMappings?: unknown[];
+      spoolAssignments?: Array<{ toolId: number; spoolId: number | null }>;
+    }
   ): Promise<{ success: boolean; error?: string }> => {
     return (await ipcRenderer.invoke('job-picker:start-job', fileName, options)) as {
       success: boolean;
@@ -82,6 +87,7 @@ const jobPickerAPI = {
     fileName: string;
     toolDatas: readonly unknown[];
     leveling: boolean;
+    trackSpools?: boolean;
   }): Promise<unknown[] | null> => {
     const payload = { ...data, context: 'job-start' as const };
     return (await ipcRenderer.invoke('show-material-matching-dialog', payload)) as unknown[] | null;

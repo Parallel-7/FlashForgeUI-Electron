@@ -6,6 +6,7 @@
  * shared by the WebUI server routes and static client modules.
  */
 
+import type { DeductionSummary, SpoolmanTrackedJobView } from './spoolman-tracking';
 import type { RebootStatusPayload } from './printer-power.js';
 
 // ============================================================================
@@ -227,55 +228,20 @@ export interface SpoolmanConfigResponse extends StandardAPIResponse {
   serverUrl: string;
   updateMode: 'length' | 'weight';
   contextId: string | null;
-  /** Present (non-null) on material-station contexts: estimate-based tracking view. */
+  /** Present (non-null) on material-station contexts: per-job tracking view. */
   readonly station?: SpoolmanStationTracking | null;
 }
 
 /**
- * Estimate-based tracking info for material-station contexts: per-slot
- * spool assignments plus the most recent terminal-state deduction.
+ * Per-job tracking info for material-station contexts: the job tracked now
+ * plus the most recent deduction.
  */
 export interface SpoolmanStationTracking {
   readonly supported: boolean;
-  /** Copy shown in the Spoolman panel explaining the estimate-based flow. */
+  /** Plain explanation shown in the Spoolman panel. */
   readonly note: string;
-  readonly slotAssignments: SlotSpoolAssignment[];
-  readonly lastDeduction: SpoolmanDeductionSummary | null;
-}
-
-/** One slot→spool assignment row for the station tracking view. */
-export interface SlotSpoolAssignment {
-  readonly slotId: number;
-  readonly spoolId: number | null;
-}
-
-/** Wire shape of a terminal-state deduction summary (main → WebUI). */
-export interface SpoolmanDeductionSummary {
-  readonly fileName: string;
-  readonly terminal: 'completed' | 'cancelled' | 'error';
-  readonly fraction: number;
-  readonly tools: readonly SpoolmanToolDeduction[];
-  readonly deductedCount: number;
-  readonly skippedCount: number;
-  readonly at: string;
-}
-
-/** Wire shape of one tool's outcome in a deduction attempt. */
-export interface SpoolmanToolDeduction {
-  readonly toolId: number;
-  readonly slotId: number;
-  readonly spoolId: number | null;
-  readonly amount: number | null;
-  readonly mode: 'weight' | 'length';
-  readonly status: 'deducted' | 'skipped';
-  readonly reason?: string;
-}
-
-/** Response for the slot→spool assignment route. */
-export interface SlotSpoolResponse extends StandardAPIResponse {
-  contextId: string;
-  slotId: number;
-  spoolId: number | null;
+  readonly activeJob: SpoolmanTrackedJobView | null;
+  readonly lastDeduction: DeductionSummary | null;
 }
 
 export interface ActiveSpoolResponse extends StandardAPIResponse {
@@ -305,6 +271,8 @@ export interface UploadSliceWarning {
  * matching modal on material-station printers (AD5X, Creator 5 / 5 Pro).
  */
 export interface UploadFilamentInfo {
+  /** Gcode tool index (0-based) this filament prints with. */
+  readonly toolId: number;
   readonly type: string | null;
   readonly color: string | null;
   readonly usedM: string | null;

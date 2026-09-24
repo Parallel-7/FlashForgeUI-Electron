@@ -23,6 +23,7 @@ import type {
   JobUploadStartResponse,
   MaterialMapping,
   PendingJobStart,
+  SpoolAssignment,
   UploadFilamentInfo,
   UploadJobMetadata,
   UploadSliceWarning,
@@ -77,6 +78,9 @@ let stagedFileName: string | null = null;
 /** Mappings confirmed in the material matching modal, applied on upload. */
 let savedMaterialMappings: MaterialMapping[] | null = null;
 
+/** Spoolman spool choices from the matching modal (empty when not tracked). */
+let savedSpoolAssignments: SpoolAssignment[] = [];
+
 /** Guards against a second upload while one is in flight. */
 let uploadInFlight = false;
 
@@ -111,6 +115,7 @@ export function openJobUploadModal(): void {
   clearPendingTimer();
   void discardStagedFile();
   savedMaterialMappings = null;
+  savedSpoolAssignments = [];
   uploadInFlight = false;
 
   const input = $('job-upload-file-input') as HTMLInputElement | null;
@@ -131,6 +136,7 @@ function closeJobUploadModal(): void {
   clearPendingTimer();
   void discardStagedFile();
   savedMaterialMappings = null;
+  savedSpoolAssignments = [];
   uploadInFlight = false;
   showLoading(false);
   showUploadProgress(false);
@@ -165,6 +171,7 @@ async function discardStagedFile(): Promise<void> {
 async function handleFileSelected(file: File | null): Promise<void> {
   // A new selection invalidates whatever the previous one produced.
   savedMaterialMappings = null;
+  savedSpoolAssignments = [];
   renderMappingSummary();
   await discardStagedFile();
 
@@ -246,10 +253,11 @@ async function handleFileSelected(file: File | null): Promise<void> {
 
   // The desktop always shows material matching for a material-station 3MF,
   // single-colour files included.
-  const mappings = await requestMaterialMappings(stagedFileName, filaments);
-  savedMaterialMappings = mappings;
+  const confirmed = await requestMaterialMappings(stagedFileName, filaments);
+  savedMaterialMappings = confirmed?.mappings ?? null;
+  savedSpoolAssignments = confirmed?.spoolAssignments ?? [];
   renderMappingSummary();
-  setOkButtonState(Boolean(mappings));
+  setOkButtonState(Boolean(confirmed));
 }
 
 /**
@@ -320,8 +328,10 @@ function showNoFilamentDataWarning(fileName: string): void {
  * modal expects, mirroring `convertFilamentsToToolData` in the desktop renderer.
  */
 function convertFilamentsToToolData(filaments: readonly UploadFilamentInfo[]): AD5XToolData[] {
+  // The tool id is the filament's gcode tool (T0-T3), not its list position:
+  // a plate that uses filaments 1 and 3 prints with T0 and T2.
   return filaments.map((filament, index) => ({
-    toolId: index,
+    toolId: Number.isInteger(filament.toolId) ? filament.toolId : index,
     materialName: filament.type || 'Unknown',
     materialColor: filament.color || '#FFFFFF',
     filamentWeight: Number.parseFloat(filament.usedG || '0') || 0,
@@ -336,13 +346,15 @@ function convertFilamentsToToolData(filaments: readonly UploadFilamentInfo[]): A
 function requestMaterialMappings(
   fileName: string,
   filaments: readonly UploadFilamentInfo[]
-): Promise<MaterialMapping[] | null> {
+): Promise<{ mappings: MaterialMapping[]; spoolAssignments: SpoolAssignment[] } | null> {
   return new Promise((resolve) => {
     let settled = false;
-    const settle = (mappings: MaterialMapping[] | null): void => {
+    const settle = (
+      confirmed: { mappings: MaterialMapping[]; spoolAssignments: SpoolAssignment[] } | null
+    ): void => {
       if (!settled) {
         settled = true;
-        resolve(mappings);
+        resolve(confirmed);
       }
     };
 
@@ -362,8 +374,8 @@ function requestMaterialMappings(
     };
 
     void openMaterialMatchingModal(pending, {
-      onConfirm: async (mappings) => {
-        settle(mappings);
+      onConfirm: async (mappings, spoolAssignments) => {
+        settle({ mappings, spoolAssignments });
         return true;
       },
       onCancel: () => settle(null),
@@ -409,6 +421,7 @@ async function handleUpload(): Promise<void> {
         startNow: getStartNow(),
         autoLevel: getAutoLevel(),
         materialMappings: savedMaterialMappings ?? undefined,
+        spoolAssignments: savedSpoolAssignments.length > 0 ? savedSpoolAssignments : undefined,
       }),
     });
   } catch (error) {
@@ -424,6 +437,7 @@ async function handleUpload(): Promise<void> {
   // whether or not the printer accepted it.
   stagedUploadId = null;
   savedMaterialMappings = null;
+  savedSpoolAssignments = [];
   uploadInFlight = false;
 
   handleUploadComplete(result, fileName);
@@ -618,6 +632,7 @@ function resetMetadata(): void {
 
   // A cleared display has no file behind it, so any mappings are stale.
   savedMaterialMappings = null;
+  savedSpoolAssignments = [];
   renderMappingSummary();
 }
 
@@ -679,6 +694,16 @@ function renderMappingSummary(): void {
     chip.appendChild(createMappingSwatch(mapping.slotMaterialColor));
     chip.appendChild(createMappingText('job-upload-mapping-label', `Slot ${mapping.slotId}`));
     chip.appendChild(createMappingText('job-upload-mapping-material', mapping.materialName || 'Unknown'));
+
+    const spoolChoice = savedSpoolAssignments.find((entry) => entry.toolId === mapping.toolId);
+    if (spoolChoice) {
+      chip.appendChild(
+        createMappingText(
+          'job-upload-mapping-spool',
+          spoolChoice.spoolId === null ? 'Not tracked' : `Spool #${spoolChoice.spoolId}`
+        )
+      );
+    }
 
     list.appendChild(chip);
   });

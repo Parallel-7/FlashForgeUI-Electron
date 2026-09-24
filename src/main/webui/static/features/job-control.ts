@@ -10,6 +10,7 @@
 import type {
   MaterialMapping,
   PendingJobStart,
+  SpoolAssignment,
   PrinterCommandResponse,
   PrinterFeaturesResponse,
   PrintJobStartResponse,
@@ -97,6 +98,7 @@ interface JobStartOptions {
   leveling: boolean;
   startNow: boolean;
   materialMappings?: MaterialMapping[];
+  spoolAssignments?: SpoolAssignment[];
 }
 
 export async function startPrintJob(): Promise<void> {
@@ -161,6 +163,10 @@ export async function sendJobStartRequest(options: JobStartOptions): Promise<boo
         leveling: options.leveling,
         startNow: options.startNow,
         materialMappings: options.materialMappings,
+        spoolAssignments:
+          options.spoolAssignments && options.spoolAssignments.length > 0
+            ? options.spoolAssignments
+            : undefined,
       }),
     });
 

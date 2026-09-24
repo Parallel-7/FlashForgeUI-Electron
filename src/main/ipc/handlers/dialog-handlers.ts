@@ -27,6 +27,7 @@ import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManage
 import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 import { getDebugLogService } from '../../services/DebugLogService.js';
+import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegrationService.js';
 import { getGo2rtcService } from '../../services/Go2rtcService.js';
 import { getLogService } from '../../services/LogService.js';
 import { getModelDisplayName } from '../../utils/PrinterUtils.js';
@@ -620,6 +621,7 @@ export function registerDialogHandlers(configManager: ConfigManager, windowManag
         toolDatas: readonly unknown[];
         leveling: boolean;
         context?: 'job-start' | 'file-upload';
+        trackSpools?: boolean;
       }
     ) => {
       console.log('Material matching dialog handler called');
@@ -627,6 +629,31 @@ export function registerDialogHandlers(configManager: ConfigManager, windowManag
       return result; // Returns material mappings or null if cancelled
     }
   );
+
+  // Spools offered in the matching dialog for per-job Spoolman tracking, or
+  // null when tracking does not apply (Spoolman off, or no material station).
+  ipcMain.handle('material-matching:get-tracking-spools', async () => {
+    try {
+      const spoolman = getSpoolmanIntegrationService();
+      const contextId = getPrinterContextManager().getActiveContextId();
+      if (!contextId || !spoolman.isGloballyEnabled() || !spoolman.isStationContext(contextId)) {
+        return null;
+      }
+      const spools = await spoolman.fetchSpools({ allow_archived: false, limit: 200 });
+      return spools
+        .filter((spool) => !spool.archived)
+        .map((spool) => ({
+          id: spool.id,
+          name: spool.filament.name,
+          vendor: spool.filament.vendor?.name ?? null,
+          material: spool.filament.material,
+          remainingWeight: spool.remaining_weight ?? null,
+        }));
+    } catch (error) {
+      console.warn('[material-matching] Could not load Spoolman spools:', error);
+      return null;
+    }
+  });
 
   ipcMain.on('material-matching:close', () => {
     const materialMatchingWindow = windowManager.getMaterialMatchingDialogWindow();

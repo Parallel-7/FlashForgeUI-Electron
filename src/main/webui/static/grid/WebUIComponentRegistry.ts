@@ -382,8 +382,8 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
             <button id="btn-change-spool" class="temp-btn">Change</button>
           </div>
           <div id="spoolman-station" class="spoolman-state hidden">
-            <div class="spoolman-message" id="spoolman-station-note">Consumption is estimated from files uploaded through this app.</div>
-            <div class="spool-stats" id="spoolman-station-slots"></div>
+            <div class="spoolman-message" id="spoolman-station-note">Choose a spool for each tool when you match materials for an upload.</div>
+            <div class="spool-stats" id="spoolman-station-job"></div>
             <div class="spool-meta" id="spoolman-station-summary"></div>
           </div>
         </div>

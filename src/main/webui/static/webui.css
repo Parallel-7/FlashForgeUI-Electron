@@ -3788,7 +3788,7 @@ body {
   }
 }
 
-/* Spoolman station (estimate-based tracking) view */
+/* Spoolman station (per-job tracking) view */
 .spoolman-state .spool-stats .stat-row span:last-child,
 #spoolman-station .stat-row span:last-child {
   color: var(--text-color-secondary);
@@ -3800,4 +3800,30 @@ body {
 
 #spoolman-station-summary {
   margin-top: 8px;
+}
+
+/* Spoolman spool picker in the matching dialog (per-job tracking). */
+.material-spool-hint {
+  margin: 0 0 8px;
+  font-size: 0.85em;
+  color: var(--text-color-secondary);
+}
+
+.material-mapping-spool {
+  flex: 1 1 180px;
+  min-width: 0;
+  max-width: 260px;
+  margin: 0 8px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color);
+  background-color: var(--card-bg, transparent);
+  color: inherit;
+  font: inherit;
+  font-size: 0.85em;
+}
+
+.job-upload-mapping-spool {
+  color: var(--text-color-secondary);
+  font-style: italic;
 }

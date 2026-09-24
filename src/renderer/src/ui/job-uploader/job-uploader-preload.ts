@@ -78,7 +78,11 @@ interface JobUploaderAPI {
   receiveMetadata: (func: (result: MetadataResult) => void) => void;
   removeListeners: () => void;
   // New methods for 3MF multi-color support
-  showMaterialMatchingDialog: (filePath: string, toolData: FFGcodeToolData[]) => Promise<AD5XMaterialMapping[] | null>;
+  showMaterialMatchingDialog: (
+    filePath: string,
+    toolData: FFGcodeToolData[],
+    trackSpools?: boolean
+  ) => Promise<AD5XMaterialMapping[] | null>;
   showSingleColorDialog: (filePath: string, filament: FilamentInfo) => void;
   uploadFileAD5X: (
     filePath: string,
@@ -102,11 +106,22 @@ const uploadFileAD5X = async (
   materialMappings?: AD5XMaterialMapping[]
 ): Promise<AD5XUploadResult> => {
   try {
+    // The matching dialog attaches the Spoolman spool choice to each mapping.
+    // Split it off: the printer must receive plain mappings only.
+    type MappingWithSpool = AD5XMaterialMapping & { spoolId?: number | null };
+    const withSpools = (materialMappings ?? []) as MappingWithSpool[];
+    const spoolAssignments = withSpools
+      .filter((mapping) => mapping.spoolId !== undefined)
+      .map((mapping) => ({ toolId: mapping.toolId, spoolId: mapping.spoolId ?? null }));
+    const plainMappings = materialMappings
+      ? withSpools.map(({ spoolId: _spoolId, ...mapping }) => mapping)
+      : undefined;
     const result = (await ipcRenderer.invoke('upload-file-ad5x', {
       filePath,
       startPrint: startNow,
       levelingBeforePrint: autoLevel,
-      materialMappings,
+      materialMappings: plainMappings,
+      spoolAssignments: spoolAssignments.length > 0 ? spoolAssignments : undefined,
     })) as AD5XUploadResult;
     return result;
   } catch (error) {
@@ -150,7 +165,8 @@ const jobUploaderAPI: JobUploaderAPI = {
   // New methods for 3MF multi-color support
   showMaterialMatchingDialog: async (
     filePath: string,
-    toolData: FFGcodeToolData[]
+    toolData: FFGcodeToolData[],
+    trackSpools = false
   ): Promise<AD5XMaterialMapping[] | null> => {
     const fileName = filePath.split(/[\\/]/).pop() || filePath;
     const dialogData = {
@@ -158,6 +174,7 @@ const jobUploaderAPI: JobUploaderAPI = {
       toolDatas: toolData,
       leveling: true, // Default to enabled
       context: 'file-upload' as const, // Specify context for button text
+      trackSpools,
     };
 
     try {

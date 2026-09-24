@@ -1,78 +1,93 @@
 /**
- * @fileoverview Types for estimate-based Spoolman consumption tracking on
+ * @fileoverview Types for per-job Spoolman consumption tracking on
  * material-station printers (Creator 5 series, AD5X with station).
  *
- * The firmware provides no per-tool usage over HTTP, so consumption for
- * station printers is ESTIMATED from per-filament slicer data captured at
- * upload time and deducted against the spool assigned to each slot when the
- * print reaches a terminal state (completed / cancelled / error).
+ * The firmware reports no per-tool usage, so consumption is estimated from the
+ * slicer's per-filament data. The user picks a Spoolman spool for each tool
+ * when they match materials for a job the app starts. That choice belongs to
+ * that one job only: it is deleted when the job ends, so a later print never
+ * uses stale spool choices. Nothing is remembered per slot or per printer,
+ * because the loaded spools can change on the printer at any time.
  *
  * Invariants enforced by the consumers of these types:
- * - No estimate => no deduction (never split totals or guess density).
- * - Exactly-once deduction per job across all terminal paths.
+ * - Only jobs the app started are tracked. No record means no deduction.
+ * - Each job is deducted at most once: the record is removed before any
+ *   Spoolman request is sent.
  * - Spoolman API failures never affect printing (log + UI hint only).
- *
- * Shared between the main-process tracker stack
- * (src/main/services/StationUsageTracker.ts and friends) and the renderer /
- * embedded WebUI surfaces that display deduction state. Also carries the
- * `spoolman:get-status` IPC payload types shared by both desktop preloads
- * (main renderer + component dialog).
  */
 
-/** Slot binding for a single tool of an uploaded job. */
-export interface ToolSlotMapping {
+/** Spool choice for one tool, as sent by the matching dialog. */
+export interface ToolSpoolAssignment {
   readonly toolId: number;
-  readonly slotId: number;
+  /** Spoolman spool id, or null when the user chose not to track the tool. */
+  readonly spoolId: number | null;
 }
 
-/** Per-tool usage estimate for a station print job. `null` means unknown. */
-export interface ToolEstimate {
+/**
+ * Per-tool usage curve against gcode byte position.
+ *
+ * `perTool[toolId][i]` is the fraction (0-1) of that tool's total extrusion
+ * done after the first `i / sampleCount` of the gcode bytes. Each array has
+ * `sampleCount + 1` values. Tools without extrusion have no entry.
+ */
+export interface ToolUsageProfile {
+  readonly sampleCount: number;
+  readonly perTool: Readonly<Record<string, readonly number[]>>;
+}
+
+/** One tracked tool of a job. */
+export interface TrackedTool {
   readonly toolId: number;
+  /** Material station slot (1-based) the tool prints from. */
   readonly slotId: number;
-  /** Estimated filament consumed by this tool, in grams. Null = unknown. */
+  readonly spoolId: number;
+  /** Estimated filament for the full print, in grams. Null = unknown. */
   readonly usedG: number | null;
-  /** Estimated filament consumed by this tool, in meters. Null = unknown. */
+  /** Estimated filament for the full print, in meters. Null = unknown. */
   readonly usedM: number | null;
 }
 
 /**
- * Where a {@link JobEstimateRecord} came from.
+ * Where a {@link TrackedJob} came from.
  *
- * - `upload-3mf`: per-filament data parsed from a 3mf at app-upload time
- * - `upload-tooldata`: AD5X printer-reported per-tool weights at app-upload time
- * - `printer-metadata`: printer file-list metadata for stored files (single
- *   material only; resolved to the one assigned slot's spool)
+ * - `upload-3mf`: a 3MF uploaded and started by the app; estimates and the
+ *   usage profile come from the file itself
+ * - `stored-file`: a file already on the printer (AD5X), started by the app;
+ *   estimates come from the printer's file list and there is no usage profile
  */
-export type JobEstimateSource = 'upload-3mf' | 'upload-tooldata' | 'printer-metadata';
+export type TrackedJobSource = 'upload-3mf' | 'stored-file';
 
-/**
- * Persisted estimate record for one print file on one printer context,
- * captured at app-upload time or from printer-reported metadata for a stored
- * file started through the app. Keyed by the final file name as reported by
- * the printer while printing.
- */
-export interface JobEstimateRecord {
+/** The one job being tracked on a printer. */
+export interface TrackedJob {
+  /** File name as the app sent it to the printer. */
   readonly fileName: string;
-  readonly mappings: readonly ToolSlotMapping[];
-  readonly perTool: readonly ToolEstimate[];
-  /** ISO 8601 timestamp of when the estimate was captured. */
-  readonly capturedAt: string;
-  /** Provenance for observability; older records have none. */
-  readonly source?: JobEstimateSource;
+  readonly source: TrackedJobSource;
+  readonly tools: readonly TrackedTool[];
+  /** Per-tool usage curve; null means a cancel is charged linearly. */
+  readonly usageProfile: ToolUsageProfile | null;
+  /** ISO 8601 time when the app started the job. */
+  readonly armedAt: string;
+  /** ISO 8601 time when the printer was first seen printing the job. */
+  startedAt: string | null;
+  /** Last printer-reported progress for the job, 0-100. */
+  lastProgress: number | null;
+  /** ISO 8601 time of {@link lastProgress}. */
+  lastProgressAt: string | null;
 }
 
-/** Terminal print state that triggers a deduction attempt. */
-export type DeductionTerminal = 'completed' | 'cancelled' | 'error';
+/** How a tracked job ended. */
+export type DeductionTerminal = 'completed' | 'cancelled' | 'error' | 'interrupted';
 
 /** Outcome for a single tool during a deduction attempt. */
 export interface ToolDeduction {
   readonly toolId: number;
   readonly slotId: number;
-  /** Spool the deduction was applied to; null when unresolved. */
   readonly spoolId: number | null;
   /** Deducted amount (grams in weight mode, mm in length mode); null when skipped. */
   readonly amount: number | null;
   readonly mode: SpoolDeductionMode;
+  /** Fraction of the tool's estimate that was charged (0-1). */
+  readonly fraction: number;
   readonly status: 'deducted' | 'skipped';
   /** Human-readable reason when status is 'skipped'. */
   readonly reason?: string;
@@ -81,12 +96,14 @@ export interface ToolDeduction {
 /** Update mode mirrored from the Spoolman config for deduction payloads. */
 export type SpoolDeductionMode = 'weight' | 'length';
 
-/** Summary of one terminal-state deduction attempt (for UI + logs). */
+/** Summary of one deduction attempt (for UI + logs). */
 export interface DeductionSummary {
   readonly fileName: string;
   readonly terminal: DeductionTerminal;
-  /** Fraction of the estimate deducted (1 for completion, 0-1 on cancel). */
-  readonly fraction: number;
+  /** Printer progress used for the charge (100 for a completed job). */
+  readonly progress: number;
+  /** True when the end state was not seen and the last progress was used. */
+  readonly approximate: boolean;
   readonly tools: readonly ToolDeduction[];
   readonly deductedCount: number;
   readonly skippedCount: number;
@@ -94,21 +111,30 @@ export interface DeductionSummary {
   readonly at: string;
 }
 
-/** One slot→spool assignment row for the station tracking view. */
-export interface SlotSpoolAssignment {
-  readonly slotId: number;
-  readonly spoolId: number | null;
+/** Panel view of the job tracked now. */
+export interface SpoolmanTrackedJobView {
+  readonly fileName: string;
+  readonly started: boolean;
+  readonly lastProgress: number | null;
+  readonly hasUsageProfile: boolean;
+  readonly tools: ReadonlyArray<{
+    readonly toolId: number;
+    readonly slotId: number;
+    readonly spoolId: number;
+    readonly usedG: number | null;
+    readonly usedM: number | null;
+  }>;
 }
 
 /**
- * Station tracking view payload for material-station contexts: per-slot
- * spool assignments plus the most recent terminal-state deduction.
+ * Station tracking view payload for material-station contexts: the job
+ * tracked now plus the most recent deduction.
  */
 export interface SpoolmanStationStatus {
   readonly supported: boolean;
-  /** Copy shown in the UI explaining the estimate-based flow. */
+  /** Plain explanation shown in the UI. */
   readonly note: string;
-  readonly slotAssignments: readonly SlotSpoolAssignment[];
+  readonly activeJob: SpoolmanTrackedJobView | null;
   readonly lastDeduction: DeductionSummary | null;
 }
 
@@ -120,6 +146,6 @@ export interface SpoolmanStatusPayload {
   readonly enabled: boolean;
   readonly disabledReason?: string | null;
   readonly contextId?: string | null;
-  /** Present on material-station contexts (estimate-based tracking view). */
+  /** Present on material-station contexts (per-job tracking view). */
   readonly station?: SpoolmanStationStatus | null;
 }

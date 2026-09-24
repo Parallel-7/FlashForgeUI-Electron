@@ -1,45 +1,44 @@
 /**
- * @fileoverview Terminal-state Spoolman deduction for material-station
- * printers (Creator 5 series, AD5X with station).
+ * @fileoverview Per-job Spoolman deduction for material-station printers
+ * (Creator 5 series, AD5X with station).
  *
- * The firmware exposes no per-tool usage over HTTP, so this tracker works
- * from upload-time estimates (see {@link JobEstimateStore}) and the
- * slot→spool assignments (see {@link SlotSpoolStore}):
+ * The firmware reports no per-tool usage, so this tracker works from the one
+ * {@link TrackedJob} the app stored when it started the job (see
+ * job-tracking). The job carries the spool the user chose for each tool.
  *
- * - Deduction fires ONLY at terminal states:
- *   (a) completion  → deduct the FULL per-tool estimates;
- *   (b) cancel/stop or error → deduct the last-known printer-reported
- *       progress fraction × per-tool estimates. If no (or zero) progress
- *       signal is known, NOTHING is deducted and a warning is logged —
- *       the tracker never guesses.
- *   Pause/resume transitions deduct nothing; the print still ends in (a)
- *   or (b).
- * - Exactly-once per job across all terminal paths, keyed by
- *   fileName + startedAt marker and persisted in the estimate store ledger.
- *   The ledger is keyed by PRINTER SERIAL (context id fallback, see
- *   {@link resolveStationStoreKey}) so the guard survives app restarts
- *   and printer reconnects, and the entry is reserved synchronously BEFORE
- *   any Spoolman I/O — a second distinct terminal transition (Cancelled →
- *   Error etc.) arriving while HTTP is slow can never double-deduct.
- * - Spoolman API failures are logged and surfaced as skipped tools; they
+ * - While the printer prints the job, the tracker records the last progress
+ *   value. Progress is the gcode byte position divided by the file size.
+ * - When the job completes, each tool is charged its full estimate.
+ * - When the job is cancelled or fails, each tool is charged the part of its
+ *   estimate used at the last progress value. With a usage profile the part
+ *   comes from the tool's own curve; without one it is the plain progress
+ *   fraction. With no progress value, nothing is charged.
+ * - Pause and resume charge nothing.
+ * - If the app was not running when the job ended (restart or reconnect), the
+ *   tracker charges the last recorded progress on the first status update and
+ *   marks the result as approximate. A completed job is charged in full.
+ * - The record is removed before any Spoolman request, so a job is charged at
+ *   most once. Removing it also ends the spool choice: the next job asks again.
+ * - Spoolman API failures are logged and reported as skipped tools; they
  *   never affect printing.
  */
 
 import type {
   DeductionSummary,
   DeductionTerminal,
-  JobEstimateRecord,
   SpoolDeductionMode,
   ToolDeduction,
+  TrackedJob,
 } from '@shared/types/spoolman-tracking';
 import type { PrinterStatus } from '@shared/types/polling';
+import type { PrinterState } from '@shared/types/polling';
 import type { SpoolmanIntegrationService } from './SpoolmanIntegrationService';
 import type { SpoolmanService } from './SpoolmanService';
-import type { JobEstimateStore } from './JobEstimateStore';
-import type { SlotSpoolStore } from './SlotSpoolStore';
+import type { TrackedJobStore } from './TrackedJobStore';
 import type { PrintStateMonitor } from './PrintStateMonitor';
 import type { PrinterPollingService } from './PrinterPollingService';
 import { resolveStationStoreKey } from './station-store-key';
+import { usedFractionAt } from './tool-usage-profile';
 
 /**
  * Factory for a ready-to-use Spoolman client, or null while the integration
@@ -51,74 +50,60 @@ export type SpoolmanServiceFactory = () => SpoolmanService | null;
 /** Rounding for deducted amounts (grams / millimetres). */
 const AMOUNT_DECIMALS = 2;
 
-/** Last-known progress snapshot used to source the cancel fraction. */
-interface ProgressSnapshot {
-  fileName: string;
-  /** Printer-reported progress percentage, 0-100. */
-  percent: number;
-  /** Epoch ms of the poll that produced this snapshot. */
-  at: number;
-}
+/**
+ * A job the app started but the printer never began is dropped after this
+ * time, so a failed start cannot bind the spool choice to a later print.
+ */
+export const ARM_TIMEOUT_MS = 15 * 60 * 1000;
+
+/** States in which the printer is working on a job. */
+const ACTIVE_STATES: ReadonlySet<PrinterState> = new Set<PrinterState>([
+  'Printing',
+  'Paused',
+  'Pausing',
+  'Heating',
+  'Calibrating',
+  'Busy',
+]);
 
 /** Payload shape shared by PrintStateMonitor lifecycle events. */
 interface PrintLifecycleEvent {
   readonly contextId: string;
   readonly jobName: string | null;
   readonly status: PrinterStatus;
-  readonly timestamp?: Date;
-  readonly completedAt?: Date;
-}
-
-/** Result of evaluating whether and how much to deduct. */
-export interface DeductionPlan {
-  fraction: number | null;
-  reason?: string;
 }
 
 /** Dependencies for constructing a per-context station tracker. */
 export interface StationUsageTrackerDeps {
   readonly contextId: string;
-  readonly estimates: JobEstimateStore;
-  readonly slots: SlotSpoolStore;
+  readonly jobs: Pick<TrackedJobStore, 'getJob' | 'updateJob' | 'takeJob'>;
   readonly createSpoolmanService: SpoolmanServiceFactory;
-  readonly integrationService: SpoolmanIntegrationService;
+  readonly integrationService: Pick<SpoolmanIntegrationService, 'getUpdateMode'>;
   /** Invoked after every deduction attempt (including all-skipped ones). */
   readonly onSummary?: (summary: DeductionSummary) => void;
+  /** Store key override for tests (defaults to the printer serial). */
+  readonly resolveStoreKey?: (contextId: string) => string;
+  /** Clock override for tests. */
+  readonly now?: () => number;
 }
 
 /**
- * Pure deduction planner: decides the fraction to deduct for a terminal
- * event given the last-known progress signal. Returns a null fraction when
- * no trustworthy progress is known (cancel path only — completion is always
- * fraction 1).
+ * Normalize a file name for comparison: no directory, no extension, lower
+ * case. The printer may report a 3MF job by its 3MF name or by the name of
+ * the gcode inside it.
  */
-export function planDeductionFraction(
-  terminal: DeductionTerminal,
-  lastKnown: ProgressSnapshot | null,
-  terminalJobName: string | null
-): DeductionPlan {
-  if (terminal === 'completed') {
-    return { fraction: 1 };
+export function jobNameKey(name: string | null | undefined): string {
+  if (!name) {
+    return '';
   }
-  if (!lastKnown) {
-    return {
-      fraction: null,
-      reason: 'no printer-reported progress was observed for this print',
-    };
-  }
-  // A terminal event that still names a file only trusts progress sampled
-  // for that same file; anything else is treated as an unknown signal.
-  if (terminalJobName && terminalJobName !== lastKnown.fileName) {
-    return {
-      fraction: null,
-      reason: `progress signal was for a different job (${lastKnown.fileName})`,
-    };
-  }
-  const fraction = lastKnown.percent / 100;
-  if (!Number.isFinite(fraction) || fraction <= 0) {
-    return { fraction: null, reason: 'printer-reported progress was zero or unknown' };
-  }
-  return { fraction: Math.min(fraction, 1) };
+  const base = name.replace(/\\/g, '/').split('/').pop() ?? '';
+  return base.replace(/\.(3mf|gcode|gx|g)$/i, '').trim().toLowerCase();
+}
+
+/** True when two job names refer to the same file. */
+export function sameJob(a: string | null | undefined, b: string | null | undefined): boolean {
+  const keyA = jobNameKey(a);
+  return keyA !== '' && keyA === jobNameKey(b);
 }
 
 /** Round to the tracker's amount precision. */
@@ -138,10 +123,8 @@ export class StationUsageTracker {
   private readonly deps: StationUsageTrackerDeps;
   private stateMonitor: PrintStateMonitor | null = null;
   private pollingService: PrinterPollingService | null = null;
-  private activeJobKey: string | null = null;
-  private activeFileName: string | null = null;
-  private lastKnownProgress: ProgressSnapshot | null = null;
   private lastSummary: DeductionSummary | null = null;
+  private firstStatusHandled = false;
   private disposed = false;
 
   constructor(deps: StationUsageTrackerDeps) {
@@ -157,7 +140,6 @@ export class StationUsageTracker {
     this.stateMonitor = stateMonitor;
     this.pollingService = pollingService;
 
-    stateMonitor.on('print-started', this.handlePrintStarted);
     stateMonitor.on('print-completed', this.handleTerminal);
     stateMonitor.on('print-cancelled', this.handleTerminal);
     stateMonitor.on('print-error', this.handleTerminal);
@@ -173,7 +155,6 @@ export class StationUsageTracker {
 
   private detachListeners(): void {
     if (this.stateMonitor) {
-      this.stateMonitor.off('print-started', this.handlePrintStarted);
       this.stateMonitor.off('print-completed', this.handleTerminal);
       this.stateMonitor.off('print-cancelled', this.handleTerminal);
       this.stateMonitor.off('print-error', this.handleTerminal);
@@ -190,35 +171,100 @@ export class StationUsageTracker {
     return this.lastSummary;
   }
 
-  /** Current slot→spool assignment view (slot id → spool id). */
-  public getSlotAssignments(): ReadonlyMap<number, number> {
-    return this.deps.slots.getSlotMap(resolveStationStoreKey(this.deps.contextId));
+  /** The job this printer tracks now, or null. */
+  public getTrackedJob(): TrackedJob | null {
+    return this.deps.jobs.getJob(this.storeKey());
+  }
+
+  private storeKey(): string {
+    return (this.deps.resolveStoreKey ?? resolveStationStoreKey)(this.deps.contextId);
+  }
+
+  private now(): number {
+    return this.deps.now ? this.deps.now() : Date.now();
   }
 
   // --- event handlers -------------------------------------------------------
 
-  private readonly handlePrintStarted = (event: PrintLifecycleEvent): void => {
+  /** Handle one polled status. Public for tests. */
+  public readonly handleStatusUpdated = (status: PrinterStatus): void => {
     if (this.disposed) {
       return;
     }
-    // New job: reset progress tracking and arm a fresh exactly-once key.
-    this.lastKnownProgress = null;
-    this.activeFileName = event.jobName;
-    const startedAt = (event.timestamp ?? event.completedAt ?? new Date()).toISOString();
-    this.activeJobKey = `${event.jobName}::${startedAt}`;
+    const key = this.storeKey();
+    const job = this.deps.jobs.getJob(key);
+    const firstStatus = !this.firstStatusHandled;
+    this.firstStatusHandled = true;
+    if (!job) {
+      return;
+    }
+
+    const reportedName = status.currentJob?.fileName ?? null;
+    const printingThisJob = ACTIVE_STATES.has(status.state) && sameJob(reportedName, job.fileName);
+
+    if (printingThisJob) {
+      this.recordProgress(key, job, status);
+      return;
+    }
+
+    if (job.startedAt !== null) {
+      // The job was printing, but the printer no longer works on it and no
+      // end event reached this tracker (app restart, reconnect, or a missed
+      // transition). Charge it now from what is known.
+      // A status without a file name while the printer is active (heating
+      // for a resume, for example) says nothing, so it never ends the job.
+      const printingOtherJob =
+        ACTIVE_STATES.has(status.state) && reportedName !== null && reportedName !== '';
+      const idle = status.state === 'Ready';
+      const endStateAfterRestart =
+        firstStatus && !ACTIVE_STATES.has(status.state);
+      if (printingOtherJob || idle || endStateAfterRestart) {
+        const completed =
+          status.state === 'Completed' && (reportedName === null || sameJob(reportedName, job.fileName));
+        this.runDeduction(completed ? 'completed' : 'interrupted', true);
+      }
+      return;
+    }
+
+    // Not started yet.
+    if (ACTIVE_STATES.has(status.state) && reportedName && !sameJob(reportedName, job.fileName)) {
+      console.warn(
+        `[StationUsageTracker] Printer on context ${this.deps.contextId} prints ${reportedName}, ` +
+          `not the tracked ${job.fileName}; the spool choice is dropped.`
+      );
+      this.deps.jobs.takeJob(key);
+      return;
+    }
+    if (this.now() - Date.parse(job.armedAt) > ARM_TIMEOUT_MS) {
+      console.warn(
+        `[StationUsageTracker] ${job.fileName} did not start within ` +
+          `${ARM_TIMEOUT_MS / 60000} minutes; the spool choice is dropped.`
+      );
+      this.deps.jobs.takeJob(key);
+    }
   };
 
-  private readonly handleStatusUpdated = (status: PrinterStatus): void => {
-    if (this.disposed) {
-      return;
+  private recordProgress(key: string, job: TrackedJob, status: PrinterStatus): void {
+    const changes: { startedAt?: string; lastProgress?: number; lastProgressAt?: string } = {};
+    let persist = false;
+    if (job.startedAt === null) {
+      changes.startedAt = new Date(this.now()).toISOString();
+      persist = true;
     }
-    const fileName = status.currentJob?.fileName;
     const percent = status.currentJob?.progress?.percentage;
-    if (!fileName || typeof percent !== 'number' || !Number.isFinite(percent) || percent <= 0) {
-      return;
+    if (typeof percent === 'number' && Number.isFinite(percent) && percent > 0) {
+      const clamped = Math.min(100, percent);
+      if (clamped !== job.lastProgress) {
+        changes.lastProgress = clamped;
+        changes.lastProgressAt = new Date(this.now()).toISOString();
+        // Write to disk once per whole percent to keep the file quiet.
+        persist = persist || Math.floor(clamped) !== Math.floor(job.lastProgress ?? -1);
+      }
     }
-    this.lastKnownProgress = { fileName, percent, at: Date.now() };
-  };
+    if (Object.keys(changes).length > 0) {
+      this.deps.jobs.updateJob(key, changes, persist);
+    }
+  }
 
   private readonly handleTerminal = (event: PrintLifecycleEvent): void => {
     if (this.disposed) {
@@ -228,25 +274,36 @@ export class StationUsageTracker {
     if (!terminal) {
       return;
     }
-    // At 'Cancelled'/'Error' the polled job is already stripped, so the
-    // event jobName is usually null; fall back to the name captured at
-    // print start, then to the last progress snapshot's file.
-    const jobName =
+    const job = this.deps.jobs.getJob(this.storeKey());
+    if (!job) {
+      return;
+    }
+    const eventName =
       (event.jobName && event.jobName !== 'Unknown' ? event.jobName : null) ??
-      this.activeFileName ??
-      this.lastKnownProgress?.fileName ??
+      event.status.currentJob?.fileName ??
       null;
+    // An end event for a job the tracker never saw start belongs to an
+    // earlier print, unless it names this job.
+    if (job.startedAt === null && !sameJob(eventName, job.fileName)) {
+      return;
+    }
+    if (eventName !== null && !sameJob(eventName, job.fileName)) {
+      return;
+    }
+    this.runDeduction(terminal, false);
+  };
+
+  private runDeduction(terminal: DeductionTerminal, approximate: boolean): void {
     // Fire-and-forget on purpose (poll handlers must never await network
     // I/O), but always observe the promise so a rejection can never become
     // an unhandledRejection; per-tool Spoolman errors are handled inside.
-    void this.deductAtTerminal(terminal, jobName).catch((error: unknown) => {
+    void this.deductTrackedJob(terminal, approximate).catch((error: unknown) => {
       console.warn(
-        `[StationUsageTracker] Terminal deduction failed for ${jobName ?? 'unknown job'} ` +
-          `on context ${this.deps.contextId}:`,
+        `[StationUsageTracker] Deduction failed on context ${this.deps.contextId}:`,
         error
       );
     });
-  };
+  }
 
   private terminalFromStatus(status: PrinterStatus): DeductionTerminal | null {
     switch (status.state) {
@@ -263,189 +320,102 @@ export class StationUsageTracker {
 
   // --- deduction ------------------------------------------------------------
 
-  /** Deduct (or deliberately skip) a job at a terminal state. */
-  public async deductAtTerminal(
+  /**
+   * Charge the tracked job and remove it. Public for tests.
+   *
+   * @param terminal - How the job ended
+   * @param approximate - True when the end state was not observed
+   */
+  public async deductTrackedJob(
     terminal: DeductionTerminal,
-    jobName: string | null
+    approximate: boolean
   ): Promise<DeductionSummary | null> {
-    if (!jobName) {
-      console.warn(
-        `[StationUsageTracker] Terminal state ${terminal} on context ${this.deps.contextId} ` +
-          'without a job name; no deduction attempted.'
-      );
+    // Remove the record BEFORE any await: a second end event that arrives
+    // while Spoolman is slow finds nothing to charge.
+    const job = this.deps.jobs.takeJob(this.storeKey());
+    if (!job) {
       return null;
     }
 
-    const jobKey =
-      this.activeJobKey ?? `${jobName}::${(this.lastKnownProgress?.at ?? 0).toString()}`;
+    const progress = terminal === 'completed' ? 100 : job.lastProgress ?? 0;
+    const mode = this.resolveMode();
+    const service = this.deps.createSpoolmanService();
+    const tools: ToolDeduction[] = [];
 
-    // Keyed by printer serial (stable across restarts/reconnects); falls
-    // back to the context id with a one-time warning when unavailable.
-    const storeKey = resolveStationStoreKey(this.deps.contextId);
-
-    if (this.deps.estimates.isDeducted(storeKey, jobKey)) {
+    if (!service) {
       console.log(
-        `[StationUsageTracker] Job ${jobName} on context ${this.deps.contextId} already deducted; skipping.`
+        `[StationUsageTracker] Spoolman integration not configured; ${job.fileName} is not charged.`
       );
-      return null;
+    } else {
+      for (const tool of job.tools) {
+        const fraction =
+          terminal === 'completed' ? 1 : usedFractionAt(job.usageProfile, tool.toolId, progress);
+        tools.push(await this.chargeTool(service, job, tool, mode, fraction, progress));
+      }
     }
 
-    const plan = planDeductionFraction(terminal, this.lastKnownProgress, jobName);
-    if (plan.fraction === null) {
-      // No trustworthy progress signal: never guess. Mark the attempt so the
-      // other terminal paths cannot deduct later for the same key either.
-      this.deps.estimates.markDeducted(storeKey, jobKey);
-      console.warn(
-        `[StationUsageTracker] No deduction for cancelled job ${jobName} on context ` +
-          `${this.deps.contextId}: ${plan.reason ?? 'unknown progress'}.`
-      );
-      const skipped: DeductionSummary = {
-        fileName: jobName,
-        terminal,
-        fraction: 0,
-        tools: [],
-        deductedCount: 0,
-        skippedCount: 0,
-        at: new Date().toISOString(),
-      };
-      this.lastSummary = skipped;
-      this.deps.onSummary?.(skipped);
-      return skipped;
-    }
-    const fraction = plan.fraction;
-
-    const record = this.deps.estimates.findEstimate(storeKey, jobName);
-    if (!record) {
-      // Untracked job (not uploaded through this app). Nothing to deduct.
-      this.deps.estimates.markDeducted(storeKey, jobKey);
-      console.log(
-        `[StationUsageTracker] Job ${jobName} on context ${this.deps.contextId} has no upload ` +
-          'estimate record (started on the printer?); no deduction.'
-      );
-      const untracked: DeductionSummary = {
-        fileName: jobName,
-        terminal,
-        fraction,
-        tools: [],
-        deductedCount: 0,
-        skippedCount: 0,
-        at: new Date().toISOString(),
-      };
-      this.lastSummary = untracked;
-      this.deps.onSummary?.(untracked);
-      return untracked;
-    }
-
-    // Reserve the ledger key BEFORE awaiting anything: a second distinct
-    // terminal transition (e.g. Cancelled → Error) arriving while the
-    // Spoolman HTTP call is in flight must observe the job as already
-    // claimed. Per-tool failures in applyDeductions are caught and skipped
-    // individually, so reserving first only means a crash mid-apply can
-    // under-deduct — the conservative failure mode.
-    this.deps.estimates.markDeducted(storeKey, jobKey);
-
-    const summary = await this.applyDeductions(record, terminal, fraction);
+    const deductedCount = tools.filter((entry) => entry.status === 'deducted').length;
+    const summary: DeductionSummary = {
+      fileName: job.fileName,
+      terminal,
+      progress,
+      approximate,
+      tools,
+      deductedCount,
+      skippedCount: tools.length - deductedCount,
+      at: new Date(this.now()).toISOString(),
+    };
+    console.log(
+      `[StationUsageTracker] ${job.fileName} ended (${terminal}${approximate ? ', approximate' : ''}) ` +
+        `at ${progress}%: ${deductedCount} spool(s) charged, ${summary.skippedCount} skipped.`
+    );
     this.lastSummary = summary;
     this.deps.onSummary?.(summary);
     return summary;
   }
 
-  /** Execute per-tool deductions for a tracked job. */
-  private async applyDeductions(
-    record: JobEstimateRecord,
-    terminal: DeductionTerminal,
-    fraction: number
-  ): Promise<DeductionSummary> {
-    const mode = this.resolveMode();
-    const service = this.deps.createSpoolmanService();
-    const slotMap = this.deps.slots.getSlotMap(resolveStationStoreKey(this.deps.contextId));
-    const tools: ToolDeduction[] = [];
+  private async chargeTool(
+    service: SpoolmanService,
+    job: TrackedJob,
+    tool: TrackedJob['tools'][number],
+    mode: SpoolDeductionMode,
+    fraction: number,
+    progress: number
+  ): Promise<ToolDeduction> {
+    const base = { toolId: tool.toolId, slotId: tool.slotId, spoolId: tool.spoolId, mode, fraction };
+    const estimate = mode === 'weight' ? tool.usedG : tool.usedM;
+    const unit = mode === 'weight' ? 'grams' : 'metres';
 
-    if (!service) {
-      // Integration disabled/unconfigured at terminal time: opt-out, not an error.
+    if (estimate === null || !Number.isFinite(estimate) || estimate <= 0) {
+      return this.skipped(base, `no ${unit} estimate for tool ${tool.toolId + 1}`);
+    }
+    if (!(progress > 0)) {
+      return this.skipped(base, 'no printer progress was seen for this job');
+    }
+
+    // Length mode consumes millimetres; estimates are stored in metres.
+    const amount = roundAmount(mode === 'weight' ? estimate * fraction : estimate * 1000 * fraction);
+    if (amount <= 0) {
+      return this.skipped(base, `tool ${tool.toolId + 1} had not printed yet`);
+    }
+
+    try {
+      const payload = mode === 'weight' ? { use_weight: amount } : { use_length: amount };
+      await service.updateUsage(tool.spoolId, payload);
       console.log(
-        `[StationUsageTracker] Spoolman integration not configured; skipping deduction for ` +
-          `${record.fileName} on context ${this.deps.contextId}.`
+        `[StationUsageTracker] Charged ${amount}${mode === 'weight' ? 'g' : 'mm'} to spool ` +
+          `${tool.spoolId} (tool ${tool.toolId + 1}, slot ${tool.slotId}, job ${job.fileName}).`
       );
-      return {
-        fileName: record.fileName,
-        terminal,
-        fraction,
-        tools: [],
-        deductedCount: 0,
-        skippedCount: 0,
-        at: new Date().toISOString(),
-      };
-    }
-
-    for (const tool of record.perTool) {
-      const spoolId = slotMap.get(tool.slotId) ?? null;
-      const estimate = mode === 'weight' ? tool.usedG : tool.usedM;
-      const unit = mode === 'weight' ? 'grams' : 'metres';
-
-      if (estimate === null || !Number.isFinite(estimate) || estimate <= 0) {
-        tools.push(
-          this.skipped(tool, spoolId, mode, `no ${unit} estimate captured for tool ${tool.toolId}`)
-        );
-        continue;
-      }
-      if (spoolId === null) {
-        tools.push(this.skipped(tool, null, mode, `no spool assigned to slot ${tool.slotId}`));
-        continue;
-      }
-
-      // Length mode consumes millimetres; estimates are stored in metres.
-      const amount = roundAmount(
-        mode === 'weight' ? estimate * fraction : estimate * 1000 * fraction
+      return { ...base, amount, status: 'deducted' };
+    } catch (error) {
+      // Invariant: Spoolman failures never affect printing.
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(
+        `[StationUsageTracker] Spoolman update failed for spool ${tool.spoolId} ` +
+          `(tool ${tool.toolId + 1}, job ${job.fileName}): ${message}`
       );
-      if (amount <= 0) {
-        tools.push(this.skipped(tool, spoolId, mode, `computed ${unit} amount rounded to zero`));
-        continue;
-      }
-
-      try {
-        const payload = mode === 'weight' ? { use_weight: amount } : { use_length: amount };
-        await service.updateUsage(spoolId, payload);
-        tools.push({
-          toolId: tool.toolId,
-          slotId: tool.slotId,
-          spoolId,
-          amount,
-          mode,
-          status: 'deducted',
-        });
-        console.log(
-          `[StationUsageTracker] Deducted ${amount}${mode === 'weight' ? 'g' : 'mm'} from spool ` +
-            `${spoolId} (tool ${tool.toolId}, slot ${tool.slotId}, job ${record.fileName}).`
-        );
-      } catch (error) {
-        // Invariant: Spoolman failures never affect printing.
-        const message = error instanceof Error ? error.message : String(error);
-        console.error(
-          `[StationUsageTracker] Spoolman update failed for spool ${spoolId} ` +
-            `(tool ${tool.toolId}, job ${record.fileName}): ${message}`
-        );
-        tools.push(this.skipped(tool, spoolId, mode, `spoolman update failed: ${message}`));
-      }
+      return this.skipped(base, `spoolman update failed: ${message}`);
     }
-
-    const deductedCount = tools.filter((entry) => entry.status === 'deducted').length;
-    const skippedCount = tools.length - deductedCount;
-    if (skippedCount > 0) {
-      console.warn(
-        `[StationUsageTracker] Job ${record.fileName} (${terminal}) on context ` +
-          `${this.deps.contextId}: ${deductedCount} tool(s) deducted, ${skippedCount} skipped.`
-      );
-    }
-    return {
-      fileName: record.fileName,
-      terminal,
-      fraction,
-      tools,
-      deductedCount,
-      skippedCount,
-      at: new Date().toISOString(),
-    };
   }
 
   /** Weight-first per config; falls back to length mode only per config. */
@@ -454,20 +424,10 @@ export class StationUsageTracker {
   }
 
   private skipped(
-    tool: { toolId: number; slotId: number },
-    spoolId: number | null,
-    mode: SpoolDeductionMode,
+    base: Omit<ToolDeduction, 'amount' | 'status' | 'reason'>,
     reason: string
   ): ToolDeduction {
-    console.warn(`[StationUsageTracker] Skipping tool ${tool.toolId}: ${reason}.`);
-    return {
-      toolId: tool.toolId,
-      slotId: tool.slotId,
-      spoolId,
-      amount: null,
-      mode,
-      status: 'skipped',
-      reason,
-    };
+    console.warn(`[StationUsageTracker] Skipping tool ${base.toolId + 1}: ${reason}.`);
+    return { ...base, amount: null, status: 'skipped', reason };
   }
 }

@@ -13,6 +13,9 @@ import type {
   MaterialStationStatus,
   MaterialStationStatusResponse,
   PendingJobStart,
+  SpoolAssignment,
+  SpoolSearchResponse,
+  SpoolSummary,
   WebUIJobFile,
 } from '../app.js';
 import {
@@ -134,7 +137,104 @@ export function updateMaterialMatchingConfirmState(): void {
 
   const job = matchingState.pending.job;
   const requiredMappings = isAD5XJobFile(job) ? job.toolDatas.length : 0;
-  confirmButton.disabled = matchingState.mappings.size !== requiredMappings;
+  confirmButton.disabled =
+    matchingState.mappings.size !== requiredMappings || !allSpoolsChosen();
+}
+
+/** True when spool tracking does not apply, or every mapped tool has a spool choice. */
+function allSpoolsChosen(): boolean {
+  const matchingState = getMaterialMatchingState();
+  if (!matchingState || matchingState.spools === null) {
+    return true;
+  }
+  for (const toolId of matchingState.mappings.keys()) {
+    if (!matchingState.spoolChoices.has(toolId)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Spool choices for the confirmed mappings (empty when tracking does not apply). */
+function collectSpoolAssignments(mappings: readonly MaterialMapping[]): SpoolAssignment[] {
+  const matchingState = getMaterialMatchingState();
+  if (!matchingState || matchingState.spools === null) {
+    return [];
+  }
+  return mappings.map((mapping) => ({
+    toolId: mapping.toolId,
+    spoolId: matchingState.spoolChoices.get(mapping.toolId) ?? null,
+  }));
+}
+
+const SPOOL_PLACEHOLDER_VALUE = '';
+const SPOOL_UNTRACKED_VALUE = 'none';
+
+function describeSpool(spool: SpoolSummary): string {
+  const parts = [`#${spool.id}`, spool.vendor, spool.name].filter(Boolean);
+  const remaining = Number.isFinite(spool.remainingWeight)
+    ? ` (${Math.round(spool.remainingWeight)} g left)`
+    : '';
+  return `${parts.join(' ')}${remaining}`;
+}
+
+/**
+ * Spool picker for one mapping. Spools whose material matches the tool come
+ * first, so the usual choice is near the top.
+ */
+function createSpoolSelect(mapping: MaterialMapping, spools: readonly SpoolSummary[]): HTMLSelectElement {
+  const matchingState = getMaterialMatchingState();
+  const select = document.createElement('select');
+  select.className = 'material-mapping-spool';
+  select.dataset.toolId = `${mapping.toolId}`;
+  select.setAttribute('aria-label', `Spoolman spool for tool ${mapping.toolId + 1}`);
+
+  const placeholder = document.createElement('option');
+  placeholder.value = SPOOL_PLACEHOLDER_VALUE;
+  placeholder.textContent = 'Choose a spool\u2026';
+  placeholder.disabled = true;
+  select.appendChild(placeholder);
+
+  const untracked = document.createElement('option');
+  untracked.value = SPOOL_UNTRACKED_VALUE;
+  untracked.textContent = 'Do not track';
+  select.appendChild(untracked);
+
+  const sorted = [...spools].sort((a, b) => {
+    const aMatch = materialsMatch(mapping.materialName, a.material) ? 0 : 1;
+    const bMatch = materialsMatch(mapping.materialName, b.material) ? 0 : 1;
+    return aMatch - bMatch || a.id - b.id;
+  });
+  for (const spool of sorted) {
+    const option = document.createElement('option');
+    option.value = `${spool.id}`;
+    option.textContent = describeSpool(spool);
+    select.appendChild(option);
+  }
+
+  const choice = matchingState?.spoolChoices.get(mapping.toolId);
+  select.value =
+    choice === undefined
+      ? SPOOL_PLACEHOLDER_VALUE
+      : choice === null
+        ? SPOOL_UNTRACKED_VALUE
+        : `${choice}`;
+
+  select.addEventListener('change', () => {
+    const current = getMaterialMatchingState();
+    if (!current) {
+      return;
+    }
+    if (select.value === SPOOL_UNTRACKED_VALUE) {
+      current.spoolChoices.set(mapping.toolId, null);
+    } else if (select.value === SPOOL_PLACEHOLDER_VALUE) {
+      current.spoolChoices.delete(mapping.toolId);
+    } else {
+      current.spoolChoices.set(mapping.toolId, Number(select.value));
+    }
+    updateMaterialMatchingConfirmState();
+  });
+  return select;
 }
 
 export function renderMaterialMappings(): void {
@@ -188,6 +288,9 @@ export function renderMaterialMappings(): void {
     });
 
     item.appendChild(content);
+    if (matchingState.spools !== null) {
+      item.appendChild(createSpoolSelect(mapping, matchingState.spools));
+    }
     item.appendChild(removeBtn);
     container.appendChild(item);
   });
@@ -207,6 +310,7 @@ function handleRemoveMapping(toolId: number): void {
   }
 
   matchingState.mappings.delete(toolId);
+  matchingState.spoolChoices.delete(toolId);
   renderMaterialRequirements(matchingState.pending.job);
   renderMaterialSlots(matchingState.materialStation);
   renderMaterialMappings();
@@ -322,7 +426,7 @@ export function renderMaterialSlots(status: MaterialStationStatus | null): void 
   if (!status) {
     const empty = document.createElement('div');
     empty.className = 'material-placeholder';
-    empty.textContent = 'Material station status unavailable.';
+    empty.textContent = 'Waiting for the material station status…';
     container.appendChild(empty);
     return;
   }
@@ -478,6 +582,37 @@ async function fetchMaterialStationStatus(): Promise<MaterialStationStatus | nul
   }
 }
 
+/**
+ * Load the spools offered in the dialog, or null when per-job tracking does
+ * not apply: Spoolman is off, the printer has no station, or the job is not
+ * started now (a file sent without Start Now is never tracked).
+ */
+async function loadTrackingSpools(pending: PendingJobStart): Promise<SpoolSummary[] | null> {
+  const config = state.spoolmanConfig;
+  if (!config?.enabled || !config.station || !pending.startNow) {
+    return null;
+  }
+  try {
+    const result = await apiRequest<SpoolSearchResponse>('/api/spoolman/spools');
+    if (result.success) {
+      return (result.spools ?? []).filter((spool) => !spool.archived);
+    }
+    showToast(result.error || 'Could not load Spoolman spools. This print is not tracked.', 'error');
+  } catch (error) {
+    console.error('Failed to load Spoolman spools:', error);
+    showToast('Could not load Spoolman spools. This print is not tracked.', 'error');
+  }
+  return null;
+}
+
+/**
+ * Material-station status reads before the dialog gives up. Right after a
+ * connect or a printer switch the server can take several poll cycles to
+ * have a status, so the dialog keeps asking for about 15 seconds.
+ */
+const STATION_STATUS_ATTEMPTS = 12;
+const STATION_STATUS_RETRY_MS = 1250;
+
 export function resetMaterialMatchingState(): void {
   const matchingState = getMaterialMatchingState();
   setMaterialMatchingState(null);
@@ -494,6 +629,7 @@ export function resetMaterialMatchingState(): void {
 
 export function closeMaterialMatchingModal(): void {
   hideElement('material-matching-modal');
+  hideElement('material-spool-hint');
   resetMaterialMatchingState();
 }
 
@@ -521,6 +657,8 @@ export async function openMaterialMatchingModal(
     materialStation: null,
     selectedToolId: null,
     mappings: new Map(),
+    spoolChoices: new Map(),
+    spools: null,
     hooks,
   });
 
@@ -535,13 +673,42 @@ export async function openMaterialMatchingModal(
   clearMaterialMessages();
   showElement('material-matching-modal');
 
-  const status = await fetchMaterialStationStatus();
+  void loadTrackingSpools(pending).then((spools) => {
+    const current = getMaterialMatchingState();
+    if (!current || current.pending !== pending) {
+      return;
+    }
+    current.spools = spools;
+    if (spools !== null) {
+      showElement('material-spool-hint');
+    }
+    renderMaterialMappings();
+    updateMaterialMatchingConfirmState();
+  });
+
+  // The server may not have a station status yet right after a connect or a
+  // printer switch, so read it a few times before reporting a problem.
+  let status: MaterialStationStatus | null = null;
+  for (let attempt = 1; attempt <= STATION_STATUS_ATTEMPTS; attempt++) {
+    status = await fetchMaterialStationStatus();
+    if (status?.connected && status.slots.length > 0) {
+      break;
+    }
+    if (attempt < STATION_STATUS_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, STATION_STATUS_RETRY_MS));
+    }
+    if (getMaterialMatchingState()?.pending !== pending) {
+      return;
+    }
+  }
+
   const matchingState = getMaterialMatchingState();
-  if (!matchingState) {
+  if (!matchingState || matchingState.pending !== pending) {
     return;
   }
 
   matchingState.materialStation = status;
+  clearMaterialMessages();
   renderMaterialSlots(status);
 
   if (!status || !status.connected) {
@@ -563,7 +730,13 @@ export async function confirmMaterialMatching(): Promise<void> {
     return;
   }
 
+  if (!allSpoolsChosen()) {
+    showMaterialError('Choose a Spoolman spool for each tool, or choose "Do not track".');
+    return;
+  }
+
   const mappings = Array.from(matchingState.mappings.values());
+  const spoolAssignments = collectSpoolAssignments(mappings);
   const confirmButton = getMaterialMatchingElement<HTMLButtonElement>('material-matching-confirm');
 
   if (confirmButton) {
@@ -575,12 +748,13 @@ export async function confirmMaterialMatching(): Promise<void> {
   // sent straight to /api/jobs/start.
   const onConfirm = matchingState.hooks?.onConfirm;
   const success = onConfirm
-    ? await onConfirm(mappings)
+    ? await onConfirm(mappings, spoolAssignments)
     : await sendJobStartRequest({
         filename: matchingState.pending.filename,
         leveling: matchingState.pending.leveling,
         startNow: true,
         materialMappings: mappings,
+        spoolAssignments,
       });
 
   if (confirmButton) {

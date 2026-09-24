@@ -16,6 +16,7 @@ import type {
   PrinterFeatures,
   PrinterStatus,
   SpoolmanConfigResponse,
+  SpoolAssignment,
   SpoolSummary,
   WebUIJobFile,
   WebUISettings,
@@ -76,7 +77,7 @@ let isMobileLayout = false;
  */
 export interface MaterialMatchingHooks {
   /** Runs in place of the default job-start request. Return true to close the modal. */
-  onConfirm?: (mappings: MaterialMapping[]) => Promise<boolean>;
+  onConfirm?: (mappings: MaterialMapping[], spoolAssignments: SpoolAssignment[]) => Promise<boolean>;
   /** Runs when the modal is dismissed without confirming. */
   onCancel?: () => void;
 }
@@ -86,6 +87,13 @@ export interface MaterialMatchingState {
   materialStation: MaterialStationStatus | null;
   selectedToolId: number | null;
   mappings: Map<number, MaterialMapping>;
+  /**
+   * Spoolman spool per tool when per-job tracking applies: a spool id, null
+   * for "do not track", or no entry while the user has not chosen yet.
+   */
+  spoolChoices: Map<number, number | null>;
+  /** Spools offered in the dialog; null when tracking does not apply. */
+  spools: SpoolSummary[] | null;
   hooks?: MaterialMatchingHooks;
   /** Set once onConfirm succeeds so teardown does not also fire onCancel. */
   confirmed?: boolean;

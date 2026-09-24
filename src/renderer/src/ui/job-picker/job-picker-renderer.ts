@@ -38,13 +38,19 @@ interface JobPickerAPI {
   readonly getRecentJobs: () => Promise<{ success: boolean; jobs: readonly unknown[]; error?: string }>;
   readonly startJob: (
     fileName: string,
-    options: { leveling: boolean; startNow: boolean; materialMappings?: unknown[] }
+    options: {
+      leveling: boolean;
+      startNow: boolean;
+      materialMappings?: unknown[];
+      spoolAssignments?: Array<{ toolId: number; spoolId: number | null }>;
+    }
   ) => Promise<{ success: boolean; error?: string }>;
   readonly showMaterialInfo: (data: MaterialInfoData) => void;
   readonly showMaterialMatching: (data: {
     fileName: string;
     toolDatas: readonly unknown[];
     leveling: boolean;
+    trackSpools?: boolean;
   }) => Promise<unknown[] | null>;
   readonly showSingleColorConfirmation: (data: { fileName: string; leveling: boolean }) => Promise<boolean>;
 }
@@ -111,7 +117,6 @@ let currentJobsData: readonly unknown[] = []; // Store full job data for AD5X
 // status IPC resolves; the indicator is hidden when Spoolman is disabled).
 let spoolmanStatusInputs: {
   readonly spoolmanEnabled: boolean;
-  readonly assignedSpoolSlotIds: readonly number[];
 } | null = null;
 
 // Type definitions for printer features
@@ -185,9 +190,6 @@ function isMultiColorJob(job: AD5XJobInfo): boolean {
 /** Minimal shape of the `spoolman:get-status` payload used by the indicator. */
 interface SpoolmanStatusShape {
   readonly enabled: boolean;
-  readonly station?: {
-    readonly slotAssignments?: readonly { readonly slotId: number; readonly spoolId: number }[];
-  } | null;
 }
 
 function isSpoolmanStatus(value: unknown): value is SpoolmanStatusShape {
@@ -317,17 +319,8 @@ async function checkPrinterCapabilities(): Promise<void> {
         if (isSpoolmanStatus(spoolmanStatus)) {
           spoolmanStatusInputs = {
             spoolmanEnabled: spoolmanStatus.enabled === true,
-            assignedSpoolSlotIds: (spoolmanStatus.station?.slotAssignments ?? []).map(
-              (assignment) => assignment.slotId
-            ),
           };
-          logDebug(
-            'Job picker: Spoolman status loaded (enabled:',
-            spoolmanStatusInputs.spoolmanEnabled,
-            ', assigned slots:',
-            spoolmanStatusInputs.assignedSpoolSlotIds.length,
-            ')'
-          );
+          logDebug('Job picker: Spoolman status loaded (enabled:', spoolmanStatusInputs.spoolmanEnabled, ')');
         }
       } catch (spoolmanError) {
         logDebug('Job picker: Spoolman status unavailable', spoolmanError);
@@ -585,7 +578,6 @@ function createFileItem(filename: string): HTMLElement {
     {
       spoolmanEnabled: spoolmanStatusInputs?.spoolmanEnabled === true,
       hasStation: hasMaterialStation,
-      assignedSpoolSlotIds: spoolmanStatusInputs?.assignedSpoolSlotIds ?? [],
     }
   );
   if (trackingHint) {
@@ -755,13 +747,15 @@ async function handleSelectJob(): Promise<void> {
       logDebug('Job picker: AD5X multi-color job detected, showing material matching');
 
       try {
-        const materialMappings = await api.showMaterialMatching({
+        const confirmedMappings = await api.showMaterialMatching({
           fileName: selectedFile,
           toolDatas: jobData.toolDatas || [],
           leveling: levelingCheckbox.checked,
+          // The job starts now, so the dialog asks for a Spoolman spool per tool.
+          trackSpools: true,
         });
 
-        if (!materialMappings) {
+        if (!confirmedMappings) {
           // User cancelled
           return;
         }
@@ -772,10 +766,20 @@ async function handleSelectJob(): Promise<void> {
           loadingElement.innerHTML = '<div class="loading-spinner"></div><div>Starting multi-color job...</div>';
         }
 
+        // The dialog attaches the Spoolman spool choice to each mapping. Split
+        // it off: the printer must receive plain mappings only.
+        type MappingWithSpool = Record<string, unknown> & { toolId: number; spoolId?: number | null };
+        const withSpools = confirmedMappings as MappingWithSpool[];
+        const materialMappings = withSpools.map(({ spoolId: _spoolId, ...mapping }) => mapping);
+        const spoolAssignments = withSpools
+          .filter((mapping) => mapping.spoolId !== undefined)
+          .map((mapping) => ({ toolId: mapping.toolId, spoolId: mapping.spoolId ?? null }));
+
         const result = await api.startJob(selectedFile, {
           leveling: levelingCheckbox.checked,
           startNow: true,
           materialMappings,
+          spoolAssignments: spoolAssignments.length > 0 ? spoolAssignments : undefined,
         });
 
         if (result.success) {

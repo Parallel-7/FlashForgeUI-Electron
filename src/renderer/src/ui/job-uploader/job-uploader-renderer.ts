@@ -107,13 +107,22 @@ const getJobUploaderAPI = (): JobUploaderAPI => {
  * expected by the material matching dialog
  */
 function convertFilamentsToToolData(filaments: FilamentInfo[]): FFGcodeToolData[] {
+  // The tool id is the filament's gcode tool (T0-T3), not its list position:
+  // a 3MF lists only the filaments a plate uses, each with its 1-based slicer
+  // id, so a plate that uses filaments 1 and 3 prints with T0 and T2.
   return filaments.map((filament, index) => ({
-    toolId: index,
+    toolId: toolIdForFilament(filament.id, index),
     materialName: filament.type || 'Unknown',
     materialColor: filament.color || '#FFFFFF', // Default to white if no color specified
     filamentWeight: parseFloat(filament.usedG || '0'),
     slotId: 0, // Will be set by user selection in material matching dialog
   }));
+}
+
+/** Gcode tool index for a 3MF filament id (1-based), or the list position without one. */
+function toolIdForFilament(id: string | null | undefined, index: number): number {
+  const parsed = Number.parseInt(String(id ?? ''), 10);
+  return Number.isInteger(parsed) && parsed >= 1 ? parsed - 1 : index;
 }
 
 /**
@@ -377,7 +386,13 @@ async function handleMetadataResult(
         const toolData = convertFilamentsToToolData(filaments);
 
         if (api.showMaterialMatchingDialog) {
-          const mappings = await api.showMaterialMatchingDialog(currentFilePath, toolData);
+          // A spool per tool is asked only when the job starts now: a file
+          // sent without Start Now is never Spoolman-tracked.
+          const mappings = await api.showMaterialMatchingDialog(
+            currentFilePath,
+            toolData,
+            elements.startNowCheckbox?.checked ?? false
+          );
           if (mappings && Array.isArray(mappings)) {
             // Save material mappings for later use
             savedMaterialMappings = mappings;
@@ -731,6 +746,13 @@ function renderMappingSummary(elements: DialogElements): void {
     chip.appendChild(createMappingSwatch(mapping.slotMaterialColor));
     chip.appendChild(createMappingText('mapping-chip-label', `Slot ${mapping.slotId}`));
     chip.appendChild(createMappingText('mapping-chip-material', mapping.materialName || 'Unknown'));
+
+    const spoolId = (mapping as { spoolId?: number | null }).spoolId;
+    if (spoolId !== undefined) {
+      chip.appendChild(
+        createMappingText('mapping-chip-spool', spoolId === null ? 'Not tracked' : `Spool #${spoolId}`)
+      );
+    }
 
     mappingSummaryList.appendChild(chip);
   });

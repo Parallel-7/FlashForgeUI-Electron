@@ -3,22 +3,20 @@
  *
  * Manages active spool selections across printer contexts with per-printer persistence,
  * station-aware context gating, and event broadcasting for desktop/WebUI synchronization.
- * This service acts as the single source of truth for active spool data and for the
- * material-station slot→spool assignments used by estimate-based tracking.
+ * This service acts as the single source of truth for active spool data.
  *
  * Key Features:
  * - Persistent storage of active spool selections per printer in printer_details.json
  * - Station-aware gating: material-station contexts (Creator 5 series, AD5X with
- *   station) use the estimate-based tracking path (slot→spool assignments +
- *   upload-time estimates) instead of the single active-spool flow
- * - Slot→spool assignments persisted per printer serial in spoolman_slot_spools.json
+ *   station) use per-job tracking (a spool per tool, chosen in the matching
+ *   dialog for each job the app starts) instead of the single active-spool flow
  * - Event-driven updates for real-time synchronization
  * - Integration with SpoolmanService for spool search and details
  * - Spoolman configuration validation and connection testing
  *
  * Gating predicates:
  * - isContextSupported: context is known (assignment operations allowed)
- * - isStationContext: material station attached (estimate-based tracking path)
+ * - isStationContext: material station attached (per-job tracking path)
  * - isUsageTrackingEligible: single-spool deduction path (non-station contexts,
  *   including AD5X printers WITHOUT a station)
  */
@@ -35,8 +33,6 @@ import type { PrinterContextManager } from '../managers/PrinterContextManager.js
 import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
 import { getPrinterDetailsManager } from '../managers/PrinterDetailsManager.js';
 import { toAppError } from '../utils/error.utils.js';
-import { getSlotSpoolStore } from './SlotSpoolStore.js';
-import { resolveStationStoreKey } from './station-store-key.js';
 import { SpoolmanService } from './SpoolmanService.js';
 
 /**
@@ -100,11 +96,11 @@ export class SpoolmanIntegrationService extends EventEmitter {
 
   /**
    * Check if a specific printer context supports Spoolman integration
-   * (assignment operations: active-spool selection, slot→spool assignment).
+   * (active-spool selection).
    *
-   * Station printers are SUPPORTED: they use the estimate-based tracking
-   * path (slot→spool assignments + upload-time estimates) instead of the
-   * single active-spool flow. Use {@link isUsageTrackingEligible} to gate
+   * Station printers are SUPPORTED: they use per-job tracking (a spool per
+   * tool, chosen for each job the app starts) instead of the single
+   * active-spool flow. Use {@link isUsageTrackingEligible} to gate
    * the single-spool deduction path and {@link isStationContext} to route
    * to the station tracker.
    *
@@ -125,7 +121,7 @@ export class SpoolmanIntegrationService extends EventEmitter {
   /**
    * True when the context's printer has a material station attached
    * (Creator 5 series, AD5X with station). Station contexts use the
-   * estimate-based deduction path.
+   * per-job deduction path.
    */
   isStationContext(contextId: string): boolean {
     try {
@@ -139,38 +135,10 @@ export class SpoolmanIntegrationService extends EventEmitter {
   /**
    * True when the context may use the legacy progress-based single-spool
    * deduction path. Station contexts are excluded — they get the
-   * estimate-based StationUsageTracker instead.
+   * per-job StationUsageTracker instead.
    */
   isUsageTrackingEligible(contextId: string): boolean {
     return this.isContextSupported(contextId) && !this.isStationContext(contextId);
-  }
-
-  /**
-   * Assign (or, with null, clear) the Spoolman spool for one material
-   * station slot. Station contexts pull each tool's filament from a slot,
-   * so deduction resolves tool → slot → spool through this mapping.
-   *
-   * @param contextId - Printer context ID (station context)
-   * @param slotId - 1-based material station slot
-   * @param spoolId - Spoolman spool id, or null to clear
-   */
-  setSpoolForSlot(contextId: string, slotId: number, spoolId: number | null): void {
-    getSlotSpoolStore().setSpoolForSlot(resolveStationStoreKey(contextId), slotId, spoolId);
-    this.emit('spoolman-changed', { contextId });
-  }
-
-  /**
-   * Spoolman spool assigned to a material station slot, or null.
-   */
-  getSpoolForSlot(contextId: string, slotId: number): number | null {
-    return getSlotSpoolStore().getSpoolForSlot(resolveStationStoreKey(contextId), slotId);
-  }
-
-  /**
-   * Full slot→spool assignment map for a station context.
-   */
-  getSlotSpoolMap(contextId: string): ReadonlyMap<number, number> {
-    return getSlotSpoolStore().getSlotMap(resolveStationStoreKey(contextId));
   }
 
   /**
