@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.0.5-alpha.13] - 2026-09-26
+
 ### Added
 
 - **Per-job Spoolman tracking for material-station printers (Creator 5, Creator 5 Pro, AD5X with a material station).** These printers do not report filament use per tool, so the app estimates it. When you match materials for a job the app starts, the matching dialog now also asks for the Spoolman spool in each slot, or "Do not track". This works in the desktop dialog, the built-in WebUI, and the standalone WebUI. The choice applies to that one print only. When the print ends, the slicer's estimate for each tool is charged to its spool, and the choice is deleted. The app never remembers a spool per slot or per printer, because the spools on the printer can change at any time.
@@ -17,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Only prints the app starts are tracked. A file sent without **Start Now**, a print started on the printer, and a reprint of the same file from the printer's screen are not tracked.
   - On the AD5X, a file already on the printer is tracked when you start it through the matching dialog. The estimate comes from the printer's file list, and a cancel is charged by progress, because the app has no gcode for that file.
   - The Spoolman panel shows the tracked print, its spool per tool, and the result of the last charge. The per-slot spool assignment and the "Set from Spoolman" assignment in the Material Station editor are removed. "Set from Spoolman" still sets the slot's material and color.
+  - Creator 5 and Creator 5 Pro tracking is not yet tested on a real printer. If you own one, please tell us how it works in [issue #21](https://github.com/Parallel-7/FlashForgeWebUI/issues/21).
 
 ### Fixed
 
