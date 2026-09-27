@@ -170,6 +170,38 @@ export async function sendJobStartRequest(options: JobStartOptions): Promise<boo
   }
 }
 
+export async function uploadPrintJob(file: File, autoLevel: boolean, startNow: boolean): Promise<boolean> {
+  if (state.authRequired && !state.authToken) {
+    showToast('Not authenticated', 'error');
+    return false;
+  }
+
+  showToast('Uploading file to printer... please wait', 'info');
+  try {
+    const result = await apiRequest<PrintJobStartResponse>(
+      `/api/jobs/upload?filename=${encodeURIComponent(file.name)}&autoLevel=${autoLevel}&startNow=${startNow}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/octet-stream' },
+        body: file,
+      }
+    );
+
+    if (result.success) {
+      showToast(result.message || 'File uploaded successfully', 'success');
+      hideElement('file-modal');
+      return true;
+    }
+
+    showToast(result.error || 'Failed to upload print', 'error');
+    return false;
+  } catch (error) {
+    console.error('Failed to upload print:', error);
+    showToast('Failed to upload print job', 'error');
+    return false;
+  }
+}
+
 export function setupJobControlEventHandlers(): void {
   const containers = [$('webui-grid-desktop'), $('webui-grid-mobile')];
 

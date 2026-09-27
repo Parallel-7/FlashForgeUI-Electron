@@ -35,6 +35,7 @@ import {
   sendPrinterCommand,
   setupJobControlEventHandlers,
   startPrintJob,
+  uploadPrintJob,
   updateFeatureVisibility,
 } from './features/job-control.js';
 import {
@@ -340,6 +341,7 @@ async function initialize(): Promise<void> {
 
   const dialogHandlers: DialogHandlers = {
     onStartPrintJob: () => startPrintJob(),
+    onUploadPrintJob: (file, autoLevel, startNow) => uploadPrintJob(file, autoLevel, startNow),
     onMaterialMatchingClosed: () => {
       closeMaterialMatchingModal();
     },
