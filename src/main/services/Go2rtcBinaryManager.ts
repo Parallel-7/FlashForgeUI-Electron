@@ -254,6 +254,15 @@ export class Go2rtcBinaryManager {
         windowsHide: true,
       });
 
+      // Ensure child process is killed if parent exits abruptly
+      process.once('exit', () => {
+        try {
+          if (this.process) {
+            this.process.kill();
+          }
+        } catch (_) {}
+      });
+
       // Setup exit promise
       this.exitPromise = new Promise<void>((resolve) => {
         this.process?.on('exit', (code, signal) => {

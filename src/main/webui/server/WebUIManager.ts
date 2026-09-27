@@ -94,6 +94,8 @@ export class WebUIManager extends EventEmitter {
 
   // Server state
   private isRunning: boolean = false;
+  private startPromise: Promise<boolean> | null = null;
+  private stopPromise: Promise<boolean> | null = null;
   private serverIP: string = 'localhost';
   private port: number = 3000;
 
@@ -280,7 +282,7 @@ export class WebUIManager extends EventEmitter {
     };
 
     // If server should be running but isn't, start it
-    if (options.enabled && !this.isRunning) {
+    if (options.enabled && !this.isRunning && !this.startPromise) {
       await this.start();
       return;
     }
@@ -313,114 +315,139 @@ export class WebUIManager extends EventEmitter {
       return true;
     }
 
-    try {
-      // Ensure authentication system is initialized (and passwords migrated)
-      this.authManager.initialize();
+    if (this.startPromise) {
+      console.log('[WebUIManager] WebUI server is already starting, returning active start promise');
+      return this.startPromise;
+    }
 
-      const config = this.configManager.getConfig();
+    this.startPromise = (async () => {
+      try {
+        // Ensure authentication system is initialized (and passwords migrated)
+        this.authManager.initialize();
 
-      // Check if WebUI is enabled
-      if (!config.WebUIEnabled) {
-        console.log('WebUI is disabled in configuration');
-        return false;
-      }
+        const config = this.configManager.getConfig();
 
-      // Check admin privileges on Windows
-      const environmentService = getEnvironmentDetectionService();
-      if (process.platform === 'win32' && !environmentService.isRunningAsAdmin()) {
-        console.log('WebUI requires administrator privileges on Windows');
-
-        if (isHeadlessMode()) {
-          // In headless mode, log error and exit immediately without dialog
-          console.error('[Headless] ERROR: Administrator privileges required for WebUI on Windows');
-          console.error('[Headless] Please restart the application as an administrator');
-          process.exit(1);
+        // Check if WebUI is enabled
+        if (!config.WebUIEnabled) {
+          console.log('WebUI is disabled in configuration');
+          return false;
         }
 
-        // Show dialog to user in normal mode
-        await dialog.showMessageBox({
-          type: 'error',
-          title: 'Administrator Privileges Required',
-          message: 'Web UI Access Requires Administrator Privileges',
-          detail:
-            'The Web UI feature requires administrator privileges to bind to network ports on Windows.\n\nPlease restart the application as an administrator to use the Web UI feature.',
-          buttons: ['OK'],
-          defaultId: 0,
-        });
+        // Check admin privileges on Windows
+        const environmentService = getEnvironmentDetectionService();
+        if (process.platform === 'win32' && !environmentService.isRunningAsAdmin()) {
+          console.log('WebUI requires administrator privileges on Windows');
 
-        // Exit the application after user clicks OK
-        console.log('Exiting application due to insufficient privileges for Web UI');
-        app.quit();
+          if (isHeadlessMode()) {
+            // In headless mode, log error and exit immediately without dialog
+            console.error('[Headless] ERROR: Administrator privileges required for WebUI on Windows');
+            console.error('[Headless] Please restart the application as an administrator');
+            process.exit(1);
+          }
+
+          // Show dialog to user in normal mode
+          await dialog.showMessageBox({
+            type: 'error',
+            title: 'Administrator Privileges Required',
+            message: 'Web UI Access Requires Administrator Privileges',
+            detail:
+              'The Web UI feature requires administrator privileges to bind to network ports on Windows.\n\nPlease restart the application as an administrator to use the Web UI feature.',
+            buttons: ['OK'],
+            defaultId: 0,
+          });
+
+          // Exit the application after user clicks OK
+          console.log('Exiting application due to insufficient privileges for Web UI');
+          app.quit();
+          return false;
+        }
+
+        // Initialize Express application
+        this.expressApp = express();
+        this.port = config.WebUIPort;
+
+        // Note: RTSP stream service is now initialized globally in index.ts
+        // No need for conditional initialization here
+
+        // Setup middleware and routes
+        this.setupMiddleware();
+        this.setupRoutes();
+
+        // Determine server IP
+        this.serverIP = await this.determineServerIP();
+
+        // Create HTTP server
+        this.httpServer = http.createServer(this.expressApp!);
+
+        // Initialize WebSocket server
+        this.webSocketManager.initialize(this.httpServer);
+
+        // Start listening
+        await this.startListening();
+
+        this.isRunning = true;
+
+        const serverUrl = `http://${this.serverIP}:${this.port}`;
+
+        console.log(`WebUI server running at ${serverUrl}`);
+        this.emit('server-started', { url: serverUrl, port: this.port });
+
+        return true;
+      } catch (error) {
+        console.error('Failed to start WebUI server:', error);
         return false;
+      } finally {
+        this.startPromise = null;
       }
+    })();
 
-      // Initialize Express application
-      this.expressApp = express();
-      this.port = config.WebUIPort;
-
-      // Note: RTSP stream service is now initialized globally in index.ts
-      // No need for conditional initialization here
-
-      // Setup middleware and routes
-      this.setupMiddleware();
-      this.setupRoutes();
-
-      // Determine server IP
-      this.serverIP = await this.determineServerIP();
-
-      // Create HTTP server
-      this.httpServer = http.createServer(this.expressApp!);
-
-      // Initialize WebSocket server
-      this.webSocketManager.initialize(this.httpServer);
-
-      // Start listening
-      await this.startListening();
-
-      this.isRunning = true;
-
-      const serverUrl = `http://${this.serverIP}:${this.port}`;
-
-      console.log(`WebUI server running at ${serverUrl}`);
-      this.emit('server-started', { url: serverUrl, port: this.port });
-
-      return true;
-    } catch (error) {
-      console.error('Failed to start WebUI server:', error);
-      return false;
-    }
+    return this.startPromise;
   }
 
   /**
    * Stop the web UI server
    */
   public async stop(): Promise<boolean> {
-    try {
-      if (this.httpServer) {
-        await new Promise<void>((resolve) => {
-          this.httpServer!.close(() => {
-            console.log('WebUI server stopped');
-            resolve();
-          });
-        });
-
-        this.httpServer = null;
-      }
-
-      // Shutdown WebSocket server
-      this.webSocketManager.shutdown();
-
-      this.expressApp = null;
-      this.isRunning = false;
-      this.connectedClients = 0;
-
-      this.emit('server-stopped');
-
+    if (!this.isRunning && !this.httpServer) {
       return true;
-    } catch (error) {
-      console.error('Error stopping WebUI server:', error);
-      return false;
     }
+
+    if (this.stopPromise) {
+      return this.stopPromise;
+    }
+
+    this.stopPromise = (async () => {
+      try {
+        if (this.httpServer) {
+          await new Promise<void>((resolve) => {
+            this.httpServer!.close(() => {
+              console.log('WebUI server stopped');
+              resolve();
+            });
+          });
+
+          this.httpServer = null;
+        }
+
+        // Shutdown WebSocket server
+        this.webSocketManager.shutdown();
+
+        this.expressApp = null;
+        this.isRunning = false;
+        this.connectedClients = 0;
+
+        this.emit('server-stopped');
+
+        return true;
+      } catch (error) {
+        console.error('Error stopping WebUI server:', error);
+        return false;
+      } finally {
+        this.stopPromise = null;
+      }
+    })();
+
+    return this.stopPromise;
   }
 
   /**

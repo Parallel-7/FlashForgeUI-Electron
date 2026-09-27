@@ -24,6 +24,7 @@ interface TemperatureDialogElement extends HTMLElement {
 
 export interface DialogHandlers {
   onStartPrintJob?: () => Promise<void> | void;
+  onUploadPrintJob?: (file: File, autoLevel: boolean, startNow: boolean) => Promise<boolean | void> | void;
   onMaterialMatchingClosed?: () => void;
   onMaterialMatchingConfirm?: () => Promise<void> | void;
   onTemperatureSubmit?: (type: 'bed' | 'extruder', temperature: number) => Promise<void> | void;
@@ -234,6 +235,32 @@ export function setupDialogEventHandlers(handlers: DialogHandlers = {}): void {
   printFileBtn?.addEventListener('click', () => {
     if (dialogHandlers.onStartPrintJob) {
       void dialogHandlers.onStartPrintJob();
+    }
+  });
+
+  const uploadJobBtn = $('upload-job-btn');
+  const uploadFileInput = $('upload-file-input') as HTMLInputElement | null;
+
+  uploadJobBtn?.addEventListener('click', () => {
+    uploadFileInput?.click();
+  });
+
+  uploadFileInput?.addEventListener('change', async (event) => {
+    const input = event.target as HTMLInputElement | null;
+    const file = input?.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const autoLevel = ($('auto-level') as HTMLInputElement | null)?.checked ?? false;
+    const startNow = ($('start-now') as HTMLInputElement | null)?.checked ?? true;
+
+    if (dialogHandlers.onUploadPrintJob) {
+      void dialogHandlers.onUploadPrintJob(file, autoLevel, startNow);
+    }
+
+    if (input) {
+      input.value = '';
     }
   });
 

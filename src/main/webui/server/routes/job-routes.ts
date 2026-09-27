@@ -2,6 +2,9 @@
  * @fileoverview Job listing and control routes (local/recent files plus start job).
  */
 
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import type { AD5XJobInfo, BasicJobInfo } from '@shared/types/printer-backend/backend-operations.js';
 import { StandardAPIResponse } from '@shared/types/web-api.types.js';
 import type { Response, Router } from 'express';
@@ -20,6 +23,48 @@ export function registerJobRoutes(router: Router, deps: RouteDependencies): void
 
   router.get('/jobs/recent', async (req: AuthenticatedRequest, res: Response) => {
     await handleJobListRequest(req, res, deps, 'recent');
+  });
+
+  router.post('/jobs/upload', async (req: AuthenticatedRequest, res: Response) => {
+    try {
+      const contextResult = resolveContext(req, deps, { requireBackendReady: true });
+      if (!contextResult.success) {
+        return sendErrorResponse<StandardAPIResponse>(res, contextResult.statusCode, contextResult.error);
+      }
+
+      const filename = (req.query.filename as string) || (req.headers['x-filename'] as string) || 'upload.gcode';
+      const autoLevel = req.query.autoLevel === 'true';
+      const startNow = req.query.startNow === 'true';
+
+      const tempPath = path.join(os.tmpdir(), filename);
+      const writeStream = fs.createWriteStream(tempPath);
+      req.pipe(writeStream);
+
+      await new Promise<void>((resolve, reject) => {
+        writeStream.on('finish', () => resolve());
+        writeStream.on('error', (err) => reject(err));
+      });
+
+      const result = await deps.backendManager.startJob(contextResult.contextId, {
+        operation: 'start',
+        filePath: tempPath,
+        fileName: filename,
+        startNow,
+        leveling: autoLevel,
+      });
+
+      fs.unlink(tempPath, () => {});
+
+      const response: StandardAPIResponse = {
+        success: result.success,
+        message: result.success ? `File uploaded and job started: ${filename}` : undefined,
+        error: result.error,
+      };
+      return res.status(result.success ? 200 : 500).json(response);
+    } catch (error) {
+      const appError = toAppError(error);
+      return sendErrorResponse<StandardAPIResponse>(res, 500, appError.message);
+    }
   });
 
   router.post('/jobs/start', async (req: AuthenticatedRequest, res: Response) => {

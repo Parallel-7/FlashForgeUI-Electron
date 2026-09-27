@@ -62,6 +62,7 @@ export class HeadlessManager extends EventEmitter {
       if (contexts.length === 0) {
         this.logger.logError('No printers connected');
         process.exit(1);
+        return;
       }
 
       this.connectedContexts = contexts;
