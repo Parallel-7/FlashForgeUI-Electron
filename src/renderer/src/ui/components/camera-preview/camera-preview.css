@@ -76,6 +76,56 @@
   text-shadow: 0 1px 2px color-mix(in srgb, var(--theme-background) 50%, black);
 }
 
+/* Fullscreen toggle button - overlaid on top-left of the video */
+.component-camera-preview .fullscreen-toggle {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  background: color-mix(in srgb, var(--theme-background) 80%, transparent);
+  color: var(--theme-text);
+  border: 1px solid var(--border-color-light);
+  border-radius: 4px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+  transition: all var(--transition-fast);
+}
+
+.component-camera-preview .fullscreen-toggle:hover {
+  background: var(--accent-color);
+  color: var(--accent-text-color);
+  transform: translateY(-1px);
+}
+
+.component-camera-preview .fullscreen-toggle:active {
+  transform: translateY(0);
+}
+
+.component-camera-preview .fullscreen-toggle.is-active {
+  background: var(--accent-color);
+  color: var(--accent-text-color);
+}
+
+/* Fullscreen state - camera stream area fills the entire screen and hides
+   the rest of the application UI, showing only the video (and FPS overlay
+   / fullscreen button controls) */
+.component-camera-preview .camera-stream-area:fullscreen {
+  background-color: black;
+  width: 100vw;
+  height: 100vh;
+}
+
+.component-camera-preview .camera-stream-area:fullscreen .camera-view video,
+.component-camera-preview .camera-stream-area:fullscreen .camera-view video-rtc {
+  object-fit: contain !important;
+}
+
 /* Integrated job info overlay at bottom - Enhanced modern design */
 .component-camera-preview .job-info-overlay {
   flex: 0 0 auto;
