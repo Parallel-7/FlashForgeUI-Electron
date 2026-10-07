@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Headless mode no longer exits at startup because the WebUI server started twice.** When a printer connected, the app and the headless startup could both start the WebUI server at the same moment. The second start failed because the port was already taken, and headless mode then exited. Both now share one start. A stop that arrives while the server is still starting now waits for the start to finish, so the server cannot come back up after it was stopped. Thanks to [@jsalmon00](https://github.com/jsalmon00) for finding this in [#80](https://github.com/Parallel-7/FlashForgeUI-Electron/pull/80).
+- **go2rtc no longer keeps running after the app exits on an error.** When headless mode exits because of an error, the app skips its normal shutdown, so the go2rtc camera process kept running and holding its ports. The app now stops go2rtc whenever it exits.
+
 ## [1.0.5-alpha.13] - 2026-09-26
 
 ### Added

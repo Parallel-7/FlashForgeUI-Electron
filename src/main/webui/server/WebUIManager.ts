@@ -96,6 +96,8 @@ export class WebUIManager extends EventEmitter {
 
   // Server state
   private isRunning: boolean = false;
+  /** In-flight start attempt, shared by concurrent start() callers */
+  private startPromise: Promise<boolean> | null = null;
   private serverIP: string = 'localhost';
   private port: number = 3000;
 
@@ -310,12 +312,26 @@ export class WebUIManager extends EventEmitter {
    * Initialize and start the web UI server
    */
   public async start(): Promise<boolean> {
-    // Prevent concurrent calls
     if (this.isRunning) {
       console.log('WebUI server is already running');
       return true;
     }
 
+    // Concurrent callers share one attempt. In headless mode the backend-ready
+    // startForPrinter() and HeadlessManager.startWebUI() both call start(), and two
+    // independent attempts race to bind the same port - the loser fails with
+    // EADDRINUSE and headless exits. The finally() callback always runs after the
+    // assignment, so a settled attempt can never be left behind in the field.
+    this.startPromise ??= this.startServer().finally(() => {
+      this.startPromise = null;
+    });
+    return this.startPromise;
+  }
+
+  /**
+   * Build and bind the server. Only start() calls this, so attempts never overlap.
+   */
+  private async startServer(): Promise<boolean> {
     try {
       // Ensure authentication system is initialized (and passwords migrated)
       this.authManager.initialize();
@@ -420,6 +436,12 @@ export class WebUIManager extends EventEmitter {
    * Stop the web UI server
    */
   public async stop(): Promise<boolean> {
+    // Let an in-flight start settle first, or it would mark the server running
+    // again after this stop has torn it down.
+    if (this.startPromise) {
+      await this.startPromise;
+    }
+
     try {
       if (this.httpServer) {
         await new Promise<void>((resolve) => {

@@ -54,6 +54,13 @@ export class Go2rtcBinaryManager {
     app.on('will-quit', () => {
       void this.stop();
     });
+
+    // will-quit never fires when the process ends through process.exit(), which the
+    // headless failure paths use. Kill the child synchronously on exit so go2rtc is
+    // not orphaned holding its ports.
+    process.once('exit', () => {
+      this.process?.kill();
+    });
   }
 
   /**

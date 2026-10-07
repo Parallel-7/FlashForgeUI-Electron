@@ -163,4 +163,37 @@ describe('WebUIManager', () => {
     expect(response.headers.get('pragma')).toBe('no-cache');
     expect(response.headers.get('expires')).toBe('0');
   });
+
+  it('shares one start attempt between concurrent start() callers', async () => {
+    const manager = getWebUIManager();
+    const results = await Promise.all([manager.start(), manager.start()]);
+
+    expect(results).toEqual([true, true]);
+    // One attempt means one server build; a second would have rebound the port.
+    expect(webSocketManager.initialize).toHaveBeenCalledTimes(1);
+    expect(manager.getStatus().isRunning).toBe(true);
+  });
+
+  it('retries after an attempt that failed before its first await', async () => {
+    authManager.initialize.mockImplementationOnce(() => {
+      throw new Error('auth init failed');
+    });
+
+    const manager = getWebUIManager();
+
+    expect(await manager.start()).toBe(false);
+    expect(await manager.start()).toBe(true);
+    expect(manager.getStatus().isRunning).toBe(true);
+  });
+
+  it('waits for an in-flight start before stopping', async () => {
+    const manager = getWebUIManager();
+    const starting = manager.start();
+    const stopped = await manager.stop();
+
+    expect(await starting).toBe(true);
+    expect(stopped).toBe(true);
+    expect(manager.getStatus().isRunning).toBe(false);
+    expect(manager.getHttpServer()).toBeNull();
+  });
 });
