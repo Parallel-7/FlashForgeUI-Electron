@@ -7,10 +7,87 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Fixed
+## [1.0.5] - 2026-10-10
 
-- **Headless mode no longer exits at startup because the WebUI server started twice.** When a printer connected, the app and the headless startup could both start the WebUI server at the same moment. The second start failed because the port was already taken, and headless mode then exited. Both now share one start. A stop that arrives while the server is still starting now waits for the start to finish, so the server cannot come back up after it was stopped. Thanks to [@jsalmon00](https://github.com/jsalmon00) for finding this in [#80](https://github.com/Parallel-7/FlashForgeUI-Electron/pull/80).
-- **go2rtc no longer keeps running after the app exits on an error.** When headless mode exits because of an error, the app skips its normal shutdown, so the go2rtc camera process kept running and holding its ports. The app now stops go2rtc whenever it exits.
+The 1.0.5 stable release consolidates the 1.0.5-alpha cycle (alpha.1 through alpha.13). It adds Creator 5 and Creator 5 Pro support. On the Adventurer 5M / 5M Pro / AD5X it adds an SSH-based printer file manager and remote reboot. The WebUI can now upload jobs. Spoolman tracks filament per job on material-station printers. The app can start with your system and minimize to the tray. Connections to modern printers are faster. Every change is now tested in CI against a printer emulator. The per-alpha entries below have the full details.
+
+### Creator 5 / Creator 5 Pro
+- **New: Creator 5 and Creator 5 Pro support.** These printers have no legacy TCP channel. The app identifies them by the USB product ID in their discovery broadcast and connects over HTTP only.
+- Four-slot material station support. It uses the same Material Station card as the AD5X, with the Creator 5's own filament palette (24 colors, 21 materials) and per-slot material and color editing. The card was renamed from "IFS Station" to "Material Station", and saved layouts migrate automatically.
+- A unified temperature card shows all four tool nozzles, the bed, and the chamber in one place. Chamber temperature can be set and cleared, and each tool's **Off** button turns that tool head off. Tool heads are labeled T1–T4, as on the printer's own screen.
+- The Creator 5 Pro has filtration controls and its door sensor. The plain Creator 5 has neither, so both are hidden on it.
+- A paused Creator 5 Pro now shows as **Paused**, no longer as `Unknown`. The printer pauses itself when it detects a clog, so this matters most at the worst moment.
+- **Known limitations:**
+  - These printers cannot start a job that is already stored on them, so **Start Recent** and **Start Local** are disabled. Upload a fresh `.3mf` instead.
+  - Raw G-code commands, including **Home Axes**, need the TCP channel these printers do not have, so they are disabled.
+  - The SSH file manager, calibration assistant, and reboot do not support the Creator 5 series yet.
+
+### Connecting to Printers
+- Modern printers (5M, 5M Pro, AD5X, Creator 5 series) are identified from their discovery broadcast. This removes an extra network probe from every connect. Legacy printers are still probed as before.
+- A new **manual connect form** replaces the old "Enter IP" prompt. It asks for the IP address, printer type, serial number, and check code. The check code is no longer asked for a second time.
+- Headless `--printers` accepts `creator-5` and `creator-5-pro` types and an optional serial field: `IP:TYPE[:CHECKCODE[:SERIAL]]`.
+
+### Job Upload & Material Matching
+- **The WebUI can upload a job.** Phones and remote browsers can now send `.gcode`, `.gx`, and `.3mf` files. The dialog, metadata, warnings, and material matching are the same as on the desktop.
+- Multi-material uploads send the correct tool numbers. A plate that uses filaments 1 and 3 now prints with T0 and T2. Before this fix it printed with T0 and T1, so the second tool fed from the wrong slot.
+- The matching dialog was reworked. Each color mismatch now gets its own warning line, both sides of every mapping show a color swatch, and the confirm button always reads **Confirm**. After matching, the upload dialog shows the mappings as chips. Its button reads **Start Print** or **Send File**, depending on whether **Start Now** is ticked.
+- The WebUI matching dialog now waits for the material station to report in after a connect or a printer switch, rather than showing "not connected".
+
+### Spoolman
+- **Per-job filament tracking for material-station printers (AD5X with a station, Creator 5, Creator 5 Pro).** When you match materials for a job, you also pick the Spoolman spool in each slot, or choose "Do not track".
+  - When the print finishes, each spool is charged the slicer's estimate for its tool.
+  - A cancelled or failed print is charged only for what was printed up to the point where it stopped.
+  - The choice applies to that one print only, because the spools on the printer can change at any time.
+- The per-slot spool assignment was removed from the Material Station editor. **Set from Spoolman** still sets a slot's material and color.
+- Creator 5 tracking has not been tested on a real printer yet. Feedback is welcome in [FlashForgeWebUI #21](https://github.com/Parallel-7/FlashForgeWebUI/issues/21).
+
+### File Manager, SSH & Reboot (Adventurer 5M / 5M Pro / AD5X)
+These features need root SSH access, which the [FlashForge-EasySSH](https://github.com/Parallel-7/FlashForge-EasySSH) USB tool sets up.
+- **New: Printer file manager** (a top-bar shortcut). Browse, rename, and delete (one or many) files on the printer's internal storage and on USB, with thumbnail previews.
+- **New: Settings → SSH.** Each printer has one set of SSH credentials, encrypted at rest, which the file manager and the calibration assistant share. The defaults match EasySSH (`root` / `flashforge`, port 22). Credentials saved for the calibration assistant in 1.0.4 are not carried over. If yours were not the defaults, enter them again here.
+- **New: Reboot** in the menu. A full-screen overlay follows the printer through the restart and reconnects the camera once the printer is back.
+- All three work in the WebUI as well. Passwords can be changed from a browser but never read back.
+
+### Start with System & Tray
+- **Start with system** and **Start minimized** settings for Windows, macOS, and Linux. Start minimized applies only when the system launches the app. A manual launch always shows the window.
+- A system tray icon (Show / Quit), and an optional **Minimize to tray** setting. It is off by default, because stock GNOME needs an extension to show tray icons.
+- On Linux, autostart uses a standard `~/.config/autostart` entry that points at the stable AppImage path.
+
+### Status, WebUI & Notifications
+- The ETA no longer creeps forward while a print is paused or heating. It shows `--:--` until the print is advancing again, and the Discord notification leaves the ETA out.
+- The WebUI Recent/Local file dialog shows thumbnail previews. They share the desktop's thumbnail cache.
+- The TVOC air-quality reading shows on every printer that reports it.
+- Fixed the WebUI calibration dialog layout and see-through popup backgrounds.
+
+### Headless & Stability
+- Fixed headless mode exiting at startup because the WebUI server was started twice. Thanks to [@jsalmon00](https://github.com/jsalmon00) ([#80](https://github.com/Parallel-7/FlashForgeUI-Electron/pull/80)).
+- The go2rtc camera process now stops whenever the app exits, including after an error.
+
+### Linux Packaging
+- The `.deb` and `.rpm` packages install their AppArmor profile again, so the app starts on Ubuntu 24.04 and later. These packages are the recommended download there.
+- The AppImage detects when it has no usable sandbox and falls back to `--no-sandbox`, so it still launches.
+
+### Diagnostics & Updates
+- Debug mode also saves all console output to a `console-<timestamp>.log` file. The WebUI debug routes can list and download it.
+- Releases now include `.exe.blockmap` files, so Windows updates download only what changed.
+- The update channel now matches the installed build unless you choose one yourself.
+
+### Testing & CI
+- CI type-checks, lints, builds, and runs the unit tests on every push and pull request, and the release workflow runs the same checks first.
+- An end-to-end suite drives the real desktop app against the [FlashForge printer emulator](https://github.com/GhostTypes/flashforge-emulator-v2) (5M Pro, AD5X, Creator 5, Creator 5 Pro) in CI. The same specs run against real printers on a test bench.
+- The WebUI browser tests now run against the real headless server, replacing a mock.
+- CI and release builds use Node 22, matching the Node runtime that ships with Electron 39.
+
+### Documentation
+- User documentation moved to the [GitHub wiki](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki).
+- New `CONTRIBUTING.md` describing the alpha-first development and release workflow.
+
+### Dependencies
+- `@ghosttypes/ff-api` 1.3 → 2.0.3, and `@parallel-7/slicer-meta` 1.3.0 → 1.5.0.
+- **Security update.** About 100 newly published dependency advisories are patched (5 critical, more than 50 high). The changes:
+  - Updated: `express` 5.3.0, `electron-updater` 6.8.9, `electron-builder` 26.15.3.
+  - Moved to patched versions: `axios` 1.20.0, `adm-zip` 0.6.1 (used to read 3MF files), `proxy-addr`, `js-yaml`, `tar`, `qs`, `ip-address`, `postcss`, `shell-quote`, `brace-expansion`, `@xmldom/xmldom`, `handlebars`, `nanoid`, `source-map-js`, and `browserslist`.
+  - Still open: the remaining advisories are in Electron 39 itself, or in tools used only during development that have no fix yet.
 
 ## [1.0.5-alpha.13] - 2026-09-26
 
@@ -1084,7 +1161,8 @@ The 1.0.4 stable release consolidates the 1.0.4-alpha cycle: a major new Calibra
 ### Changed
 - README.md - Added download link to v1.0.0 release and feature comparison table (fcd8750)
 
-[Unreleased]: https://github.com/Parallel-7/FlashForgeUI-Electron/compare/v1.0.4...alpha
+[Unreleased]: https://github.com/Parallel-7/FlashForgeUI-Electron/compare/v1.0.5...alpha
+[1.0.5]: https://github.com/Parallel-7/FlashForgeUI-Electron/compare/v1.0.4...v1.0.5
 [1.0.4]: https://github.com/Parallel-7/FlashForgeUI-Electron/compare/v1.0.4-alpha.4...v1.0.4
 [1.0.4-alpha.4]: https://github.com/Parallel-7/FlashForgeUI-Electron/compare/v1.0.4-alpha.3...v1.0.4-alpha.4
 [1.0.4-alpha.3]: https://github.com/Parallel-7/FlashForgeUI-Electron/compare/v1.0.4-alpha.2...v1.0.4-alpha.3
