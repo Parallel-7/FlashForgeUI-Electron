@@ -10,7 +10,7 @@ on:
       emulator-ref:
         description: 'flashforge-emulator-v2 git ref to run the E2E track against'
         required: false
-        default: 'v0.2.0'
+        default: 'v0.4.0'
         type: string
 
 concurrency:
