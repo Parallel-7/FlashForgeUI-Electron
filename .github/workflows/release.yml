@@ -182,11 +182,19 @@ jobs:
 
           PRERELEASE_NOTICE=""
           if [[ "$IS_PRERELEASE" == "true" ]]; then
-            PRERELEASE_NOTICE="This is an alpha pre-release build intended for testing before the next stable desktop release."
+            PRERELEASE_NOTICE="This build is an alpha pre-release. Use it to test changes before the next stable release."
           fi
 
           VERSION_TAG="v${VERSION}"
-          PREVIOUS_TAG=$(git tag -l 'v*' --sort=-version:refname | grep -vx "${VERSION_TAG}" | head -n 1)
+          # versionsort.suffix=- ranks a prerelease below its release (v1.0.5-alpha.13 < v1.0.5);
+          # without it git sorts the longer alpha tag higher. A stable release compares
+          # against the previous stable release, so its notes span the whole alpha cycle.
+          # `|| true` because the step runs under pipefail and grep exits 1 on no match.
+          PREVIOUS_TAG=$(git -c versionsort.suffix=- tag -l 'v*' --sort=-version:refname | grep -vx "${VERSION_TAG}" || true)
+          if [[ "$IS_PRERELEASE" != "true" ]]; then
+            PREVIOUS_TAG=$(printf '%s\n' "$PREVIOUS_TAG" | grep -v -- '-' || true)
+          fi
+          PREVIOUS_TAG=$(printf '%s\n' "$PREVIOUS_TAG" | head -n 1)
           CHANGELOG_URL="https://github.com/${{ github.repository }}/blob/${VERSION_TAG}/CHANGELOG.md"
           README_URL="https://github.com/${{ github.repository }}"
           COMPARE_URL=""
@@ -216,7 +224,7 @@ jobs:
           cat > RELEASE_NOTES.md << EOF
           # FlashForgeUI v${VERSION}${RELEASE_TYPE_BADGE}
 
-          Desktop monitoring and control app for FlashForge printers.
+          Desktop app to monitor and control FlashForge 3D printers.
 
           ${PRERELEASE_NOTICE}
 
@@ -226,18 +234,17 @@ jobs:
 
           ## Downloads
 
-          Download the installer or archive for your platform from the assets attached to this release.
+          Download the installer or archive for your operating system from the assets of this release.
 
           ## More Information
 
-          - [README](${README_URL}) for setup and usage
-          - [CHANGELOG](${CHANGELOG_URL}) for the full release history
-
+          - [README](${README_URL}): setup and operation
+          - [CHANGELOG](${CHANGELOG_URL}): all release notes
           EOF
 
           if [[ -n "$COMPARE_URL" ]]; then
             cat >> RELEASE_NOTES.md << EOF
-          - [Compare changes since ${PREVIOUS_TAG}](${COMPARE_URL})
+          - [Changes since ${PREVIOUS_TAG}](${COMPARE_URL})
 
           EOF
           fi
