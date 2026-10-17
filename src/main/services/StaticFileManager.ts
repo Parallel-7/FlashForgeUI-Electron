@@ -2,8 +2,7 @@
  * @fileoverview StaticFileManager resolves and validates static asset paths
  * (HTML, CSS, JS, icons, preloads) for the development and production
  * layouts, on top of EnvironmentDetectionService. It validates single
- * assets, batches, and the startup-critical set (main HTML, renderer bundle,
- * preload script), and can export a manifest plus diagnostics for debugging
+ * assets, batches, and the startup-critical set (main HTML, preload script), and can export a manifest plus diagnostics for debugging
  * load failures. Singleton via getStaticFileManager().
  */
 
@@ -33,7 +32,6 @@ interface AssetValidationResult {
  */
 interface StaticFileConfig {
   readonly mainHTML: string;
-  readonly rendererBundle: string;
   readonly stylesheets: readonly string[];
   readonly icons: readonly string[];
   readonly preloadScript: string;
@@ -96,7 +94,6 @@ class StaticFileManager {
 
     return {
       mainHTML: this.environmentService.getWebUIPath(),
-      rendererBundle: path.join(assetsPath, 'renderer.bundle.js'),
       stylesheets: [path.join(assetsPath, 'styles.css'), path.join(assetsPath, 'main.css')],
       icons: [path.join(assetsPath, 'icon.png'), path.join(assetsPath, 'icon.ico'), path.join(assetsPath, 'icon.icns')],
       preloadScript: this.environmentService.getPreloadPath(),
@@ -108,13 +105,6 @@ class StaticFileManager {
    */
   public getMainHTMLPath(): string {
     return this.config.mainHTML;
-  }
-
-  /**
-   * Get the path to the renderer bundle
-   */
-  public getRendererBundlePath(): string {
-    return this.config.rendererBundle;
   }
 
   /**
@@ -217,7 +207,9 @@ class StaticFileManager {
    * Validate all critical assets required for the application
    */
   public async validateCriticalAssets(): Promise<ValidationSummary> {
-    const criticalAssets = [this.config.mainHTML, this.config.rendererBundle, this.config.preloadScript];
+    // electron-vite emits content-hashed renderer chunks, so there is no fixed
+    // bundle filename to check; index.html references them.
+    const criticalAssets = [this.config.mainHTML, this.config.preloadScript];
 
     const results = await this.validateAssets(criticalAssets);
 
@@ -230,7 +222,6 @@ class StaticFileManager {
   public async validateAllAssets(): Promise<ValidationSummary> {
     const allAssets = [
       this.config.mainHTML,
-      this.config.rendererBundle,
       this.config.preloadScript,
       ...this.config.stylesheets,
       ...this.config.icons,
@@ -285,14 +276,6 @@ class StaticFileManager {
   }
 
   /**
-   * Check if the renderer bundle is available
-   */
-  public async isRendererBundleAvailable(): Promise<boolean> {
-    const result = await this.validateAsset(this.config.rendererBundle);
-    return result.exists && result.isAccessible;
-  }
-
-  /**
    * Check if the preload script is available
    */
   public async isPreloadScriptAvailable(): Promise<boolean> {
@@ -309,7 +292,7 @@ class StaticFileManager {
         main: this.config.mainHTML,
       },
       css: [...this.config.stylesheets],
-      js: [this.config.rendererBundle],
+      js: [],
       icons: [...this.config.icons],
       fonts: [], // Can be extended as needed
       images: [], // Can be extended as needed
@@ -380,7 +363,6 @@ class StaticFileManager {
 
     console.log('Static File Paths:');
     console.log(`  Main HTML: ${this.config.mainHTML}`);
-    console.log(`  Renderer Bundle: ${this.config.rendererBundle}`);
     console.log(`  Preload Script: ${this.config.preloadScript}`);
     console.log('===============================');
   }

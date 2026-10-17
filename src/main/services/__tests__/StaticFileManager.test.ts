@@ -7,7 +7,7 @@
  *
  * Key Features Tested:
  * - Singleton pattern implementation and instance management
- * - Environment-aware path resolution (main HTML, renderer bundle, preload script)
+ * - Environment-aware path resolution (main HTML, preload script)
  * - Asset type-specific path generation (HTML, CSS, JS, icons, images)
  * - File validation including existence, accessibility, and metadata checks
  * - Critical asset validation with comprehensive error reporting
@@ -78,11 +78,6 @@ describe('StaticFileManager', () => {
       const htmlPath = manager.getMainHTMLPath();
       expect(htmlPath).toBe('/app/dist/renderer/index.html');
       expect(mockEnvironmentService.getWebUIPath).toHaveBeenCalled();
-    });
-
-    it('should return correct renderer bundle path', () => {
-      const bundlePath = manager.getRendererBundlePath();
-      expect(bundlePath).toBe(path.join('/app/dist/renderer', 'renderer.bundle.js'));
     });
 
     it('should return correct preload script path', () => {
@@ -210,8 +205,8 @@ describe('StaticFileManager', () => {
 
       const summary = await manager.validateCriticalAssets();
 
-      expect(summary.totalAssets).toBe(3); // HTML, bundle, preload
-      expect(summary.validAssets).toBe(3);
+      expect(summary.totalAssets).toBe(2); // HTML, preload
+      expect(summary.validAssets).toBe(2);
       expect(summary.missingAssets).toHaveLength(0);
       expect(summary.inaccessibleAssets).toHaveLength(0);
       expect(summary.errors).toHaveLength(0);
@@ -224,11 +219,11 @@ describe('StaticFileManager', () => {
 
       const summary = await manager.validateCriticalAssets();
 
-      expect(summary.totalAssets).toBe(3);
+      expect(summary.totalAssets).toBe(2);
       expect(summary.validAssets).toBe(0);
-      expect(summary.missingAssets).toHaveLength(3);
+      expect(summary.missingAssets).toHaveLength(2);
       expect(summary.isValid).toBe(false);
-      expect(summary.errors).toHaveLength(3);
+      expect(summary.errors).toHaveLength(2);
     });
   });
 
@@ -249,18 +244,6 @@ describe('StaticFileManager', () => {
 
       expect(isAvailable).toBe(true);
       expect(mockFs.stat).toHaveBeenCalledWith('/app/dist/renderer/index.html');
-    });
-
-    it('should check renderer bundle availability', async () => {
-      const mockStats = { size: 1024, mtime: new Date('2023-01-01') };
-
-      mockFs.stat.mockResolvedValue(mockStats as any);
-      mockFs.access.mockResolvedValue(undefined);
-
-      const isAvailable = await manager.isRendererBundleAvailable();
-
-      expect(isAvailable).toBe(true);
-      expect(mockFs.stat).toHaveBeenCalledWith(path.join('/app/dist/renderer', 'renderer.bundle.js'));
     });
 
     it('should check preload script availability', async () => {
@@ -291,7 +274,7 @@ describe('StaticFileManager', () => {
           main: '/app/dist/renderer/index.html',
         },
         css: [path.join('/app/dist/renderer', 'styles.css'), path.join('/app/dist/renderer', 'main.css')],
-        js: [path.join('/app/dist/renderer', 'renderer.bundle.js')],
+        js: [],
         icons: [
           path.join('/app/dist/renderer', 'icon.png'),
           path.join('/app/dist/renderer', 'icon.ico'),
