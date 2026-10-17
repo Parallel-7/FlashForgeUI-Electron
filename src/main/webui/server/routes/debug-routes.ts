@@ -4,6 +4,8 @@
  * Endpoints:
  * - GET /api/debug/logs - List available debug log files
  * - GET /api/debug/logs/:filename - Download a specific debug log file
+ * - GET /api/debug/console-logs - List available console log files
+ * - GET /api/debug/console-logs/:filename - Download a specific console log file
  * - GET /api/debug/network-logs - List available network debug log files
  * - GET /api/debug/network-logs/:filename - Download a specific network log file
  * - GET /api/debug/status - Get current debug mode status
@@ -32,6 +34,7 @@ interface DebugStatusResponse {
   // Log file info
   logsDirectory: string;
   currentDebugLog: string | null;
+  currentConsoleLog: string | null;
   currentNetworkLog: string | null;
 }
 
@@ -58,6 +61,7 @@ export function registerDebugRoutes(router: Router): void {
       // Log file info
       logsDirectory: debugLogService.getLogsDirectory(),
       currentDebugLog: debugLogService.getDebugLogPath(),
+      currentConsoleLog: debugLogService.getConsoleLogPath(),
       currentNetworkLog: debugLogService.getNetworkLogPath(),
     };
 
@@ -94,6 +98,58 @@ export function registerDebugRoutes(router: Router): void {
 
     // Security: validate filename format
     if (!filename || !/^debug-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.log$/.test(filename)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid filename format',
+      });
+    }
+
+    const content = debugLogService.readLogFile(filename);
+
+    if (content === null) {
+      return res.status(404).json({
+        success: false,
+        error: 'Log file not found',
+      });
+    }
+
+    // Set headers for file download
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    return res.send(content);
+  });
+
+  /**
+   * GET /api/debug/console-logs
+   * Lists all available console log files (full console output capture)
+   */
+  router.get('/debug/console-logs', (_req: AuthenticatedRequest, res: Response) => {
+    const logFiles = debugLogService.listConsoleLogs();
+    const currentLogPath = debugLogService.getConsoleLogPath();
+    const currentLogFilename = currentLogPath ? path.basename(currentLogPath) : null;
+
+    const logs: DebugLogInfo[] = logFiles.map((filename) => ({
+      filename,
+      isCurrent: filename === currentLogFilename,
+    }));
+
+    return res.json({
+      success: true,
+      logs,
+      count: logs.length,
+    });
+  });
+
+  /**
+   * GET /api/debug/console-logs/:filename
+   * Downloads a specific console log file
+   */
+  router.get('/debug/console-logs/:filename', (req: AuthenticatedRequest, res: Response) => {
+    const { filename } = req.params;
+
+    // Security: validate filename format
+    if (!filename || !/^console-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.log$/.test(filename)) {
       return res.status(400).json({
         success: false,
         error: 'Invalid filename format',
@@ -179,6 +235,36 @@ export function registerDebugRoutes(router: Router): void {
       return res.status(404).json({
         success: false,
         error: 'No debug logs available',
+      });
+    }
+
+    const filename = path.basename(latestLog);
+    const content = debugLogService.readLogFile(filename);
+
+    if (content === null) {
+      return res.status(404).json({
+        success: false,
+        error: 'Failed to read log file',
+      });
+    }
+
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    return res.send(content);
+  });
+
+  /**
+   * GET /api/debug/console-latest
+   * Downloads the most recent console log file (convenience endpoint)
+   */
+  router.get('/debug/console-latest', (_req: AuthenticatedRequest, res: Response) => {
+    const latestLog = debugLogService.getMostRecentConsoleLog();
+
+    if (!latestLog) {
+      return res.status(404).json({
+        success: false,
+        error: 'No console logs available',
       });
     }
 

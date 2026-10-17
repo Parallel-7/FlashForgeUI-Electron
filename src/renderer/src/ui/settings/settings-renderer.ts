@@ -47,6 +47,7 @@ import { DiscordWebhookSection } from './sections/DiscordWebhookSection.js';
 import { InputDependencySection } from './sections/InputDependencySection.js';
 import { PrinterContextSection } from './sections/PrinterContextSection.js';
 import { RoundedUISection } from './sections/RoundedUISection.js';
+import { type ISSHSettingsAPI, SSHSection } from './sections/SSHSection.js';
 import { SpoolmanTestSection } from './sections/SpoolmanTestSection.js';
 import { TabSection } from './sections/TabSection.js';
 import type { MutableSettings } from './types.js';
@@ -72,6 +73,10 @@ const resolvePrinterSettingsAPI = (): IPrinterSettingsAPI | undefined => {
 
 const resolveAutoUpdateAPI = (): IAutoUpdateAPI | undefined => {
   return window.api?.dialog?.autoUpdate as IAutoUpdateAPI | undefined;
+};
+
+const resolveSSHSettingsAPI = (): ISSHSettingsAPI | undefined => {
+  return window.api?.dialog?.sshSettings as ISSHSettingsAPI | undefined;
 };
 
 type PerPrinterSettingsConfigKey =
@@ -115,6 +120,9 @@ const INPUT_TO_CONFIG_MAP: Record<string, SettingsConfigKey> = {
   'spoolman-enabled': 'SpoolmanEnabled',
   'spoolman-server-url': 'SpoolmanServerUrl',
   'spoolman-update-mode': 'SpoolmanUpdateMode',
+  'start-at-boot': 'StartAtBoot',
+  'start-minimized': 'StartMinimized',
+  'minimize-to-tray': 'MinimizeToTray',
 };
 
 class SettingsRenderer {
@@ -132,6 +140,14 @@ class SettingsRenderer {
   private hasUnsavedChanges: boolean = false;
   private autoDownloadSupported: boolean = true;
   private perPrinterControlsEnabled: boolean = true;
+  /**
+   * Whether the app is running from a packaged (production) build.
+   * Defaults to `true` so production users can toggle "Start with system".
+   * Whether the app is running from a packaged (production) build, exposed
+   * synchronously by the settings preload as window.IS_PACKAGED. Used to
+   * disable the "Start with system" checkbox in development builds.
+   */
+  private readonly isPackaged: boolean = window.IS_PACKAGED;
   private desktopThemeSection: DesktopThemeSection | null = null;
   private tabSection: TabSection | null = null;
   private dependencySection: InputDependencySection | null = null;
@@ -140,6 +156,7 @@ class SettingsRenderer {
   private discordWebhookSection: DiscordWebhookSection | null = null;
   private printerContextSection: PrinterContextSection | null = null;
   private roundedUISection: RoundedUISection | null = null;
+  private sshSection: SSHSection | null = null;
   private webUIEnabledToggle: HTMLInputElement | null = null;
   private readonly settingsAPI?: ISettingsAPI = resolveSettingsAPI();
   private readonly printerSettingsAPI?: IPrinterSettingsAPI = resolvePrinterSettingsAPI();
@@ -249,6 +266,16 @@ class SettingsRenderer {
       document,
       settings: this.settings,
     });
+
+    this.sshSection = new SSHSection({
+      document,
+      sshSettingsAPI: resolveSSHSettingsAPI(),
+      onDirty: () => {
+        this.hasUnsavedChanges = true;
+        this.updateSaveButtonState();
+      },
+    });
+    this.sshSection.initialize();
   }
 
   private setupEventListeners(): void {
@@ -371,6 +398,8 @@ class SettingsRenderer {
         if (this.roundedUISection) {
           await this.roundedUISection.initialize();
         }
+
+        await this.sshSection?.load();
 
         this.updateInputStates();
       } catch (error) {
@@ -495,13 +524,28 @@ class SettingsRenderer {
       console.log(`[Settings] Updated global setting ${configKey}:`, value);
     }
 
+    // "Start minimized" only makes sense when the app launches at boot. When "Start with
+    // system" is turned off, clear StartMinimized so the app does not keep starting minimized
+    // via a stale value behind the now-disabled checkbox.
+    if (configKey === 'StartAtBoot' && value === false) {
+      const startMinimizedInput = this.inputs.get('start-minimized');
+      if (startMinimizedInput?.checked) {
+        startMinimizedInput.checked = false;
+      }
+      this.settings.global['StartMinimized'] = false;
+    }
+
     this.hasUnsavedChanges = true;
     this.updateSaveButtonState();
     this.updateInputStates();
   }
 
   private updateInputStates(): void {
-    this.dependencySection?.updateStates(this.perPrinterControlsEnabled, this.autoDownloadSupported);
+    this.dependencySection?.updateStates(
+      this.perPrinterControlsEnabled,
+      this.autoDownloadSupported,
+      this.isPackaged
+    );
   }
 
   private updateSaveButtonState(): void {
@@ -530,6 +574,15 @@ class SettingsRenderer {
 
           if (!perPrinterSuccess) {
             this.showSaveStatus('Failed to save per-printer settings', true);
+            return;
+          }
+        }
+
+        // Save per-printer SSH settings when edited
+        if (this.sshSection?.isDirty()) {
+          const sshSuccess = await this.sshSection.save();
+          if (!sshSuccess) {
+            this.showSaveStatus('Failed to save SSH settings', true);
             return;
           }
         }
@@ -699,6 +752,7 @@ class SettingsRenderer {
     this.discordWebhookSection?.dispose();
     this.autoUpdateSection?.dispose();
     this.printerContextSection?.dispose();
+    this.sshSection?.dispose();
     // Note: No longer need to remove IPC listeners since we're using promises
   }
 

@@ -1,8 +1,6 @@
 /**
  * @fileoverview Analyzer for bed mesh deviations and calibration strategy determination.
  * Analyzes mesh data to identify problems and recommend calibration approaches.
- *
- * @module main/services/calibration/engine/DeviationAnalyzer
  */
 
 import type { AnalysisResult, BedCorners, ScrewConfig } from '../../../../shared/types/calibration';

@@ -99,13 +99,11 @@ export class MultiContextTemperatureMonitor extends EventEmitter {
     pollingService: PrinterPollingService,
     printStateMonitor: PrintStateMonitor
   ): void {
-    // Check if monitor already exists
     if (this.monitors.has(contextId)) {
       console.warn(`[MultiContextTemperatureMonitor] Monitor already exists for context ${contextId}`);
       return;
     }
 
-    // Create new monitor for this context
     const monitor = new TemperatureMonitoringService(contextId);
 
     // Wire dependencies
@@ -115,12 +113,10 @@ export class MultiContextTemperatureMonitor extends EventEmitter {
     // Forward events from this monitor
     this.setupMonitorEventForwarding(monitor);
 
-    // Store monitor
     this.monitors.set(contextId, monitor);
 
     console.log(`[MultiContextTemperatureMonitor] Created monitor for context ${contextId}`);
 
-    // Emit event
     this.emit('monitor-created', { contextId });
   }
 
@@ -173,15 +169,12 @@ export class MultiContextTemperatureMonitor extends EventEmitter {
       return;
     }
 
-    // Dispose monitor
     monitor.dispose();
 
-    // Remove from map
     this.monitors.delete(contextId);
 
     console.log(`[MultiContextTemperatureMonitor] Removed monitor for context ${contextId}`);
 
-    // Emit event
     this.emit('monitor-removed', { contextId });
   }
 
@@ -219,16 +212,13 @@ export class MultiContextTemperatureMonitor extends EventEmitter {
   public dispose(): void {
     console.log('[MultiContextTemperatureMonitor] Disposing all monitors...');
 
-    // Dispose all monitors
     for (const [contextId, monitor] of this.monitors) {
       monitor.dispose();
       console.log(`[MultiContextTemperatureMonitor] Disposed monitor for context ${contextId}`);
     }
 
-    // Clear map
     this.monitors.clear();
 
-    // Remove all event listeners
     this.removeAllListeners();
 
     if (this.isInitialized) {

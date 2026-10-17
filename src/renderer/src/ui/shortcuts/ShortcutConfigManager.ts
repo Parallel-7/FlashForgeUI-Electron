@@ -12,9 +12,6 @@
  * - Validate configuration schema and component assignments
  * - Provide utility methods for checking pinned status
  * - Ensure mutual exclusivity (component can't be in grid and pinned)
- *
- * @author FlashForgeUI Team
- * @module ui/shortcuts/ShortcutConfigManager
  */
 
 import type { ShortcutButtonConfig, SlotAssignment, SlotNumber } from './types.js';

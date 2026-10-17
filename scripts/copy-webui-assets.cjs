@@ -36,7 +36,7 @@ const vendorLibraries = [
 // Local lib files to copy
 const libFiles = [
   {
-    src: 'src/main/webui/static/lib/video-rtc.js',
+    src: 'src/shared/lib/video-rtc.js',
     dest: 'lib/video-rtc.js',
   },
 ];

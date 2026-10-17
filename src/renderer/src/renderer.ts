@@ -33,6 +33,7 @@ import { RendererGridController } from './renderer/gridController.js';
 import { logMessage, setLogPanelComponent } from './renderer/logging.js';
 import {
   loadLayoutForSerial,
+  loadLayoutForSerialMigrated,
   loadShortcutsForSerial,
   saveLayoutForSerial,
   saveShortcutsForSerial,
@@ -44,11 +45,12 @@ import { ShortcutButtonController } from './renderer/shortcutButtons.js';
 import { getLucideIcons, initializeLucideIcons } from './renderer/utils/icons.js';
 // Component system imports
 import { type ComponentUpdateData, componentManager, PrinterTabsComponent } from './ui/components/index.js';
+import { isCreator5ModelType } from './ui/gridstack/defaults.js';
 import { editModeController } from './ui/gridstack/EditModeController.js';
 // GridStack system imports
 import { gridStackManager } from './ui/gridstack/GridStackManager.js';
 import { layoutPersistence } from './ui/gridstack/LayoutPersistence.js';
-import { LegacyUiController } from './ui/legacy/LegacyUiController.js';
+import { ShellController } from './ui/shell/ShellController.js';
 // Shortcut system imports
 import { DEFAULT_SHORTCUT_CONFIG } from './ui/shortcuts/types.js';
 
@@ -116,7 +118,7 @@ const shortcutButtonController = new ShortcutButtonController({
   gridController,
 });
 
-const legacyUiController = new LegacyUiController(logMessage);
+const shellController = new ShellController(logMessage, () => editModeController.toggle());
 const RENDERER_LOG_NAMESPACE = 'Renderer';
 const logDebug = (message: string, ...args: unknown[]): void => {
   logVerbose(RENDERER_LOG_NAMESPACE, message, ...args);
@@ -134,6 +136,37 @@ let activeContextId: string | null = null;
 
 /** Current active printer serial number (stable identifier for layouts/shortcuts) */
 let activeContextSerial: string | null = null;
+
+/**
+ * Reboot availability state for the active context (modelType + connection
+ * status + display name). Mirrors the main-process guard; both must stay in
+ * sync when adding reboot-capable models.
+ */
+interface ActiveRebootInfo {
+  modelType?: string;
+  name?: string;
+  status?: string;
+}
+
+let activeRebootInfo: ActiveRebootInfo = {};
+/** Whether the active printer supports raw G-code passthrough (gates Home Axes). */
+let activeGcodeAvailable = true;
+
+/** Whether a model type supports remote reboot (5M / 5M Pro / AD5X only). */
+function isRebootSupportedModel(modelType: string | undefined): boolean {
+  return modelType === 'adventurer-5m' || modelType === 'adventurer-5m-pro' || modelType === 'ad5x';
+}
+
+/** Recompute Reboot menu item visibility from the active context state. */
+function updateRebootAvailability(): void {
+  const supported = isRebootSupportedModel(activeRebootInfo.modelType);
+  const connected = activeRebootInfo.status === 'connected';
+  shellController.setRebootAvailable(
+    supported && connected,
+    connected ? activeContextId : null,
+    activeRebootInfo.name ?? null
+  );
+}
 
 /** Track disposers for config-related IPC listeners */
 const configEventDisposers: Array<() => void> = [];
@@ -186,6 +219,11 @@ function handleAllContextsRemoved(): void {
   activeContextId = null;
   activeContextSerial = null;
   editModeController.setActiveSerial(null);
+
+  // No active context: hide the Reboot item.
+  activeRebootInfo = {};
+  activeGcodeAvailable = true;
+  updateRebootAvailability();
 
   if (gridController.areComponentsInitialized()) {
     gridController.clearAllComponents();
@@ -297,12 +335,27 @@ async function initializePrinterTabs(): Promise<void> {
         const serialLabel = activeContextSerial ?? 'default';
         logDebug(`[PerPrinter] Switching UI to context ${event.contextId} (serial: ${serialLabel})`);
 
+        // Track reboot availability for the newly active context.
+        activeRebootInfo = {
+          modelType: event.contextInfo?.modelType,
+          name: event.contextInfo?.name,
+          status: event.contextInfo?.status,
+        };
+        updateRebootAvailability();
+
+        // One-time tool-changer layout migration (Creator 5 series): swaps the
+        // generic temperature card + tool-temps for the unified creator5-temperature
+        // card and persists it. Gated on the authoritative PID-derived model type.
+        const isToolChanger = isCreator5ModelType(event.contextInfo?.modelType);
+
         if (!gridController.areComponentsInitialized()) {
-          await gridController.initialize(activeContextSerial);
+          // First load: the migration is applied INSIDE initialize, after the layout
+          // persistence layer is initialized (migrating earlier would no-op the save).
+          await gridController.initialize(activeContextSerial, isToolChanger);
         } else {
-          const newLayout = loadLayoutForSerial(activeContextSerial);
+          const migratedLayout = loadLayoutForSerialMigrated(activeContextSerial, isToolChanger);
           const newShortcutConfig = loadShortcutsForSerial(activeContextSerial);
-          await gridController.reloadGridForLayout(newLayout, serialLabel, newShortcutConfig);
+          await gridController.reloadGridForLayout(migratedLayout, serialLabel, newShortcutConfig);
         }
       } catch (error) {
         console.error('[PerPrinter] Failed to switch context:', error);
@@ -338,6 +391,16 @@ async function initializePrinterTabs(): Promise<void> {
       logDebug('Renderer received context-updated event:', event);
       if (printerTabsComponent) {
         printerTabsComponent.updateTab(event.contextId, event.updates);
+      }
+
+      // Keep reboot availability in sync with the active context's status/model.
+      if (event.contextId === activeContextId) {
+        activeRebootInfo = {
+          modelType: event.updates.modelType ?? activeRebootInfo.modelType,
+          name: event.updates.name ?? activeRebootInfo.name,
+          status: event.updates.status ?? activeRebootInfo.status,
+        };
+        updateRebootAvailability();
       }
     });
 
@@ -393,6 +456,16 @@ function initializePollingListeners(): void {
             // Add any other update data fields as needed by components
             printerState: pollingData.printerStatus?.state,
             connectionState: pollingData.isConnected,
+            backendCapabilities: {
+              // Model-derived and authoritative: HTTP-only models (Creator 5 series)
+              // expose no G-code passthrough. activeRebootInfo.modelType tracks the
+              // ACTIVE context via context events, so this stays correct across
+              // context switches even when the backend-initialized event raced boot.
+              gcodeAvailable: isCreator5ModelType(activeRebootInfo.modelType) ? false : activeGcodeAvailable,
+              // Plumb the active model type so the controls-grid component can
+              // gate model-specific buttons (e.g. Creator 5 local/recent jobs).
+              modelType: activeRebootInfo.modelType,
+            },
           };
 
           // Update all components with centralized manager
@@ -401,9 +474,8 @@ function initializePollingListeners(): void {
           console.error('Component system update failed:', error);
           logMessage(`ERROR: Component update failed: ${error}`);
 
-          // Fallback to legacy update system if components fail
-          console.warn('Falling back to legacy UI update system');
-          // Note: updateAllPanels is removed, so we'll handle this gracefully
+          // The component system is the only renderer for printer data; there is
+          // no fallback path, so surface the failure gracefully.
           handleUIError(error, 'component system failure');
         }
       }
@@ -448,6 +520,8 @@ function initializeStateAndEventListeners(): void {
         printerName: string;
         modelType: string;
         backendType?: string;
+        gcodeAvailable?: boolean;
+        contextId?: string;
         timestamp: string;
       };
       logDebug('Backend initialized:', data);
@@ -457,6 +531,23 @@ function initializeStateAndEventListeners(): void {
       if (isLegacyBackendType(backendType)) {
         logDebug('[LegacyUI] Legacy printer detected:', backendType);
         logMessage('Legacy printer detected - some features may be unavailable');
+      }
+
+      // A ready backend means the active context is connected; confirm its
+      // model/name so the Reboot item can surface for supported printers.
+      // At boot the renderer's activeContextId can still be unset when this event
+      // lands (the context event that sets it races this one), so an unset active
+      // context must also accept the payload - otherwise gcodeAvailable (and the
+      // reboot info) silently keep their optimistic defaults.
+      const activeContextUnset = !activeContextId;
+      if (!data.contextId || data.contextId === activeContextId || activeContextUnset) {
+        activeRebootInfo = {
+          modelType: data.modelType && data.modelType !== 'unknown' ? data.modelType : activeRebootInfo.modelType,
+          name: data.printerName ?? activeRebootInfo.name,
+          status: 'connected',
+        };
+        updateRebootAvailability();
+        activeGcodeAvailable = data.gcodeAvailable ?? true;
       }
     });
 
@@ -604,6 +695,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       'x-circle',
       'pencil',
       'rotate-ccw',
+      'rotate-cw',
       'plug'
     )
   );
@@ -632,7 +724,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   logDebug('IPC listeners configured for component system integration');
 
   // Setup essential UI elements
-  legacyUiController.initialize();
+  shellController.initialize();
+
+  // Keep the "Edit Layout" menu item in sync with edit mode state, regardless
+  // of how it was toggled (menu, CTRL+E, layout reset, or printer disconnect).
+  editModeController.onStateChange(({ enabled, available }) => {
+    shellController.setEditModeState(enabled, available);
+  });
 
   // Initialize shortcut button system
   shortcutButtonController.initialize();
@@ -677,7 +775,7 @@ document.addEventListener('DOMContentLoaded', async () => {
  */
 window.addEventListener('beforeunload', () => {
   logDebug('Cleaning up resources in enhanced renderer with GridStack and component system');
-  legacyUiController.dispose();
+  shellController.dispose();
 
   // Clean up GridStack system
   try {

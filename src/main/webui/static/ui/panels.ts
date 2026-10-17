@@ -8,17 +8,17 @@
  * actions.
  */
 
-import type { PrinterStatus } from '../app.js';
+import type { DeductionSummary, PrinterStatus, SpoolmanStationTracking } from '../app.js';
 import { state } from '../core/AppState.js';
 import { isSpoolmanAvailableForCurrentContext } from '../features/layout-theme.js';
 import { $, hideElement, setTextContent, showElement } from '../shared/dom.js';
 import {
+  formatCompletionTime,
   formatElapsedSeconds,
-  formatETA,
-  formatETAFromString,
   formatLifetimeFilament,
   formatLifetimePrintTime,
   formatTime,
+  isPrintAdvancing,
 } from '../shared/formatting.js';
 
 export function updateConnectionStatus(connected: boolean): void {
@@ -46,16 +46,17 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
     setTextContent('current-job', 'No data');
     setTextContent('progress-percentage', '0%');
     updateModelPreview(null);
+    updateCreator5TemperatureCard(null);
     return;
   }
 
   state.printerStatus = status;
   updatePrinterStateCard(status);
 
-  const bedTemp = isNaN(status.bedTemperature) ? 0 : Math.round(status.bedTemperature);
-  const bedTarget = isNaN(status.bedTargetTemperature) ? 0 : Math.round(status.bedTargetTemperature);
-  const extruderTemp = isNaN(status.nozzleTemperature) ? 0 : Math.round(status.nozzleTemperature);
-  const extruderTarget = isNaN(status.nozzleTargetTemperature) ? 0 : Math.round(status.nozzleTargetTemperature);
+  const bedTemp = Number.isNaN(status.bedTemperature) ? 0 : Math.round(status.bedTemperature);
+  const bedTarget = Number.isNaN(status.bedTargetTemperature) ? 0 : Math.round(status.bedTargetTemperature);
+  const extruderTemp = Number.isNaN(status.nozzleTemperature) ? 0 : Math.round(status.nozzleTemperature);
+  const extruderTarget = Number.isNaN(status.nozzleTargetTemperature) ? 0 : Math.round(status.nozzleTargetTemperature);
 
   setTextContent('bed-temp', `${bedTemp}°C / ${bedTarget}°C`);
   setTextContent('extruder-temp', `${extruderTemp}°C / ${extruderTarget}°C`);
@@ -63,7 +64,7 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
   if (status.jobName) {
     setTextContent('current-job', status.jobName);
 
-    const progress = isNaN(status.progress) ? 0 : status.progress;
+    const progress = Number.isNaN(status.progress) ? 0 : status.progress;
     const progressPercent = progress <= 1 ? Math.round(progress * 100) : Math.round(progress);
     setTextContent('progress-percentage', `${progressPercent}%`);
 
@@ -75,8 +76,8 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
     if (
       status.currentLayer !== undefined &&
       status.totalLayers !== undefined &&
-      !isNaN(status.currentLayer) &&
-      !isNaN(status.totalLayers)
+      !Number.isNaN(status.currentLayer) &&
+      !Number.isNaN(status.totalLayers)
     ) {
       setTextContent('layer-info', `${status.currentLayer} / ${status.totalLayers}`);
     } else {
@@ -84,30 +85,29 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
     }
 
     // Elapsed — prefer seconds precision
-    if (status.elapsedTimeSeconds !== undefined && !isNaN(status.elapsedTimeSeconds)) {
+    if (status.elapsedTimeSeconds !== undefined && !Number.isNaN(status.elapsedTimeSeconds)) {
       setTextContent('elapsed-time', formatElapsedSeconds(status.elapsedTimeSeconds));
-    } else if (status.timeElapsed !== undefined && !isNaN(status.timeElapsed)) {
+    } else if (status.timeElapsed !== undefined && !Number.isNaN(status.timeElapsed)) {
       setTextContent('elapsed-time', formatTime(status.timeElapsed));
     } else {
       setTextContent('elapsed-time', '--:--');
     }
 
-    // ETA — prefer firmware string
-    if (status.formattedEta && status.formattedEta !== '--:--') {
-      setTextContent('time-remaining', formatETAFromString(status.formattedEta));
-    } else if (status.timeRemaining !== undefined && !isNaN(status.timeRemaining)) {
-      setTextContent('time-remaining', formatETA(status.timeRemaining));
-    } else {
+    // ETA — sourced from the library CompletionTime (null when the print
+    // is not advancing). The isPrintAdvancing gate is belt-and-suspenders.
+    if (!isPrintAdvancing(status.printerState)) {
       setTextContent('time-remaining', '--:--');
+    } else {
+      setTextContent('time-remaining', formatCompletionTime(status.completionTime ?? null));
     }
 
     // Weight and length as separate fields
-    if (status.estimatedWeight !== undefined && !isNaN(status.estimatedWeight)) {
+    if (status.estimatedWeight !== undefined && !Number.isNaN(status.estimatedWeight)) {
       setTextContent('job-weight', `${Math.round(status.estimatedWeight)}g`);
     } else {
       setTextContent('job-weight', '--');
     }
-    if (status.estimatedLength !== undefined && !isNaN(status.estimatedLength)) {
+    if (status.estimatedLength !== undefined && !Number.isNaN(status.estimatedLength)) {
       setTextContent('job-length', `${status.estimatedLength.toFixed(1)}m`);
     } else {
       setTextContent('job-length', '--');
@@ -130,6 +130,128 @@ export function updatePrinterStatus(status: PrinterStatus | null): void {
 
   updateButtonStates(status.printerState || 'Unknown');
   updateFiltrationStatus(status.filtrationMode);
+  updateCreator5TemperatureCard(status);
+  updateTvocDisplay(status);
+}
+
+/** `<current>°C / <target>°C`, guarding against NaN readings. */
+function formatTempPair(current: number, target: number): string {
+  const c = Number.isNaN(current) ? 0 : Math.round(current);
+  const t = Number.isNaN(target) ? 0 : Math.round(target);
+  return `${c}°C / ${t}°C`;
+}
+
+/** Whether heater Set/Off controls should be disabled for the given printer state. */
+function isHeaterControlDisabled(printerState: string): boolean {
+  const isPrintingActive =
+    printerState === 'Printing' ||
+    printerState === 'Paused' ||
+    printerState === 'Calibrating' ||
+    printerState === 'Heating' ||
+    printerState === 'Pausing';
+  const isBusy = printerState === 'Busy' || printerState === 'Error';
+  return isPrintingActive || isBusy;
+}
+
+/**
+ * Render the Creator 5 multi-tool temperature card (per-tool heaters + bed +
+ * chamber). Self-gates: shows an "unavailable" message when the printer does not
+ * report per-tool temperatures. No-ops when the card is not mounted (non-C5).
+ */
+export function updateCreator5TemperatureCard(status: PrinterStatus | null): void {
+  const panel = document.querySelector<HTMLElement>('[data-component-id="creator5-temperature"]');
+  if (!panel) {
+    return;
+  }
+
+  const unavailable = $('c5-temps-unavailable');
+  const body = $('c5-temps-body');
+  const toolGrid = $('c5-tool-grid');
+  const chamberRow = $('c5-chamber-row');
+
+  const toolTemps = status?.toolTemps ?? [];
+  const available = Boolean(status) && toolTemps.length > 0;
+
+  unavailable?.classList.toggle('hidden', available);
+  body?.classList.toggle('hidden', !available);
+
+  if (!available || !status) {
+    return;
+  }
+
+  // Rebuild the per-tool rows only when the tool count changes.
+  if (toolGrid) {
+    const existingRows = toolGrid.querySelectorAll('.temp-row').length;
+    if (existingRows !== toolTemps.length) {
+      toolGrid.innerHTML = toolTemps
+        .map(
+          (_, i) => `
+        <div class="temp-row">
+          <span>T${i + 1}: <span class="c5-tool-reading" data-tool-reading="${i}">--°C / --°C</span></span>
+          <div class="temp-buttons">
+            <button class="temp-btn" data-c5-action="set" data-heater="tool" data-tool="${i}">Set</button>
+            <button class="temp-btn" data-c5-action="off" data-heater="tool" data-tool="${i}">Off</button>
+          </div>
+        </div>`
+        )
+        .join('');
+    }
+    toolTemps.forEach((tool, i) => {
+      const reading = toolGrid.querySelector(`[data-tool-reading="${i}"]`);
+      if (reading) {
+        reading.textContent = formatTempPair(tool.current, tool.target);
+      }
+    });
+  }
+
+  setTextContent('c5-bed-temp', formatTempPair(status.bedTemperature, status.bedTargetTemperature));
+
+  const hasChamber = Boolean(status.hasChamberControl) && status.chamberTemperature !== undefined;
+  chamberRow?.classList.toggle('hidden', !hasChamber);
+  if (hasChamber) {
+    setTextContent(
+      'c5-chamber-temp',
+      formatTempPair(status.chamberTemperature ?? 0, status.chamberTargetTemperature ?? 0)
+    );
+  }
+
+  const disabled = isHeaterControlDisabled(status.printerState || 'Unknown');
+  panel.querySelectorAll<HTMLButtonElement>('button[data-c5-action]').forEach((btn) => {
+    btn.disabled = disabled;
+  });
+}
+
+/**
+ * Populate the read-only TVOC air-quality reading and gate the filtration
+ * controls. Every printer that mounts this card (filtration-capable printers and
+ * the Creator 5 Pro) shows both its filtration mode/controls and its TVOC level.
+ * The Creator 5 Pro reports TVOC but cannot switch filtration modes, so its
+ * control buttons are shown but disabled.
+ */
+export function updateTvocDisplay(status: PrinterStatus | null): void {
+  const tvocInfo = $('tvoc-info');
+  const filtrationSection = $('filtration-section');
+  if (!tvocInfo && !filtrationSection) {
+    return;
+  }
+
+  // The card itself is only mounted for filtration-capable printers or the
+  // Creator 5 Pro (see layout-theme component gating), so whenever it exists we
+  // show both the filtration controls and the TVOC readout together.
+  filtrationSection?.classList.remove('hidden');
+  tvocInfo?.classList.remove('hidden');
+
+  const tvoc = status?.tvocLevel;
+  setTextContent('tvoc-status', tvoc !== undefined && !Number.isNaN(tvoc) ? `${Math.round(tvoc)}` : '--');
+
+  // The Creator 5 Pro exposes a TVOC sensor but no filtration-mode control.
+  const isCreator5Pro = Boolean(state.printerFeatures?.isCreator5Pro);
+  for (const id of ['btn-external-filtration', 'btn-internal-filtration', 'btn-no-filtration']) {
+    const btn = $(id) as HTMLButtonElement | null;
+    if (btn) {
+      btn.disabled = isCreator5Pro;
+    }
+  }
 }
 
 export function updateFiltrationStatus(mode?: 'external' | 'internal' | 'none'): void {
@@ -202,10 +324,23 @@ export function updateSpoolmanPanelState(): void {
   const disabled = $('spoolman-disabled');
   const noSpool = $('spoolman-no-spool');
   const active = $('spoolman-active');
+  const station = $('spoolman-station');
 
   if (!disabled || !noSpool || !active) {
     return;
   }
+
+  // Material-station contexts: per-job tracking view instead of the
+  // single active-spool view.
+  if (station && state.spoolmanConfig?.station) {
+    hideElement('spoolman-disabled');
+    hideElement('spoolman-no-spool');
+    hideElement('spoolman-active');
+    showElement('spoolman-station');
+    renderStationTracking(state.spoolmanConfig.station);
+    return;
+  }
+  hideElement('spoolman-station');
 
   if (!isSpoolmanAvailableForCurrentContext()) {
     showElement('spoolman-disabled');
@@ -268,6 +403,82 @@ export function updateSpoolmanPanelState(): void {
   }
 }
 
+/**
+ * Render the per-job tracking view for material-station contexts: the
+ * explanation, the job tracked now with its spool per tool, and the last
+ * deduction summary.
+ */
+function renderStationTracking(station: SpoolmanStationTracking): void {
+  const note = $('spoolman-station-note');
+  if (note) {
+    note.textContent = station.note;
+  }
+
+  const jobView = $('spoolman-station-job');
+  if (jobView) {
+    jobView.textContent = '';
+    const job = station.activeJob;
+    if (!job) {
+      jobView.appendChild(createStatRow('Tracked print:', 'None'));
+    } else {
+      const progress = job.started
+        ? job.lastProgress !== null
+          ? `${Math.round(job.lastProgress)}%`
+          : 'printing'
+        : 'waiting to start';
+      jobView.appendChild(createStatRow('Tracked print:', `${job.fileName} (${progress})`));
+      for (const tool of job.tools) {
+        const estimate = tool.usedG !== null ? ` · ${tool.usedG.toFixed(1)} g` : '';
+        jobView.appendChild(
+          createStatRow(`Tool ${tool.toolId + 1} (slot ${tool.slotId}):`, `Spool #${tool.spoolId}${estimate}`)
+        );
+      }
+    }
+  }
+
+  const summary = $('spoolman-station-summary');
+  if (summary) {
+    summary.textContent = describeDeduction(station.lastDeduction);
+  }
+}
+
+function createStatRow(label: string, value: string): HTMLDivElement {
+  const row = document.createElement('div');
+  row.className = 'stat-row';
+  const labelEl = document.createElement('span');
+  labelEl.textContent = label;
+  const valueEl = document.createElement('span');
+  valueEl.textContent = value;
+  row.append(labelEl, valueEl);
+  return row;
+}
+
+function describeDeduction(deduction: DeductionSummary | null): string {
+  if (!deduction) {
+    return 'No deduction recorded this session.';
+  }
+  const ending: Record<DeductionSummary['terminal'], string> = {
+    completed: 'completed',
+    cancelled: 'was cancelled',
+    error: 'stopped with an error',
+    interrupted: 'ended while the app was not watching',
+  };
+  const approximate = deduction.approximate ? ' (approximate)' : '';
+  const charged = deduction.tools
+    .filter((tool) => tool.status === 'deducted' && tool.amount !== null)
+    .map(
+      (tool) =>
+        `#${tool.spoolId} ${tool.amount}${tool.mode === 'weight' ? ' g' : ' mm'}`
+    )
+    .join(', ');
+  return (
+    `${deduction.fileName} ${ending[deduction.terminal]} at ${Math.round(deduction.progress)}%${approximate}: ` +
+    `${deduction.deductedCount} spool(s) charged` +
+    (charged ? ` (${charged})` : '') +
+    (deduction.skippedCount > 0 ? `, ${deduction.skippedCount} skipped` : '')
+  );
+}
+
 function updateButtonStates(printerState: string): void {
   const isPrintingActive =
     printerState === 'Printing' ||
@@ -298,9 +509,35 @@ function updateButtonStates(printerState: string): void {
   const localBtn = $('btn-start-local') as HTMLButtonElement | null;
   const homeAxesBtn = $('btn-home-axes') as HTMLButtonElement | null;
 
-  if (recentBtn) recentBtn.disabled = !isReadyForNewJob;
-  if (localBtn) localBtn.disabled = !isReadyForNewJob;
-  if (homeAxesBtn) homeAxesBtn.disabled = isPrintingActive;
+  // Creator 5 series firmware neither sends nor accepts material mappings over
+  // the local API, so starting a previously-uploaded resident job dead-ends at
+  // material selection. Disable the local/recent job entry buttons for those
+  // models (fresh 3mf upload+start still works). hasMultiTool is true for BOTH
+  // creator-5 and creator-5-pro.
+  const isCreator5Series = Boolean(state.printerFeatures?.hasMultiTool);
+  // Material-station printers (AD5X and the Creator 5 series) have no local
+  // file listing, so Start Local is unavailable on all of them.
+  const noLocalJobs = isCreator5Series || Boolean(state.printerFeatures?.hasMaterialStation);
+  if (recentBtn) {
+    recentBtn.disabled = !isReadyForNewJob || isCreator5Series;
+    recentBtn.title = isCreator5Series ? 'Local job management is not available on this printer.' : '';
+  }
+  if (localBtn) {
+    localBtn.disabled = !isReadyForNewJob || noLocalJobs;
+    localBtn.title = noLocalJobs ? 'Local job management is not available on this printer.' : '';
+  }
+  // Uploading a fresh file works on every model, Creator 5 series included -
+  // the 3mf is parsed here, so material mappings are available on upload even
+  // where the resident-job lists are not.
+  const uploadJobBtn = $('btn-upload-job') as HTMLButtonElement | null;
+  if (uploadJobBtn) {
+    uploadJobBtn.disabled = !isReadyForNewJob;
+  }
+  // Home Axes (~G28) is a raw G-code command. HTTP-only printers (Creator 5
+  // series) expose no TCP/G-code passthrough, so disable the button while printing
+  // OR when the active printer explicitly reports G-code commands unavailable.
+  const gcodeUnavailable = state.printerFeatures?.gcodeCommands?.available === false;
+  if (homeAxesBtn) homeAxesBtn.disabled = isPrintingActive || gcodeUnavailable;
   const clearStatusBtn = $('btn-clear-status') as HTMLButtonElement | null;
   if (clearStatusBtn) clearStatusBtn.disabled = isPrintingActive;
 

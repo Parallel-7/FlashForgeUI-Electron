@@ -20,12 +20,109 @@
  * - Right middle: Model preview (6w×3h, columns 6-11, rows 3-5)
  * - Right bottom: Job stats (6w×2h, columns 6-11, rows 6-7)
  * - Bottom: Status bar (4 components, 3w×1h each, row 8)
- *
- * @module ui/gridstack/defaults
  */
 
+import type { PrinterModelType } from '@shared/types/printer-backend/index.js';
 import { getComponentDefinition } from './ComponentRegistry.js';
 import type { GridOptions, GridStackWidgetConfig, LayoutConfig } from './types.js';
+
+/**
+ * Legacy → current component-id renames, applied when loading a saved layout.
+ * Component ids are persisted in stored layouts (and layout history), so renaming
+ * a component requires mapping its old id here or saved widgets would orphan.
+ * Add one entry per rename; keep old entries indefinitely.
+ */
+export const LEGACY_COMPONENT_ID_RENAMES: Readonly<Record<string, string>> = {
+  // The IFS station component was renamed to "material-station" (it also serves
+  // the Creator 5 series now, not just the AD5X IFS).
+  'ifs-station': 'material-station',
+};
+
+/** Map a possibly-legacy component id to its current id (identity if unchanged). */
+export function migrateComponentId(componentId: string): string {
+  return LEGACY_COMPONENT_ID_RENAMES[componentId] ?? componentId;
+}
+
+/**
+ * Current layout schema version. Bumped when a one-time, capability-conditional
+ * migration needs to run against a printer's persisted layout (see
+ * {@link migrateLayoutForToolChanger}). A layout is migrated at most once: after
+ * it runs, the layout is stamped with this version and saved, so it never repeats.
+ *
+ * v3: the v2 tool-changer migration could be silently dropped when it ran before the
+ * layout persistence layer was initialized, leaving early testers stamped at v2 but
+ * still showing the generic temperature card. Bumping to v3 forces the (now correctly
+ * timed) migration to run once more for those layouts; it is idempotent for layouts
+ * that already carry the Creator 5 card.
+ */
+export const LAYOUT_SCHEMA_VERSION = 3;
+
+/** The unified Creator 5 temperature card. */
+const C5_TEMP_CARD_ID = 'creator5-temperature';
+/** Generic/legacy temperature cards folded into the Creator 5 card on a tool-changer. */
+const C5_TEMP_REPLACED_IDS = new Set(['temperature-controls', 'tool-temps']);
+
+/**
+ * Whether a model type identifies a Creator 5 series tool-changer. Reads the
+ * authoritative PID-derived {@link PrinterModelType} (`creator-5` / `creator-5-pro`)
+ * rather than substring-matching the user-mutable model/name string.
+ */
+export function isCreator5ModelType(modelType: PrinterModelType | null | undefined): boolean {
+  return modelType === 'creator-5' || modelType === 'creator-5-pro';
+}
+
+/**
+ * One-time, version-gated migration for tool-changer printers (Creator 5 / 5 Pro).
+ *
+ * Replaces the generic `temperature-controls` and read-only `tool-temps` widgets
+ * with the single, settable `creator5-temperature` card (preserving the temp
+ * card's grid position; the card is a singleton so duplicates are collapsed).
+ * Non-tool-changer layouts and already-migrated layouts are returned unchanged
+ * (same reference), so callers can persist only when something actually changed.
+ *
+ * @param layout The loaded layout for a specific printer.
+ * @param isToolChanger Whether the connected printer is a Creator 5 series.
+ * @returns The migrated layout (new object) or the original (unchanged) reference.
+ */
+export function migrateLayoutForToolChanger(
+  layout: LayoutConfig,
+  isToolChanger: boolean
+): LayoutConfig {
+  if (!isToolChanger || (layout.version ?? 1) >= LAYOUT_SCHEMA_VERSION) {
+    return layout;
+  }
+
+  let hasCard = false;
+  const widgets: GridStackWidgetConfig[] = [];
+  for (const widget of layout.widgets) {
+    const id = migrateComponentId(widget.componentId);
+
+    if (id === C5_TEMP_CARD_ID) {
+      if (hasCard) continue; // singleton — keep the first
+      hasCard = true;
+      widgets.push({ ...widget, componentId: id });
+      continue;
+    }
+
+    if (C5_TEMP_REPLACED_IDS.has(id)) {
+      if (hasCard) continue; // a C5 card already took a slot; drop the redundant one
+      const def = getComponentDefinition(C5_TEMP_CARD_ID);
+      widgets.push({
+        ...widget,
+        componentId: C5_TEMP_CARD_ID,
+        minW: def?.minSize.w ?? widget.minW,
+        minH: def?.minSize.h ?? widget.minH,
+        id: `widget-${C5_TEMP_CARD_ID}`,
+      });
+      hasCard = true;
+      continue;
+    }
+
+    widgets.push(widget);
+  }
+
+  return { ...layout, widgets, version: LAYOUT_SCHEMA_VERSION };
+}
 
 /**
  * Default grid options matching current layout behavior
@@ -206,17 +303,20 @@ export function mergeWithDefaults(userLayout: Partial<LayoutConfig>): LayoutConf
   // Get user widgets or default widgets
   const baseWidgets = userLayout.widgets ?? defaultLayout.widgets;
 
-  // Apply ComponentRegistry minSize values to each widget
+  // Migrate any legacy component ids first (saved layouts may reference old ids),
+  // then apply current ComponentRegistry minSize values to each widget.
   const widgetsWithUpdatedMinSize = baseWidgets.map((widget) => {
-    const componentDef = getComponentDefinition(widget.componentId);
+    const componentId = migrateComponentId(widget.componentId);
+    const migrated = componentId === widget.componentId ? widget : { ...widget, componentId };
+    const componentDef = getComponentDefinition(componentId);
     if (componentDef) {
       return {
-        ...widget,
+        ...migrated,
         minW: componentDef.minSize.w,
         minH: componentDef.minSize.h,
       };
     }
-    return widget;
+    return migrated;
   });
 
   return {

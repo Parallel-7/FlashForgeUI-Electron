@@ -1,8 +1,6 @@
 /**
  * @fileoverview Unit tests for the ShaperAnalyzer class.
  * Tests input shaper analysis, shaper evaluation, and Klipper config generation.
- *
- * @module main/services/calibration/__tests__/ShaperAnalyzer.test
  */
 
 import { ShaperType } from '../../../../shared/types/calibration';

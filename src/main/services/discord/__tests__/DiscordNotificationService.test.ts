@@ -3,8 +3,6 @@
  *
  * Covers the single periodic timer model, multi-context periodic sends, cleanup on context
  * removal, and monitor listener teardown on unregister.
- *
- * @module services/discord/__tests__/DiscordNotificationService.test
  */
 
 import type { PrinterStatus } from '@shared/types/polling.js';
@@ -138,6 +136,7 @@ function createStatus(fileName: string): PrinterStatus {
         weightUsed: 10,
         lengthUsed: 2,
         formattedEta: '01:30',
+        completionTime: new Date('2026-01-01T01:30:00.000Z'),
       },
       isActive: true,
     },

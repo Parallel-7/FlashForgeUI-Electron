@@ -13,15 +13,13 @@
  * - Click-to-open spool selection dialog
  * - Real-time spool data updates from main process
  * - Works even if component not on grid (state in main process)
- *
- * @module ui/components/spoolman
  */
 
 import type { AppConfig } from '@shared/types/config.js';
 import { initializeUniversalLucideIcons } from '../../../renderer/utils/icons.js';
 import { BaseComponent } from '../base/component.js';
 import type { ComponentUpdateData } from '../base/types.js';
-import type { ActiveSpoolData } from './types.js';
+import type { ActiveSpoolData, SpoolmanStationStatus } from './types.js';
 import './spoolman.css';
 
 /**
@@ -58,6 +56,13 @@ export class SpoolmanComponent extends BaseComponent {
         <div class="spool-name"></div>
         <div class="spool-info"></div>
       </div>
+
+      <!-- Material station (per-job tracking) state -->
+      <div class="spoolman-state spoolman-station">
+        <p class="spoolman-station-note"></p>
+        <div class="spoolman-station-job"></div>
+        <p class="spoolman-station-summary"></p>
+      </div>
     </div>
   `;
 
@@ -66,6 +71,8 @@ export class SpoolmanComponent extends BaseComponent {
   private contextId: string | null = null;
   private contextEnabled = false;
   private disabledReason: string | null = null;
+  /** Per-job tracking view payload (material-station contexts). */
+  private stationStatus: SpoolmanStationStatus | null = null;
 
   // DOM references
   private disabledView: HTMLElement | null = null;
@@ -77,6 +84,10 @@ export class SpoolmanComponent extends BaseComponent {
   private setSpoolButton: HTMLElement | null = null;
   private settingsButton: HTMLElement | null = null;
   private disabledMessageEl: HTMLElement | null = null;
+  private stationView: HTMLElement | null = null;
+  private stationNoteEl: HTMLElement | null = null;
+  private stationJobEl: HTMLElement | null = null;
+  private stationSummaryEl: HTMLElement | null = null;
 
   /**
    * Setup event listeners for spool selection and IPC events
@@ -92,6 +103,10 @@ export class SpoolmanComponent extends BaseComponent {
     this.setSpoolButton = this.findElementByClass('btn-set-spool');
     this.settingsButton = this.findElementByClass('btn-settings');
     this.disabledMessageEl = this.findElementByClass('spoolman-message');
+    this.stationView = this.findElementByClass('spoolman-station');
+    this.stationNoteEl = this.findElementByClass('spoolman-station-note');
+    this.stationJobEl = this.findElementByClass('spoolman-station-job');
+    this.stationSummaryEl = this.findElementByClass('spoolman-station-summary');
 
     // "Set Active Spool" button
     if (this.setSpoolButton) {
@@ -190,6 +205,16 @@ export class SpoolmanComponent extends BaseComponent {
     if (this.disabledView) this.disabledView.style.display = 'none';
     if (this.noSpoolView) this.noSpoolView.style.display = 'none';
     if (this.activeSpoolView) this.activeSpoolView.style.display = 'none';
+    if (this.stationView) this.stationView.style.display = 'none';
+
+    // Material-station contexts: per-job tracking view. The single
+    // active-spool concept does not apply — slots are assigned via the
+    // Material Station editor's "Set from Spoolman" flow.
+    if (this.contextEnabled && this.stationStatus) {
+      if (this.stationView) this.stationView.style.display = 'flex';
+      this.renderStationView();
+      return;
+    }
 
     // Show appropriate state
     const disabled = !this.isEnabled || !this.contextEnabled;
@@ -235,6 +260,79 @@ export class SpoolmanComponent extends BaseComponent {
     if (this.spoolInfoText) {
       this.spoolInfoText.textContent = `${material} - ${remaining}g remaining`;
     }
+  }
+
+  /**
+   * Render the per-job tracking view for material-station contexts: the
+   * explanation, the job tracked now with its spool per tool, and the last
+   * deduction summary.
+   */
+  private renderStationView(): void {
+    const station = this.stationStatus;
+    if (!station) return;
+
+    if (this.stationNoteEl) {
+      this.stationNoteEl.textContent = station.note;
+    }
+
+    if (this.stationJobEl) {
+      this.stationJobEl.textContent = '';
+      const job = station.activeJob;
+      if (!job) {
+        this.stationJobEl.appendChild(this.createStationRow('Tracked print:', 'None'));
+      } else {
+        const progress = job.started
+          ? job.lastProgress !== null
+            ? `${Math.round(job.lastProgress)}%`
+            : 'printing'
+          : 'waiting to start';
+        this.stationJobEl.appendChild(this.createStationRow('Tracked print:', `${job.fileName} (${progress})`));
+        for (const tool of job.tools) {
+          const estimate = tool.usedG !== null ? ` · ${tool.usedG.toFixed(1)} g` : '';
+          this.stationJobEl.appendChild(
+            this.createStationRow(`Tool ${tool.toolId + 1} (slot ${tool.slotId}):`, `Spool #${tool.spoolId}${estimate}`)
+          );
+        }
+      }
+    }
+
+    if (this.stationSummaryEl) {
+      this.stationSummaryEl.textContent = this.describeDeduction(station.lastDeduction);
+    }
+  }
+
+  private createStationRow(label: string, value: string): HTMLDivElement {
+    const row = document.createElement('div');
+    row.className = 'spoolman-station-row';
+    const labelEl = document.createElement('span');
+    labelEl.textContent = label;
+    const valueEl = document.createElement('span');
+    valueEl.textContent = value;
+    row.append(labelEl, valueEl);
+    return row;
+  }
+
+  private describeDeduction(deduction: SpoolmanStationStatus['lastDeduction']): string {
+    if (!deduction) {
+      return 'No deduction recorded this session.';
+    }
+    const ending: Record<NonNullable<SpoolmanStationStatus['lastDeduction']>['terminal'], string> = {
+      completed: 'completed',
+      cancelled: 'was cancelled',
+      error: 'stopped with an error',
+      interrupted: 'ended while the app was not watching',
+    };
+    const approximate = deduction.approximate ? ' (approximate)' : '';
+    const charged = deduction.tools
+      .filter((tool) => tool.status === 'deducted' && tool.amount !== null)
+      .map((tool) => `#${tool.spoolId} ${tool.amount}${tool.mode === 'weight' ? ' g' : ' mm'}`)
+      .join(', ');
+    return (
+      `${deduction.fileName} ${ending[deduction.terminal]} at ${Math.round(deduction.progress)}%${approximate}: ` +
+      `${deduction.deductedCount} spool(s) charged` +
+      (charged ? ` (${charged})` : '') +
+      (deduction.skippedCount > 0 ? `, ${deduction.skippedCount} skipped` : '')
+    );
   }
 
   /**
@@ -299,10 +397,17 @@ export class SpoolmanComponent extends BaseComponent {
       const status = await window.api.spoolman.getStatus(this.contextId || undefined);
       this.contextEnabled = status.enabled;
       this.disabledReason = status.disabledReason ?? null;
+      this.stationStatus = status.station ?? null;
 
       if (status.enabled) {
-        await this.loadState();
+        if (this.stationStatus) {
+          this.activeSpool = null;
+          this.updateView();
+        } else {
+          await this.loadState();
+        }
       } else {
+        this.stationStatus = null;
         this.activeSpool = null;
         this.updateView();
       }

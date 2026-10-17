@@ -13,8 +13,6 @@
  * - Asset existence and accessibility validation
  * - Critical asset validation with comprehensive error reporting
  * - Platform-specific path handling and diagnostic logging
- *
- * @module services/__tests__/EnvironmentDetectionService.test
  */
 
 // Mock fs module

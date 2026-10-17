@@ -46,6 +46,9 @@ export class Go2rtcBinaryManager {
   /** WebRTC port - hardcoded as per user preference */
   private readonly webrtcPort = 8555;
 
+  /** RTSP port - go2rtc's default, kept so the loopback bind replaces it in place */
+  private readonly rtspPort = 8554;
+
   /** Timeout for graceful shutdown (ms) */
   private readonly shutdownTimeoutMs = 5000;
 
@@ -53,6 +56,13 @@ export class Go2rtcBinaryManager {
     // Register cleanup on app quit
     app.on('will-quit', () => {
       void this.stop();
+    });
+
+    // will-quit never fires when the process ends through process.exit(), which the
+    // headless failure paths use. Kill the child synchronously on exit so go2rtc is
+    // not orphaned holding its ports.
+    process.once('exit', () => {
+      this.process?.kill();
     });
   }
 
@@ -144,9 +154,16 @@ export class Go2rtcBinaryManager {
    * Generate and write the go2rtc configuration file
    */
   private async generateConfig(): Promise<string> {
+    // The API and RTSP server are unauthenticated, so they bind to loopback only.
+    // Every consumer reaches the API on 127.0.0.1, and remote WebUI viewers go
+    // through the authenticated CameraStreamProxy. WebRTC stays on all
+    // interfaces because it carries the media to remote WebUI viewers.
     const config: Go2rtcConfig = {
       api: {
-        listen: `:${this.apiPort}`,
+        listen: `127.0.0.1:${this.apiPort}`,
+      },
+      rtsp: {
+        listen: `127.0.0.1:${this.rtspPort}`,
       },
       webrtc: {
         listen: `:${this.webrtcPort}/tcp`,
@@ -184,6 +201,12 @@ export class Go2rtcBinaryManager {
       if (config.api.listen) lines.push(`  listen: "${config.api.listen}"`);
       // Allow CORS for WebSocket connections from Electron renderer/dev server
       lines.push('  origin: "*"');
+    }
+
+    if (config.rtsp) {
+      lines.push('');
+      lines.push('rtsp:');
+      if (config.rtsp.listen) lines.push(`  listen: "${config.rtsp.listen}"`);
     }
 
     if (config.webrtc) {

@@ -13,6 +13,7 @@
  * - WebSocket schemas: WebSocketCommandSchema, WebSocketCommandTypeSchema
  * - Command validation: PrinterCommandSchema, CommandDataValidators
  * - Temperature/Job schemas: TemperatureSetRequestSchema, JobStartRequestSchema, GCodeCommandRequestSchema
+ * - Job upload schemas: JobUploadStartRequestSchema, JobUploadCancelRequestSchema
  * - Helper functions: validateWebSocketCommand, extractBearerToken, createValidationError
  * - Type exports: ValidatedLoginRequest, ValidatedWebSocketCommand, ValidatedPrinterCommand
  */
@@ -73,6 +74,14 @@ export const JobStartDataSchema = z.object({
   startNow: z.boolean().optional().default(true),
 });
 
+/**
+ * Model preview request data
+ */
+export const ModelPreviewRequestSchema = z.object({
+  filename: z.string().min(1),
+  requestId: z.string().optional(),
+});
+
 // ============================================================================
 // API REQUEST SCHEMAS
 // ============================================================================
@@ -95,6 +104,17 @@ const MaterialMappingSchema = z.object({
   slotMaterialColor: z.string().min(1, 'slotMaterialColor is required'),
 });
 
+/**
+ * Spoolman spool chosen for one tool in the matching dialog. A null spoolId
+ * means the user chose not to track that tool.
+ */
+const SpoolAssignmentSchema = z.object({
+  toolId: z.number().int('toolId must be an integer').min(0, 'toolId must be non-negative'),
+  spoolId: z.number().int('spoolId must be an integer').positive('spoolId must be a positive integer').nullable(),
+});
+
+const SpoolAssignmentsSchema = z.array(SpoolAssignmentSchema).max(16).optional();
+
 export const JobStartRequestSchema = z.object({
   filename: z
     .string()
@@ -106,6 +126,41 @@ export const JobStartRequestSchema = z.object({
     .array(MaterialMappingSchema)
     .min(1, 'materialMappings must contain at least one mapping')
     .optional(),
+  spoolAssignments: SpoolAssignmentsSchema,
+});
+
+/**
+ * Job upload start request validation.
+ *
+ * `uploadId` refers to a file already staged via POST /api/jobs/upload/stage, so
+ * no filename is accepted here - the server only ever prints the name it wrote.
+ */
+export const JobUploadStartRequestSchema = z.object({
+  uploadId: z.string().uuid('uploadId must be a valid upload handle'),
+  startNow: z.boolean().optional().default(true),
+  autoLevel: z.boolean().optional().default(false),
+  materialMappings: z
+    .array(MaterialMappingSchema)
+    .min(1, 'materialMappings must contain at least one mapping')
+    .optional(),
+  spoolAssignments: SpoolAssignmentsSchema,
+});
+
+/**
+ * Job upload cancel/discard request validation.
+ */
+export const JobUploadCancelRequestSchema = z.object({
+  uploadId: z.string().uuid('uploadId must be a valid upload handle'),
+});
+
+/**
+ * G-code command request validation
+ */
+export const GCodeCommandRequestSchema = z.object({
+  command: z
+    .string()
+    .min(1, 'Command is required')
+    .regex(/^[A-Z]/, 'G-code commands must start with a letter'),
 });
 
 // ============================================================================
@@ -148,9 +203,28 @@ export const PrinterCommandSchema = z.enum([
   'request-model-preview',
 ]);
 
+/**
+ * Command-specific data validation
+ */
+export const CommandDataValidators = {
+  'set-bed-temp': TemperatureDataSchema,
+  'set-extruder-temp': TemperatureDataSchema,
+  'print-file': JobStartDataSchema,
+  'request-model-preview': ModelPreviewRequestSchema,
+} as const;
+
 // ============================================================================
 // RESPONSE VALIDATION
 // ============================================================================
+
+/**
+ * Standard API response validation (for internal use)
+ */
+export const StandardAPIResponseSchema = z.object({
+  success: z.boolean(),
+  message: z.string().optional(),
+  error: z.string().optional(),
+});
 
 /**
  * Printer features validation
@@ -163,6 +237,13 @@ export const PrinterFeaturesSchema = z.object({
   canPause: z.boolean(),
   canResume: z.boolean(),
   canCancel: z.boolean(),
+  gcodeCommands: z
+    .object({
+      available: z.boolean(),
+      usesLegacyAPI: z.boolean(),
+      supportedCommands: z.array(z.string()),
+    })
+    .optional(),
 });
 
 // ============================================================================
@@ -209,6 +290,29 @@ export const SpoolSelectRequestSchema = z.object({
  */
 export const SpoolClearRequestSchema = z.object({
   contextId: z.string().optional(),
+});
+
+/**
+ * Material station slot configuration request validation.
+ *
+ * The client snaps a Spoolman spool's material/color to the printer's fixed
+ * palette (AD5X vs Creator 5) and sends the already-snapped values here. Slot is
+ * 1-based (1-4); `materialName` is required (the slot editor always resolves a
+ * material from the model's fixed palette), and `colorHex` must be a 6-digit hex
+ * with an optional leading '#'. Both string fields are trimmed before validation.
+ */
+export const SlotConfigRequestSchema = z.object({
+  contextId: z.string().optional(),
+  slot: z
+    .number()
+    .int('slot must be an integer')
+    .min(1, 'slot must be at least 1')
+    .max(4, 'slot must be at most 4'),
+  materialName: z.string().trim().min(1, 'Material name is required'),
+  colorHex: z
+    .string()
+    .trim()
+    .regex(/^#?[0-9a-fA-F]{6}$/, 'A valid 6-digit hex color is required'),
 });
 
 // ============================================================================

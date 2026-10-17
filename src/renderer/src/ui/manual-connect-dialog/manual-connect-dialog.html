@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy" content="
+        default-src 'self';
+        script-src 'self' 'unsafe-inline';
+        style-src 'self' 'unsafe-inline';
+        img-src 'self' data: blob:;
+        connect-src 'self';
+        font-src 'self';
+        object-src 'none';
+        base-uri 'self';
+        form-action 'self';
+    ">
+    <title>Manual Printer Connection</title>
+    <link rel="stylesheet" href="manual-connect-dialog.css">
+</head>
+<body>
+<div class="dialog-container dialog-container--full">
+    <div class="dialog-header">
+        <div class="dialog-title" id="dialog-title">Manual Printer Connection</div>
+        <button class="dialog-close" id="dialog-close" aria-label="Close">
+            <i data-lucide="x" aria-hidden="true"></i>
+        </button>
+    </div>
+    <div class="dialog-content">
+        <div class="dialog-message" id="dialog-message">
+            Enter your printer's details to connect directly.
+        </div>
+
+        <div class="field">
+            <label class="field-label" for="input-ip">IP Address</label>
+            <input class="field-input" id="input-ip" type="text" placeholder="192.168.1.100"
+                   autocomplete="off" spellcheck="false" />
+        </div>
+
+        <div class="field">
+            <label class="field-label" for="input-type">Printer Type</label>
+            <select class="field-input" id="input-type"></select>
+        </div>
+
+        <div class="field" id="field-serial">
+            <label class="field-label" for="input-serial">Serial Number</label>
+            <input class="field-input" id="input-serial" type="text" placeholder="e.g. SNMOMC9900728"
+                   autocomplete="off" spellcheck="false" />
+        </div>
+
+        <div class="field" id="field-check-code">
+            <label class="field-label" for="input-check-code">Check Code</label>
+            <input class="field-input" id="input-check-code" type="text" placeholder="e.g. a1b2c3d4"
+                   autocomplete="off" spellcheck="false" />
+        </div>
+
+        <div class="field-hint" id="field-hint">
+            Modern printers need the serial number and check code shown on the printer's
+            network/status screen.
+        </div>
+
+        <div class="dialog-error" id="dialog-error" role="alert" hidden></div>
+
+        <div class="dialog-buttons">
+            <button class="dialog-button cancel" id="dialog-cancel">Cancel</button>
+            <button class="dialog-button" id="dialog-connect">Connect</button>
+        </div>
+    </div>
+</div>
+
+<script type="module" src="./manual-connect-dialog-renderer.ts"></script>
+</body>
+</html>

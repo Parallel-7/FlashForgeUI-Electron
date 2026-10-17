@@ -1,41 +1,13 @@
 /**
- * @fileoverview Printer notification coordinator that manages notification business logic,
- * state tracking, and integration with printer polling and configuration systems.
- *
- * This coordinator acts as the bridge between printer state monitoring (PrinterPollingService),
- * user notification preferences (ConfigManager), and notification delivery (NotificationService).
- * It implements intelligent notification logic including duplicate prevention and state-based
- * notification triggers tied to the printer's operational lifecycle.
- *
- * Key Features:
- * - Integration with PrinterPollingService for real-time printer state monitoring
- * - Configuration-driven notification behavior based on user preferences from ConfigManager
- * - Stateful notification tracking to prevent duplicate notifications during a print job
- * - Temperature monitoring coordination via TemperatureMonitoringService for cooled notifications
- * - Automatic state reset on print start/cancel/error to ensure clean notification cycles
- * - Support for multiple notification types: print complete, printer cooled, upload complete/failed, connection events
- * - Event emitter pattern for notification triggers and state changes
- * - Singleton pattern with global instance management and test-friendly dependency injection
- *
- * Core Responsibilities:
- * - Monitor printer state changes from PrinterPollingService and handle state transitions
- * - Check notification settings from ConfigManager to respect user preferences
- * - Manage notification state to prevent duplicate notifications within a print cycle
- * - Coordinate notification sending through NotificationService based on state and settings
- * - Delegate temperature monitoring to TemperatureMonitoringService for cooled notifications
- * - Reset state appropriately during print cycles (start, complete, cancel, error transitions)
- * - Handle connection changes and cleanup resources on disconnect
- *
- * Temperature Monitoring Coordination:
- * - Delegates to TemperatureMonitoringService for bed cooling detection
- * - Listens for 'printer-cooled' events from temperature monitor
- * - Sends cooled notifications when temperature threshold is met
- * - Respects notification settings for cooled notifications
- *
- * @exports PrinterNotificationCoordinator - Main coordinator class for printer notifications
- * @exports getPrinterNotificationCoordinator - Singleton instance accessor
- * @exports resetPrinterNotificationCoordinator - Test helper for instance reset
- * @exports CoordinatorEventMap - Type for coordinator event emissions
+ * @fileoverview PrinterNotificationCoordinator bridges printer state to
+ * notifications. It watches polling and print-state events, checks the
+ * user's notification settings from ConfigManager, and sends through
+ * NotificationService. Per-print state tracking makes each lifecycle event
+ * (print complete, printer cooled, upload result, connection changes)
+ * notify at most once per print cycle; the state resets on start, cancel,
+ * and error. Bed cooling detection is delegated to
+ * TemperatureMonitoringService. Singleton via
+ * getPrinterNotificationCoordinator().
  */
 
 import {

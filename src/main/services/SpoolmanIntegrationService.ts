@@ -1,22 +1,24 @@
 /**
- * @fileoverview Spoolman integration service with persistence and AD5X protection
+ * @fileoverview Spoolman integration service with persistence and station-aware gating
  *
  * Manages active spool selections across printer contexts with per-printer persistence,
- * AD5X printer detection/blocking, and event broadcasting for desktop/WebUI synchronization.
+ * station-aware context gating, and event broadcasting for desktop/WebUI synchronization.
  * This service acts as the single source of truth for active spool data.
  *
  * Key Features:
  * - Persistent storage of active spool selections per printer in printer_details.json
- * - AD5X printer detection and automatic disablement
+ * - Station-aware gating: material-station contexts (Creator 5 series, AD5X with
+ *   station) use per-job tracking (a spool per tool, chosen in the matching
+ *   dialog for each job the app starts) instead of the single active-spool flow
  * - Event-driven updates for real-time synchronization
  * - Integration with SpoolmanService for spool search and details
  * - Spoolman configuration validation and connection testing
  *
- * AD5X Detection Logic:
- * - Material station feature flag (materialStation.available === true), OR
- * - Printer model string starts with "AD5"
- *
- * @module services/SpoolmanIntegrationService
+ * Gating predicates:
+ * - isContextSupported: context is known (assignment operations allowed)
+ * - isStationContext: material station attached (per-job tracking path)
+ * - isUsageTrackingEligible: single-spool deduction path (non-station contexts,
+ *   including AD5X printers WITHOUT a station)
  */
 
 import type { ConfigUpdateEvent } from '@shared/types/config.js';
@@ -94,36 +96,49 @@ export class SpoolmanIntegrationService extends EventEmitter {
 
   /**
    * Check if a specific printer context supports Spoolman integration
-   * Returns false for AD5X printers (material station or model name)
+   * (active-spool selection).
+   *
+   * Station printers are SUPPORTED: they use per-job tracking (a spool per
+   * tool, chosen for each job the app starts) instead of the single
+   * active-spool flow. Use {@link isUsageTrackingEligible} to gate
+   * the single-spool deduction path and {@link isStationContext} to route
+   * to the station tracker.
    *
    * @param contextId - Printer context ID to check
-   * @returns true if context supports Spoolman, false if AD5X or unsupported
+   * @returns true if the context is known and supports Spoolman
    */
   isContextSupported(contextId: string): boolean {
     try {
       // Check if context exists
       const context = this.contextManager.getContext(contextId);
-      if (!context) {
-        return false;
-      }
-
-      // Check for material station feature (AD5X indicator)
-      const features = this.backendManager.getFeatures(contextId);
-      if (features?.materialStation?.available === true) {
-        return false; // AD5X with material station
-      }
-
-      // Check for AD5X model name
-      const printerModel = context.printerDetails?.printerModel || '';
-      if (printerModel.startsWith('AD5')) {
-        return false; // AD5X model
-      }
-
-      return true;
+      return Boolean(context);
     } catch (error) {
       console.error('[SpoolmanIntegrationService] Error checking context support:', toAppError(error).message);
       return false;
     }
+  }
+
+  /**
+   * True when the context's printer has a material station attached
+   * (Creator 5 series, AD5X with station). Station contexts use the
+   * per-job deduction path.
+   */
+  isStationContext(contextId: string): boolean {
+    try {
+      return this.backendManager.isFeatureAvailable(contextId, 'material-station');
+    } catch (error) {
+      console.error('[SpoolmanIntegrationService] Error checking station context:', toAppError(error).message);
+      return false;
+    }
+  }
+
+  /**
+   * True when the context may use the legacy progress-based single-spool
+   * deduction path. Station contexts are excluded — they get the
+   * per-job StationUsageTracker instead.
+   */
+  isUsageTrackingEligible(contextId: string): boolean {
+    return this.isContextSupported(contextId) && !this.isStationContext(contextId);
   }
 
   /**
@@ -138,7 +153,7 @@ export class SpoolmanIntegrationService extends EventEmitter {
     }
 
     if (!this.isContextSupported(contextId)) {
-      return 'Spoolman integration is not available for AD5X printers with material stations.';
+      return 'Spoolman integration is not available for this printer.';
     }
 
     return null;

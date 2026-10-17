@@ -5,7 +5,7 @@
  * material station slots. Validates material type compatibility, warns on color differences,
  * and prevents invalid mappings (empty slots, type mismatches, duplicate assignments). Provides
  * visual feedback through color swatches, selection states, and real-time mapping display.
- * Context-aware button text (Start Print vs Confirm) based on workflow origin.
+ * Confirms mappings only - the caller decides whether the job is sent or started.
  *
  * Key features:
  * - Dual-panel selection: print requirements and available IFS slots
@@ -52,6 +52,17 @@ interface AD5XMaterialMapping {
   readonly materialName: string;
   readonly toolMaterialColor: string;
   readonly slotMaterialColor: string;
+  /** Spoolman spool for the tool; null = do not track; absent = not asked. */
+  readonly spoolId?: number | null;
+}
+
+/** Spool offered in the dialog for per-job Spoolman tracking. */
+interface TrackingSpool {
+  readonly id: number;
+  readonly name: string;
+  readonly vendor: string | null;
+  readonly material: string | null;
+  readonly remainingWeight: number | null;
 }
 
 // Utility functions (inlined to avoid require errors)
@@ -60,8 +71,9 @@ function validateMaterialCompatibility(tool: FFGcodeToolData, slot: MaterialSlot
   return tool.materialName === slot.materialType;
 }
 
+/** Shared wording - keep in step with the two web UIs. */
 function createColorDifferenceWarning(toolId: number, toolColor: string, slotId: number, slotColor: string): string {
-  return `Color difference detected: Tool ${toolId + 1} expects ${toolColor} but Slot ${slotId} has ${slotColor}. This is allowed but may affect print appearance.`;
+  return `Tool ${toolId + 1} expects ${toolColor} but Slot ${slotId} has ${slotColor}.`;
 }
 
 function createMaterialMismatchError(
@@ -83,6 +95,7 @@ interface MaterialMatchingDialogAPI {
   readonly closeDialog: () => void;
   readonly confirmMappings: (mappings: AD5XMaterialMapping[]) => void;
   readonly getMaterialStationStatus: () => Promise<MaterialStationStatus | null>;
+  readonly getTrackingSpools?: () => Promise<TrackingSpool[] | null>;
   receive?: (channel: string, func: (...args: unknown[]) => void) => void;
 }
 
@@ -90,7 +103,9 @@ interface MaterialMatchingInitData {
   readonly fileName: string;
   readonly toolDatas: readonly FFGcodeToolData[];
   readonly leveling: boolean;
-  readonly context?: 'job-start' | 'file-upload'; // Context to determine button text
+  readonly context?: 'job-start' | 'file-upload'; // Which flow opened the dialog
+  /** True when the caller starts the job now, so a spool per tool is asked. */
+  readonly trackSpools?: boolean;
 }
 
 let cachedMaterialMatchingAPI: MaterialMatchingDialogAPI | null = null;
@@ -113,6 +128,13 @@ let materialStation: MaterialStationStatus | null = null;
 let selectedTool: number | null = null;
 let selectedSlot: number | null = null;
 const currentMappings: Map<number, AD5XMaterialMapping> = new Map();
+/** Spools offered for per-job tracking; null when tracking does not apply. */
+let trackingSpools: TrackingSpool[] | null = null;
+/** Spool choice per tool: a spool id, null for "do not track", or no entry. */
+const spoolChoices: Map<number, number | null> = new Map();
+
+const SPOOL_PLACEHOLDER_VALUE = '';
+const SPOOL_UNTRACKED_VALUE = 'none';
 
 // DOM elements
 let printRequirementsElement: HTMLElement | null = null;
@@ -177,20 +199,110 @@ function setupIpcListeners(api: MaterialMatchingDialogAPI): void {
     console.log('Material matching: Received init data', data);
     initData = data;
 
-    // Set button text based on context
+    // The label is the same in every flow and on every UI surface: this dialog
+    // only confirms mappings, the caller decides what happens with them.
     if (confirmButton) {
-      if (data.context === 'file-upload') {
-        confirmButton.textContent = 'Confirm';
-      } else {
-        confirmButton.textContent = 'Start Print'; // Default for job-start context
-      }
+      confirmButton.textContent = 'Confirm';
     }
 
     await loadMaterialStation(api);
     displayPrintRequirements();
     displayIFSSlots();
     updateMappingsDisplay();
+
+    trackingSpools = null;
+    spoolChoices.clear();
+    if (data.trackSpools && api.getTrackingSpools) {
+      try {
+        trackingSpools = await api.getTrackingSpools();
+      } catch (error) {
+        console.warn('Material matching: could not load Spoolman spools', error);
+        trackingSpools = null;
+      }
+    }
+    const hint = document.getElementById('spool-hint');
+    if (hint) {
+      hint.style.display = trackingSpools !== null ? 'block' : 'none';
+    }
+    updateMappingsDisplay();
+    updateConfirmButton();
   });
+}
+
+function normalizeMaterial(value: string | null | undefined): string {
+  return (value ?? '').trim().toLowerCase();
+}
+
+function describeSpool(spool: TrackingSpool): string {
+  const parts = [`#${spool.id}`, spool.vendor, spool.name].filter(Boolean);
+  const remaining =
+    typeof spool.remainingWeight === 'number' ? ` (${Math.round(spool.remainingWeight)} g left)` : '';
+  return `${parts.join(' ')}${remaining}`;
+}
+
+/**
+ * Spool picker for one mapping. Spools whose material matches the tool come
+ * first, so the usual choice is near the top.
+ */
+function createSpoolSelect(mapping: AD5XMaterialMapping, spools: readonly TrackingSpool[]): HTMLSelectElement {
+  const select = document.createElement('select');
+  select.className = 'mapping-spool';
+  select.dataset.toolId = String(mapping.toolId);
+  select.setAttribute('aria-label', `Spoolman spool for tool ${mapping.toolId + 1}`);
+
+  const placeholder = document.createElement('option');
+  placeholder.value = SPOOL_PLACEHOLDER_VALUE;
+  placeholder.textContent = 'Choose a spool\u2026';
+  placeholder.disabled = true;
+  select.appendChild(placeholder);
+
+  const untracked = document.createElement('option');
+  untracked.value = SPOOL_UNTRACKED_VALUE;
+  untracked.textContent = 'Do not track';
+  select.appendChild(untracked);
+
+  const wanted = normalizeMaterial(mapping.materialName);
+  const sorted = [...spools].sort((a, b) => {
+    const aMatch = normalizeMaterial(a.material) === wanted ? 0 : 1;
+    const bMatch = normalizeMaterial(b.material) === wanted ? 0 : 1;
+    return aMatch - bMatch || a.id - b.id;
+  });
+  for (const spool of sorted) {
+    const option = document.createElement('option');
+    option.value = String(spool.id);
+    option.textContent = describeSpool(spool);
+    select.appendChild(option);
+  }
+
+  const choice = spoolChoices.get(mapping.toolId);
+  select.value =
+    choice === undefined ? SPOOL_PLACEHOLDER_VALUE : choice === null ? SPOOL_UNTRACKED_VALUE : String(choice);
+
+  select.addEventListener('click', (event) => event.stopPropagation());
+  select.addEventListener('change', () => {
+    if (select.value === SPOOL_UNTRACKED_VALUE) {
+      spoolChoices.set(mapping.toolId, null);
+    } else if (select.value === SPOOL_PLACEHOLDER_VALUE) {
+      spoolChoices.delete(mapping.toolId);
+    } else {
+      spoolChoices.set(mapping.toolId, Number(select.value));
+    }
+    updateConfirmButton();
+  });
+  return select;
+}
+
+/** True when tracking does not apply, or every mapped tool has a spool choice. */
+function allSpoolsChosen(): boolean {
+  if (trackingSpools === null) {
+    return true;
+  }
+  for (const toolId of currentMappings.keys()) {
+    if (!spoolChoices.has(toolId)) {
+      return false;
+    }
+  }
+  return true;
 }
 
 /**
@@ -414,12 +526,7 @@ function createMapping(): void {
     return;
   }
 
-  // Check for color differences
-  if (hasColorDifference(tool.materialColor, slot.materialColor)) {
-    showWarning(createColorDifferenceWarning(tool.toolId, tool.materialColor, selectedSlot, slot.materialColor || ''));
-  }
-
-  // Add mapping
+  // Add mapping - the colour warnings are rebuilt from the whole set below
   currentMappings.set(tool.toolId, mapping);
 
   // Reset selections
@@ -438,6 +545,7 @@ function updateAllDisplays(): void {
   displayIFSSlots();
   updateMappingsDisplay();
   updateConfirmButton();
+  refreshColorWarnings();
 }
 
 /**
@@ -519,6 +627,9 @@ function createMappingItem(mapping: AD5XMaterialMapping): HTMLElement {
   removeButton.addEventListener('click', () => removeMapping(mapping.toolId));
 
   item.appendChild(content);
+  if (trackingSpools !== null) {
+    item.appendChild(createSpoolSelect(mapping, trackingSpools));
+  }
   item.appendChild(removeButton);
 
   return item;
@@ -529,6 +640,7 @@ function createMappingItem(mapping: AD5XMaterialMapping): HTMLElement {
  */
 function removeMapping(toolId: number): void {
   currentMappings.delete(toolId);
+  spoolChoices.delete(toolId);
   updateAllDisplays();
   hideMessages();
 }
@@ -541,7 +653,7 @@ function updateConfirmButton(): void {
 
   // Enable only if all tools are mapped
   const allMapped = initData.toolDatas.every((tool) => currentMappings.has(tool.toolId));
-  confirmButton.disabled = !allMapped;
+  confirmButton.disabled = !allMapped || !allSpoolsChosen();
 }
 
 /**
@@ -551,17 +663,41 @@ function showError(message: string): void {
   if (!errorMessageElement) return;
   errorMessageElement.textContent = message;
   errorMessageElement.style.display = 'block';
-  if (warningMessageElement) warningMessageElement.style.display = 'none';
 }
 
 /**
- * Show warning message
+ * One line per mapping whose tool color does not match the slot it was mapped
+ * to. Rebuilt from the current mappings on every change, so the card always
+ * reflects the whole set rather than the last click.
  */
-function showWarning(message: string): void {
-  if (!warningMessageElement) return;
-  warningMessageElement.textContent = message;
+function refreshColorWarnings(): void {
+  const list = document.getElementById('warning-message-list');
+  if (!warningMessageElement || !list) return;
+
+  list.textContent = '';
+
+  const mismatched = Array.from(currentMappings.values()).filter((mapping) =>
+    hasColorDifference(mapping.toolMaterialColor, mapping.slotMaterialColor)
+  );
+
+  if (mismatched.length === 0) {
+    warningMessageElement.style.display = 'none';
+    return;
+  }
+
+  mismatched.forEach((mapping) => {
+    const item = document.createElement('div');
+    item.className = 'warning-card-item';
+    item.textContent = createColorDifferenceWarning(
+      mapping.toolId,
+      mapping.toolMaterialColor,
+      mapping.slotId,
+      mapping.slotMaterialColor
+    );
+    list.appendChild(item);
+  });
+
   warningMessageElement.style.display = 'block';
-  if (errorMessageElement) errorMessageElement.style.display = 'none';
 }
 
 /**
@@ -569,7 +705,7 @@ function showWarning(message: string): void {
  */
 function hideMessages(): void {
   if (errorMessageElement) errorMessageElement.style.display = 'none';
-  if (warningMessageElement) warningMessageElement.style.display = 'none';
+  refreshColorWarnings();
 }
 
 /**
@@ -585,8 +721,15 @@ function handleClose(): void {
 function handleConfirm(): void {
   if (!initData) return;
 
-  // Convert mappings to array
-  const mappings = Array.from(currentMappings.values());
+  if (!allSpoolsChosen()) {
+    showError('Choose a Spoolman spool for each tool, or choose "Do not track".');
+    return;
+  }
+
+  // Convert mappings to array; attach the spool choice when one was asked.
+  const mappings = Array.from(currentMappings.values()).map((mapping) =>
+    trackingSpools === null ? mapping : { ...mapping, spoolId: spoolChoices.get(mapping.toolId) ?? null }
+  );
 
   // Ensure all tools are mapped
   if (mappings.length !== initData.toolDatas.length) {
@@ -606,6 +749,8 @@ function cleanup(): void {
   selectedTool = null;
   selectedSlot = null;
   currentMappings.clear();
+  trackingSpools = null;
+  spoolChoices.clear();
 }
 
 // Initialize when DOM is ready

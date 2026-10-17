@@ -2,8 +2,6 @@
  * @fileoverview SSH connection management for remote printer access.
  * Provides connection pooling, automatic reconnection, and timeout handling.
  * Uses the ssh2 library for native SSH connectivity.
- *
- * @module main/services/calibration/ssh/SSHConnectionManager
  */
 
 import { EventEmitter } from 'events';

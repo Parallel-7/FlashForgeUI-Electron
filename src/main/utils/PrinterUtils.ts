@@ -1,54 +1,75 @@
 /**
- * @fileoverview Printer family detection, model identification, and connection utilities
- * for FlashForge printer compatibility management. Provides comprehensive printer classification
- * (5M family vs. legacy), feature detection (camera, LED, filtration, material station), and
- * validation helpers for IP addresses, serial numbers, and check codes.
- *
- * Key Features:
- * - Printer model type detection from typeName strings (5M, 5M Pro, AD5X, legacy)
- * - Enhanced printer family information with feature capability flags
- * - Client type determination (new API vs. legacy API)
- * - Connection parameter validation (IP, serial number, check code)
- * - Feature availability checking and override capability detection
- * - Error message generation for connection failures
- * - Timeout calculation based on printer family
- * - Display name formatting and sanitization
- *
- * Printer Classification:
- * - 5M Family: Adventurer 5M, 5M Pro, AD5X (new API, check code required)
- * - Legacy: All other models (legacy API, direct connection)
- *
- * Model-Specific Features:
- * - Adventurer 5M Pro: Built-in camera, LED, filtration
- * - Adventurer 5M: No built-in peripherals
- * - AD5X: Material station support, no built-in camera/LED/filtration
- * - Generic Legacy: No built-in peripherals, no material station
- *
- * Key Functions:
- * - detectPrinterModelType(typeName): Returns PrinterModelType enum
- * - detectPrinterFamily(typeName): Returns family classification with check code requirement
- * - determineClientType(is5MFamily): Returns 'new' or 'legacy' client type
- * - supportsDualAPI(modelType): Checks if printer can use both APIs
- *
- * Validation Functions:
- * - shouldPromptForCheckCode(): Determines if check code prompt is needed
- *
- * Utilities:
- * - formatPrinterName: Display-safe naming
- * - getConnectionErrorMessage(error): User-friendly error messages
- *
- * Context:
- * Central to printer backend selection, connection workflow, and feature availability
- * throughout the application. Used by ConnectionFlowManager, PrinterBackendManager,
- * and UI components for printer-specific behavior.
+ * @fileoverview Printer family and model detection. Classifies a printer as
+ * 5M-family (new HTTP API, check code required) or legacy (old API), resolves
+ * per-model feature flags (camera, LED, filtration, material station), and
+ * validates connection inputs. Backend selection and feature gating start
+ * here; NEW_API_PRODUCT_IDS below is the authoritative model discriminator.
  */
-
-// src/utils/PrinterUtils.ts
-// Utility functions for printer connection and family detection
 
 import { PrinterClientType, PrinterFamilyInfo } from '@shared/types/printer.js';
 import { PrinterModelType } from '@shared/types/printer-backend/index.js';
 
+/**
+ * Canonical USB Product IDs (discovery packet offset 0x88 / firmware `/detail`
+ * pid field / FlashForge update-checker keys) for "new API" printers — those
+ * that speak the HTTP 8898 + check-code protocol.
+ *
+ * This is the authoritative, user-immutable model discriminator. Prefer it over
+ * the printer name, which the user can freely rename. `productType` (0x5A02)
+ * only identifies the 5M *family* and cannot tell these models apart.
+ */
+export const NEW_API_PRODUCT_IDS: Readonly<Record<number, PrinterModelType>> = {
+  0x0023: 'adventurer-5m',
+  0x0024: 'adventurer-5m-pro',
+  0x0026: 'ad5x',
+  0x0028: 'creator-5',
+  0x0029: 'creator-5-pro',
+};
+
+/**
+ * Model types that speak ONLY the HTTP API (no legacy TCP server on port 8899).
+ *
+ * The Creator 5 / 5 Pro are Klipper-based and run only the HTTP `OrcaServer`
+ * (port 8898) — they have no `~M601`/`~M115` TCP control channel. Connections to
+ * these models must skip the legacy TCP temporary connection and the secondary
+ * FlashForgeClient, and the FiveMClient must be created in `httpOnly` mode.
+ */
+const HTTP_ONLY_MODEL_TYPES: ReadonlySet<PrinterModelType> = new Set([
+  'creator-5',
+  'creator-5-pro',
+]);
+
+/**
+ * Whether the given model type is HTTP-only (no legacy TCP control channel).
+ * @param modelType The detected printer model type.
+ * @returns True for Creator 5 / 5 Pro; false for all dual-API and legacy models.
+ */
+export const isHttpOnlyModel = (modelType: PrinterModelType): boolean =>
+  HTTP_ONLY_MODEL_TYPES.has(modelType);
+
+/**
+ * Model types that support the remote "Reboot Printer" feature.
+ *
+ * Reboot is delivered over the flashforge-easyssh root SSH/SFTP surface, which
+ * is only provisioned on the Adventurer 5M / 5M Pro / AD5X. Creator 5 / 5 Pro
+ * use a different (Klipper) SSH method that is not yet wired up, and legacy
+ * printers have no SSH surface at all. Mirrored by a renderer-side guard in
+ * ShellController.setRebootAvailable — keep both in sync when adding models.
+ */
+const REBOOT_SUPPORTED_MODEL_TYPES: ReadonlySet<PrinterModelType> = new Set([
+  'adventurer-5m',
+  'adventurer-5m-pro',
+  'ad5x',
+]);
+
+/**
+ * Whether a printer model supports the remote reboot command. Defense-in-depth:
+ * the renderer also hides the menu item, but the main-process reboot handler
+ * re-checks this before dispatching the SSH command.
+ * @param modelType The detected (PID-derived) printer model type.
+ */
+export const isRebootSupportedModel = (modelType: PrinterModelType | undefined): boolean =>
+  !!modelType && REBOOT_SUPPORTED_MODEL_TYPES.has(modelType);
 /**
  * Detect specific printer model type from typeName
  * Returns detailed model information for backend selection
@@ -67,10 +88,48 @@ export const detectPrinterModelType = (typeName: string): PrinterModelType => {
     return 'adventurer-5m';
   } else if (typeNameLower.includes('ad5x')) {
     return 'ad5x';
+  } else if (typeNameLower.includes('creator 5 pro')) {
+    return 'creator-5-pro';
+  } else if (typeNameLower.includes('creator 5')) {
+    return 'creator-5';
   }
 
   // Default to generic legacy for all other printers
   return 'generic-legacy';
+};
+
+/**
+ * Detect the model type preferring the authoritative USB product ID, falling
+ * back to the (user-mutable) typeName only when no product ID is available
+ * (e.g. manual IP connections that never went through UDP discovery).
+ */
+export const detectPrinterModelTypeFromId = (
+  productId: number | undefined,
+  typeName: string
+): PrinterModelType => {
+  if (productId !== undefined && productId in NEW_API_PRODUCT_IDS) {
+    return NEW_API_PRODUCT_IDS[productId];
+  }
+  return detectPrinterModelType(typeName);
+};
+
+/**
+ * Detect printer family preferring the authoritative USB product ID, falling
+ * back to the typeName when no product ID is available. Any printer in
+ * {@link NEW_API_PRODUCT_IDS} is a new-API printer that requires a check code.
+ */
+export const detectPrinterFamilyFromId = (
+  productId: number | undefined,
+  typeName: string
+): PrinterFamilyInfo => {
+  if (productId !== undefined && productId in NEW_API_PRODUCT_IDS) {
+    return {
+      is5MFamily: true,
+      requiresCheckCode: true,
+      familyName: getModelDisplayName(NEW_API_PRODUCT_IDS[productId]),
+    };
+  }
+  return detectPrinterFamily(typeName);
 };
 
 /**
@@ -92,6 +151,10 @@ export const getModelDisplayName = (modelType: PrinterModelType): string => {
       return 'Adventurer 5M';
     case 'ad5x':
       return 'AD5X';
+    case 'creator-5':
+      return 'Creator 5';
+    case 'creator-5-pro':
+      return 'Creator 5 Pro';
     case 'generic-legacy':
     default:
       return 'Legacy Printer';
@@ -152,8 +215,14 @@ export const detectPrinterFamily = (typeName: string): PrinterFamilyInfo => {
 
   const typeNameLower = typeName.toLowerCase();
 
-  // Check for 5M family indicators
-  const is5MFamily = typeNameLower.includes('5m') || typeNameLower.includes('ad5x');
+  // Check for new-API ("5M family") indicators. Creator 5 / 5 Pro speak the
+  // same HTTP + check-code protocol, so they belong here too. This name-based
+  // path is the fallback for manual connections; discovery-based connections
+  // route on the authoritative USB product ID via detectPrinterFamilyFromId.
+  const is5MFamily =
+    typeNameLower.includes('5m') ||
+    typeNameLower.includes('ad5x') ||
+    typeNameLower.includes('creator 5');
 
   if (is5MFamily) {
     let familyName = 'Adventurer 5M Family';
@@ -164,6 +233,10 @@ export const detectPrinterFamily = (typeName: string): PrinterFamilyInfo => {
       familyName = 'Adventurer 5M';
     } else if (typeNameLower.includes('ad5x')) {
       familyName = 'AD5X';
+    } else if (typeNameLower.includes('creator 5 pro')) {
+      familyName = 'Creator 5 Pro';
+    } else if (typeNameLower.includes('creator 5')) {
+      familyName = 'Creator 5';
     }
 
     return {

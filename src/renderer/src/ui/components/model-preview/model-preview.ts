@@ -66,10 +66,7 @@ export class ModelPreviewComponent extends BaseComponent {
     // Thumbnail images are handled via error events when created
   }
 
-  /**
-   * Update component with new polling data
-   * @param data - Component update data containing polling information
-   */
+  /** {@inheritDoc BaseComponent.update} */
   public update(data: ComponentUpdateData): void {
     try {
       this.assertInitialized();

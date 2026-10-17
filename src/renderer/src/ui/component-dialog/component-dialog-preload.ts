@@ -10,13 +10,12 @@
  * components instantiated inside the dialog have access to the same IPC helpers
  * (send/receive/invoke, camera API, input dialogs, etc.). Channel validation is
  * preserved to maintain security guarantees.
- *
- * @module ui/component-dialog/component-dialog-preload
  */
 
 import type { CameraProxyStatus } from '@shared/types/camera/camera.types.js';
 import type { AppConfig, ThemeColors } from '@shared/types/config.js';
 import type {} from '@shared/types/global.d.ts';
+import type { SpoolmanStatusPayload } from '@shared/types/spoolman-tracking';
 import { contextBridge, ipcRenderer } from 'electron';
 
 // ---------------------------------------------------------------------------
@@ -75,14 +74,13 @@ interface DialogPrinterSettingsAPI {
 }
 
 interface DialogSpoolmanAPI {
-  openSpoolSelection: () => Promise<void>;
+  openSpoolSelection: (purpose?: 'active' | 'slot-config') => Promise<void>;
   getActiveSpool: (contextId?: string) => Promise<unknown>;
   setActiveSpool: (spool: unknown, contextId?: string) => Promise<void>;
-  getStatus: (
-    contextId?: string
-  ) => Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
+  getStatus: (contextId?: string) => Promise<SpoolmanStatusPayload>;
   onSpoolSelected: (callback: (spool: unknown) => void) => void;
   onSpoolUpdated: (callback: (spool: unknown) => void) => void;
+  onSpoolPickedForSlot: (callback: (spool: unknown) => void) => DialogEventDisposer;
 }
 
 interface DialogConfigAPI {
@@ -123,6 +121,7 @@ interface DialogElectronAPI {
   readonly connectionState: DialogConnectionStateAPI;
   readonly printerSettings: DialogPrinterSettingsAPI;
   readonly spoolman: DialogSpoolmanAPI;
+  readonly material: MaterialAPI;
 }
 
 const listeners = new Map<string, { original: DialogIPCListener; wrapped: DialogIPCListener }>();
@@ -208,7 +207,6 @@ const validSendChannels = [
   'open-about-dialog',
   'open-printer-selection',
   'open-job-uploader',
-  'open-ifs-dialog',
   'window-minimize',
   'window-maximize',
   'window-close',
@@ -284,6 +282,7 @@ const validReceiveChannels = [
   'log-dialog-cleared',
   'spoolman:spool-selected',
   'spoolman:spool-updated',
+  'spoolman:spool-picked-for-slot',
 ];
 
 const validInvokeChannels = [
@@ -292,6 +291,13 @@ const validInvokeChannels = [
   'set-extruder-temp',
   'turn-off-bed-temp',
   'turn-off-extruder-temp',
+  // Creator 5 series per-tool / chamber heaters. Must mirror the main-window preload
+  // (src/preload/index.ts) or the popped-out temperature card's chamber/tool buttons
+  // silently throw "Invalid invoke channel" and send no request.
+  'set-tool-temp',
+  'turn-off-tool-temp',
+  'set-chamber-temp',
+  'turn-off-chamber-temp',
   'clear-status',
   'led-on',
   'led-off',
@@ -331,6 +337,8 @@ const validInvokeChannels = [
   'spoolman:open-dialog',
   'spoolman:get-active-spool',
   'spoolman:set-active-spool',
+  'material:configure-slot',
+  'material:set-slot',
 ];
 
 // ---------------------------------------------------------------------------
@@ -525,8 +533,8 @@ contextBridge.exposeInMainWorld('api', {
   },
 
   spoolman: {
-    openSpoolSelection: async (): Promise<void> => {
-      await ipcRenderer.invoke('spoolman:open-dialog');
+    openSpoolSelection: async (purpose?: 'active' | 'slot-config'): Promise<void> => {
+      await ipcRenderer.invoke('spoolman:open-dialog', purpose);
     },
     getActiveSpool: async (contextId?: string): Promise<unknown> => {
       return await ipcRenderer.invoke('spoolman:get-active-spool', contextId);
@@ -534,14 +542,8 @@ contextBridge.exposeInMainWorld('api', {
     setActiveSpool: async (spool: unknown, contextId?: string): Promise<void> => {
       await ipcRenderer.invoke('spoolman:set-active-spool', spool, contextId);
     },
-    getStatus: async (
-      contextId?: string
-    ): Promise<{ enabled: boolean; contextId: string | null; disabledReason: string | null }> => {
-      return (await ipcRenderer.invoke('spoolman:get-status', contextId)) as {
-        enabled: boolean;
-        contextId: string | null;
-        disabledReason: string | null;
-      };
+    getStatus: async (contextId?: string): Promise<SpoolmanStatusPayload> => {
+      return (await ipcRenderer.invoke('spoolman:get-status', contextId)) as SpoolmanStatusPayload;
     },
     onSpoolSelected: (callback: (spool: unknown) => void) => {
       const wrapped: DialogIPCListener = (_event: unknown, spool: unknown) => callback(spool);
@@ -552,6 +554,38 @@ contextBridge.exposeInMainWorld('api', {
       const wrapped: DialogIPCListener = (_event: unknown, spool: unknown) => callback(spool);
       listeners.set('spoolman:spool-updated', { original: callback as DialogIPCListener, wrapped });
       ipcRenderer.on('spoolman:spool-updated', wrapped);
+    },
+    onSpoolPickedForSlot: (callback: (spool: unknown) => void): DialogEventDisposer =>
+      registerDialogPayloadListener<unknown>('spoolman:spool-picked-for-slot', callback),
+  },
+  material: {
+    configureSlot: async (
+      slot: number,
+      spoolId: number,
+      contextId?: string
+    ): Promise<ConfigureSlotResult> => {
+      const result: unknown = await ipcRenderer.invoke('material:configure-slot', { slot, spoolId, contextId });
+      if (result && typeof result === 'object' && typeof (result as { success?: unknown }).success === 'boolean') {
+        return result as ConfigureSlotResult;
+      }
+      return { success: false, error: 'Invalid response from material:configure-slot' };
+    },
+    setSlot: async (
+      slot: number,
+      materialName: string,
+      colorHex: string,
+      contextId?: string
+    ): Promise<ConfigureSlotResult> => {
+      const result: unknown = await ipcRenderer.invoke('material:set-slot', {
+        slot,
+        materialName,
+        colorHex,
+        contextId,
+      });
+      if (result && typeof result === 'object' && typeof (result as { success?: unknown }).success === 'boolean') {
+        return result as ConfigureSlotResult;
+      }
+      return { success: false, error: 'Invalid response from material:set-slot' };
     },
   },
   dialog: {

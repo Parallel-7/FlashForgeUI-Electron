@@ -3,12 +3,6 @@
  * Express static options factory.
  */
 
-/**
- * @fileoverview Jest coverage for WebUI static asset cache policy helpers.
- *
- * Verifies the no-cache headers and Express static options used when serving
- * versioned WebUI bundles from the desktop/headless server.
- */
 import {
   applyWebUIStaticAssetHeaders,
   createWebUIStaticAssetOptions,

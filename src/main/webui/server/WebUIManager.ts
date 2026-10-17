@@ -36,6 +36,7 @@ import { isHeadlessMode } from '../../utils/HeadlessDetection.js';
 import { WebUILoginRequestSchema } from '../schemas/web-api.schemas.js';
 import { getAuthManager } from './AuthManager.js';
 import { buildRouteDependencies, createAPIRoutes } from './api-routes.js';
+import { CameraStreamProxy } from './CameraStreamProxy.js';
 import {
   AuthenticatedRequest,
   createAuthMiddleware,
@@ -44,6 +45,7 @@ import {
   createRequestLogger,
 } from './auth-middleware.js';
 import { registerPublicThemeRoutes } from './routes/theme-routes.js';
+import { disposeUploadStaging } from './upload-staging.js';
 import { createSecurityMiddleware } from './security-middleware.js';
 import { createWebUIStaticAssetOptions } from './static-asset-options.js';
 import { getWebSocketManager } from './WebSocketManager.js';
@@ -94,6 +96,8 @@ export class WebUIManager extends EventEmitter {
 
   // Server state
   private isRunning: boolean = false;
+  /** In-flight start attempt, shared by concurrent start() callers */
+  private startPromise: Promise<boolean> | null = null;
   private serverIP: string = 'localhost';
   private port: number = 3000;
 
@@ -105,6 +109,9 @@ export class WebUIManager extends EventEmitter {
 
   // WebSocket manager
   private readonly webSocketManager = getWebSocketManager();
+
+  // Camera stream proxy (created per server start, torn down on stop)
+  private cameraStreamProxy: CameraStreamProxy | null = null;
 
   // RTSP stream service for RTSP camera streaming
 
@@ -140,12 +147,10 @@ export class WebUIManager extends EventEmitter {
     // Monitor printer connection status
     this.connectionManager.on('connected', () => {
       this.emit('printer-connected');
-      // Web UI no longer controls polling - it just receives updates
     });
 
     this.connectionManager.on('disconnected', () => {
       this.emit('printer-disconnected');
-      // Web UI no longer controls polling
     });
   }
 
@@ -307,12 +312,26 @@ export class WebUIManager extends EventEmitter {
    * Initialize and start the web UI server
    */
   public async start(): Promise<boolean> {
-    // Prevent concurrent calls
     if (this.isRunning) {
       console.log('WebUI server is already running');
       return true;
     }
 
+    // Concurrent callers share one attempt. In headless mode the backend-ready
+    // startForPrinter() and HeadlessManager.startWebUI() both call start(), and two
+    // independent attempts race to bind the same port - the loser fails with
+    // EADDRINUSE and headless exits. The finally() callback always runs after the
+    // assignment, so a settled attempt can never be left behind in the field.
+    this.startPromise ??= this.startServer().finally(() => {
+      this.startPromise = null;
+    });
+    return this.startPromise;
+  }
+
+  /**
+   * Build and bind the server. Only start() calls this, so attempts never overlap.
+   */
+  private async startServer(): Promise<boolean> {
     try {
       // Ensure authentication system is initialized (and passwords migrated)
       this.authManager.initialize();
@@ -371,8 +390,30 @@ export class WebUIManager extends EventEmitter {
       // Create HTTP server
       this.httpServer = http.createServer(this.expressApp!);
 
-      // Initialize WebSocket server
-      this.webSocketManager.initialize(this.httpServer);
+      // Initialize WebSocket server (noServer mode; upgrades dispatched below)
+      this.webSocketManager.initialize();
+
+      // Camera stream proxy tunnels authenticated clients to the local go2rtc API
+      this.cameraStreamProxy = new CameraStreamProxy();
+
+      // Single upgrade dispatcher shared by all WebSocket endpoints
+      this.httpServer.on('upgrade', (req, socket, head) => {
+        let pathname: string;
+        try {
+          pathname = new URL(req.url ?? '', 'http://localhost').pathname;
+        } catch {
+          socket.destroy();
+          return;
+        }
+
+        if (pathname === '/ws') {
+          this.webSocketManager.handleUpgrade(req, socket, head);
+        } else if (pathname === '/api/camera/ws') {
+          this.cameraStreamProxy?.handleUpgrade(req, socket, head);
+        } else {
+          socket.destroy();
+        }
+      });
 
       // Start listening
       await this.startListening();
@@ -395,6 +436,12 @@ export class WebUIManager extends EventEmitter {
    * Stop the web UI server
    */
   public async stop(): Promise<boolean> {
+    // Let an in-flight start settle first, or it would mark the server running
+    // again after this stop has torn it down.
+    if (this.startPromise) {
+      await this.startPromise;
+    }
+
     try {
       if (this.httpServer) {
         await new Promise<void>((resolve) => {
@@ -407,8 +454,14 @@ export class WebUIManager extends EventEmitter {
         this.httpServer = null;
       }
 
-      // Shutdown WebSocket server
+      // Shutdown WebSocket server and camera proxy bridges
       this.webSocketManager.shutdown();
+      this.cameraStreamProxy?.shutdown();
+      this.cameraStreamProxy = null;
+
+      // Scratch files for staged job uploads are worthless once the server that
+      // handed out their handles is gone.
+      await disposeUploadStaging();
 
       this.expressApp = null;
       this.isRunning = false;

@@ -35,6 +35,18 @@
             </label>
         </div>
 
+        <!-- Material Mappings (populated once matching is confirmed) -->
+        <div class="mapping-summary" id="mapping-summary" style="display: none;">
+            <h4 class="mapping-summary-title">Material Mappings</h4>
+            <div class="mapping-summary-list" id="mapping-summary-list"></div>
+        </div>
+
+        <!-- Warnings (populated from slicer metadata) -->
+        <div class="warnings-card" id="warnings-container" style="display: none;">
+            <h4 class="warnings-card-title">Warnings</h4>
+            <div class="warnings-list" id="meta-warnings">-</div>
+        </div>
+
         <!-- Main Content Layout -->
         <div class="content">
             <!-- Left Side: Preview -->
@@ -90,10 +102,25 @@
                     <h4 class="group-title">First Layer Time:</h4>
                     <div class="group-value" id="meta-first-layer-time">-</div>
                 </div>
-                
-                <div class="metadata-group" id="warnings-container" style="display: none;">
-                    <h4 class="group-title">Warnings:</h4>
-                    <div class="group-value warnings-list" id="meta-warnings">-</div>
+
+                <div class="metadata-group">
+                    <h4 class="group-title">Layer Height:</h4>
+                    <div class="group-value" id="meta-layer-height">-</div>
+                </div>
+
+                <div class="metadata-group">
+                    <h4 class="group-title">Infill Density:</h4>
+                    <div class="group-value" id="meta-infill">-</div>
+                </div>
+
+                <div class="metadata-group">
+                    <h4 class="group-title">Layers:</h4>
+                    <div class="group-value" id="meta-layers">-</div>
+                </div>
+
+                <div class="metadata-group">
+                    <h4 class="group-title">Support Used:</h4>
+                    <div class="group-value" id="meta-support">-</div>
                 </div>
             </div>
         </div>
@@ -102,7 +129,7 @@
     <!-- Dialog Footer -->
     <div class="dialog-footer">
         <button class="dialog-button cancel" id="btn-cancel">Cancel</button>
-        <button class="dialog-button primary" id="btn-ok" disabled>OK</button>
+        <button class="dialog-button primary" id="btn-ok" disabled>Start Print</button>
     </div>
 </div>
 

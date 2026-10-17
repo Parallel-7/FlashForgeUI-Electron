@@ -5,10 +5,6 @@
  * safely, preserves explicit values, and reports when stored settings are
  * incomplete.
  */
-/**
- * @fileoverview Tests for per-printer settings default helpers covering default application
- * and detection of incomplete saved-printer records.
- */
 
 import {
   applyPerPrinterDefaults,

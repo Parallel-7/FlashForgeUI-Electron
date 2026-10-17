@@ -1,8 +1,6 @@
 /**
  * @fileoverview Exports for the calibration visualization module.
  * Provides canvas-based visualization components for bed mesh heatmaps.
- *
- * @module renderer/ui/calibration/visualization
  */
 
 export type { RecommendationVisualizerOptions } from './AnimatedRecommendationVisualizer';

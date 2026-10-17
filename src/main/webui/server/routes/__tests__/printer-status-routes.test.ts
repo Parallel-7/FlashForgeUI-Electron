@@ -1,14 +1,8 @@
 /**
  * @fileoverview Tests for printer-status WebUI routes covering normalized status
- * payloads and backend-availability guard rails.
+ * payloads, command responses, and backend-availability guard rails.
  */
 
-/**
- * @fileoverview Jest coverage for WebUI printer-status route handlers.
- *
- * Tests status polling, command-facing responses, and route error handling for
- * the HTTP API that backs WebUI status panels.
- */
 import express from 'express';
 import { registerPrinterStatusRoutes } from '../printer-status-routes.js';
 import { startTestServer } from '../test-server.js';
@@ -55,6 +49,10 @@ describe('printer-status-routes', () => {
         isFeatureAvailable: jest.fn().mockImplementation((_contextId: string, feature: string) => {
           return feature === 'camera' || feature === 'led-control' || feature === 'filtration';
         }),
+        getBackendStatus: jest.fn().mockReturnValue({
+          capabilities: { modelType: 'adventurer-5m' },
+        }),
+        configureMaterialSlot: jest.fn().mockResolvedValue({ success: true }),
         getMaterialStationStatus: jest.fn().mockReturnValue({
           connected: true,
           slots: [],
@@ -112,6 +110,7 @@ describe('printer-status-routes', () => {
         cumulativeFilament: 321,
         cumulativePrintTime: 654,
         formattedEta: '04:48',
+        completionTime: null,
         elapsedTimeSeconds: 600,
       },
     });
@@ -142,6 +141,8 @@ describe('printer-status-routes', () => {
         canResume: true,
         canCancel: true,
         ledUsesLegacyAPI: true,
+        hasMultiTool: false,
+        isCreator5Pro: false,
       },
     });
   });
@@ -202,5 +203,111 @@ describe('printer-status-routes', () => {
         errorMessage: null,
       },
     });
+  });
+
+  it('configures a material-station slot via the backend manager', async () => {
+    const deps = createDependencies({
+      backendManager: {
+        ...createDependencies().backendManager,
+        isFeatureAvailable: jest
+          .fn()
+          .mockImplementation((_contextId: string, feature: string) => feature === 'material-station'),
+      },
+    });
+    const server = await startTestServer((app) => {
+      const router = express.Router();
+      registerPrinterStatusRoutes(router, deps);
+      app.use('/api', router);
+    });
+
+    const response = await fetch(`${server.baseUrl}/api/printer/material-station/slot?contextId=context-1`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slot: 2, materialName: 'PLA', colorHex: '#F72224' }),
+    });
+    const body = await response.json();
+    await server.close();
+
+    expect(response.status).toBe(200);
+    expect(body.success).toBe(true);
+    expect(deps.backendManager.configureMaterialSlot).toHaveBeenCalledWith('context-1', 2, 'PLA', '#F72224');
+  });
+
+  it('rejects a material-station slot write with an invalid color', async () => {
+    const deps = createDependencies({
+      backendManager: {
+        ...createDependencies().backendManager,
+        isFeatureAvailable: jest
+          .fn()
+          .mockImplementation((_contextId: string, feature: string) => feature === 'material-station'),
+      },
+    });
+    const server = await startTestServer((app) => {
+      const router = express.Router();
+      registerPrinterStatusRoutes(router, deps);
+      app.use('/api', router);
+    });
+
+    const response = await fetch(`${server.baseUrl}/api/printer/material-station/slot?contextId=context-1`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slot: 2, materialName: 'PLA', colorHex: 'nothex' }),
+    });
+    await server.close();
+
+    expect(response.status).toBe(400);
+    expect(deps.backendManager.configureMaterialSlot).not.toHaveBeenCalled();
+  });
+
+  it('rejects a material-station slot write with a non-6-digit hex color', async () => {
+    const deps = createDependencies({
+      backendManager: {
+        ...createDependencies().backendManager,
+        isFeatureAvailable: jest
+          .fn()
+          .mockImplementation((_contextId: string, feature: string) => feature === 'material-station'),
+      },
+    });
+    const server = await startTestServer((app) => {
+      const router = express.Router();
+      registerPrinterStatusRoutes(router, deps);
+      app.use('/api', router);
+    });
+
+    const response = await fetch(`${server.baseUrl}/api/printer/material-station/slot?contextId=context-1`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slot: 2, materialName: 'PLA', colorHex: '#FFF' }),
+    });
+    await server.close();
+
+    expect(response.status).toBe(400);
+    expect(deps.backendManager.configureMaterialSlot).not.toHaveBeenCalled();
+  });
+
+  it('rejects a material-station slot write with a missing material name', async () => {
+    const deps = createDependencies({
+      backendManager: {
+        ...createDependencies().backendManager,
+        isFeatureAvailable: jest
+          .fn()
+          .mockImplementation((_contextId: string, feature: string) => feature === 'material-station'),
+      },
+    });
+    const server = await startTestServer((app) => {
+      const router = express.Router();
+      registerPrinterStatusRoutes(router, deps);
+      app.use('/api', router);
+    });
+
+    const response = await fetch(`${server.baseUrl}/api/printer/material-station/slot?contextId=context-1`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slot: 2, materialName: null, colorHex: '#F72224' }),
+    });
+    await server.close();
+
+    expect(response.status).toBe(400);
+    expect(deps.backendManager.configureMaterialSlot).not.toHaveBeenCalled();
   });
 });

@@ -1,8 +1,6 @@
 /**
  * @fileoverview Unit tests for the KlipperConfigParser class.
  * Tests parsing of Klipper printer.cfg files with bed mesh data.
- *
- * @module main/services/calibration/__tests__/KlipperConfigParser.test
  */
 
 import { KlipperConfigParser, klipperConfigParser } from '../parsers/KlipperConfigParser';

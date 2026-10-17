@@ -7,9 +7,6 @@
  * Handlers:
  * - component-dialog:open: Opens dialog for specified component
  * - component-dialog:get-polling-data: Returns current polling data for active context
- *
- * @author FlashForgeUI Team
- * @module ipc/handlers/component-dialog-handlers
  */
 
 import { ipcMain } from 'electron';

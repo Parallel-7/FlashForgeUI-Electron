@@ -27,8 +27,6 @@
  * - Event-driven: Immediate updates on print complete, printer cooled, idle transition
  * - Idle logic: Only send idle notification when transitioning FROM active TO idle
  * - Skip idle on timers: Timer updates skip idle printers, only send when printing
- *
- * @module services/discord/DiscordNotificationService
  */
 
 import type {
@@ -39,6 +37,7 @@ import type {
 } from '@shared/types/discord.js';
 import type { ContextRemovedEvent } from '@shared/types/PrinterContext.js';
 import type { PrinterState, PrinterStatus } from '@shared/types/polling.js';
+import { isPrintAdvancing } from '@shared/types/polling.js';
 import { EventEmitter } from 'events';
 import { type ConfigManager, getConfigManager } from '../../managers/ConfigManager.js';
 import {
@@ -673,16 +672,11 @@ export class DiscordNotificationService extends EventEmitter {
         });
       }
 
-      // ETA — prefer formattedEta (firmware), fall back to timeRemaining (minutes)
-      {
-        const { formattedEta, timeRemaining } = status.currentJob.progress;
-        let etaDate: Date | null = null;
-        if (formattedEta && formattedEta !== '--:--') {
-          const [h, m] = formattedEta.split(':').map(Number);
-          etaDate = new Date(Date.now() + (h * 60 + m) * 60_000);
-        } else if (timeRemaining != null) {
-          etaDate = new Date(Date.now() + timeRemaining * 60_000); // timeRemaining is minutes
-        }
+      // ETA — sourced from the library CompletionTime (null while the print
+      // is not advancing). The isPrintAdvancing gate is belt-and-suspenders.
+      if (isPrintAdvancing(status.state)) {
+        const completionTime = status.currentJob.progress.completionTime;
+        const etaDate = completionTime ? new Date(completionTime) : null;
         if (etaDate) {
           const formattedETA = etaDate.toLocaleTimeString('en-US', {
             hour: 'numeric',

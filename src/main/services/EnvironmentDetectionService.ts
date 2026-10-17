@@ -269,7 +269,9 @@ class EnvironmentDetectionService {
    * Validate that required assets exist and are accessible
    */
   public async validateRequiredAssets(): Promise<{ valid: boolean; missingAssets: string[]; errors: string[] }> {
-    const requiredAssets = ['index.html', 'renderer.bundle.js'];
+    // Renderer chunks are content-hashed by electron-vite, so only index.html
+    // has a fixed name.
+    const requiredAssets = ['index.html'];
 
     const missingAssets: string[] = [];
     const errors: string[] = [];

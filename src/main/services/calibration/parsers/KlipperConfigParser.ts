@@ -16,8 +16,6 @@
  * #*# min_y = 15.0
  * #*# max_y = 205.0
  * ```
- *
- * @module main/services/calibration/parsers/KlipperConfigParser
  */
 
 import type { BedConfig, MeshData } from '../../../../shared/types/calibration';

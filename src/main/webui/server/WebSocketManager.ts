@@ -19,9 +19,11 @@
  */
 
 import type { PollingData } from '@shared/types/polling.js';
+import type { RebootStatusPayload } from '@shared/types/printer-power.js';
 import { PrinterStatusData, WebSocketCommand, WebSocketMessage } from '@shared/types/web-api.types.js';
 import { EventEmitter } from 'events';
 import * as http from 'http';
+import type { Duplex } from 'node:stream';
 import { RawData, WebSocket, WebSocketServer } from 'ws';
 import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
@@ -95,9 +97,12 @@ export class WebSocketManager extends EventEmitter {
   }
 
   /**
-   * Initialize WebSocket server with HTTP server
+   * Initialize WebSocket server.
+   * Runs in noServer mode; WebUIManager dispatches HTTP upgrade requests for
+   * the /ws path to handleUpgrade so multiple WebSocket endpoints can share
+   * the same HTTP server (e.g. the camera stream proxy).
    */
-  public initialize(httpServer: http.Server): void {
+  public initialize(): void {
     if (this.wss) {
       console.warn('WebSocket server already initialized');
       return;
@@ -105,8 +110,7 @@ export class WebSocketManager extends EventEmitter {
 
     // Create WebSocket server
     this.wss = new WebSocketServer({
-      server: httpServer,
-      path: '/ws',
+      noServer: true,
       verifyClient: this.verifyClient.bind(this),
     });
 
@@ -124,6 +128,21 @@ export class WebSocketManager extends EventEmitter {
 
     this.isRunning = true;
     console.log('WebSocket server initialized');
+  }
+
+  /**
+   * Complete an HTTP upgrade for the /ws endpoint.
+   * Called by WebUIManager's shared upgrade dispatcher.
+   */
+  public handleUpgrade(req: http.IncomingMessage, socket: Duplex, head: Buffer): void {
+    if (!this.wss) {
+      socket.destroy();
+      return;
+    }
+
+    this.wss.handleUpgrade(req, socket, head, (ws) => {
+      this.wss!.emit('connection', ws, req);
+    });
   }
 
   /**
@@ -483,6 +502,13 @@ export class WebSocketManager extends EventEmitter {
     const filtrationMode: 'external' | 'internal' | 'none' =
       rawFiltrationMode === 'external' || rawFiltrationMode === 'internal' ? rawFiltrationMode : 'none';
 
+    // Creator 5 series (multi-tool) fields. Undefined/empty on single-nozzle printers.
+    const toolTemps = (status.toolTemps ?? []).map((tool) => ({
+      current: Math.round(tool.current),
+      target: Math.round(tool.target),
+    }));
+    const chamber = status.temperatures?.chamber;
+
     return {
       printerState: status.state, // Note: 'state' not 'printerState'
       bedTemperature: Math.round(bedTemp.current),
@@ -497,6 +523,9 @@ export class WebSocketManager extends EventEmitter {
       timeElapsed: currentJob?.progress.elapsedTime ?? undefined,
       timeRemaining: currentJob?.progress.timeRemaining ?? undefined,
       formattedEta: currentJob?.progress.formattedEta !== undefined ? currentJob.progress.formattedEta : undefined,
+      completionTime: currentJob?.progress.completionTime
+        ? new Date(currentJob.progress.completionTime).toISOString()
+        : null,
       elapsedTimeSeconds:
         currentJob?.progress.elapsedTimeSeconds !== undefined ? currentJob.progress.elapsedTimeSeconds : undefined,
       filtrationMode: filtrationMode,
@@ -508,6 +537,12 @@ export class WebSocketManager extends EventEmitter {
       // Backend provides filament usage in meters, same as main UI
       cumulativeFilament: status.cumulativeStats?.totalFilamentUsed || undefined,
       cumulativePrintTime: status.cumulativeStats?.totalPrintTime || undefined,
+      // Creator 5 multi-tool + chamber + air-quality fields
+      toolTemps: toolTemps.length > 0 ? toolTemps : undefined,
+      chamberTemperature: chamber ? Math.round(chamber.current) : undefined,
+      chamberTargetTemperature: chamber ? Math.round(chamber.target) : undefined,
+      hasChamberControl: chamber !== undefined ? true : undefined,
+      tvocLevel: status.filtration?.tvocLevel,
     };
   }
 
@@ -589,6 +624,23 @@ export class WebSocketManager extends EventEmitter {
         ws.send(messageStr);
       }
     }
+  }
+
+  /**
+   * Broadcast an in-flight reboot lifecycle update to every connected client.
+   * No-op when the WebSocket server is not running (e.g. WebUI disabled) so
+   * desktop-triggered reboots never fail on the broadcast path.
+   */
+  public broadcastRebootStatus(contextId: string, payload: RebootStatusPayload): void {
+    if (!this.isRunning || this.clients.size === 0) {
+      return;
+    }
+    this.broadcast({
+      type: 'REBOOT_STATUS',
+      timestamp: new Date().toISOString(),
+      contextId,
+      reboot: payload,
+    });
   }
 
   /**

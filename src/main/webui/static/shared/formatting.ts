@@ -80,11 +80,38 @@ export function formatTime(minutes: number): string {
   return `${mins}:00`;
 }
 
-export function formatETA(remainingMinutes: number): string {
-  const now = new Date();
-  const completionTime = new Date(now.getTime() + remainingMinutes * 60 * 1000);
+/**
+ * Whether the print is advancing, i.e. whether the firmware is still counting
+ * `estimatedTime` down.
+ *
+ * Browser-side mirror of `isPrintAdvancing` in shared/types/polling.ts - the
+ * WebUI static bundle has its own module graph and cannot import from there.
+ *
+ * Outside 'Printing' the field freezes while the wall clock keeps moving, so the
+ * `now() + remaining` conversions below walk forward a minute every minute
+ * instead of holding still. Gate them on this; the remaining *duration* stays
+ * correct in every state and needs no gate. 'Heating' is excluded for the same
+ * reason as the paused states - the warmup does not advance the job either.
+ */
+export function isPrintAdvancing(printerState: string | undefined): boolean {
+  return printerState === 'Printing';
+}
 
-  return completionTime.toLocaleTimeString('en-US', {
+/**
+ * Format a completion timestamp (Date or ISO string) as a clock time.
+ * Returns '--:--' for null/undefined/invalid input. No Date.now() dependency.
+ */
+export function formatCompletionTime(value: Date | string | null): string {
+  if (value === null || value === undefined || value === '') {
+    return '--:--';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '--:--';
+  }
+
+  return date.toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
@@ -129,18 +156,4 @@ export function formatElapsedSeconds(seconds: number): string {
   const mm = String(m).padStart(2, '0');
   const ss = String(s).padStart(2, '0');
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
-}
-
-/**
- * Convert a firmware ETA string (HH:MM remaining) to a clock time string.
- * Mirrors the desktop's formatETAToCompletionTime in job-stats.ts.
- */
-export function formatETAFromString(hhmm: string): string {
-  const [hours, minutes] = hhmm.split(':').map(Number);
-  const completion = new Date(Date.now() + (hours * 60 + minutes) * 60_000);
-  return completion.toLocaleTimeString('en-US', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  });
 }

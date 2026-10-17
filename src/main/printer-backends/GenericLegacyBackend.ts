@@ -309,6 +309,8 @@ export class GenericLegacyBackend extends BasePrinterBackend {
         coolingFanSpeed: undefined,
         chamberFanSpeed: undefined,
         tvoc: undefined,
+        // Legacy API supplies no time estimate, so there is no completion time.
+        completionTime: null,
       };
 
       return {

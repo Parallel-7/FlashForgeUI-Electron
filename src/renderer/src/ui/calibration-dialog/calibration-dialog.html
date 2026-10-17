@@ -213,7 +213,8 @@
           <h3 class="section-title">SSH Connection</h3>
           <div class="settings-info-text">
             Connect to your printer via SSH to fetch configuration files directly.
-            SSH can be enabled on stock FlashForge firmware using the Stone-Time method.
+            Credentials are managed centrally in Settings &rarr; SSH and default to the
+            FlashForge easy-SSH setup, so most printers connect with no configuration.
           </div>
 
           <div class="settings-section">
@@ -223,34 +224,9 @@
             </div>
 
             <div class="input-group">
-              <label for="ssh-port">SSH Port (Fixed):</label>
-              <input type="number" id="ssh-port" class="settings-input" value="22" min="1" max="65535" readonly>
+              <label for="ssh-connection-summary">Credentials (from Settings &rarr; SSH):</label>
+              <input type="text" id="ssh-connection-summary" class="settings-input" readonly>
             </div>
-
-            <div class="input-group">
-              <label for="ssh-username">Username:</label>
-              <input type="text" id="ssh-username" class="settings-input" value="root">
-            </div>
-
-            <div class="input-group">
-              <label for="ssh-password">Password:</label>
-              <input type="password" id="ssh-password" class="settings-input" placeholder="Enter password">
-            </div>
-
-            <div class="input-group">
-              <label for="ssh-key-path">SSH Private Key (optional):</label>
-              <div class="input-with-button">
-                <input type="text" id="ssh-key-path" class="settings-input" placeholder="C:\\path\\to\\id_rsa">
-                <button id="btn-ssh-key-browse" class="control-button">
-                  <i data-lucide="folder-open" aria-hidden="true"></i>
-                  Browse
-                </button>
-              </div>
-            </div>
-
-            <label class="checkbox-label">
-              <input type="checkbox" id="ssh-save-credentials"> Save credentials for this printer
-            </label>
           </div>
 
           <div class="ssh-connection-buttons">

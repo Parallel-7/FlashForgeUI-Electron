@@ -3,6 +3,13 @@
  *
  * Central registry of all available dashboard components with their metadata.
  * Shared between Main process (for Palette window) and Renderer process (for Grid UI).
+ *
+ * Availability model: each definition may declare `availability` ('grid',
+ * 'shortcut', or 'both' — default 'both'). Grid-facing surfaces (component
+ * palette, grid widget factories) must only consume grid-capable definitions
+ * via `isGridComponent()` / `getGridComponentDefinitions()`, while the topbar
+ * shortcut system must only consume shortcut-capable definitions via
+ * `isShortcutComponent()` / `getShortcutComponentDefinitions()`.
  */
 
 import type { ComponentDefinition } from './types/components.js';
@@ -145,14 +152,84 @@ export const COMPONENT_REGISTRY_DATA: ReadonlyArray<ComponentDefinition> = [
   },
 
   {
-    id: 'ifs-station',
-    name: 'IFS Material Station',
+    id: 'material-station',
+    name: 'Material Station',
     icon: 'grid-3x3',
     defaultSize: { w: 6, h: 3 },
     minSize: { w: 2, h: 2 },
     category: 'main',
-    description: 'Intelligent Filament System material station status (AD5X only)',
+    description: 'Material station status and per-slot editor (AD5X + Creator 5 / 5 Pro)',
     required: false,
     singleton: true,
   },
+
+  {
+    id: 'tool-temps',
+    name: 'Tool Temperatures',
+    icon: 'thermometer',
+    defaultSize: { w: 4, h: 2 },
+    minSize: { w: 2, h: 2 },
+    category: 'main',
+    description: 'Per-tool nozzle temperatures (Creator 5 series)',
+    required: false,
+    singleton: true,
+  },
+
+  {
+    id: 'creator5-temperature',
+    name: 'Creator 5 Temperature',
+    icon: 'thermometer',
+    defaultSize: { w: 4, h: 3 },
+    minSize: { w: 3, h: 3 },
+    category: 'main',
+    description: 'Settable 4 tools + bed + chamber (Creator 5 / 5 Pro)',
+    required: false,
+    singleton: true,
+  },
+
+  // ========================================================================
+  // SHORTCUT-ONLY ENTRIES (never appear in the grid palette or grid layouts)
+  // ========================================================================
+
+  {
+    id: 'file-manager',
+    name: 'File Manager',
+    icon: 'folder-open',
+    defaultSize: { w: 6, h: 4 },
+    minSize: { w: 4, h: 3 },
+    category: 'utility',
+    description: 'Browse, rename, and delete files on the printer over SFTP',
+    required: false,
+    singleton: true,
+    availability: 'shortcut',
+    shortcutOpenChannel: 'file-manager:open',
+  },
 ];
+
+/**
+ * Whether a component may be surfaced in grid contexts (palette, grid widgets).
+ */
+export function isGridComponent(definition: ComponentDefinition): boolean {
+  return (definition.availability ?? 'both') !== 'shortcut';
+}
+
+/**
+ * Whether a component may be surfaced as a topbar shortcut button.
+ */
+export function isShortcutComponent(definition: ComponentDefinition): boolean {
+  return (definition.availability ?? 'both') !== 'grid';
+}
+
+/**
+ * All definitions that can appear in grid contexts (palette, grid widgets).
+ */
+export function getGridComponentDefinitions(): ComponentDefinition[] {
+  return COMPONENT_REGISTRY_DATA.filter(isGridComponent);
+}
+
+/**
+ * All definitions that can be pinned as topbar shortcut buttons.
+ */
+export function getShortcutComponentDefinitions(): ComponentDefinition[] {
+  return COMPONENT_REGISTRY_DATA.filter(isShortcutComponent);
+}

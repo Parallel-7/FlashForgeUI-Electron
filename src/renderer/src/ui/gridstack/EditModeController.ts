@@ -1,50 +1,9 @@
 /**
- * @fileoverview Edit mode controller for GridStack dashboard
- *
- * Manages the edit mode state for the GridStack dashboard, including CTRL+E
- * keyboard shortcut handling, visual indicators, grid enable/disable coordination,
- * and component palette window management. Provides auto-save on exit and
- * change tracking for unsaved modifications.
- *
- * Key exports:
- * - EditModeController: Main edit mode controller class
- * - editModeController: Singleton instance for application-wide use
- *
- * Features:
- * - CTRL+E (or CMD+E on Mac) keyboard shortcut toggle
- * - Visual edit mode indicator with instructions
- * - Grid editing enable/disable (dragging and resizing)
- * - Component palette window coordination (open on enter, close on exit)
- * - Auto-save on exit with change tracking
- * - Unsaved changes indicator
- * - Reset to default layout
- * - Force save operation
- *
- * Usage:
- * ```typescript
- * import { editModeController } from './EditModeController';
- * import { gridStackManager } from './GridStackManager';
- * import { layoutPersistence } from './LayoutPersistence';
- *
- * // Initialize (call after GridStack and LayoutPersistence)
- * editModeController.initialize(gridStackManager, layoutPersistence);
- *
- * // Programmatically toggle edit mode
- * editModeController.toggle();
- *
- * // Check if edit mode is enabled
- * if (editModeController.isEnabled()) {
- *   console.log('Edit mode active');
- * }
- *
- * // Force save current layout
- * editModeController.forceSave();
- *
- * // Reset to default layout
- * await editModeController.resetToDefault();
- * ```
- *
- * @module ui/gridstack/EditModeController
+ * @fileoverview EditModeController drives the dashboard's edit mode: the
+ * Ctrl/Cmd+E toggle, the visual indicator, enabling grid dragging and
+ * resizing, and opening/closing the component palette. Leaving edit mode
+ * saves the layout; unsaved changes are tracked and flagged in the
+ * indicator.
  */
 
 import { getLucideIcons, initializeLucideIcons } from '../../renderer/utils/icons.js';
@@ -89,6 +48,39 @@ export class EditModeController {
 
   /** Whether controller is initialized */
   private initialized = false;
+
+  /** Subscribers notified when edit mode enabled/availability changes */
+  private readonly stateChangeListeners: Array<(state: { enabled: boolean; available: boolean }) => void> = [];
+
+  /**
+   * Subscribe to edit mode state changes (enabled + availability).
+   * The listener is invoked immediately with the current state so callers
+   * can synchronize their UI without duplicating the initial read.
+   * @param listener - Callback invoked on every state change
+   * @returns Disposer that removes the listener
+   */
+  onStateChange(listener: (state: { enabled: boolean; available: boolean }) => void): () => void {
+    this.stateChangeListeners.push(listener);
+    listener({ enabled: this.state.enabled, available: this.editingAvailable });
+
+    return () => {
+      const index = this.stateChangeListeners.indexOf(listener);
+      if (index !== -1) {
+        this.stateChangeListeners.splice(index, 1);
+      }
+    };
+  }
+
+  /**
+   * Notify all subscribers of the current edit mode state
+   */
+  private emitStateChange(): void {
+    const snapshot = { enabled: this.state.enabled, available: this.editingAvailable };
+    // Iterate a copy so listeners that unsubscribe during the callback are not skipped.
+    for (const listener of [...this.stateChangeListeners]) {
+      listener(snapshot);
+    }
+  }
 
   /**
    * Initialize the edit mode controller
@@ -258,6 +250,8 @@ export class EditModeController {
         console.warn('EditModeController: API not available to open palette');
       }
 
+      this.emitStateChange();
+
       console.log('EditModeController: Edit mode enabled');
     } catch (error) {
       console.error('EditModeController: Failed to enter edit mode:', error);
@@ -310,6 +304,8 @@ export class EditModeController {
       } else {
         console.warn('EditModeController: API not available to close palette');
       }
+
+      this.emitStateChange();
 
       console.log('EditModeController: Edit mode disabled');
     } catch (error) {
@@ -458,9 +454,15 @@ export class EditModeController {
    * Set whether edit mode can be enabled (based on printer availability)
    */
   setAvailability(available: boolean): void {
+    const changed = this.editingAvailable !== available;
     this.editingAvailable = available;
     if (!available && this.state.enabled) {
+      // exitEditMode emits its own state change with the updated availability
       this.exitEditMode();
+      return;
+    }
+    if (changed) {
+      this.emitStateChange();
     }
   }
 

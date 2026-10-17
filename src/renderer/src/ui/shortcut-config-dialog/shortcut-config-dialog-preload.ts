@@ -3,9 +3,6 @@
  *
  * Provides secure IPC communication bridge between the dialog renderer
  * and the main process. Exposes minimal API surface for dialog operations.
- *
- * @author FlashForgeUI Team
- * @module ui/shortcut-config-dialog/shortcut-config-dialog-preload
  */
 
 import type {

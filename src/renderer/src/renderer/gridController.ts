@@ -16,13 +16,15 @@ import {
   ControlsGridComponent,
   componentManager,
   FiltrationControlsComponent,
-  IFSStationComponent,
   JobStatsComponent,
   LogPanelComponent,
+  MaterialStationComponent,
   ModelPreviewComponent,
   PrinterStatusComponent,
   SpoolmanComponent,
   TemperatureControlsComponent,
+  ToolTempsComponent,
+  Creator5TemperatureComponent,
 } from '../ui/components/index.js';
 import { getComponentDefinition } from '../ui/gridstack/ComponentRegistry.js';
 import { editModeController } from '../ui/gridstack/EditModeController.js';
@@ -34,6 +36,7 @@ import { hydrateLogPanelWithHistory, logMessage, setLogPanelComponent } from './
 import {
   getPinnedComponentIdsForSerial,
   loadLayoutForSerial,
+  loadLayoutForSerialMigrated,
   loadShortcutsForSerial,
   saveLayoutForSerial,
 } from './perPrinterStorage.js';
@@ -50,6 +53,7 @@ export class RendererGridController {
   private componentsInitialized = false;
   private gridInitializationPromise: Promise<void> | null = null;
   private pendingGridInitializationSerial: string | null = null;
+  private pendingIsToolChanger = false;
 
   constructor(private readonly options: GridControllerOptions) {}
 
@@ -61,7 +65,7 @@ export class RendererGridController {
     return this.componentsInitialized;
   }
 
-  async initialize(initialSerial?: string | null): Promise<void> {
+  async initialize(initialSerial?: string | null, isToolChanger = false): Promise<void> {
     if (this.componentsInitialized) {
       return;
     }
@@ -69,14 +73,19 @@ export class RendererGridController {
     if (initialSerial !== undefined) {
       this.pendingGridInitializationSerial = initialSerial;
     }
+    this.pendingIsToolChanger = isToolChanger;
 
     if (!this.gridInitializationPromise) {
       this.gridInitializationPromise = (async () => {
         try {
-          await this.performGridStackInitialization(this.pendingGridInitializationSerial ?? undefined);
+          await this.performGridStackInitialization(
+            this.pendingGridInitializationSerial ?? undefined,
+            this.pendingIsToolChanger
+          );
         } finally {
           this.gridInitializationPromise = null;
           this.pendingGridInitializationSerial = null;
+          this.pendingIsToolChanger = false;
         }
       })();
     }
@@ -270,7 +279,10 @@ export class RendererGridController {
     logMessage(`Component ${componentId} removed from grid`);
   }
 
-  private async performGridStackInitialization(initialSerial?: string | null): Promise<void> {
+  private async performGridStackInitialization(
+    initialSerial?: string | null,
+    isToolChanger = false
+  ): Promise<void> {
     if (this.componentsInitialized) {
       this.logDebug('GridStack already initialized, skipping base setup');
       return;
@@ -282,7 +294,11 @@ export class RendererGridController {
 
     const serialForLoad = initialSerial ?? this.options.getActiveSerial();
 
-    const layout = loadLayoutForSerial(serialForLoad);
+    // Apply the one-time tool-changer migration here (not in the caller): persistence
+    // is only initialized on the line above, so migrating/persisting any earlier
+    // (e.g. in the context-switch handler before initialize) silently no-ops the save
+    // and the generic temperature card would load instead of the Creator 5 card.
+    const layout = loadLayoutForSerialMigrated(serialForLoad, isToolChanger);
     this.logDebug('Loaded layout configuration', layout);
 
     const shortcutConfig = loadShortcutsForSerial(serialForLoad);
@@ -431,8 +447,12 @@ export class RendererGridController {
       }
       case 'spoolman-tracker':
         return new SpoolmanComponent(container);
-      case 'ifs-station':
-        return new IFSStationComponent(container);
+      case 'material-station':
+        return new MaterialStationComponent(container);
+      case 'tool-temps':
+        return new ToolTempsComponent(container);
+      case 'creator5-temperature':
+        return new Creator5TemperatureComponent(container);
       default:
         console.error(`Unknown component ID: ${componentId}`);
         return null;
@@ -450,15 +470,6 @@ export class RendererGridController {
       return;
     }
 
-    const widgetElement = document.createElement('div');
-    widgetElement.className = 'grid-stack-item';
-    widgetElement.setAttribute('data-component-id', componentId);
-    widgetElement.setAttribute('gs-id', `widget-${componentId}`);
-
-    const contentContainer = document.createElement('div');
-    contentContainer.className = 'grid-stack-item-content';
-    widgetElement.appendChild(contentContainer);
-
     const config: GridStackWidgetConfig = widgetConfig || {
       componentId,
       w: componentDef.defaultSize?.w || 4,
@@ -469,60 +480,44 @@ export class RendererGridController {
       autoPosition: true,
     };
 
+    // Build the widget via the shared factory so the context-reload path gets
+    // the same DOM as initial load and palette-add — including the edit-mode
+    // remove button (`.grid-stack-item-remove`) that was missing here, causing
+    // the missing delete "X" on the second printer. See issue #77.
+    const widgetElement = this.createGridWidget(componentId);
+
     const addedWidget = gridStackManager.addWidget(config, widgetElement);
-
-    if (addedWidget) {
-      const component = this.createComponentInstance(componentId, contentContainer);
-
-      if (component) {
-        componentManager.registerComponent(component);
-        await component.initialize();
-
-        const lastPollingData = this.options.getLastPollingData();
-        if (lastPollingData) {
-          const updateData: ComponentUpdateData = {
-            pollingData: lastPollingData,
-            timestamp: new Date().toISOString(),
-            printerState: lastPollingData.printerStatus?.state,
-            connectionState: lastPollingData.isConnected,
-          };
-          if (configData) {
-            updateData.config = configData;
-          }
-          component.update(updateData);
-        }
-      }
+    if (!addedWidget) {
+      return;
     }
-  }
 
-  private createComponentInstance(componentId: string, container: HTMLElement) {
-    switch (componentId) {
-      case 'camera-preview':
-        return new CameraPreviewComponent(container);
-      case 'temperature-controls':
-        return new TemperatureControlsComponent(container);
-      case 'job-stats':
-        return new JobStatsComponent(container);
-      case 'printer-status':
-        return new PrinterStatusComponent(container);
-      case 'model-preview':
-        return new ModelPreviewComponent(container);
-      case 'additional-info':
-        return new AdditionalInfoComponent(container);
-      case 'log-panel': {
-        const logPanel = new LogPanelComponent(container);
-        setLogPanelComponent(logPanel);
-        return logPanel;
+    const contentContainer = addedWidget.querySelector('.grid-stack-item-content') as HTMLElement | null;
+    if (!contentContainer) {
+      return;
+    }
+
+    // Use createComponentForGrid so every component type (incl. material-station
+    // and tool-temps) are instantiated. See issue #77.
+    const component = this.createComponentForGrid(componentId, contentContainer);
+    if (!component) {
+      return;
+    }
+
+    componentManager.registerComponent(component);
+    await component.initialize();
+
+    const lastPollingData = this.options.getLastPollingData();
+    if (lastPollingData) {
+      const updateData: ComponentUpdateData = {
+        pollingData: lastPollingData,
+        timestamp: new Date().toISOString(),
+        printerState: lastPollingData.printerStatus?.state,
+        connectionState: lastPollingData.isConnected,
+      };
+      if (configData) {
+        updateData.config = configData;
       }
-      case 'controls-grid':
-        return new ControlsGridComponent(container);
-      case 'filtration-controls':
-        return new FiltrationControlsComponent(container);
-      case 'spoolman-tracker':
-        return new SpoolmanComponent(container);
-      default:
-        console.error(`[ShortcutButtons] Unknown component ID: ${componentId}`);
-        return null;
+      component.update(updateData);
     }
   }
 

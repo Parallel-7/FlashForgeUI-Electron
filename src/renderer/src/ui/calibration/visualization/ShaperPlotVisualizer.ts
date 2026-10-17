@@ -1,8 +1,6 @@
 /**
  * @fileoverview Canvas-based visualization for input shaper frequency analysis.
  * Renders power spectral density plots with peak markers and recommended frequency.
- *
- * @module renderer/ui/calibration/visualization/ShaperPlotVisualizer
  */
 
 import type { AxisCalibration } from '../../../../../shared/types/calibration';

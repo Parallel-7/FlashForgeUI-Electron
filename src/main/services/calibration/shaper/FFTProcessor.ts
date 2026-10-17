@@ -2,8 +2,6 @@
  * @fileoverview Fast Fourier Transform processor for accelerometer data.
  * Provides frequency domain analysis of vibration data for input shaper calibration.
  * Uses a pure TypeScript implementation suitable for Web Worker execution.
- *
- * @module main/services/calibration/shaper/FFTProcessor
  */
 
 import type { AccelerometerData, PowerSpectrum } from '../../../../shared/types/calibration';

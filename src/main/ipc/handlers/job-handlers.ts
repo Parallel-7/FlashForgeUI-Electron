@@ -25,9 +25,17 @@
 
 import { parseSlicerFile } from '@parallel-7/slicer-meta';
 import type { AD5XUploadParams, SlicerMetadata, UploadJobPayload } from '@shared/types/ipc.js';
+import type { ToolSpoolAssignment } from '@shared/types/spoolman-tracking.js';
 import { dialog, ipcMain } from 'electron';
+import * as path from 'path';
 import type { PrinterBackendManager } from '../../managers/PrinterBackendManager.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
+import {
+  armUploadedJob,
+  clearTrackedJob,
+  commitStoredFileJob,
+  prepareStoredFileJob,
+} from '../../services/job-tracking.js';
 import { getThumbnailCacheService } from '../../services/ThumbnailCacheService.js';
 import { getThumbnailRequestQueue } from '../../services/ThumbnailRequestQueue.js';
 import type { getWindowManager } from '../../windows/WindowManager.js';
@@ -96,7 +104,12 @@ export function registerJobHandlers(backendManager: PrinterBackendManager, windo
     async (
       _event,
       fileName: string,
-      options: { leveling: boolean; startNow: boolean; materialMappings?: unknown[] }
+      options: {
+        leveling: boolean;
+        startNow: boolean;
+        materialMappings?: unknown[];
+        spoolAssignments?: ToolSpoolAssignment[];
+      }
     ): Promise<{ success: boolean; error?: string }> => {
       try {
         const contextManager = getPrinterContextManager();
@@ -112,6 +125,22 @@ export function registerJobHandlers(backendManager: PrinterBackendManager, windo
           return { success: false, error: 'Job starting not supported on this printer' };
         }
 
+        // Spoolman per-job tracking for a file already on the printer: read
+        // the printer's per-tool data before the start, while the file list
+        // is stable. Only jobs with spool choices from the matching dialog
+        // qualify.
+        const isStation = backendManager.isFeatureAvailable(contextId, 'material-station');
+        const startNow = options.startNow !== false;
+        const mappings = (options.materialMappings ?? []) as Array<{ toolId: number; slotId: number }>;
+        let tracked: Awaited<ReturnType<typeof prepareStoredFileJob>> | null = null;
+        if (isStation && startNow && mappings.length > 0 && options.spoolAssignments?.length) {
+          try {
+            tracked = await prepareStoredFileJob(contextId, fileName, mappings, options.spoolAssignments);
+          } catch (error) {
+            console.warn('[spoolman] stored-file tracking lookup failed (start continues):', error);
+          }
+        }
+
         const result = await backendManager.startJob(contextId, {
           operation: 'start',
           fileName,
@@ -119,6 +148,19 @@ export function registerJobHandlers(backendManager: PrinterBackendManager, windo
           startNow: options.startNow,
           additionalParams: options.materialMappings ? { materialMappings: options.materialMappings } : undefined,
         });
+
+        if (isStation && result.success && startNow) {
+          try {
+            clearTrackedJob(contextId);
+            if (tracked && 'tools' in tracked) {
+              commitStoredFileJob(contextId, fileName, tracked.tools);
+            } else if (tracked) {
+              console.log(`[spoolman] ${fileName} is not tracked (${tracked.reason}).`);
+            }
+          } catch (error) {
+            console.warn('[spoolman] stored-file tracking failed (start continues):', error);
+          }
+        }
 
         return { success: result.success, error: result.error };
       } catch (error) {
@@ -168,7 +210,7 @@ export function registerJobHandlers(backendManager: PrinterBackendManager, windo
   // AD5X file upload handler
   ipcMain.handle('upload-file-ad5x', async (event, params: AD5XUploadParams) => {
     try {
-      const { filePath, startPrint, levelingBeforePrint, materialMappings } = params;
+      const { filePath, startPrint, levelingBeforePrint, materialMappings, spoolAssignments } = params;
 
       // Validate required parameters
       if (!filePath || typeof filePath !== 'string') {
@@ -249,6 +291,32 @@ export function registerJobHandlers(backendManager: PrinterBackendManager, windo
           status: 'Upload complete',
           stage: 'completed',
         });
+
+        // Spoolman per-job tracking: a job the app starts replaces any
+        // earlier tracked job, and is tracked itself when the user chose
+        // spools for it. Best effort only - a failure never fails the upload.
+        if (startPrint) {
+          try {
+            clearTrackedJob(contextId);
+            if (materialMappings?.length) {
+              const armed = await armUploadedJob(contextId, {
+                fileName: result.fileName || path.basename(filePath),
+                filePath,
+                parsed: await parseSlicerFile(filePath),
+                mappings: materialMappings,
+                spoolAssignments,
+              });
+              if (!armed.armed) {
+                console.log(`[spoolman] ${path.basename(filePath)} is not tracked (${armed.reason}).`);
+              }
+            }
+          } catch (trackingError) {
+            console.warn(
+              '[job-handlers] Spoolman job tracking failed (upload continues):',
+              trackingError instanceof Error ? trackingError.message : trackingError
+            );
+          }
+        }
 
         // Send completion event
         event.sender.send('uploader:upload-complete', {
@@ -460,8 +528,8 @@ export function registerJobHandlers(backendManager: PrinterBackendManager, windo
   // Job selected handler
   ipcMain.on('job-selected', (_, data) => {
     console.log('Job selected:', data);
-    // TODO: Implement actual job handling logic
-    // For now, just close the dialog
+    // TODO: handle the selected job. The handler currently logs the selection
+    // and closes the picker without using the job data.
     const jobPickerWindow = windowManager.getJobPickerWindow();
     if (jobPickerWindow) {
       jobPickerWindow.close();

@@ -1,6 +1,6 @@
 /**
  * @fileoverview Single Color Confirmation Dialog preload script providing secure IPC bridge
- * for confirming single-color print jobs on printers with material station (IFS) support.
+ * for confirming single-color print jobs on printers with material station support.
  * Exposes APIs for displaying active material slot information and collecting print confirmation
  * with optional bed leveling setting.
  *

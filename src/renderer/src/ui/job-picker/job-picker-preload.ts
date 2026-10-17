@@ -49,6 +49,9 @@ const jobPickerAPI = {
   getFeatures: async (): Promise<unknown> => {
     return await ipcRenderer.invoke('printer:get-features');
   },
+  getSpoolmanStatus: async (): Promise<unknown> => {
+    return await ipcRenderer.invoke('spoolman:get-status');
+  },
   getLocalJobs: async (): Promise<{ success: boolean; jobs: readonly unknown[]; error?: string }> => {
     return (await ipcRenderer.invoke('job-picker:get-local-jobs')) as {
       success: boolean;
@@ -65,7 +68,12 @@ const jobPickerAPI = {
   },
   startJob: async (
     fileName: string,
-    options: { leveling: boolean; startNow: boolean; materialMappings?: unknown[] }
+    options: {
+      leveling: boolean;
+      startNow: boolean;
+      materialMappings?: unknown[];
+      spoolAssignments?: Array<{ toolId: number; spoolId: number | null }>;
+    }
   ): Promise<{ success: boolean; error?: string }> => {
     return (await ipcRenderer.invoke('job-picker:start-job', fileName, options)) as {
       success: boolean;
@@ -79,6 +87,7 @@ const jobPickerAPI = {
     fileName: string;
     toolDatas: readonly unknown[];
     leveling: boolean;
+    trackSpools?: boolean;
   }): Promise<unknown[] | null> => {
     const payload = { ...data, context: 'job-start' as const };
     return (await ipcRenderer.invoke('show-material-matching-dialog', payload)) as unknown[] | null;

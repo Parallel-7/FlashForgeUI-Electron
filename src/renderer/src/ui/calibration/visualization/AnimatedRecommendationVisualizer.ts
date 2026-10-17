@@ -1,7 +1,5 @@
 /**
  * @fileoverview Animated visualization for screw adjustments and tape recommendations.
- *
- * @module renderer/ui/calibration/visualization/AnimatedRecommendationVisualizer
  */
 
 import type { ScrewAdjustment, TapeRecommendation } from '../../../../../shared/types/calibration';

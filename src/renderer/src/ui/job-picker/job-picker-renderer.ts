@@ -20,8 +20,10 @@
 // Handles file grid display, selection, and thumbnail loading
 
 import { logVerbose } from '@shared/logging.js';
-import type { AD5XJobInfo } from '@shared/types/printer-backend/index.js';
+import type { AD5XJobInfo, PrinterModelType } from '@shared/types/printer-backend/index.js';
+import { isCreator5ModelType } from '../gridstack/defaults.js';
 import { initializeLucideIconsFromGlobal } from '../shared/lucide.js';
+import { describeStoredFileTracking } from './stored-file-tracking.js';
 
 interface JobPickerAPI {
   readonly onInit: (callback: (data: JobPickerInitData) => void) => void;
@@ -31,17 +33,24 @@ interface JobPickerAPI {
   readonly selectJob: (data: JobSelectionData) => void;
   readonly requestThumbnail: (filename: string) => void;
   readonly getFeatures: () => Promise<unknown>;
+  readonly getSpoolmanStatus: () => Promise<unknown>;
   readonly getLocalJobs: () => Promise<{ success: boolean; jobs: readonly unknown[]; error?: string }>;
   readonly getRecentJobs: () => Promise<{ success: boolean; jobs: readonly unknown[]; error?: string }>;
   readonly startJob: (
     fileName: string,
-    options: { leveling: boolean; startNow: boolean; materialMappings?: unknown[] }
+    options: {
+      leveling: boolean;
+      startNow: boolean;
+      materialMappings?: unknown[];
+      spoolAssignments?: Array<{ toolId: number; spoolId: number | null }>;
+    }
   ) => Promise<{ success: boolean; error?: string }>;
   readonly showMaterialInfo: (data: MaterialInfoData) => void;
   readonly showMaterialMatching: (data: {
     fileName: string;
     toolDatas: readonly unknown[];
     leveling: boolean;
+    trackSpools?: boolean;
   }) => Promise<unknown[] | null>;
   readonly showSingleColorConfirmation: (data: { fileName: string; leveling: boolean }) => Promise<boolean>;
 }
@@ -98,12 +107,23 @@ const logDebug = (message: string, ...args: unknown[]): void => {
 let selectedFile: string | null = null;
 let printerCapabilities: PrinterJobManagementFeatures | null = null;
 let selectedPrinterModel: string | null = null;
+// Whether the connected printer has a material station (IFS). Drives the
+// material-matching / single-color-confirmation flow. Derived from the printer's
+// capabilities rather than the model name, so every material-station printer
+// (AD5X, Creator 5 / 5 Pro, and any future model) is handled the same way.
+let hasMaterialStation = false;
 let currentJobsData: readonly unknown[] = []; // Store full job data for AD5X
+// Spoolman tracking inputs for the stored-file indicator (null until the
+// status IPC resolves; the indicator is hidden when Spoolman is disabled).
+let spoolmanStatusInputs: {
+  readonly spoolmanEnabled: boolean;
+} | null = null;
 
 // Type definitions for printer features
 interface PrinterFeatures {
   readonly jobManagement: PrinterJobManagementFeatures;
   readonly modelType?: string;
+  readonly materialStation?: { readonly available?: boolean };
 }
 
 interface PrinterJobManagementFeatures {
@@ -167,6 +187,17 @@ function isMultiColorJob(job: AD5XJobInfo): boolean {
   return !!(job.toolDatas && job.toolDatas.length > 0);
 }
 
+/** Minimal shape of the `spoolman:get-status` payload used by the indicator. */
+interface SpoolmanStatusShape {
+  readonly enabled: boolean;
+}
+
+function isSpoolmanStatus(value: unknown): value is SpoolmanStatusShape {
+  if (!value || typeof value !== 'object') return false;
+  const obj = value as Record<string, unknown>;
+  return 'enabled' in obj && typeof obj.enabled === 'boolean';
+}
+
 // DOM element references
 let loadingElement: HTMLElement | null = null;
 let fileListElement: HTMLElement | null = null;
@@ -209,11 +240,30 @@ function initializeJobPicker(): void {
 }
 
 /**
+ * Whether the connected printer is a Creator 5 series tool-changer. Mirrors the
+ * desktop controls-grid guard: resident local/recent jobs cannot be started on
+ * these models because the firmware accepts no material mappings over the local
+ * API. The IPC-supplied model type is a loose string on the wire, so it is cast
+ * to the authoritative {@link PrinterModelType} before the centralized check.
+ */
+function isCreator5Series(): boolean {
+  return isCreator5ModelType(selectedPrinterModel as PrinterModelType | null);
+}
+
+/**
  * Initialize dialog by checking capabilities and loading jobs
  * @param isRecentFiles - Whether to load recent files or local files
  */
 async function initializeDialog(isRecentFiles: boolean): Promise<void> {
   await checkPrinterCapabilities();
+
+  // Defensive: Creator 5 series cannot start resident local/recent jobs. The
+  // desktop controls-grid disables the entry buttons; this catches a picker
+  // reached via stale IPC and avoids opening an unusable file list.
+  if (isCreator5Series()) {
+    showMessage('Local job management is not available on this printer.');
+    return;
+  }
 
   // Load the appropriate type of jobs based on the parameter
 
@@ -223,7 +273,7 @@ async function initializeDialog(isRecentFiles: boolean): Promise<void> {
     await loadLocalJobs();
   } else {
     // Show appropriate message for unsupported features
-    showCapabilityMessage(isRecentFiles);
+    showCapabilityMessage();
   }
 }
 
@@ -259,8 +309,26 @@ async function checkPrinterCapabilities(): Promise<void> {
         selectedPrinterModel = features.modelType;
       }
 
+      // Capability-based material-station detection (AD5X, Creator 5 / 5 Pro, …).
+      hasMaterialStation = features.materialStation?.available === true;
+
+      // Spoolman inputs for the stored-file tracking indicator. Best-effort:
+      // a missing/unavailable status simply hides the indicator.
+      try {
+        const spoolmanStatus = await api.getSpoolmanStatus();
+        if (isSpoolmanStatus(spoolmanStatus)) {
+          spoolmanStatusInputs = {
+            spoolmanEnabled: spoolmanStatus.enabled === true,
+          };
+          logDebug('Job picker: Spoolman status loaded (enabled:', spoolmanStatusInputs.spoolmanEnabled, ')');
+        }
+      } catch (spoolmanError) {
+        logDebug('Job picker: Spoolman status unavailable', spoolmanError);
+      }
+
       logDebug('Job picker: Printer capabilities loaded', printerCapabilities);
       logDebug('Job picker: Printer model type:', selectedPrinterModel);
+      logDebug('Job picker: Has material station:', hasMaterialStation);
     } else {
       console.error('Job picker: Invalid features format received');
     }
@@ -502,6 +570,28 @@ function createFileItem(filename: string): HTMLElement {
   fileItem.appendChild(thumbnail);
   fileItem.appendChild(filenameElement);
 
+  // Spoolman tracked/untracked indicator for stored files (station printers).
+  // Mirrors the file modal in the WebUI: hidden when Spoolman is disabled or
+  // the printer has no material station; see stored-file-tracking.ts.
+  const trackingHint = describeStoredFileTracking(
+    isAD5XJobInfo(jobData) ? jobData : undefined,
+    {
+      spoolmanEnabled: spoolmanStatusInputs?.spoolmanEnabled === true,
+      hasStation: hasMaterialStation,
+    }
+  );
+  if (trackingHint) {
+    const trackingElement = document.createElement('div');
+    trackingElement.className = `spoolman-track-hint spoolman-track-hint--${
+      trackingHint.tracked ? '' : 'un'
+    }tracked`;
+    trackingElement.textContent = trackingHint.label;
+    if (trackingHint.tooltip) {
+      trackingElement.title = trackingHint.tooltip;
+    }
+    fileItem.appendChild(trackingElement);
+  }
+
   // Add click handler for selection
   fileItem.addEventListener('click', () => handleFileSelection(filename, fileItem));
 
@@ -611,20 +701,29 @@ async function handleSelectJob(): Promise<void> {
     return;
   }
 
+  // Defensive: Creator 5 series cannot start resident local/recent jobs.
+  if (isCreator5Series()) {
+    showMessage('Local job management is not available on this printer.');
+    return;
+  }
+
   // Check if job starting is supported
   if (!printerCapabilities?.startJobs) {
     showMessage('Job starting is not available for your printer model');
     return;
   }
 
-  // For AD5X printers, check if this is a multi-color job
+  // For material-station printers (AD5X, Creator 5 / 5 Pro), check if this is a
+  // multi-color job that needs material matching before starting.
   logDebug(
-    'Job picker: Checking for AD5X multi-color - model:',
+    'Job picker: Checking for material-station multi-color - model:',
     selectedPrinterModel,
+    ', hasMaterialStation:',
+    hasMaterialStation,
     ', startNow:',
     startNowCheckbox.checked
   );
-  if (selectedPrinterModel === 'ad5x' && startNowCheckbox.checked) {
+  if (hasMaterialStation && startNowCheckbox.checked) {
     const jobData = findJobDataByFilename(selectedFile);
     logDebug('Job picker: Found job data for', selectedFile, ':', jobData);
 
@@ -648,13 +747,15 @@ async function handleSelectJob(): Promise<void> {
       logDebug('Job picker: AD5X multi-color job detected, showing material matching');
 
       try {
-        const materialMappings = await api.showMaterialMatching({
+        const confirmedMappings = await api.showMaterialMatching({
           fileName: selectedFile,
           toolDatas: jobData.toolDatas || [],
           leveling: levelingCheckbox.checked,
+          // The job starts now, so the dialog asks for a Spoolman spool per tool.
+          trackSpools: true,
         });
 
-        if (!materialMappings) {
+        if (!confirmedMappings) {
           // User cancelled
           return;
         }
@@ -665,10 +766,20 @@ async function handleSelectJob(): Promise<void> {
           loadingElement.innerHTML = '<div class="loading-spinner"></div><div>Starting multi-color job...</div>';
         }
 
+        // The dialog attaches the Spoolman spool choice to each mapping. Split
+        // it off: the printer must receive plain mappings only.
+        type MappingWithSpool = Record<string, unknown> & { toolId: number; spoolId?: number | null };
+        const withSpools = confirmedMappings as MappingWithSpool[];
+        const materialMappings = withSpools.map(({ spoolId: _spoolId, ...mapping }) => mapping);
+        const spoolAssignments = withSpools
+          .filter((mapping) => mapping.spoolId !== undefined)
+          .map((mapping) => ({ toolId: mapping.toolId, spoolId: mapping.spoolId ?? null }));
+
         const result = await api.startJob(selectedFile, {
           leveling: levelingCheckbox.checked,
           startNow: true,
           materialMappings,
+          spoolAssignments: spoolAssignments.length > 0 ? spoolAssignments : undefined,
         });
 
         if (result.success) {
@@ -819,11 +930,8 @@ async function loadRecentJobs(): Promise<void> {
 /**
  * Show capability message when feature is not supported
  */
-function showCapabilityMessage(isRecentFiles: boolean): void {
-  const message = isRecentFiles
-    ? 'Recent job management is not available for your printer model'
-    : 'Local job management is not available for your printer model';
-  showErrorState(message);
+function showCapabilityMessage(): void {
+  showErrorState('Local job management is not available on this printer.');
 }
 
 /**

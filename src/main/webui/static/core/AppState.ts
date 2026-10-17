@@ -16,6 +16,7 @@ import type {
   PrinterFeatures,
   PrinterStatus,
   SpoolmanConfigResponse,
+  SpoolAssignment,
   SpoolSummary,
   WebUIJobFile,
   WebUISettings,
@@ -69,11 +70,33 @@ let gridChangeUnsubscribe: (() => void) | null = null;
 export const contextById = new Map<string, PrinterContext>();
 let isMobileLayout = false;
 
+/**
+ * Optional overrides that let a caller other than the file dialog drive the
+ * material matching modal. The job uploader uses them to collect mappings for a
+ * file that is not on the printer yet, instead of starting a resident job.
+ */
+export interface MaterialMatchingHooks {
+  /** Runs in place of the default job-start request. Return true to close the modal. */
+  onConfirm?: (mappings: MaterialMapping[], spoolAssignments: SpoolAssignment[]) => Promise<boolean>;
+  /** Runs when the modal is dismissed without confirming. */
+  onCancel?: () => void;
+}
+
 export interface MaterialMatchingState {
   pending: PendingJobStart;
   materialStation: MaterialStationStatus | null;
   selectedToolId: number | null;
   mappings: Map<number, MaterialMapping>;
+  /**
+   * Spoolman spool per tool when per-job tracking applies: a spool id, null
+   * for "do not track", or no entry while the user has not chosen yet.
+   */
+  spoolChoices: Map<number, number | null>;
+  /** Spools offered in the dialog; null when tracking does not apply. */
+  spools: SpoolSummary[] | null;
+  hooks?: MaterialMatchingHooks;
+  /** Set once onConfirm succeeds so teardown does not also fire onCancel. */
+  confirmed?: boolean;
 }
 
 let materialMatchingState: MaterialMatchingState | null = null;

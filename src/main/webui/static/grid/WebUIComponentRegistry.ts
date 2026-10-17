@@ -54,6 +54,13 @@ const COMPONENT_DEFINITIONS: Record<string, WebUIComponentDefinition> = {
     minSize: { w: 2, h: 2 },
     defaultPosition: { x: 3, y: 6 },
   },
+  'creator5-temperature': {
+    id: 'creator5-temperature',
+    displayName: 'Temperature (Multi-tool)',
+    defaultSize: { w: 3, h: 4 },
+    minSize: { w: 2, h: 3 },
+    defaultPosition: { x: 3, y: 6 },
+  },
   'filtration-tvoc': {
     id: 'filtration-tvoc',
     displayName: 'Filtration & TVOC',
@@ -81,6 +88,13 @@ const COMPONENT_DEFINITIONS: Record<string, WebUIComponentDefinition> = {
     defaultSize: { w: 3, h: 2 },
     minSize: { w: 2, h: 2 },
     defaultPosition: { x: 3, y: 8 },
+  },
+  'material-station': {
+    id: 'material-station',
+    displayName: 'Material Station',
+    defaultSize: { w: 6, h: 3 },
+    minSize: { w: 2, h: 2 },
+    defaultPosition: { x: 0, y: 10 },
   },
 };
 
@@ -122,6 +136,9 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
           <div class="btn-row">
             <button id="btn-start-local" class="control-btn">Local Files</button>
             <button id="btn-refresh" class="control-btn">Refresh Status</button>
+          </div>
+          <div class="btn-row">
+            <button id="btn-upload-job" class="control-btn">Upload Job</button>
           </div>
         </div>
       </div>
@@ -178,6 +195,36 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
             <div class="temp-buttons">
               <button id="btn-extruder-set" class="temp-btn">Set</button>
               <button id="btn-extruder-off" class="temp-btn">Off</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+  },
+  'creator5-temperature': {
+    id: 'creator5-temperature',
+    html: `
+      <div class="panel" id="creator5-temp-panel">
+        <div class="panel-header">Temperature</div>
+        <div class="panel-content">
+          <div class="c5-temps-unavailable hidden" id="c5-temps-unavailable">
+            Per-tool temperature control is not available for this printer.
+          </div>
+          <div class="c5-temps-body" id="c5-temps-body">
+            <div class="c5-tool-grid" id="c5-tool-grid"></div>
+            <div class="temp-row">
+              <span>Bed: <span id="c5-bed-temp">--°C / --°C</span></span>
+              <div class="temp-buttons">
+                <button class="temp-btn" data-c5-action="set" data-heater="bed">Set</button>
+                <button class="temp-btn" data-c5-action="off" data-heater="bed">Off</button>
+              </div>
+            </div>
+            <div class="temp-row hidden" id="c5-chamber-row">
+              <span>Chamber: <span id="c5-chamber-temp">--°C / --°C</span></span>
+              <div class="temp-buttons">
+                <button class="temp-btn" data-c5-action="set" data-heater="chamber">Set</button>
+                <button class="temp-btn" data-c5-action="off" data-heater="chamber">Off</button>
+              </div>
             </div>
           </div>
         </div>
@@ -254,6 +301,57 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
       </div>
     `,
   },
+  'material-station': {
+    id: 'material-station',
+    html: `
+      <div class="panel" id="ms-station-panel">
+        <div class="panel-header">
+          <span>Material Station</span>
+          <span class="ms-card-active-indicator" id="ms-card-active-indicator"></span>
+        </div>
+        <div class="panel-content">
+          <div class="ms-card-state ms-card-unavailable">
+            <p class="ms-card-message">Material station not available on this printer</p>
+          </div>
+          <div class="ms-card-state ms-card-disconnected hidden">
+            <p class="ms-card-message">Material station disconnected</p>
+          </div>
+          <div class="ms-card-state ms-card-active hidden">
+            <div class="ms-card-slots">
+              <div class="ms-card-slot" data-slot="1">
+                <div class="ms-card-swatch"></div>
+                <div class="ms-card-slot-info">
+                  <span class="ms-card-slot-label">Slot 1</span>
+                  <span class="ms-card-slot-material">Empty</span>
+                </div>
+              </div>
+              <div class="ms-card-slot" data-slot="2">
+                <div class="ms-card-swatch"></div>
+                <div class="ms-card-slot-info">
+                  <span class="ms-card-slot-label">Slot 2</span>
+                  <span class="ms-card-slot-material">Empty</span>
+                </div>
+              </div>
+              <div class="ms-card-slot" data-slot="3">
+                <div class="ms-card-swatch"></div>
+                <div class="ms-card-slot-info">
+                  <span class="ms-card-slot-label">Slot 3</span>
+                  <span class="ms-card-slot-material">Empty</span>
+                </div>
+              </div>
+              <div class="ms-card-slot" data-slot="4">
+                <div class="ms-card-swatch"></div>
+                <div class="ms-card-slot-info">
+                  <span class="ms-card-slot-label">Slot 4</span>
+                  <span class="ms-card-slot-material">Empty</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `,
+  },
   'spoolman-tracker': {
     id: 'spoolman-tracker',
     html: `
@@ -283,6 +381,11 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
             </div>
             <button id="btn-change-spool" class="temp-btn">Change</button>
           </div>
+          <div id="spoolman-station" class="spoolman-state hidden">
+            <div class="spoolman-message" id="spoolman-station-note">Choose a spool for each tool when you match materials for an upload.</div>
+            <div class="spool-stats" id="spoolman-station-job"></div>
+            <div class="spool-meta" id="spoolman-station-summary"></div>
+          </div>
         </div>
       </div>
     `,
@@ -295,10 +398,12 @@ const DEFAULT_LAYOUT_COMPONENTS: WebUIComponentLayoutMap = {
   'model-preview': { x: 6, y: 4, w: 6, h: 2 },
   'printer-state': { x: 0, y: 6, w: 3, h: 2 },
   'temp-control': { x: 3, y: 6, w: 3, h: 2 },
+  'creator5-temperature': { x: 3, y: 6, w: 3, h: 4 },
   'job-progress': { x: 6, y: 6, w: 6, h: 2 },
   'filtration-tvoc': { x: 0, y: 8, w: 3, h: 2 },
   'spoolman-tracker': { x: 3, y: 8, w: 3, h: 2 },
   'job-details': { x: 6, y: 8, w: 6, h: 3 },
+  'material-station': { x: 0, y: 11, w: 6, h: 3 },
 };
 
 const COMPONENT_IDS = Object.keys(COMPONENT_DEFINITIONS);

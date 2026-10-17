@@ -40,6 +40,10 @@ interface PrinterInfo {
   readonly model?: string;
   readonly status?: string;
   readonly firmwareVersion?: string;
+  // Carried through from discovery and echoed back on selection so the main
+  // process can identify HTTP-only models (Creator 5 / 5 Pro) by product ID.
+  readonly productId?: number;
+  readonly productType?: number;
 }
 
 const PRINTER_SELECTION_LOG_NAMESPACE = 'PrinterSelectionRenderer';

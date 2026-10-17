@@ -16,8 +16,6 @@
  * Singleton Pattern:
  * Uses singleton pattern to ensure consistent printer data access across the application.
  * Access via getSavedPrinterService() factory function.
- *
- * @module services/SavedPrinterService
  */
 
 import { DiscoveredPrinter, PrinterDetails, SavedPrinterMatch, StoredPrinterDetails } from '@shared/types/printer.js';

@@ -37,7 +37,6 @@ import {
 } from './ipc/printer-context-handlers.js';
 import type { PollingData, PrinterStatus } from '@shared/types/polling.js';
 import type { AppConfig } from '@shared/types/config.js';
-// import { getMainProcessPollingCoordinator } from './services/MainProcessPollingCoordinator';
 import { getMultiContextPollingCoordinator } from './services/MultiContextPollingCoordinator.js';
 import { getMultiContextPrintStateMonitor } from './services/MultiContextPrintStateMonitor.js';
 import { getMultiContextNotificationCoordinator } from './services/MultiContextNotificationCoordinator.js';
@@ -49,6 +48,7 @@ import { getGo2rtcService } from './services/Go2rtcService.js';
 import { getWebUIManager } from './webui/server/WebUIManager.js';
 import { getEnvironmentDetectionService } from './services/EnvironmentDetectionService.js';
 import { getStaticFileManager } from './services/StaticFileManager.js';
+import { getFileManagerService } from './services/FileManagerService.js';
 import { initializeNotificationSystem, disposeNotificationSystem } from './services/notifications/index.js';
 import { getThumbnailCacheService } from './services/ThumbnailCacheService.js';
 import { injectUIStyleVariables } from './utils/CSSVariables.js';
@@ -65,6 +65,8 @@ import { setHeadlessMode, isHeadlessMode } from './utils/HeadlessDetection.js';
 import { getHeadlessManager } from './managers/HeadlessManager.js';
 import { getLoadingManager } from './managers/LoadingManager.js';
 import { getAutoUpdateService } from './services/AutoUpdateService.js';
+import { getAutoLaunchService } from './services/AutoLaunchService.js';
+import { getTrayService } from './services/TrayService.js';
 import {
   initializeSpoolmanIntegrationService,
   getSpoolmanIntegrationService,
@@ -108,11 +110,21 @@ if (!gotTheLock) {
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow) {
       if (mainWindow.isMinimized()) mainWindow.restore();
+      // Surface hidden / --hidden-launched windows so a re-launch brings them into view.
+      mainWindow.show();
       mainWindow.focus();
       console.log('Second instance blocked - focused existing window');
     }
   });
 }
+
+// Synchronously expose packaged (production vs development) state to preloads. The renderer
+// preloads run sandboxed, where the main-process `app` module is unavailable, so they cannot
+// read `app.isPackaged` directly - they resolve it via this synchronous IPC channel instead.
+// Registered at module scope so it is available before any BrowserWindow loads its preload.
+ipcMain.on('app:is-packaged', (event) => {
+  event.returnValue = app.isPackaged;
+});
 
 // Note: app.setName() and app.setAppUserModelId() are now called in bootstrap.ts
 // to ensure they execute before any singleton initialization
@@ -328,6 +340,18 @@ const createMainWindow = async (): Promise<void> => {
   const windowManager = getWindowManager();
   const environmentService = getEnvironmentDetectionService();
   const staticFileManager = getStaticFileManager();
+  const configManager = getConfigManager();
+  const autoLaunchService = getAutoLaunchService();
+
+  // ConfigManager loads asynchronously in its constructor, so the saved config may not be
+  // populated yet when createMainWindow runs. Wait for it before reading StartMinimized so
+  // the hidden-start decision is accurate for every launch (not just OS auto-launched sessions).
+  if (!configManager.isConfigLoaded()) {
+    console.log('Config not yet loaded - waiting before resolving hidden-start state');
+    await new Promise<void>((resolve) => {
+      configManager.once('config-loaded', () => resolve());
+    });
+  }
 
   // Handle rounded UI compatibility before creating windows
   await handleRoundedUICompatibilityIssues();
@@ -348,10 +372,20 @@ const createMainWindow = async (): Promise<void> => {
   console.log(`Will load HTML from: ${htmlPath}`);
 
   // Get UI configuration for main window (only for transparency)
-  const configManager = getConfigManager();
   const config: Readonly<AppConfig> = configManager.getConfig();
   const roundedUI = config.RoundedUI;
   const useRoundedUI = roundedUI && isRoundedUISupported();
+
+  // Resolve the hidden-start (minimized) state for this launch. StartMinimized is a MODIFIER on
+  // StartAtBoot, not an independent preference: it reaches this process as the `--hidden` launch
+  // argument that AutoLaunchService writes into the OS login item (Windows/macOS) or the
+  // freedesktop autostart entry (Linux). Reading config.StartMinimized directly here would also
+  // hide manually launched sessions, which reads as "the app does not start" - especially on
+  // Linux, where a hidden window may never surface in the taskbar at all.
+  const startHidden = autoLaunchService.wasLaunchedHidden();
+  console.log(
+    `[Window] Hidden-start decision: startHidden=${startHidden} (StartMinimized=${config.StartMinimized})`
+  );
 
   // Create the browser window - always frameless for custom titlebar
   const mainWindow = new BrowserWindow({
@@ -369,7 +403,10 @@ const createMainWindow = async (): Promise<void> => {
     },
     frame: false, // Always frameless for custom titlebar
     transparent: useRoundedUI, // Only transparent when rounded UI is enabled
-    show: true, // Show immediately when ready
+    // Hidden starts create the window unmapped so it never flashes on screen. Linux is the
+    // exception: an unmapped window cannot be minimized (see the hidden-start block below), so
+    // it is created shown and minimized once its contents are ready.
+    show: !startHidden || process.platform === 'linux',
   });
 
   // Hide traffic light buttons on macOS
@@ -379,6 +416,50 @@ const createMainWindow = async (): Promise<void> => {
 
   // Ensure background throttling is disabled for WebContents
   mainWindow.webContents.setBackgroundThrottling(false);
+
+  // Apply the hidden start. With MinimizeToTray enabled the window goes to the tray rather than
+  // the taskbar, so a boot start leaves no taskbar entry at all - otherwise platform behavior
+  // differs:
+  // - Windows: minimize() on the not-yet-shown window creates the taskbar button directly, so the
+  //   window never flashes on screen.
+  // - Linux: minimize() cannot act on a window that was never mapped (see electron#45815 for the
+  //   same defect via maximize()), so the window is created shown and minimized on ready-to-show.
+  //   Some environments ignore programmatic minimize entirely - notably Wayland, where "minimized"
+  //   is not a supported window state - and there the window simply stays open. That is a
+  //   window-manager limitation, not something the app can work around; the tray icon is the
+  //   reliable way back to the window in that case.
+  // - macOS: the window was created with show:false and stays hidden until the dock surfaces it.
+  if (startHidden) {
+    const minimizeToTray = config.MinimizeToTray;
+
+    if (minimizeToTray && process.platform !== 'linux') {
+      // Already created with show:false - leaving it unmapped IS the tray state on these platforms,
+      // so there is nothing to do beyond skipping the taskbar minimize below.
+      console.log('[Window] Main window started hidden to tray');
+    } else if (minimizeToTray) {
+      // Linux created the window shown (see the show: option above), so hide it once it is mapped.
+      // This acts on `mainWindow` directly rather than going through TrayService.hideToTray(),
+      // because ready-to-show can fire before WindowManager has been handed the window below - the
+      // tray-availability guard is applied here instead so the fallback stays identical.
+      mainWindow.once('ready-to-show', () => {
+        if (getTrayService().isAvailable()) {
+          mainWindow.hide();
+          console.log('[Window] Main window hidden to tray after ready-to-show (Linux hidden start)');
+          return;
+        }
+        mainWindow.minimize();
+        console.log('[Window] No tray available - minimized after ready-to-show instead of hiding');
+      });
+    } else if (process.platform === 'win32') {
+      mainWindow.minimize();
+      console.log('[Window] Main window started minimized to taskbar');
+    } else if (process.platform === 'linux') {
+      mainWindow.once('ready-to-show', () => {
+        mainWindow.minimize();
+        console.log('[Window] Main window minimized after ready-to-show (Linux hidden start)');
+      });
+    }
+  }
 
   // Load the app using environment-aware path resolution
   try {
@@ -663,6 +744,17 @@ const setupPrinterContextEventForwarding = (): void => {
 
     console.log(`[Main] Context ${contextId} cleanup delegated to context lifecycle services`);
 
+    // Release the pooled SFTP session for this context (file-manager:<contextId>)
+    // so it does not linger until the SSHConnectionManager's stale-cleanup
+    // timer reaps it. Fire-and-forget: a disconnect failure must never break
+    // context cleanup.
+    console.log(`[Main] Releasing file manager session for ${contextId}`);
+    getFileManagerService()
+      .disconnect(contextId)
+      .catch((error) => {
+        console.warn(`[Main] File manager SFTP cleanup failed for ${contextId}:`, error);
+      });
+
     // Forward to renderer
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow && !mainWindow.isDestroyed()) {
@@ -728,6 +820,9 @@ const setupConnectionEventForwarding = (): void => {
         success: true,
         printerName: eventData.printerDetails?.Name || 'Unknown',
         modelType: eventData.modelType || 'unknown',
+        gcodeAvailable: eventData.contextId
+          ? backendManager.getBackendStatus(eventData.contextId)?.features?.gcodeCommands.available ?? true
+          : true,
         contextId: eventData.contextId,
         serialNumber: eventData.printerDetails?.SerialNumber,
         timestamp: new Date().toISOString(),
@@ -924,6 +1019,13 @@ const initializeApp = async (): Promise<void> => {
   // Setup legacy dialog handlers (printer selection enhancement, loading overlay)
   setupDialogHandlers();
 
+  // Create the tray icon BEFORE the window. The tray resolves the main window lazily through
+  // WindowManager, so it does not need one to exist yet - and createMainWindow's hidden-start path
+  // asks TrayService whether a tray is available before it hides the window, which is only a
+  // meaningful answer once initialize() has run. This is the reliable way back to the app after a
+  // hidden start, since not every desktop environment honors minimize-to-taskbar.
+  getTrayService().initialize();
+
   // NOW create the window - renderer will find handlers already registered
   await createMainWindow();
   console.log('Main window created with all handlers ready');
@@ -982,6 +1084,17 @@ const initializeApp = async (): Promise<void> => {
   } catch (error: unknown) {
     const autoUpdateError = toError(error);
     console.error('Failed to initialize auto-update service:', autoUpdateError);
+  }
+
+  // Initialize auto-launch (start-at-boot / start-minimized) service. Mirrors the
+  // AutoUpdateService init guard above; OS login-item registration is skipped in dev.
+  try {
+    const autoLaunchService = getAutoLaunchService();
+    autoLaunchService.initialize();
+    console.log('Auto-launch service initialized');
+  } catch (error: unknown) {
+    const autoLaunchError = toError(error);
+    console.error('Failed to initialize auto-launch service:', autoLaunchError);
   }
 
   // Initialize multi-context notification coordinator
@@ -1317,9 +1430,17 @@ void app
       await initializeApp();
 
       app.on('activate', () => {
-        // On macOS, re-create a window when the dock icon is clicked
-        if (BrowserWindow.getAllWindows().length === 0) {
+        // On macOS, clicking the dock icon should surface the app. Re-create the window only
+        // when none exists; otherwise show/focus the existing one. This matters for hidden
+        // starts (StartMinimized), where the window is created with show:false and would
+        // otherwise remain unreachable via the dock.
+        const existingWindow = getWindowManager().getMainWindow();
+        if (!existingWindow) {
           void createMainWindow();
+        } else {
+          if (existingWindow.isMinimized()) existingWindow.restore();
+          existingWindow.show();
+          existingWindow.focus();
         }
       });
     }
@@ -1341,6 +1462,9 @@ app.on('window-all-closed', () => {
 // Cleanup when app is quitting
 app.on('before-quit', async () => {
   try {
+    // Remove the tray icon first so it does not linger in the status area during teardown
+    getTrayService().destroy();
+
     // Stop power save blocker
     if (powerSaveBlockerId !== null) {
       powerSaveBlocker.stop(powerSaveBlockerId);

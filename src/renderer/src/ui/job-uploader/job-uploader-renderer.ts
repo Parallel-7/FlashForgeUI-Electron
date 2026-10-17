@@ -73,6 +73,8 @@ interface DialogElements {
   firstLayerTime: HTMLElement | null;
   warningsContainer: HTMLElement | null;
   warningsList: HTMLElement | null;
+  mappingSummary: HTMLElement | null;
+  mappingSummaryList: HTMLElement | null;
   okButton: HTMLButtonElement | null;
   cancelButton: HTMLButtonElement | null;
   closeButton: HTMLButtonElement | null;
@@ -105,8 +107,11 @@ const getJobUploaderAPI = (): JobUploaderAPI => {
  * expected by the material matching dialog
  */
 function convertFilamentsToToolData(filaments: FilamentInfo[]): FFGcodeToolData[] {
+  // The tool id is the filament's gcode tool (T0-T3), not its list position:
+  // a 3MF lists only the filaments a plate uses, each with its 1-based slicer
+  // id, so a plate that uses filaments 1 and 3 prints with T0 and T2.
   return filaments.map((filament, index) => ({
-    toolId: index,
+    toolId: toolIdForFilament(filament.id, index),
     materialName: filament.type || 'Unknown',
     materialColor: filament.color || '#FFFFFF', // Default to white if no color specified
     filamentWeight: parseFloat(filament.usedG || '0'),
@@ -114,12 +119,18 @@ function convertFilamentsToToolData(filaments: FilamentInfo[]): FFGcodeToolData[
   }));
 }
 
+/** Gcode tool index for a 3MF filament id (1-based), or the list position without one. */
+function toolIdForFilament(id: string | null | undefined, index: number): number {
+  const parsed = Number.parseInt(String(id ?? ''), 10);
+  return Number.isInteger(parsed) && parsed >= 1 ? parsed - 1 : index;
+}
+
 /**
  * Determine if file is a 3MF and should use enhanced upload flow
  */
 async function shouldUseEnhanced3MFFlow(api: JobUploaderAPI, filePath: string): Promise<boolean> {
-  const isAD5X = await api.isAD5XPrinter();
-  if (!isAD5X) {
+  const hasMaterialStation = await api.hasMaterialStation();
+  if (!hasMaterialStation) {
     return false;
   }
 
@@ -173,6 +184,8 @@ document.addEventListener('DOMContentLoaded', (): void => {
     firstLayerTime: document.getElementById('meta-first-layer-time'),
     warningsContainer: document.getElementById('warnings-container'),
     warningsList: document.getElementById('meta-warnings'),
+    mappingSummary: document.getElementById('mapping-summary'),
+    mappingSummaryList: document.getElementById('mapping-summary-list'),
     okButton: document.getElementById('btn-ok') as HTMLButtonElement,
     cancelButton: document.getElementById('btn-cancel') as HTMLButtonElement,
     closeButton: document.getElementById('btn-close') as HTMLButtonElement,
@@ -206,6 +219,7 @@ document.addEventListener('DOMContentLoaded', (): void => {
   // Initialize UI state
   resetMetadata(elements);
   setOKButtonState(elements, false);
+  updatePrimaryButtonLabel(elements);
 
   console.log('Job Uploader Dialog initialized successfully');
 });
@@ -226,6 +240,13 @@ function setupEventHandlers(elements: DialogElements, api: JobUploaderAPI): void
   if (elements.okButton) {
     elements.okButton.addEventListener('click', (): void => {
       void handleUploadJob(elements, api);
+    });
+  }
+
+  // "Start Now" decides whether the primary button sends or prints
+  if (elements.startNowCheckbox) {
+    elements.startNowCheckbox.addEventListener('change', (): void => {
+      updatePrimaryButtonLabel(elements);
     });
   }
 
@@ -277,6 +298,7 @@ function handleFileSelected(elements: DialogElements, filePath: string | null): 
 
   // Clear any previously saved material mappings when a new file is selected
   savedMaterialMappings = null;
+  renderMappingSummary(elements);
 
   if (filePath) {
     currentFilePath = filePath;
@@ -320,17 +342,17 @@ async function handleMetadataResult(
   showLoading(elements, false);
 
   if (result && !result.error) {
-    // Check if this is an AD5X printer with a non-3MF file
-    const isAD5X = await api.isAD5XPrinter();
+    // Material-station printers (AD5X, Creator 5 / 5 Pro) only accept 3MF files,
+    // which carry the per-tool material data the firmware needs for matching.
+    const hasMaterialStation = await api.hasMaterialStation();
     const is3MF = currentFilePath?.toLowerCase().endsWith('.3mf');
 
-    if (isAD5X && !is3MF) {
-      // AD5X printers only support 3MF files
+    if (hasMaterialStation && !is3MF) {
       const fileName = currentFilePath?.split(/[\\/]/).pop() || 'file';
       const fileExtension = fileName.split('.').pop()?.toUpperCase() || 'unknown';
 
       if (elements.filePathDisplay) {
-        elements.filePathDisplay.textContent = 'Unsupported file type for AD5X printer';
+        elements.filePathDisplay.textContent = 'Unsupported file type for this printer';
       }
 
       resetMetadata(elements);
@@ -338,7 +360,7 @@ async function handleMetadataResult(
       currentFilePath = null;
 
       alert(
-        `AD5X printers only support 3MF files.\n\nThe selected ${fileExtension} file cannot be uploaded to this printer.\n\nPlease select a 3MF file that has been sliced specifically for the AD5X printer.`
+        `This printer only supports 3MF files.\n\nThe selected ${fileExtension} file cannot be uploaded to this printer.\n\nPlease select a 3MF file sliced for this printer.`
       );
       return;
     }
@@ -364,16 +386,24 @@ async function handleMetadataResult(
         const toolData = convertFilamentsToToolData(filaments);
 
         if (api.showMaterialMatchingDialog) {
-          const mappings = await api.showMaterialMatchingDialog(currentFilePath, toolData);
+          // A spool per tool is asked only when the job starts now: a file
+          // sent without Start Now is never Spoolman-tracked.
+          const mappings = await api.showMaterialMatchingDialog(
+            currentFilePath,
+            toolData,
+            elements.startNowCheckbox?.checked ?? false
+          );
           if (mappings && Array.isArray(mappings)) {
             // Save material mappings for later use
             savedMaterialMappings = mappings;
             console.log('Material mappings saved:', mappings);
             // Enable OK button now that mappings are confirmed
+            renderMappingSummary(elements);
             setOKButtonState(elements, true);
           } else {
             // User cancelled - disable OK button
             console.log('Material matching cancelled by user');
+            renderMappingSummary(elements);
             setOKButtonState(elements, false);
           }
           return; // Don't enable OK button here, handled above
@@ -410,14 +440,14 @@ async function handleMetadataResult(
 async function handleUploadJob(elements: DialogElements, api: JobUploaderAPI): Promise<void> {
   if (!currentFilePath) return;
 
-  // Check if this should use AD5X upload path
-  const isAD5X = await api.isAD5XPrinter();
+  // Material-station printers (AD5X, Creator 5 / 5 Pro) use the material-aware
+  // 3MF upload path; everything else uses the regular upload below.
+  const hasMaterialStation = await api.hasMaterialStation();
   const is3MF = currentFilePath.toLowerCase().endsWith('.3mf');
-  const useAD5XUpload = isAD5X && is3MF;
+  const useAD5XUpload = hasMaterialStation && is3MF;
 
   if (useAD5XUpload) {
-    // Use AD5X upload for 3MF files on AD5X printer
-    console.log('Using AD5X upload for 3MF file');
+    console.log('Using material-station 3MF upload path');
 
     try {
       const result = await api.uploadFileAD5X(
@@ -434,12 +464,12 @@ async function handleUploadJob(elements: DialogElements, api: JobUploaderAPI): P
       console.error('AD5X upload failed:', error);
       alert(`Upload failed: ${error instanceof Error ? error.message : String(error)}`);
     }
-  } else if (isAD5X && !is3MF) {
+  } else if (hasMaterialStation && !is3MF) {
     // This should not happen due to earlier validation, but safety check
-    alert('AD5X printers only support 3MF files. Please select a valid 3MF file.');
+    alert('This printer only supports 3MF files. Please select a valid 3MF file.');
     return;
   } else {
-    // Use regular upload for non-AD5X printers or non-3MF files
+    // Use regular upload for printers without a material station
     const payload: UploadJobPayload = {
       filePath: currentFilePath,
       startNow: elements.startNowCheckbox?.checked || false,
@@ -571,28 +601,18 @@ function populateMetadata(elements: DialogElements, data: MetadataResult): void 
     elements.eta.textContent = data.slicer?.printEta || '-';
   }
 
-  // New Print Information Fields - Use available data or fallbacks
+  // New Print Information Fields - from slicer-meta 1.4.0 (Orca-family; null otherwise)
   if (elements.layerHeight) {
-    // Try to get layer height from threeMf or file with proper type checking
-    const threeMfData = data.threeMf as Record<string, unknown> | undefined;
-    const fileData = data.file as Record<string, unknown> | undefined;
-    const layerHeight =
-      (threeMfData?.layerHeight as number | undefined) || (fileData?.layerHeight as number | undefined);
-    elements.layerHeight.textContent = layerHeight ? `${layerHeight} mm` : '-';
+    const layerHeight = data.file?.layerHeight;
+    elements.layerHeight.textContent = layerHeight != null ? `${layerHeight} mm` : '-';
   }
   if (elements.infill) {
-    // Try to get infill from threeMf or file with proper type checking
-    const threeMfData = data.threeMf as Record<string, unknown> | undefined;
-    const fileData = data.file as Record<string, unknown> | undefined;
-    const infill = (threeMfData?.infill as number | undefined) || (fileData?.infill as number | undefined);
-    elements.infill.textContent = infill ? `${infill}%` : '-';
+    const infill = data.file?.infillDensity;
+    elements.infill.textContent = infill != null ? `${infill}%` : '-';
   }
   if (elements.layers) {
-    // Try to get layer count from threeMf or file with proper type checking
-    const threeMfData = data.threeMf as Record<string, unknown> | undefined;
-    const fileData = data.file as Record<string, unknown> | undefined;
-    const layerCount = (threeMfData?.layerCount as number | undefined) || (fileData?.layers as number | undefined);
-    elements.layers.textContent = layerCount ? layerCount.toString() : '-';
+    const layerCount = data.file?.layerCount;
+    elements.layers.textContent = layerCount != null ? layerCount.toString() : '-';
   }
 
   // First Layer Time (3MF only - from slicer-meta 1.2.0)
@@ -653,6 +673,10 @@ function resetMetadata(elements: DialogElements): void {
     }
   });
 
+  // A reset display has no file behind it, so any mappings are stale
+  savedMaterialMappings = null;
+  renderMappingSummary(elements);
+
   // Reset warnings container
   if (elements.warningsContainer) {
     elements.warningsContainer.style.display = 'none';
@@ -682,6 +706,72 @@ function setOKButtonState(elements: DialogElements, enabled: boolean): void {
   if (elements.okButton) {
     elements.okButton.disabled = !enabled;
   }
+}
+
+/**
+ * Name the primary button after what pressing it does: with "Start Now" ticked
+ * the printer begins the job, otherwise the file is only transferred. Both web
+ * UIs carry the same labels.
+ */
+function updatePrimaryButtonLabel(elements: DialogElements): void {
+  if (elements.okButton) {
+    elements.okButton.textContent = elements.startNowCheckbox?.checked ? 'Start Print' : 'Send File';
+  }
+}
+
+/**
+ * Show the confirmed tool -> slot pairs on the main screen so they can be
+ * checked at a glance before the job is sent.
+ */
+function renderMappingSummary(elements: DialogElements): void {
+  const { mappingSummary, mappingSummaryList } = elements;
+  if (!mappingSummary || !mappingSummaryList) {
+    return;
+  }
+
+  mappingSummaryList.textContent = '';
+
+  if (!savedMaterialMappings || savedMaterialMappings.length === 0) {
+    mappingSummary.style.display = 'none';
+    return;
+  }
+
+  savedMaterialMappings.forEach((mapping) => {
+    const chip = document.createElement('div');
+    chip.className = 'mapping-chip';
+
+    chip.appendChild(createMappingSwatch(mapping.toolMaterialColor));
+    chip.appendChild(createMappingText('mapping-chip-label', `Tool ${mapping.toolId + 1}`));
+    chip.appendChild(createMappingText('mapping-chip-arrow', '→'));
+    chip.appendChild(createMappingSwatch(mapping.slotMaterialColor));
+    chip.appendChild(createMappingText('mapping-chip-label', `Slot ${mapping.slotId}`));
+    chip.appendChild(createMappingText('mapping-chip-material', mapping.materialName || 'Unknown'));
+
+    const spoolId = (mapping as { spoolId?: number | null }).spoolId;
+    if (spoolId !== undefined) {
+      chip.appendChild(
+        createMappingText('mapping-chip-spool', spoolId === null ? 'Not tracked' : `Spool #${spoolId}`)
+      );
+    }
+
+    mappingSummaryList.appendChild(chip);
+  });
+
+  mappingSummary.style.display = 'block';
+}
+
+function createMappingSwatch(color: string): HTMLSpanElement {
+  const swatch = document.createElement('span');
+  swatch.className = 'mapping-chip-swatch';
+  swatch.style.backgroundColor = color || '#cccccc';
+  return swatch;
+}
+
+function createMappingText(className: string, text: string): HTMLSpanElement {
+  const element = document.createElement('span');
+  element.className = className;
+  element.textContent = text;
+  return element;
 }
 
 /**

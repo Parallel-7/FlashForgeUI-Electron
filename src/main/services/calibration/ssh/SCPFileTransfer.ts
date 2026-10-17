@@ -1,8 +1,6 @@
 /**
  * @fileoverview SCP file transfer for printer configuration and calibration files.
  * Provides download and upload functionality using the SCP protocol over SSH exec channels.
- *
- * @module main/services/calibration/ssh/SCPFileTransfer
  */
 
 import { app } from 'electron';

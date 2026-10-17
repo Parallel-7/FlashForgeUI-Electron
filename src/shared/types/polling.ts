@@ -26,9 +26,9 @@
  * - BasePrinterBackend: Raw status data source
  * - ui-updater.ts: Direct UI element updates
  * - PrinterNotificationCoordinator: State change monitoring
- *
- * @module types/polling
  */
+
+import type { PrinterModelType } from './printer-backend/backend-operations.js';
 
 // ============================================================================
 // PRINTER STATE (SIMPLE)
@@ -88,6 +88,8 @@ export interface JobProgress {
   weightUsed: number; // grams
   lengthUsed: number; // meters
   formattedEta?: string; // formatted ETA from ff-api (e.g. "14:30")
+  /** Library-computed completion timestamp. Null while the print is not advancing. */
+  completionTime?: Date | null;
 }
 
 /**
@@ -146,6 +148,12 @@ export interface CumulativeStats {
 export interface PrinterStatus {
   state: PrinterState;
   temperatures: PrinterTemperatures;
+  /**
+   * Per-tool nozzle temperatures for multi-tool printers (e.g. Creator 5 series,
+   * one entry per nozzle). Undefined/empty on single-nozzle printers, which use
+   * {@link PrinterTemperatures.extruder} instead.
+   */
+  toolTemps?: TemperatureData[];
   fans: FanStatus;
   filtration: FiltrationStatus;
   settings: PrinterSettings;
@@ -179,6 +187,12 @@ export interface MaterialStationStatus {
   activeSlot: number | null; // 1-4 or null
   errorMessage: string | null;
   lastUpdate: Date;
+  /**
+   * Printer model that owns this station, so the renderer can pick the correct
+   * fixed filament palette (the Creator 5 / 5 Pro use a different palette than the
+   * AD5X — see `@shared/palette`). Optional/absent for older payloads → treat as AD5X.
+   */
+  printerModelType?: PrinterModelType;
 }
 
 // ============================================================================
@@ -231,6 +245,24 @@ export function isActiveState(state: PrinterState): boolean {
   return (
     state === 'Printing' || state === 'Paused' || state === 'Calibrating' || state === 'Heating' || state === 'Pausing'
   );
+}
+
+/**
+ * Check whether the print is actually advancing, i.e. whether the firmware is
+ * still counting `estimatedTime` down.
+ *
+ * Outside 'Printing' the field freezes at its last value while the wall clock
+ * keeps moving, so any `now() + remaining` conversion walks forward one minute
+ * per minute instead of holding still - a paused print appears to recede
+ * forever. Gate wall-clock ETA displays on this; the remaining *duration* stays
+ * correct in every state and needs no gate.
+ *
+ * 'Heating' is deliberately excluded. The pre-print warmup does not advance the
+ * job either, so the same drift applies - it just lasts minutes rather than
+ * hours, which is why it is easy to miss.
+ */
+export function isPrintAdvancing(state: PrinterState): boolean {
+  return state === 'Printing';
 }
 
 /**

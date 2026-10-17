@@ -3,12 +3,6 @@
  * URL formatting, validation, and context-aware camera config resolution.
  */
 
-/**
- * @fileoverview Jest coverage for camera utility helpers.
- *
- * Verifies camera capability detection, custom URL derivation, and stream-type
- * classification used by desktop and WebUI camera setup paths.
- */
 import type { PrinterFeatureSet } from '@shared/types/printer-backend/index.js';
 import { getConfigManager } from '../../managers/ConfigManager.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';

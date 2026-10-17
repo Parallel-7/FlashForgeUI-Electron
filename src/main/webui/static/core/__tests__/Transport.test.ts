@@ -9,10 +9,6 @@
  * handling, update fan-out, reconnect behavior, and command dispatch failure
  * paths in `Transport.js`.
  */
-/**
- * @fileoverview JSDOM tests for the WebUI Transport layer covering fetch requests,
- * websocket lifecycle, reconnection, and auth-aware command dispatch.
- */
 
 const mockShowToast = jest.fn();
 const mockFetch = jest.fn();

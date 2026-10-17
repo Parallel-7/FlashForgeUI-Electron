@@ -1,74 +1,13 @@
 /**
- * @fileoverview DialogWindowFactory handles all modal dialog window creation with user interaction
- * and promise-based result handling.
+ * @fileoverview DialogWindowFactory creates the interactive modal dialogs.
+ * Each create function returns a promise that resolves with the user's
+ * answer, or null/false when the dialog is cancelled.
  *
- * This factory module provides creation functions for interactive modal dialogs that require user
- * input and return results via promises. It manages complex IPC communication patterns using unique
- * dialog IDs, response channels, and proper handler cleanup to prevent memory leaks and race conditions.
- * All dialogs are created as modal children of the main window or job picker window with standardized
- * lifecycle management and comprehensive error handling throughout the dialog interaction lifecycle.
- *
- * Key Features:
- * - Promise-based dialog results for clean async/await patterns in calling code
- * - Unique dialog ID generation for each dialog instance to prevent channel conflicts
- * - Dynamic IPC response channel creation and cleanup per dialog instance
- * - Global IPC handler management with duplicate registration prevention
- * - Proper cleanup of IPC handlers on dialog close to prevent memory leaks
- * - Race condition prevention with immediate window destruction on response
- * - Window data storage pattern using typed extensions of BrowserWindow
- * - Parent window validation with fallback to job picker or main window
- * - Initialization data passing via IPC events on did-finish-load
- *
- * Core Responsibilities:
- * - Create input dialogs with text/password/hidden input types and return user input as promise
- * - Create material matching dialogs for printer material configuration and return material mappings
- * - Create single color confirmation dialogs for print job validation and return boolean confirmation
- * - Create material info dialogs for displaying material station slot information (void return)
- * - Create IFS dialogs for material station display and management (void return)
- * - Create auto-connect choice dialogs for saved printer selection and return user choice
- * - Create connect choice dialogs for connection method selection and return selected method
- * - Create printer connected warning dialogs when attempting to connect while already connected
- * - Manage unique dialog IDs and response channels for each dialog instance
- * - Handle proper IPC handler registration, invocation, and cleanup
- * - Prevent race conditions during dialog close and result handling
- *
- * Dialog Types and Return Values:
- * - Input Dialog: Promise<string | null> - Returns user input or null if cancelled
- * - Material Matching Dialog: Promise<unknown[] | null> - Returns material mappings or null if cancelled
- * - Single Color Confirmation: Promise<boolean> - Returns true if confirmed, false if cancelled
- * - Material Info Dialog: void - Display-only, no return value
- * - IFS Dialog: void - Display-only, no return value
- * - Auto-Connect Choice: Promise<string | null> - Returns action choice or null if cancelled
- * - Connect Choice: Promise<string | null> - Returns action choice or null if cancelled
- * - Printer Connected Warning: Promise<boolean> - Returns true to continue, false to cancel
- *
- * IPC Communication Patterns:
- * - Generate unique dialog ID using timestamp + random string
- * - Create response channel name: `dialog-result-${dialogId}`
- * - Register IPC handler for response channel using ipcMain.handle()
- * - Send initialization data to renderer via webContents.send()
- * - Renderer invokes response channel with result
- * - Handler processes result, cleans up, closes window, and resolves promise
- * - Global handlers for reusable dialogs to prevent duplicate registrations
- *
- * Window Specifications:
- * - Input Dialog: 420x300 (min 380x280), non-resizable, frameless, transparent
- * - Material Matching: 700x650 (min 600x550), non-resizable, frameless, transparent
- * - Single Color Confirmation: 450x500 (min 400x450), non-resizable, frameless, transparent
- * - Material Info: 600x500 (min 450x400), non-resizable, frameless, transparent
- * - IFS Dialog: 600x700 (min 600x650), non-resizable, frameless, transparent
- * - Auto-Connect Choice: 500x480 (min 450x420), non-resizable, frameless, transparent
- * - Connect Choice: 480x450 (min 450x400), non-resizable, frameless, transparent
- * - Printer Connected Warning: 450x380 (min 400x350), non-resizable, frameless, transparent
- *
- * @exports createInputDialog - Create input dialog for user text input
- * @exports createMaterialMatchingDialog - Create material matching dialog for printer configuration
- * @exports createSingleColorConfirmationDialog - Create single color confirmation for print validation
- * @exports createMaterialInfoDialog - Create material info dialog for slot information
- * @exports createIFSDialog - Create IFS dialog for material station management
- * @exports createAutoConnectChoiceDialog - Create auto-connect choice dialog for saved printers
- * @exports createConnectChoiceDialog - Create connect choice dialog for connection method
- * @exports createPrinterConnectedWarningDialog - Create warning dialog for existing connections
+ * IPC pattern: each dialog instance gets a unique dialog ID and a
+ * `dialog-result-${id}` response channel, and removes its ipcMain handler
+ * when it closes. The parent is the job picker window when one is open, else
+ * the main window. The auto-connect and connect-choice dialogs also register
+ * a global response-channel handler, once, for renderer reuse.
  */
 
 import { BrowserWindow, ipcMain } from 'electron';
@@ -82,10 +21,12 @@ import {
   setupWindowLifecycle,
   validateParentWindow,
 } from '../shared/WindowConfig.js';
+import type { ManualConnectResult } from '@shared/types/manual-connect.js';
 import {
   AutoConnectChoiceDialogData,
   ConnectChoiceDialogData,
   InputDialogOptions,
+  ManualConnectDialogOptions,
   MaterialMatchingDialogData,
   PrinterConnectedWarningData,
   SingleColorConfirmationDialogData,
@@ -178,6 +119,89 @@ export const createInputDialog = (options: InputDialogOptions): Promise<string |
 
     setupDevTools(inputDialogWindow);
     windowManager.setInputDialogWindow(inputDialogWindow);
+  });
+};
+
+/**
+ * Create the manual printer-connection dialog with promise-based result handling.
+ *
+ * Collects IP address, printer type, and (for modern models) serial number and
+ * check code — the details the discovery broadcast would have supplied. Modern
+ * printers are typed from their product ID and never TCP-probed, so the serial
+ * cannot be recovered automatically on a manual connect.
+ *
+ * @param options - Dialog configuration options
+ * @returns Promise that resolves with the entered details, or null if cancelled
+ */
+export const createManualConnectDialog = (
+  options: ManualConnectDialogOptions = {}
+): Promise<ManualConnectResult | null> => {
+  return new Promise((resolve) => {
+    const windowManager = getWindowManager();
+    const mainWindow = windowManager.getMainWindow();
+
+    if (!validateParentWindow(mainWindow, 'manual connect dialog')) {
+      resolve(null);
+      return;
+    }
+
+    const dialogId = generateDialogId();
+    const responseChannel = createResponseChannelName(dialogId);
+    let handlerActive = true;
+
+    const manualConnectWindow = createModalWindow(
+      mainWindow,
+      WINDOW_SIZES.MANUAL_CONNECT_DIALOG,
+      createUIPreloadPath('manual-connect-dialog'),
+      { resizable: true, frame: false }
+    );
+
+    const handleResponse = async (
+      _event: unknown,
+      result: ManualConnectResult | null
+    ): Promise<void> => {
+      if (!handlerActive) return;
+
+      handlerActive = false;
+      ipcMain.removeHandler(responseChannel);
+
+      // Shares the input-dialog slot: both are the single modal entry prompt and
+      // can never be open at the same time.
+      windowManager.setInputDialogWindow(null);
+
+      // Close immediately to prevent race conditions
+      if (manualConnectWindow && !manualConnectWindow.isDestroyed()) {
+        manualConnectWindow.destroy();
+      }
+
+      resolve(result);
+    };
+
+    ipcMain.handle(responseChannel, handleResponse);
+
+    void loadWindowHTML(manualConnectWindow, 'manual-connect-dialog');
+
+    manualConnectWindow.webContents.on('did-finish-load', () => {
+      if (manualConnectWindow && !manualConnectWindow.isDestroyed()) {
+        manualConnectWindow.webContents.send('manual-connect:init', {
+          ...options,
+          responseChannel,
+        });
+      }
+    });
+
+    setupWindowLifecycle(manualConnectWindow, () => {
+      windowManager.setInputDialogWindow(null);
+      // Window closed without a response - treat as cancelled
+      if (handlerActive) {
+        handlerActive = false;
+        ipcMain.removeHandler(responseChannel);
+        resolve(null);
+      }
+    });
+
+    setupDevTools(manualConnectWindow);
+    windowManager.setInputDialogWindow(manualConnectWindow);
   });
 };
 

@@ -1,8 +1,6 @@
 /**
  * @fileoverview Unit tests for the WorkflowEngine class.
  * Tests multi-stage calibration workflow computation.
- *
- * @module main/services/calibration/__tests__/WorkflowEngine.test
  */
 
 import type { BedConfig, CalibrationSettings } from '../../../../shared/types/calibration';

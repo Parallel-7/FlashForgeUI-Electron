@@ -215,6 +215,17 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
   public async executeGCodeCommand(command: string): Promise<GCodeCommandResult> {
     const startTime = Date.now();
 
+    // HTTP-only backends (Creator 5 / 5 Pro) have no TCP channel for raw G-code.
+    if (!this.legacyClient) {
+      return {
+        success: false,
+        command,
+        error: 'Raw G-code is unavailable on this printer (HTTP-only, no TCP channel)',
+        executionTime: 0,
+        timestamp: new Date(),
+      };
+    }
+
     try {
       // G-code commands always use legacy API
       const response = await this.legacyClient.sendRawCmd(command);
@@ -263,8 +274,9 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
       // Calculate time estimates properly
       const estimatedTimeSeconds = machineInfo?.EstimatedTime || 0;
       const elapsedTimeSeconds = machineInfo?.PrintDuration || 0;
-      const remainingTimeSeconds =
-        estimatedTimeSeconds > elapsedTimeSeconds ? estimatedTimeSeconds - elapsedTimeSeconds : 0;
+      // Firmware EstimatedTime is already remaining (a countdown), not total.
+      // Do not subtract PrintDuration/elapsed again — that double-counts.
+      const remainingTimeSeconds = estimatedTimeSeconds;
 
       // Extract current filament usage values
       const estimatedRightLen = machineInfo?.EstLength || 0;
@@ -325,6 +337,7 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
         estimatedRightLen: finalEstimatedRightLen,
         estimatedRightWeight: finalEstimatedRightWeight,
         printEta: machineInfo?.PrintEta || undefined,
+        completionTime: machineInfo?.CompletionTime ?? null,
         cumulativePrintTime: machineInfo?.CumulativePrintTime || 0,
         cumulativeFilament: machineInfo?.CumulativeFilament || 0,
         nozzleSize: machineInfo?.NozzleSize || '0.4mm',
@@ -354,6 +367,22 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
    */
   protected async getPrinterStatusLegacy(originalError: unknown): Promise<StatusResult> {
     void originalError;
+    // HTTP-only backends have no legacy client to fall back to.
+    if (!this.legacyClient) {
+      return {
+        success: false,
+        error: originalError instanceof Error ? originalError.message : String(originalError),
+        timestamp: new Date(),
+        status: {
+          printerState: 'error',
+          bedTemperature: 0,
+          nozzleTemperature: 0,
+          progress: 0,
+          currentLayer: undefined,
+          totalLayers: undefined,
+        },
+      };
+    }
     try {
       const printerInfo = await this.legacyClient.getPrinterInfo();
 
@@ -549,8 +578,15 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
         data: 'Job paused',
         timestamp: new Date(),
       };
-    } catch (_error) {
-      // Fallback to legacy API
+    } catch (error) {
+      // Fallback to legacy API (unavailable on HTTP-only backends)
+      if (!this.legacyClient) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date(),
+        };
+      }
       try {
         await this.legacyClient.sendRawCmd('M25');
         return {
@@ -584,8 +620,15 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
         data: 'Job resumed',
         timestamp: new Date(),
       };
-    } catch (_error) {
-      // Fallback to legacy API
+    } catch (error) {
+      // Fallback to legacy API (unavailable on HTTP-only backends)
+      if (!this.legacyClient) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date(),
+        };
+      }
       try {
         await this.legacyClient.sendRawCmd('M24');
         return {
@@ -619,8 +662,15 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
         data: 'Job cancelled',
         timestamp: new Date(),
       };
-    } catch (_error) {
-      // Fallback to legacy API
+    } catch (error) {
+      // Fallback to legacy API (unavailable on HTTP-only backends)
+      if (!this.legacyClient) {
+        return {
+          success: false,
+          error: error instanceof Error ? error.message : String(error),
+          timestamp: new Date(),
+        };
+      }
       try {
         await this.legacyClient.sendRawCmd('M26');
         return {
@@ -863,9 +913,15 @@ export abstract class DualAPIBackend extends BasePrinterBackend {
    * Override in subclasses to add model-specific fields
    */
   protected getAdditionalStatusFields(_machineInfo: unknown): Record<string, unknown> {
-    // Default implementation returns empty object
-    // 5M Pro backend will override to add filtration fan fields
-    return {};
+    // Surface the resolved filtration CAPABILITY (from the backend feature set) so the
+    // renderer can gate the filtration controls on it rather than on the per-poll fan
+    // states. The /product-derived fan heuristic is unreliable on some models (e.g. the
+    // Creator 5 Pro under-reports its fan control state), so model backends that know
+    // they have filtration force the capability on in getBaseFeatures(); this carries
+    // that decision through to the UI. Subclasses that override this MUST spread super.
+    return {
+      filtrationAvailable: this.isFeatureAvailable('filtration'),
+    };
   }
 
   /**

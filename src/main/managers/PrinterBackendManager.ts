@@ -47,6 +47,7 @@ import { EventEmitter } from 'events';
 import { AD5XBackend } from '../printer-backends/AD5XBackend.js';
 import { Adventurer5MBackend } from '../printer-backends/Adventurer5MBackend.js';
 import { Adventurer5MProBackend } from '../printer-backends/Adventurer5MProBackend.js';
+import { Creator5Backend } from '../printer-backends/Creator5Backend.js';
 import { BasePrinterBackend } from '../printer-backends/BasePrinterBackend.js';
 import { GenericLegacyBackend } from '../printer-backends/GenericLegacyBackend.js';
 import { detectPrinterModelType, getModelDisplayName } from '../utils/PrinterUtils.js';
@@ -303,6 +304,14 @@ export class PrinterBackendManager extends EventEmitter {
       case 'ad5x':
         return new AD5XBackend(backendOptions);
 
+      case 'creator-5':
+      case 'creator-5-pro':
+        // Creator 5 / 5 Pro: a material-station printer like the AD5X (shared
+        // MaterialStationBackend base), but a SIBLING of AD5XBackend rather than a
+        // subclass — it is HTTP-only, maps materials at print-start (not upload),
+        // and adds per-tool temps / chamber plus Pro-only camera/LED/filtration.
+        return new Creator5Backend(backendOptions);
+
       default:
         // Fallback to generic legacy for unknown models
         console.warn(`Unknown printer model: ${modelType}, falling back to generic legacy backend`);
@@ -494,6 +503,75 @@ export class PrinterBackendManager extends EventEmitter {
     }
 
     return await backend.executeGCodeCommand(command);
+  }
+
+  /**
+   * Resolve the HTTP (FiveMClient) client for a context, if the backend's primary
+   * client is a FiveMClient. Used to route per-tool / chamber temperature control over
+   * HTTP for the Creator 5 series, which is HTTP-only and has no G-code passthrough.
+   */
+  private getFiveMClient(contextId: string): FiveMClient | null {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
+      return null;
+    }
+    const client = backend.getPrimaryClient();
+    return client instanceof FiveMClient ? client : null;
+  }
+
+  /**
+   * Run a FiveMClient temperature-control action for a context and normalize the
+   * result. Mirrors the desktop control IPC handlers so the WebUI can drive per-tool
+   * and chamber heaters on HTTP-only Creator 5 printers.
+   */
+  private async runTempControl(
+    contextId: string,
+    action: (client: FiveMClient) => Promise<boolean>
+  ): Promise<CommandResult> {
+    const client = this.getFiveMClient(contextId);
+    if (!client) {
+      return {
+        success: false,
+        error: 'Temperature control not available for this printer',
+        timestamp: new Date(),
+      };
+    }
+    try {
+      const result = await action(client);
+      return { success: result, timestamp: new Date() };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date(),
+      };
+    }
+  }
+
+  /** Set a single tool (nozzle) target temperature on a multi-tool printer. */
+  public async setToolTemperature(
+    contextId: string,
+    toolIndex: number,
+    temperature: number
+  ): Promise<CommandResult> {
+    return this.runTempControl(contextId, (client) =>
+      client.tempControl.setToolTemp(toolIndex, temperature)
+    );
+  }
+
+  /** Turn off a single tool (nozzle) heater on a multi-tool printer. */
+  public async cancelToolTemperature(contextId: string, toolIndex: number): Promise<CommandResult> {
+    return this.runTempControl(contextId, (client) => client.tempControl.cancelToolTemp(toolIndex));
+  }
+
+  /** Set the heated-chamber target temperature. */
+  public async setChamberTemperature(contextId: string, temperature: number): Promise<CommandResult> {
+    return this.runTempControl(contextId, (client) => client.tempControl.setChamberTemp(temperature));
+  }
+
+  /** Turn off the heated chamber. */
+  public async cancelChamberTemperature(contextId: string): Promise<CommandResult> {
+    return this.runTempControl(contextId, (client) => client.tempControl.cancelChamberTemp());
   }
 
   /**
@@ -711,6 +789,58 @@ export class PrinterBackendManager extends EventEmitter {
       ) => Promise<JobStartResult>;
     };
     return await ad5xBackend.uploadFileAD5X(filePath, startPrint, levelingBeforePrint, materialMappings);
+  }
+
+  /**
+   * Configure an AD5X material station slot's material and color.
+   * Only available for AD5X printers with material station functionality.
+   *
+   * @param contextId - Context ID
+   * @param slot - Target slot number (1-4)
+   * @param materialName - Recognized material name (e.g. "PLA")
+   * @param hexRgb - Color hex (with or without leading '#')
+   * @returns Command result indicating whether the printer accepted the configuration
+   */
+  public async configureMaterialSlot(
+    contextId: string,
+    slot: number,
+    materialName: string,
+    hexRgb: string
+  ): Promise<CommandResult> {
+    const backend = this.contextBackends.get(contextId);
+    if (!backend) {
+      return {
+        success: false,
+        error: 'No backend initialized',
+        timestamp: new Date(),
+      };
+    }
+
+    if (!('configureSlot' in backend)) {
+      return {
+        success: false,
+        error: 'Current printer does not support material station slot configuration',
+        timestamp: new Date(),
+      };
+    }
+
+    try {
+      const ad5xBackend = backend as {
+        configureSlot: (slot: number, materialName: string, hexRgb: string) => Promise<boolean>;
+      };
+      const accepted = await ad5xBackend.configureSlot(slot, materialName, hexRgb);
+      return {
+        success: accepted,
+        error: accepted ? undefined : 'Printer rejected the slot configuration',
+        timestamp: new Date(),
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+        timestamp: new Date(),
+      };
+    }
   }
 
   /**

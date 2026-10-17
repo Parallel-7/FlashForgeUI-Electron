@@ -9,10 +9,6 @@
  * UI transitions, and the post-login callback wiring exposed by
  * `authentication.js`.
  */
-/**
- * @fileoverview JSDOM tests for WebUI authentication helpers, including login state,
- * token persistence, and post-login bootstrap behavior.
- */
 
 const mockApiRequest = jest.fn();
 const mockApiRequestWithMetadata = jest.fn();

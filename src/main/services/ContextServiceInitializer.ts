@@ -10,8 +10,6 @@
  *
  * This helper keeps GUI and headless initialization paths aligned without changing
  * the underlying service responsibilities.
- *
- * @module services/ContextServiceInitializer
  */
 
 import { getPrinterContextManager } from '../managers/PrinterContextManager.js';
@@ -53,7 +51,7 @@ export function initializeContextServices(contextId: string): void {
   }
 
   const spoolmanTracker = getMultiContextSpoolmanTracker();
-  spoolmanTracker.createTrackerForContext(contextId, stateMonitor);
+  spoolmanTracker.createTrackerForContext(contextId, stateMonitor, pollingService);
 
   const notificationCoordinator = getMultiContextNotificationCoordinator();
   notificationCoordinator.createCoordinatorForContext(contextId, pollingService, stateMonitor);

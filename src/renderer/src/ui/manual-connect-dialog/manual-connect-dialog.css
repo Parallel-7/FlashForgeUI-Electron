@@ -1,0 +1,167 @@
+/* Manual Connect Dialog CSS - Rounded Styling Pattern */
+/* Import shared template for consistent styling */
+@import url("../shared/rounded-dialog-template.css");
+
+/* Content scrolls if the window is short - the form is taller than a plain input dialog */
+.dialog-content {
+  overflow-y: auto;
+}
+
+/* Intro message */
+.dialog-message {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--theme-text);
+  margin-bottom: 16px;
+  text-align: center;
+  opacity: 0.85;
+}
+
+/* Labelled form rows */
+.field {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.field.hidden {
+  display: none;
+}
+
+.field-label {
+  flex: 0 0 104px;
+  font-size: 13px;
+  color: var(--theme-text);
+  text-align: right;
+}
+
+.field-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  background-color: var(--surface-elevated);
+  border: 1px solid var(--border-color);
+  padding: 8px 10px;
+  color: var(--theme-text);
+  font-size: 13px;
+  font-family: inherit;
+  border-radius: 6px;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.field-input:focus {
+  border-color: var(--theme-primary);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary) 30%, transparent);
+}
+
+.field-input::placeholder {
+  color: color-mix(in srgb, var(--theme-text) 45%, transparent);
+}
+
+/* Invalid field highlight */
+.field-input.invalid {
+  border-color: var(--theme-error, #e05252);
+}
+
+select.field-input {
+  cursor: pointer;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, currentColor 50%),
+    linear-gradient(135deg, currentColor 50%, transparent 50%);
+  background-position: calc(100% - 16px) calc(50% + 1px), calc(100% - 11px) calc(50% + 1px);
+  background-size: 5px 5px, 5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 30px;
+}
+
+/* Contextual hint under the form */
+.field-hint {
+  font-size: 11px;
+  line-height: 1.4;
+  color: color-mix(in srgb, var(--theme-text) 65%, transparent);
+  margin: 4px 0 12px 116px;
+}
+
+.field-hint.hidden {
+  display: none;
+}
+
+/* Validation error banner */
+.dialog-error {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--theme-error, #e05252);
+  background-color: color-mix(in srgb, var(--theme-error, #e05252) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--theme-error, #e05252) 40%, transparent);
+  border-radius: 6px;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  text-align: center;
+}
+
+.dialog-error[hidden] {
+  display: none;
+}
+
+/* Button container styling */
+.dialog-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+/* Button styling - inherit most styles from template */
+.dialog-button {
+  background-color: var(--theme-primary);
+  border-color: var(--theme-primary);
+}
+
+.dialog-button:hover {
+  background-color: var(--theme-primary-hover);
+  border-color: var(--theme-primary-hover);
+}
+
+/* Cancel button variant */
+.dialog-button.cancel {
+  background-color: var(--surface-elevated);
+  border-color: var(--border-color);
+}
+
+.dialog-button.cancel:hover {
+  background-color: var(--surface-muted);
+  border-color: var(--border-color-light);
+}
+
+/* Responsive adjustments */
+@media (max-width: 420px) {
+  .dialog-content {
+    padding: 20px;
+  }
+
+  .field {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 4px;
+  }
+
+  .field-label {
+    flex: none;
+    text-align: left;
+  }
+
+  .field-hint {
+    margin-left: 0;
+  }
+
+  .dialog-buttons {
+    flex-direction: column-reverse;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .dialog-button {
+    width: 140px;
+  }
+}

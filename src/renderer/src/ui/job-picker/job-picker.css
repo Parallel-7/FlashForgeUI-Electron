@@ -126,6 +126,25 @@
   max-width: 100%;
 }
 
+/* Spoolman tracked/untracked indicator for stored files (station printers). */
+.spoolman-track-hint {
+  margin-top: 4px;
+  max-width: 100%;
+  font-size: 10px;
+  line-height: 1.3;
+  text-align: center;
+  word-break: break-word;
+}
+
+.spoolman-track-hint--tracked {
+  color: var(--theme-success, #4caf50);
+}
+
+.spoolman-track-hint--untracked {
+  color: color-mix(in srgb, var(--theme-text) 55%, transparent);
+  cursor: help;
+}
+
 /* Template provides: .dialog-footer styles */
 
 .options {

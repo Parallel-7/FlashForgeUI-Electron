@@ -29,6 +29,7 @@ import type { CameraProxyStatus } from './camera/camera.types.js';
 import type { ISettingsAPI, IPrinterSettingsAPI, IAutoUpdateAPI } from '../ui/settings/types/external.js';
 import type { PrinterSelectionAPI as PrinterSelectionDialogAPI } from '../ui/printer-selection/printer-selection-preload.js';
 import type { DialogAPI as InputDialogAPI } from '../ui/input-dialog/input-dialog-preload.js';
+import type { ManualConnectDialogAPI } from '../ui/manual-connect-dialog/manual-connect-dialog-preload.js';
 import type { JobUploaderAPI } from '../ui/job-uploader/job-uploader-preload.js';
 import type { AppConfig, ThemeColors } from './config.js';
 import type {
@@ -104,15 +105,76 @@ interface PrinterSettingsAPI {
 }
 
 // Spoolman API interface
+
+/** Station tracking view payload (material-station contexts, per-job tracking). */
+interface SpoolmanStationStatus {
+  supported: boolean;
+  note: string;
+  activeJob: {
+    fileName: string;
+    started: boolean;
+    lastProgress: number | null;
+    hasUsageProfile: boolean;
+    tools: Array<{ toolId: number; slotId: number; spoolId: number; usedG: number | null; usedM: number | null }>;
+  } | null;
+  lastDeduction: {
+    fileName: string;
+    terminal: 'completed' | 'cancelled' | 'error' | 'interrupted';
+    progress: number;
+    approximate: boolean;
+    tools: Array<{
+      toolId: number;
+      spoolId: number | null;
+      amount: number | null;
+      mode: 'weight' | 'length';
+      status: 'deducted' | 'skipped';
+    }>;
+    deductedCount: number;
+    skippedCount: number;
+    at: string;
+  } | null;
+}
+
+/** Response of spoolman:get-status. */
+interface SpoolmanStatusInfo {
+  enabled: boolean;
+  disabledReason?: string | null;
+  contextId?: string | null;
+  station?: SpoolmanStationStatus | null;
+}
+
 interface SpoolmanAPI {
-  openSpoolSelection(): Promise<void>;
+  openSpoolSelection(purpose?: 'active' | 'slot-config'): Promise<void>;
   getActiveSpool(contextId?: string): Promise<unknown>;
   setActiveSpool(spool: unknown, contextId?: string): Promise<void>;
   getStatus(
     contextId?: string
-  ): Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
+  ): Promise<SpoolmanStatusInfo>;
   onSpoolSelected(callback: (spool: unknown) => void): void;
   onSpoolUpdated(callback: (spool: unknown) => void): void;
+  onSpoolPickedForSlot(callback: (spool: unknown) => void): () => void;
+}
+
+// Result of an AD5X material-slot configuration attempt
+interface ConfigureSlotResult {
+  success: boolean;
+  error?: string;
+  slot?: number;
+  material?: string | null;
+  colorName?: string;
+  colorHex?: string;
+  spoolName?: string;
+}
+
+// Material station control API interface
+interface MaterialAPI {
+  configureSlot(slot: number, spoolId: number, contextId?: string): Promise<ConfigureSlotResult>;
+  setSlot(
+    slot: number,
+    materialName: string,
+    colorHex: string,
+    contextId?: string
+  ): Promise<ConfigureSlotResult>;
 }
 
 interface ConfigAPI {
@@ -200,6 +262,7 @@ interface DialogNamespace {
   sendCommands?: SendCommandsDialogAPI;
   status?: StatusDialogAPI;
   input?: InputDialogAPI;
+  manualConnect?: ManualConnectDialogAPI;
   materialInfo?: MaterialInfoDialogAPI;
   materialMatching?: MaterialMatchingDialogAPI;
   singleColor?: SingleColorConfirmDialogAPI;
@@ -228,6 +291,7 @@ interface ElectronAPI {
   connectionState: ConnectionStateAPI;
   printerSettings: PrinterSettingsAPI;
   spoolman: SpoolmanAPI;
+  material: MaterialAPI;
 }
 
 // Window controls interface for sub-windows
@@ -243,6 +307,7 @@ declare global {
     api: ElectronAPI;
     componentDialogAPI?: ComponentDialogAPI;
     PLATFORM: string;
+    IS_PACKAGED: boolean;
     windowControls?: WindowControls;
     logMessage?: (message: string) => void;
   }

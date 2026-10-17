@@ -1,54 +1,12 @@
 /**
- * @fileoverview IPC handlers for Component Palette window
- *
- * Registers IPC handlers for communication between the Component Palette window
- * and the main application window. Handles palette open/close, component queries,
- * status updates, and component removal requests with proper coordination.
- *
- * Handlers:
- * - open-component-palette: Open palette window (or focus if exists)
- * - close-component-palette: Close palette window programmatically
- * - palette:close: Close button handler from palette window
- * - palette:get-components: Query available component definitions from registry
- * - palette:opened: Palette window opened notification to main window
- * - palette:update-status: Broadcast grid status to palette (receive & forward)
- * - palette:remove-component: Remove component from grid via grid controls
- * - palette:add-component: Add component to grid via palette button
- *
- * Key exports:
- * - registerPaletteHandlers(): Register all palette IPC handlers on app startup
- *
- * Component Registry Integration:
- * - Queries ComponentRegistry for all available components
- * - Provides component metadata (id, name, icon, category)
- * - Maps registry format to palette-expected format
- *
- * Grid State Synchronization:
- * - Main window broadcasts component additions/removals
- * - Palette updates UI to reflect component availability
- * - Prevents duplicate singleton component additions
- * - Supports button-driven add/remove workflow
- *
- * Communication Flow:
- * 1. Palette requests components via palette:get-components
- * 2. Main process queries ComponentRegistry and returns definitions
- * 3. Main window broadcasts status updates via palette:update-status
- * 4. Palette receives updates and re-renders component list
- * 5. Palette sends add/remove requests via palette:add-component / palette:remove-component
- * 6. Main window updates grid and broadcasts new status
- *
- * Usage:
- * ```typescript
- * import { registerPaletteHandlers } from './palette-handlers';
- *
- * // Register handlers on app startup
- * registerPaletteHandlers();
- * ```
- *
- * @module ipc/handlers/palette-handlers
+ * @fileoverview IPC bridge between the Component Palette window and the main
+ * window's grid: palette open/close, component queries against the shared
+ * component definitions, add/remove requests, and grid-status broadcasts
+ * back to the palette so it can reflect which components are in use.
+ * registerPaletteHandlers() wires all channels at startup.
  */
 
-import { COMPONENT_REGISTRY_DATA } from '@shared/component-definitions.js';
+import { getGridComponentDefinitions } from '@shared/component-definitions.js';
 import { ipcMain } from 'electron';
 import {
   closeComponentPaletteWindow,
@@ -95,8 +53,9 @@ export function registerPaletteHandlers(): void {
     console.log('[Palette Handlers] Fetching available components from shared registry');
 
     try {
-      // Map to the format expected by palette
-      const components: ComponentDefinition[] = COMPONENT_REGISTRY_DATA.map((comp) => ({
+      // Map to the format expected by palette (grid-capable components only;
+      // shortcut-only entries like the file manager never appear here)
+      const components: ComponentDefinition[] = getGridComponentDefinitions().map((comp) => ({
         id: comp.id,
         name: comp.name,
         icon: comp.icon,
@@ -192,8 +151,6 @@ export function registerPaletteHandlers(): void {
       console.warn('[Palette Handlers] Main window not available for edit mode toggle');
     }
   });
-
-  // Drag forwarding no longer required with button-based workflow
 
   console.log('[Palette Handlers] Palette IPC handlers registered successfully');
 }

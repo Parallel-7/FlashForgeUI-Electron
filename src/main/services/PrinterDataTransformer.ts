@@ -21,7 +21,13 @@
  * or malformed data gracefully.
  */
 
-import type { CurrentJobInfo, MaterialSlot, MaterialStationStatus, PrinterStatus } from '@shared/types/polling.js';
+import type {
+  CurrentJobInfo,
+  MaterialSlot,
+  MaterialStationStatus,
+  PrinterStatus,
+  TemperatureData,
+} from '@shared/types/polling.js';
 import { secondsToMinutes } from '@shared/utils/time.utils.js';
 import {
   hasValue,
@@ -79,6 +85,10 @@ export class PrinterDataTransformer {
     const nozzleTemp = safeExtractNumber(backendData, 'nozzleTemperature', 0);
     const nozzleTarget = safeExtractNumber(backendData, 'nozzleTargetTemperature', 0);
 
+    // Per-tool nozzle temperatures (Creator 5 series). The backend surfaces these
+    // as `toolTemps: { current, set }[]`; map to the UI TemperatureData shape.
+    const toolTemps = this.extractToolTemps(backendData);
+
     // Extract current job info
     const currentJobName = safeExtractString(backendData, 'currentJob', '');
     const currentJob = this.extractCurrentJob(backendData, state, currentJobName);
@@ -92,6 +102,12 @@ export class PrinterDataTransformer {
     // Extract fan speeds
     const coolingFanSpeed = safeExtractNumber(backendData, 'coolingFanSpeed', 0);
     const chamberFanSpeed = safeExtractNumber(backendData, 'chamberFanSpeed', 0);
+
+    // Chamber heater (Creator 5 series). The backend only surfaces
+    // `hasChamberControl` for printers that actually have a chamber.
+    const hasChamberControl = backendData.hasChamberControl === true;
+    const chamberTemp = safeExtractNumber(backendData, 'chamberTemp', 0);
+    const chamberTarget = safeExtractNumber(backendData, 'chamberTargetTemp', 0);
 
     // Extract filtration status
     const tvoc = safeExtractNumber(backendData, 'tvoc', 0);
@@ -114,7 +130,17 @@ export class PrinterDataTransformer {
           target: nozzleTarget,
           isHeating: nozzleTarget > 0 && Math.abs(nozzleTemp - nozzleTarget) > 2,
         },
+        ...(hasChamberControl
+          ? {
+              chamber: {
+                current: chamberTemp,
+                target: chamberTarget,
+                isHeating: chamberTarget > 0 && Math.abs(chamberTemp - chamberTarget) > 2,
+              },
+            }
+          : {}),
       },
+      ...(toolTemps.length > 0 ? { toolTemps } : {}),
       fans: {
         coolingFan: coolingFanSpeed,
         chamberFan: chamberFanSpeed,
@@ -122,7 +148,14 @@ export class PrinterDataTransformer {
       filtration: {
         mode: filtrationInfo.filtrationMode || 'none',
         tvocLevel: tvoc,
-        available: filtrationInfo.hasFiltration || false,
+        // Prefer the backend's resolved filtration CAPABILITY flag when present
+        // (model backends force this on for hardware they know has filtration, e.g.
+        // the Creator 5 Pro). Fall back to the per-poll fan heuristic for backends
+        // that don't surface a capability flag.
+        available:
+          typeof backendData.filtrationAvailable === 'boolean'
+            ? backendData.filtrationAvailable
+            : filtrationInfo.hasFiltration || false,
       },
       settings: {
         nozzleSize: parseFloat(nozzleSize) || 0.4,
@@ -154,6 +187,8 @@ export class PrinterDataTransformer {
     const activeSlot = safeExtractNumber(backendData, 'activeSlot', -1);
     const errorMessage = safeExtractString(backendData, 'errorMessage', '');
     const slots = safeExtractArray<unknown>(backendData, 'slots', []);
+    // Propagate the owning model so the renderer can pick the right palette.
+    const printerModelType = safeExtractString(backendData, 'printerModelType', '') || undefined;
 
     const transformedSlots: MaterialSlot[] = slots
       .filter(isValidObject)
@@ -165,6 +200,7 @@ export class PrinterDataTransformer {
       activeSlot: activeSlot >= 0 ? activeSlot : null,
       errorMessage: errorMessage || null,
       lastUpdate: new Date(),
+      printerModelType: printerModelType as MaterialStationStatus['printerModelType'],
     };
   }
 
@@ -214,10 +250,16 @@ export class PrinterDataTransformer {
           elapsedTimeSeconds: 0,
           weightUsed: 0,
           lengthUsed: 0,
+          completionTime: null,
         },
         isActive: false,
       };
     }
+
+    // Library-computed completion timestamp (Date | null). Null while the print
+    // is not advancing. Read directly so the Date instance is preserved.
+    const completionTime: Date | null =
+      backendData.completionTime instanceof Date ? backendData.completionTime : null;
 
     // Enhanced progress data extraction with legacy printer support
     const rawProgress = safeExtractNumber(backendData, 'progress', 0);
@@ -272,6 +314,7 @@ export class PrinterDataTransformer {
       weightUsed: filamentWeight,
       lengthUsed: filamentUsed,
       formattedEta: printEta || undefined,
+      completionTime,
     };
 
     // Validate progress data for type safety
@@ -301,6 +344,31 @@ export class PrinterDataTransformer {
   /**
    * Extract filtration status from backend data
    */
+  /**
+   * Extract per-tool nozzle temperatures from the backend status.
+   *
+   * The Creator 5 backend surfaces `toolTemps` as an array of `{ current, set }`
+   * (ff-api Temperature). Map each to the UI TemperatureData shape. Returns an
+   * empty array for single-nozzle printers that don't report it.
+   */
+  private extractToolTemps(backendData: Record<string, unknown>): TemperatureData[] {
+    const raw = backendData.toolTemps;
+    if (!Array.isArray(raw)) {
+      return [];
+    }
+
+    return raw.map((entry) => {
+      const tool = isValidObject(entry) ? entry : {};
+      const current = safeExtractNumber(tool, 'current', 0);
+      const target = safeExtractNumber(tool, 'set', 0);
+      return {
+        current,
+        target,
+        isHeating: target > 0 && Math.abs(current - target) > 2,
+      };
+    });
+  }
+
   private extractFiltrationStatus(backendData: Record<string, unknown>): {
     hasFiltration?: boolean;
     filtrationMode?: 'external' | 'internal' | 'none';

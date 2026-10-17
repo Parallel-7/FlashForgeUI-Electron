@@ -5,13 +5,30 @@
  * and SSH helpers so the WebUI can mirror the desktop dialog functionality.
  */
 
-import type { CalibrationSettings, ShaperResult, SSHConnectionConfig } from '@shared/types/calibration.js';
+import type { CalibrationSettings, ShaperResult } from '@shared/types/calibration.js';
 import type { Response, Router } from 'express';
 import { getCalibrationManager } from '../../../managers/CalibrationManager.js';
+import { getPrinterContextManager } from '../../../managers/PrinterContextManager.js';
 import { getSSHConnectionManager, SCPFileTransfer } from '../../../services/calibration/ssh/index.js';
+import { getSSHSettingsService } from '../../../services/SSHSettingsService.js';
 import { toAppError } from '../../../utils/error.utils.js';
 import type { AuthenticatedRequest } from '../auth-middleware.js';
 import { type RouteDependencies, resolveContext, sendErrorResponse } from './route-helpers.js';
+
+/**
+ * Resolve a context id to the printer's serial number and IP for SSH purposes.
+ */
+function resolveSshTarget(contextId: string): { serialNumber: string; host: string } | null {
+  const contextManager = getPrinterContextManager();
+  const context = contextManager.getContext(contextId);
+  if (!context) {
+    return null;
+  }
+  return {
+    serialNumber: context.printerDetails.SerialNumber,
+    host: context.printerDetails.IPAddress,
+  };
+}
 
 const REPORT_FORMATS = new Set(['json', 'csv', 'png', 'pdf'] as const);
 type ReportFormat = 'json' | 'csv' | 'png' | 'pdf';
@@ -320,16 +337,21 @@ export function registerCalibrationRoutes(router: Router, deps: RouteDependencie
       }
 
       const data = await manager.getPrinterData(contextResult.contextId);
+      const target = resolveSshTarget(contextResult.contextId);
+      if (!target) {
+        return res.json({ success: true, config: { configPath: data.sshConfigPath } });
+      }
+
+      const ssh = await getSSHSettingsService().getSettings(target.serialNumber);
       return res.json({
         success: true,
         config: {
-          host: data.sshHost,
-          port: data.sshPort,
-          username: data.sshUsername,
-          password: data.sshPassword,
-          keyPath: data.sshKeyPath,
+          host: target.host,
+          port: ssh.port,
+          username: ssh.username,
+          keyPath: ssh.keyPath,
+          isCustom: ssh.isCustom,
           configPath: data.sshConfigPath,
-          saveCredentials: data.sshSaveCredentials,
         },
       });
     } catch (error) {
@@ -346,27 +368,36 @@ export function registerCalibrationRoutes(router: Router, deps: RouteDependencie
       }
 
       const config = (req.body ?? {}) as {
-        host?: string;
         port?: number;
         username?: string;
         password?: string;
         keyPath?: string;
         configPath?: string;
-        saveCredentials?: boolean;
       };
 
-      const data = await manager.getPrinterData(contextResult.contextId);
-      const updated = {
-        ...data,
-        sshHost: config.host,
-        sshPort: config.port,
-        sshUsername: config.username,
-        sshPassword: config.password,
-        sshKeyPath: config.keyPath,
-        sshConfigPath: config.configPath,
-        sshSaveCredentials: config.saveCredentials ?? true,
-      };
-      await manager.savePrinterData(contextResult.contextId, updated);
+      const target = resolveSshTarget(contextResult.contextId);
+      if (
+        target &&
+        (config.username !== undefined ||
+          config.password !== undefined ||
+          config.port !== undefined ||
+          config.keyPath !== undefined)
+      ) {
+        await getSSHSettingsService().updateSettings(target.serialNumber, {
+          username: config.username,
+          password: config.password,
+          port: config.port,
+          keyPath: config.keyPath,
+        });
+      }
+
+      if (config.configPath !== undefined) {
+        const data = await manager.getPrinterData(contextResult.contextId);
+        await manager.savePrinterData(contextResult.contextId, {
+          ...data,
+          sshConfigPath: config.configPath || undefined,
+        });
+      }
       return res.json({ success: true });
     } catch (error) {
       const appError = toAppError(error);
@@ -381,16 +412,15 @@ export function registerCalibrationRoutes(router: Router, deps: RouteDependencie
         return sendErrorResponse(res, contextResult.statusCode, contextResult.error);
       }
 
+      const target = resolveSshTarget(contextResult.contextId);
+      if (target) {
+        await getSSHSettingsService().resetSettings(target.serialNumber);
+      }
+
       const data = await manager.getPrinterData(contextResult.contextId);
       const updated = {
         ...data,
-        sshHost: undefined,
-        sshPort: undefined,
-        sshUsername: undefined,
-        sshPassword: undefined,
-        sshKeyPath: undefined,
         sshConfigPath: undefined,
-        sshSaveCredentials: false,
       };
       await manager.savePrinterData(contextResult.contextId, updated);
       return res.json({ success: true });
@@ -407,9 +437,13 @@ export function registerCalibrationRoutes(router: Router, deps: RouteDependencie
         return sendErrorResponse(res, contextResult.statusCode, contextResult.error);
       }
 
-      const config = (req.body ?? {}) as SSHConnectionConfig;
-      const resolvedConfig = await resolvePrivateKey(config);
-      await sshManager.connect(contextResult.contextId, resolvedConfig);
+      const target = resolveSshTarget(contextResult.contextId);
+      if (!target || !target.host) {
+        return sendErrorResponse(res, 409, 'No connected printer to resolve SSH settings for');
+      }
+
+      const config = await getSSHSettingsService().buildConnectionConfig(target.serialNumber, target.host);
+      await sshManager.connect(contextResult.contextId, config);
       return res.json({ success: true });
     } catch (error) {
       const appError = toAppError(error);
@@ -522,20 +556,6 @@ export function registerCalibrationRoutes(router: Router, deps: RouteDependencie
       return sendErrorResponse(res, 500, appError.message);
     }
   });
-}
-
-async function resolvePrivateKey(config: SSHConnectionConfig): Promise<SSHConnectionConfig> {
-  if (!config.privateKey || config.privateKey.includes('BEGIN')) {
-    return config;
-  }
-
-  try {
-    const fs = await import('fs/promises');
-    const keyContent = await fs.readFile(config.privateKey, 'utf-8');
-    return { ...config, privateKey: keyContent };
-  } catch {
-    return config;
-  }
 }
 
 function sendReportPayload(res: Response, payload: string | Buffer, format: ReportFormat): Response {

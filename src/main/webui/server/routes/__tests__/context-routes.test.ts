@@ -3,12 +3,6 @@
  * and switch the active printer context.
  */
 
-/**
- * @fileoverview Jest coverage for WebUI context route handlers.
- *
- * Verifies context listing, switching, and error handling for the API used by
- * the multi-printer WebUI context selector.
- */
 import express from 'express';
 import { registerContextRoutes } from '../context-routes.js';
 import { startTestServer } from '../test-server.js';

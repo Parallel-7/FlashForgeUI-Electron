@@ -1,8 +1,6 @@
 /**
  * @fileoverview Preload script for the Calibration Assistant dialog.
  * Exposes calibration IPC methods to the renderer process via context bridge.
- *
- * @module renderer/ui/calibration-dialog/calibration-dialog-preload
  */
 
 import { contextBridge, ipcRenderer } from 'electron';
@@ -14,7 +12,6 @@ import type {
   CalibrationSettings,
   MeshData,
   ShaperResult,
-  SSHConnectionConfig,
   SSHConnectionStatus,
   TransferResult,
   WorkflowData,
@@ -31,14 +28,18 @@ interface CommandResult {
   error?: string;
 }
 
+/**
+ * SSH info surfaced to the calibration dialog. Credentials are managed
+ * centrally (Settings -> SSH); only the calibration-specific remote config
+ * path is writable from this dialog.
+ */
 interface StoredSSHConfig {
   host?: string;
   port?: number;
   username?: string;
-  password?: string;
   keyPath?: string;
+  isCustom?: boolean;
   configPath?: string;
-  saveCredentials?: boolean;
 }
 
 interface ActivePrinterContextInfo {
@@ -199,9 +200,9 @@ const calibrationAPI = {
   // SSH Operations
   // ============================================================================
 
-  /** Connect to printer via SSH */
-  sshConnect: (contextId: string, config: SSHConnectionConfig): Promise<void> => {
-    return ipcRenderer.invoke('calibration:ssh-connect', contextId, config);
+  /** Connect to printer via SSH using the centralized per-printer settings */
+  sshConnect: (contextId: string): Promise<void> => {
+    return ipcRenderer.invoke('calibration:ssh-connect', contextId);
   },
 
   /** Disconnect SSH */
@@ -264,8 +265,8 @@ const calibrationAPI = {
     return ipcRenderer.invoke('calibration:get-ssh-config', contextId);
   },
 
-  /** Save SSH config for this printer */
-  saveSSHConfig: (contextId: string, config: StoredSSHConfig): Promise<void> => {
+  /** Save the calibration remote config path (credentials live in Settings -> SSH) */
+  saveSSHConfig: (contextId: string, config: Pick<StoredSSHConfig, 'configPath'>): Promise<void> => {
     return ipcRenderer.invoke('calibration:save-ssh-config', contextId, config);
   },
 

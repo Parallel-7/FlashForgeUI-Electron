@@ -4,10 +4,6 @@
  * Verifies `copy-webui-assets.cjs` rewrites local asset URLs and module
  * imports with a shared build stamp while leaving external URLs untouched.
  */
-/**
- * @fileoverview Tests for the build-time WebUI asset copier, including version stamping
- * and module import rewriting for cache-busted static output.
- */
 
 import * as fs from 'fs';
 import * as os from 'os';

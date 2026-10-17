@@ -686,3 +686,18 @@ input[type="checkbox"] {
   font-size: 0.85em;
   color: var(--text-color-secondary);
 }
+
+/* SSH settings tab */
+.input-with-button {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.input-with-button .settings-input {
+  flex: 1;
+}
+
+#ssh-settings-status {
+  margin-left: 12px;
+}

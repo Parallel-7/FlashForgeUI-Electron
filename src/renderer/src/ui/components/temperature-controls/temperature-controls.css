@@ -13,6 +13,18 @@
   background: transparent;
 }
 
+/* Redirect notice shown on tool-changers (Creator 5), which use their own card. */
+.temperature-controls__redirect {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 12px;
+  color: var(--text-color-muted);
+  font-size: 0.85em;
+}
+
 .temperature-controls .panel-header {
   background: var(--surface-muted);
   padding: 10px 14px;

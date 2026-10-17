@@ -14,8 +14,6 @@
  * - SpoolSearchQuery: Query parameters for searching spools
  * - SpoolUsageUpdate: Payload for updating filament usage
  * - ActiveSpoolData: Simplified spool data for UI components
- *
- * @module types/spoolman
  */
 
 /**

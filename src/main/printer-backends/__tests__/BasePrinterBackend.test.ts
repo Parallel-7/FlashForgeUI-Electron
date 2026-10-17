@@ -1,14 +1,9 @@
 /**
  * @fileoverview Tests for BasePrinterBackend feature normalization, status helpers,
- * and default backend behavior shared by concrete printer implementations.
+ * command and job forwarding, polling, and default backend behavior shared by
+ * concrete printer implementations.
  */
 
-/**
- * @fileoverview Jest coverage for shared `BasePrinterBackend` behavior.
- *
- * Validates the common backend contract around polling, command forwarding,
- * job helpers, and lifecycle/event behavior used by concrete printer backends.
- */
 import type {
   CommandResult,
   GCodeCommandResult,

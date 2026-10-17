@@ -2,8 +2,6 @@
  * @fileoverview Shared type definitions for the Calibration Assistant module.
  * These types are used across main process, renderer, and WebUI for bed leveling,
  * input shaper analysis, and calibration workflow operations.
- *
- * @module shared/types/calibration
  */
 
 // ============================================================================
@@ -558,20 +556,12 @@ export interface CalibrationHistoryEntry {
  * Per-printer calibration data stored with printer context.
  */
 export interface PrinterCalibrationData {
-  /** SSH host for this printer */
-  sshHost?: string;
-  /** SSH port (default: 22) */
-  sshPort?: number;
-  /** SSH username */
-  sshUsername?: string;
-  /** SSH password (encrypted) */
-  sshPassword?: string;
-  /** Path to SSH private key */
-  sshKeyPath?: string;
-  /** Remote printer.cfg path override */
+  /**
+   * Remote printer.cfg path override (calibration-specific). SSH credentials
+   * (host/port/username/password/keyPath) live in the centralized
+   * SSHSettingsService keyed by serial number, not here.
+   */
   sshConfigPath?: string;
-  /** Whether credentials should be persisted */
-  sshSaveCredentials?: boolean;
 
   /** Last bed mesh calibration */
   lastBedMesh?: {

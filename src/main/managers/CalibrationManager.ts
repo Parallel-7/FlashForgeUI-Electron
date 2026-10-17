@@ -2,8 +2,6 @@
  * @fileoverview Central manager for calibration operations.
  * Coordinates between parsers, analysis engines, and UI components.
  * Provides a unified interface for all calibration functionality.
- *
- * @module main/managers/CalibrationManager
  */
 
 import { app } from 'electron';
@@ -26,7 +24,6 @@ import { DEFAULT_BED_CONFIG, DEFAULT_CALIBRATION_SETTINGS } from '../../shared/t
 import { Bed, DeviationAnalyzer, ScrewSolver, TapeCalculator, WorkflowEngine } from '../services/calibration/engine';
 import { KlipperConfigParser } from '../services/calibration/parsers/KlipperConfigParser';
 import { renderHeatmapPNG, renderReportPDF } from '../services/calibration/report/ReportRenderer';
-import { decryptSecret, encryptSecret } from '../utils/SecureStorage';
 
 type SerializedWorkflowData = Omit<WorkflowData, 'stages'> & {
   stages: Array<[WorkflowStage, StageResult]>;
@@ -429,10 +426,6 @@ export class CalibrationManager {
       calibrationHistory: historyData ? this.deserializeHistoryEntries(historyData) : undefined,
     };
 
-    if (data.sshPassword) {
-      data.sshPassword = decryptSecret(data.sshPassword);
-    }
-
     this.printerData.set(contextId, data);
     return data;
   }
@@ -444,18 +437,9 @@ export class CalibrationManager {
     await this.ensurePrinterDirs(contextId);
     const paths = this.getPrinterPaths(contextId);
 
-    const shouldPersistSSH = data.sshSaveCredentials !== false;
-    const sshPayload: PrinterCalibrationData = shouldPersistSSH
-      ? {
-          sshHost: data.sshHost,
-          sshPort: data.sshPort,
-          sshUsername: data.sshUsername,
-          sshPassword: data.sshPassword ? encryptSecret(data.sshPassword) : undefined,
-          sshKeyPath: data.sshKeyPath,
-          sshConfigPath: data.sshConfigPath,
-          sshSaveCredentials: data.sshSaveCredentials,
-        }
-      : {};
+    const sshPayload: PrinterCalibrationData = {
+      sshConfigPath: data.sshConfigPath,
+    };
 
     const sshHasValues = Object.values(sshPayload).some((value) => value !== undefined && value !== '');
     if (sshHasValues) {

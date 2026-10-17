@@ -6,12 +6,18 @@ import type { AD5XJobInfo, BasicJobInfo } from '@shared/types/printer-backend/ba
 import { StandardAPIResponse } from '@shared/types/web-api.types.js';
 import type { Response, Router } from 'express';
 import { isAD5XJobInfo } from '../../../printer-backends/ad5x/ad5x-utils.js';
+import { clearTrackedJob, commitStoredFileJob, prepareStoredFileJob } from '../../../services/job-tracking.js';
+import { getThumbnailCacheService } from '../../../services/ThumbnailCacheService.js';
 import { toAppError } from '../../../utils/error.utils.js';
 import { createValidationError, JobStartRequestSchema } from '../../schemas/web-api.schemas.js';
 import type { AuthenticatedRequest } from '../auth-middleware.js';
 import { type RouteDependencies, resolveContext, sendErrorResponse } from './route-helpers.js';
 
 type JobSource = 'local' | 'recent';
+
+interface ThumbnailAPIResponse extends StandardAPIResponse {
+  readonly thumbnail?: string | null;
+}
 
 export function registerJobRoutes(router: Router, deps: RouteDependencies): void {
   router.get('/jobs/local', async (req: AuthenticatedRequest, res: Response) => {
@@ -20,6 +26,10 @@ export function registerJobRoutes(router: Router, deps: RouteDependencies): void
 
   router.get('/jobs/recent', async (req: AuthenticatedRequest, res: Response) => {
     await handleJobListRequest(req, res, deps, 'recent');
+  });
+
+  router.get('/jobs/thumbnail', async (req: AuthenticatedRequest, res: Response) => {
+    await handleThumbnailRequest(req, res, deps);
   });
 
   router.post('/jobs/start', async (req: AuthenticatedRequest, res: Response) => {
@@ -61,6 +71,24 @@ export function registerJobRoutes(router: Router, deps: RouteDependencies): void
         }
       }
 
+      // Spoolman per-job tracking for a file already on the printer: read the
+      // printer's per-tool data before the start, while the file list is
+      // stable. Only jobs with spool choices from the matching dialog qualify.
+      const contextId = contextResult.contextId;
+      const isStation = deps.backendManager.isFeatureAvailable(contextId, 'material-station');
+      const { spoolAssignments, startNow, filename } = validation.data;
+      let trackedTools: Awaited<ReturnType<typeof prepareStoredFileJob>> | null = null;
+      if (isStation && startNow && materialMappings?.length && spoolAssignments?.length) {
+        try {
+          trackedTools = await prepareStoredFileJob(contextId, filename, materialMappings, spoolAssignments);
+        } catch (error) {
+          console.warn(
+            '[job-routes] Spoolman job tracking lookup failed (start continues):',
+            error instanceof Error ? error.message : error
+          );
+        }
+      }
+
       const result = await deps.backendManager.startJob(contextResult.contextId, {
         operation: 'start',
         fileName: validation.data.filename,
@@ -68,6 +96,22 @@ export function registerJobRoutes(router: Router, deps: RouteDependencies): void
         leveling: validation.data.leveling,
         additionalParams: materialMappings && materialMappings.length > 0 ? { materialMappings } : undefined,
       });
+
+      if (isStation && result.success && startNow) {
+        try {
+          clearTrackedJob(contextId);
+          if (trackedTools && 'tools' in trackedTools) {
+            commitStoredFileJob(contextId, filename, trackedTools.tools);
+          } else if (trackedTools) {
+            console.log(`[job-routes] ${filename} is not Spoolman-tracked (${trackedTools.reason}).`);
+          }
+        } catch (error) {
+          console.warn(
+            '[job-routes] Spoolman job tracking failed (start continues):',
+            error instanceof Error ? error.message : error
+          );
+        }
+      }
 
       const response: StandardAPIResponse = {
         success: result.success,
@@ -111,6 +155,57 @@ async function handleJobListRequest(
   } catch (error) {
     const appError = toAppError(error);
     return sendErrorResponse<StandardAPIResponse>(res, 500, appError.message);
+  }
+}
+
+/**
+ * Serve a single job thumbnail for the lazy-loading file dialog. Mirrors the desktop
+ * job picker: check the shared per-printer {@link getThumbnailCacheService} first, and on
+ * a miss fetch from the resolved context's backend and cache the result. Fetching by the
+ * request's resolved context (not the active one) keeps multi-printer clients correct.
+ * Returns raw base64 (no data URL prefix); `thumbnail` is null when none is available.
+ */
+async function handleThumbnailRequest(
+  req: AuthenticatedRequest,
+  res: Response,
+  deps: RouteDependencies
+): Promise<Response | void> {
+  try {
+    const contextResult = resolveContext(req, deps, { requireBackendReady: true });
+    if (!contextResult.success) {
+      return sendErrorResponse<ThumbnailAPIResponse>(res, contextResult.statusCode, contextResult.error);
+    }
+
+    const filenameParam = req.query.filename;
+    const filename = typeof filenameParam === 'string' ? filenameParam : '';
+    if (!filename) {
+      return sendErrorResponse<ThumbnailAPIResponse>(res, 400, 'filename query parameter is required');
+    }
+
+    const serialNumber = deps.backendManager.getPrinterDetailsForContext(contextResult.contextId)?.SerialNumber;
+    const cache = getThumbnailCacheService();
+
+    if (serialNumber) {
+      const cached = await cache.get(serialNumber, filename);
+      if (cached.success && cached.data) {
+        return res.json({ success: true, thumbnail: cached.data } satisfies ThumbnailAPIResponse);
+      }
+    }
+
+    const thumbnail = await deps.backendManager.getJobThumbnail(contextResult.contextId, filename);
+    if (!thumbnail) {
+      return res.json({ success: true, thumbnail: null } satisfies ThumbnailAPIResponse);
+    }
+
+    const base64 = thumbnail.replace(/^data:image\/\w+;base64,/, '');
+    if (serialNumber) {
+      await cache.set(serialNumber, filename, base64);
+    }
+
+    return res.json({ success: true, thumbnail: base64 } satisfies ThumbnailAPIResponse);
+  } catch (error) {
+    const appError = toAppError(error);
+    return sendErrorResponse<ThumbnailAPIResponse>(res, 500, appError.message);
   }
 }
 

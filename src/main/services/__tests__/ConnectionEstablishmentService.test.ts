@@ -3,13 +3,6 @@
  * initialization flow, and printer-info handshake handling.
  */
 
-/**
- * @fileoverview Jest coverage for `ConnectionEstablishmentService`.
- *
- * Exercises direct and discovery connection flows, ff-api client selection,
- * pairing-code handling, and the printer detail normalization returned to the
- * rest of the connection pipeline.
- */
 const flashForgeClientConfigs: any[] = [];
 const flashForgeClientInstances: any[] = [];
 const fiveMClientConfigs: any[] = [];
@@ -257,7 +250,7 @@ describe('ConnectionEstablishmentService', () => {
       '192.168.1.130',
       'SN-PORTS',
       '7777',
-      { httpPort: 19098, tcpPort: 19099 },
+      { httpPort: 19098, tcpPort: 19099, httpOnly: false },
     ]);
     expect(flashForgeClientInstances[0].args).toEqual(['192.168.1.130', { port: 19099 }]);
   });
@@ -441,6 +434,64 @@ describe('ConnectionEstablishmentService', () => {
       primaryClient: fiveMClientInstances[0],
       secondaryClient: flashForgeClientInstances[0],
     });
+  });
+
+  it('forces HTTP-only mode for a Creator 5 even when forceLegacyMode is true', async () => {
+    // Regression: a Creator 5 saved as legacy under an older build must not be
+    // routed to the (nonexistent) legacy TCP server — that hangs on port 8899.
+    const service = ConnectionEstablishmentService.getInstance();
+
+    fiveMClientConfigs.push({
+      initialize: jest.fn().mockResolvedValue(true),
+      initControl: jest.fn().mockResolvedValue(true),
+    });
+
+    const result = await service.establishFinalConnection(
+      {
+        name: 'Creator 5',
+        ipAddress: '10.0.0.14',
+        serialNumber: 'SN-C5-LEGACYFLAG',
+      },
+      'Creator 5',
+      true,
+      '4444',
+      true, // stale forceLegacyMode — must be ignored for HTTP-only models
+      'creator-5'
+    );
+
+    // HTTP-only: a single FiveMClient, no secondary TCP client, no legacy client.
+    expect(result).toEqual({
+      primaryClient: fiveMClientInstances[0],
+    });
+    expect(flashForgeClientInstances).toHaveLength(0);
+    expect(fiveMClientInstances[0].args[3]).toMatchObject({ httpOnly: true });
+  });
+
+  it('forces HTTP-only mode for a Creator 5 inferred from type name when no model type is passed', async () => {
+    const service = ConnectionEstablishmentService.getInstance();
+
+    fiveMClientConfigs.push({
+      initialize: jest.fn().mockResolvedValue(true),
+      initControl: jest.fn().mockResolvedValue(true),
+    });
+
+    const result = await service.establishFinalConnection(
+      {
+        name: 'Creator 5 Pro',
+        ipAddress: '10.0.0.15',
+        serialNumber: 'SN-C5P-NOMODEL',
+      },
+      'Creator 5 Pro',
+      true,
+      '4444',
+      false
+      // no modelType — must fall back to the type name and still go HTTP-only
+    );
+
+    expect(result).toEqual({
+      primaryClient: fiveMClientInstances[0],
+    });
+    expect(flashForgeClientInstances).toHaveLength(0);
   });
 
   it('logs out legacy clients before disposing them', async () => {

@@ -13,9 +13,17 @@ import type {
   MaterialStationStatus,
   MaterialStationStatusResponse,
   PendingJobStart,
+  SpoolAssignment,
+  SpoolSearchResponse,
+  SpoolSummary,
   WebUIJobFile,
 } from '../app.js';
-import { getMaterialMatchingState, setMaterialMatchingState, state } from '../core/AppState.js';
+import {
+  getMaterialMatchingState,
+  type MaterialMatchingHooks,
+  setMaterialMatchingState,
+  state,
+} from '../core/AppState.js';
 import { apiRequest } from '../core/Transport.js';
 import { $, hideElement, showElement, showToast } from '../shared/dom.js';
 import { colorsDiffer, isAD5XJobFile, materialsMatch } from '../shared/formatting.js';
@@ -38,34 +46,81 @@ function getMaterialMessageElement(type: MaterialMessageType): HTMLDivElement | 
 }
 
 export function clearMaterialMessages(): void {
-  (['error', 'warning'] as const).forEach((type) => {
-    const messageEl = getMaterialMessageElement(type);
-    if (messageEl) {
-      messageEl.classList.add('hidden');
-      messageEl.textContent = '';
-    }
-  });
+  const errorEl = getMaterialMessageElement('error');
+  if (errorEl) {
+    errorEl.classList.add('hidden');
+    errorEl.textContent = '';
+  }
+  hideMaterialWarnings();
+}
+
+function hideMaterialWarnings(): void {
+  const warningEl = getMaterialMessageElement('warning');
+  const list = getMaterialMatchingElement<HTMLDivElement>('material-matching-warning-list');
+  if (list) {
+    list.textContent = '';
+  }
+  warningEl?.classList.add('hidden');
 }
 
 export function showMaterialError(text: string): void {
   const errorEl = getMaterialMessageElement('error');
-  const warningEl = getMaterialMessageElement('warning');
-  if (warningEl) {
-    warningEl.classList.add('hidden');
-    warningEl.textContent = '';
-  }
   if (errorEl) {
     errorEl.textContent = text;
     errorEl.classList.remove('hidden');
   }
 }
 
-export function showMaterialWarning(text: string): void {
+/**
+ * One line per mapping whose tool colour does not match the slot it was mapped
+ * to. Rebuilt from the current mappings on every change, so the card always
+ * reflects the whole set rather than the last click. The wording is shared with
+ * the desktop dialog.
+ */
+export function refreshColorWarnings(): void {
+  const matchingState = getMaterialMatchingState();
   const warningEl = getMaterialMessageElement('warning');
-  if (warningEl) {
-    warningEl.textContent = text;
-    warningEl.classList.remove('hidden');
+  const list = getMaterialMatchingElement<HTMLDivElement>('material-matching-warning-list');
+  if (!warningEl || !list) {
+    return;
   }
+
+  list.textContent = '';
+
+  const mismatched = matchingState
+    ? Array.from(matchingState.mappings.values()).filter((mapping) =>
+        colorsDiffer(mapping.toolMaterialColor, mapping.slotMaterialColor)
+      )
+    : [];
+
+  if (mismatched.length === 0) {
+    warningEl.classList.add('hidden');
+    return;
+  }
+
+  mismatched.forEach((mapping) => {
+    const item = document.createElement('div');
+    item.className = 'material-matching-warning-item';
+    item.textContent = colorMismatchMessage(
+      mapping.toolId,
+      mapping.toolMaterialColor,
+      mapping.slotId,
+      mapping.slotMaterialColor
+    );
+    list.appendChild(item);
+  });
+
+  warningEl.classList.remove('hidden');
+}
+
+/** Shared wording - keep in step with the desktop material matching dialog. */
+export function colorMismatchMessage(
+  toolId: number,
+  toolColor: string,
+  slotId: number,
+  slotColor: string
+): string {
+  return `Tool ${toolId + 1} expects ${toolColor} but Slot ${slotId} has ${slotColor}.`;
 }
 
 export function updateMaterialMatchingConfirmState(): void {
@@ -82,7 +137,104 @@ export function updateMaterialMatchingConfirmState(): void {
 
   const job = matchingState.pending.job;
   const requiredMappings = isAD5XJobFile(job) ? job.toolDatas.length : 0;
-  confirmButton.disabled = matchingState.mappings.size !== requiredMappings;
+  confirmButton.disabled =
+    matchingState.mappings.size !== requiredMappings || !allSpoolsChosen();
+}
+
+/** True when spool tracking does not apply, or every mapped tool has a spool choice. */
+function allSpoolsChosen(): boolean {
+  const matchingState = getMaterialMatchingState();
+  if (!matchingState || matchingState.spools === null) {
+    return true;
+  }
+  for (const toolId of matchingState.mappings.keys()) {
+    if (!matchingState.spoolChoices.has(toolId)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Spool choices for the confirmed mappings (empty when tracking does not apply). */
+function collectSpoolAssignments(mappings: readonly MaterialMapping[]): SpoolAssignment[] {
+  const matchingState = getMaterialMatchingState();
+  if (!matchingState || matchingState.spools === null) {
+    return [];
+  }
+  return mappings.map((mapping) => ({
+    toolId: mapping.toolId,
+    spoolId: matchingState.spoolChoices.get(mapping.toolId) ?? null,
+  }));
+}
+
+const SPOOL_PLACEHOLDER_VALUE = '';
+const SPOOL_UNTRACKED_VALUE = 'none';
+
+function describeSpool(spool: SpoolSummary): string {
+  const parts = [`#${spool.id}`, spool.vendor, spool.name].filter(Boolean);
+  const remaining = Number.isFinite(spool.remainingWeight)
+    ? ` (${Math.round(spool.remainingWeight)} g left)`
+    : '';
+  return `${parts.join(' ')}${remaining}`;
+}
+
+/**
+ * Spool picker for one mapping. Spools whose material matches the tool come
+ * first, so the usual choice is near the top.
+ */
+function createSpoolSelect(mapping: MaterialMapping, spools: readonly SpoolSummary[]): HTMLSelectElement {
+  const matchingState = getMaterialMatchingState();
+  const select = document.createElement('select');
+  select.className = 'material-mapping-spool';
+  select.dataset.toolId = `${mapping.toolId}`;
+  select.setAttribute('aria-label', `Spoolman spool for tool ${mapping.toolId + 1}`);
+
+  const placeholder = document.createElement('option');
+  placeholder.value = SPOOL_PLACEHOLDER_VALUE;
+  placeholder.textContent = 'Choose a spool\u2026';
+  placeholder.disabled = true;
+  select.appendChild(placeholder);
+
+  const untracked = document.createElement('option');
+  untracked.value = SPOOL_UNTRACKED_VALUE;
+  untracked.textContent = 'Do not track';
+  select.appendChild(untracked);
+
+  const sorted = [...spools].sort((a, b) => {
+    const aMatch = materialsMatch(mapping.materialName, a.material) ? 0 : 1;
+    const bMatch = materialsMatch(mapping.materialName, b.material) ? 0 : 1;
+    return aMatch - bMatch || a.id - b.id;
+  });
+  for (const spool of sorted) {
+    const option = document.createElement('option');
+    option.value = `${spool.id}`;
+    option.textContent = describeSpool(spool);
+    select.appendChild(option);
+  }
+
+  const choice = matchingState?.spoolChoices.get(mapping.toolId);
+  select.value =
+    choice === undefined
+      ? SPOOL_PLACEHOLDER_VALUE
+      : choice === null
+        ? SPOOL_UNTRACKED_VALUE
+        : `${choice}`;
+
+  select.addEventListener('change', () => {
+    const current = getMaterialMatchingState();
+    if (!current) {
+      return;
+    }
+    if (select.value === SPOOL_UNTRACKED_VALUE) {
+      current.spoolChoices.set(mapping.toolId, null);
+    } else if (select.value === SPOOL_PLACEHOLDER_VALUE) {
+      current.spoolChoices.delete(mapping.toolId);
+    } else {
+      current.spoolChoices.set(mapping.toolId, Number(select.value));
+    }
+    updateMaterialMatchingConfirmState();
+  });
+  return select;
 }
 
 export function renderMaterialMappings(): void {
@@ -110,9 +262,21 @@ export function renderMaterialMappings(): void {
       item.classList.add('warning');
     }
 
+    // Swatches on both sides, as the desktop dialog shows them: the tool colour
+    // and the slot colour are what a mismatch is actually about.
+    const content = document.createElement('span');
+    content.className = 'material-mapping-content';
+
     const text = document.createElement('span');
     text.className = 'material-mapping-text';
-    text.innerHTML = `Tool ${mapping.toolId + 1} <span class="material-mapping-arrow">&rarr;</span> Slot ${mapping.slotId}`;
+    const arrow = document.createElement('span');
+    arrow.className = 'material-mapping-arrow';
+    arrow.textContent = '→';
+    text.append(`Tool ${mapping.toolId + 1} `, arrow, ` Slot ${mapping.slotId}`);
+
+    content.appendChild(createMappingSwatch(mapping.toolMaterialColor));
+    content.appendChild(text);
+    content.appendChild(createMappingSwatch(mapping.slotMaterialColor));
 
     const removeBtn = document.createElement('button');
     removeBtn.className = 'material-mapping-remove';
@@ -123,10 +287,20 @@ export function renderMaterialMappings(): void {
       handleRemoveMapping(mapping.toolId);
     });
 
-    item.appendChild(text);
+    item.appendChild(content);
+    if (matchingState.spools !== null) {
+      item.appendChild(createSpoolSelect(mapping, matchingState.spools));
+    }
     item.appendChild(removeBtn);
     container.appendChild(item);
   });
+}
+
+function createMappingSwatch(color: string): HTMLSpanElement {
+  const swatch = document.createElement('span');
+  swatch.className = 'material-mapping-swatch';
+  swatch.style.backgroundColor = color || DEFAULT_SLOT_GREY;
+  return swatch;
 }
 
 function handleRemoveMapping(toolId: number): void {
@@ -136,11 +310,13 @@ function handleRemoveMapping(toolId: number): void {
   }
 
   matchingState.mappings.delete(toolId);
+  matchingState.spoolChoices.delete(toolId);
   renderMaterialRequirements(matchingState.pending.job);
   renderMaterialSlots(matchingState.materialStation);
   renderMaterialMappings();
   updateMaterialMatchingConfirmState();
   clearMaterialMessages();
+  refreshColorWarnings();
 }
 
 export function renderMaterialRequirements(job: WebUIJobFile | undefined): void {
@@ -250,7 +426,7 @@ export function renderMaterialSlots(status: MaterialStationStatus | null): void 
   if (!status) {
     const empty = document.createElement('div');
     empty.className = 'material-placeholder';
-    empty.textContent = 'Material station status unavailable.';
+    empty.textContent = 'Waiting for the material station status…';
     container.appendChild(empty);
     return;
   }
@@ -377,13 +553,8 @@ function handleSlotSelection(slotInfo: MaterialSlotInfo): void {
   matchingState.mappings.set(tool.toolId, mapping);
   matchingState.selectedToolId = null;
 
-  if (colorsDiffer(tool.materialColor, slotInfo.materialColor || '')) {
-    showMaterialWarning(
-      `Tool ${tool.toolId + 1} color (${tool.materialColor}) does not match Slot ${slotInfo.slotId} color (${slotInfo.materialColor || 'unknown'}). The print will succeed, but appearance may differ.`
-    );
-  } else {
-    clearMaterialMessages();
-  }
+  clearMaterialMessages();
+  refreshColorWarnings();
 
   renderMaterialRequirements(job);
   renderMaterialSlots(matchingState.materialStation);
@@ -411,25 +582,72 @@ async function fetchMaterialStationStatus(): Promise<MaterialStationStatus | nul
   }
 }
 
+/**
+ * Load the spools offered in the dialog, or null when per-job tracking does
+ * not apply: Spoolman is off, the printer has no station, or the job is not
+ * started now (a file sent without Start Now is never tracked).
+ */
+async function loadTrackingSpools(pending: PendingJobStart): Promise<SpoolSummary[] | null> {
+  const config = state.spoolmanConfig;
+  if (!config?.enabled || !config.station || !pending.startNow) {
+    return null;
+  }
+  try {
+    const result = await apiRequest<SpoolSearchResponse>('/api/spoolman/spools');
+    if (result.success) {
+      return (result.spools ?? []).filter((spool) => !spool.archived);
+    }
+    showToast(result.error || 'Could not load Spoolman spools. This print is not tracked.', 'error');
+  } catch (error) {
+    console.error('Failed to load Spoolman spools:', error);
+    showToast('Could not load Spoolman spools. This print is not tracked.', 'error');
+  }
+  return null;
+}
+
+/**
+ * Material-station status reads before the dialog gives up. Right after a
+ * connect or a printer switch the server can take several poll cycles to
+ * have a status, so the dialog keeps asking for about 15 seconds.
+ */
+const STATION_STATUS_ATTEMPTS = 12;
+const STATION_STATUS_RETRY_MS = 1250;
+
 export function resetMaterialMatchingState(): void {
+  const matchingState = getMaterialMatchingState();
   setMaterialMatchingState(null);
   state.pendingJobStart = null;
   clearMaterialMessages();
   updateMaterialMatchingConfirmState();
+
+  // Let a hosting flow (the job uploader) know the user backed out, so it can
+  // put its own dialog back into the "needs matching" state.
+  if (matchingState && !matchingState.confirmed) {
+    matchingState.hooks?.onCancel?.();
+  }
 }
 
 export function closeMaterialMatchingModal(): void {
   hideElement('material-matching-modal');
+  hideElement('material-spool-hint');
   resetMaterialMatchingState();
 }
 
-export async function openMaterialMatchingModal(pending: PendingJobStart): Promise<void> {
+export async function openMaterialMatchingModal(
+  pending: PendingJobStart,
+  hooks?: MaterialMatchingHooks
+): Promise<void> {
   const modal = getMaterialMatchingElement<HTMLDivElement>('material-matching-modal');
   const title = getMaterialMatchingElement<HTMLHeadingElement>('material-matching-title');
 
-  if (!modal || !pending || !pending.job || !isAD5XJobFile(pending.job)) {
+  // `toolDatas.length` is checked as well as the type guard: a Creator 5 reports no
+  // per-tool data on `/gcodeList`, so its files reach here shaped like AD5X ones but
+  // with nothing to map. An empty modal whose confirm button satisfies "0 of 0 tools
+  // mapped" is worse than refusing outright.
+  if (!modal || !pending || !pending.job || !isAD5XJobFile(pending.job) || pending.job.toolDatas.length === 0) {
     showToast('Material matching is not available for this job.', 'error');
     resetMaterialMatchingState();
+    hooks?.onCancel?.();
     return;
   }
 
@@ -439,6 +657,9 @@ export async function openMaterialMatchingModal(pending: PendingJobStart): Promi
     materialStation: null,
     selectedToolId: null,
     mappings: new Map(),
+    spoolChoices: new Map(),
+    spools: null,
+    hooks,
   });
 
   if (title) {
@@ -452,13 +673,42 @@ export async function openMaterialMatchingModal(pending: PendingJobStart): Promi
   clearMaterialMessages();
   showElement('material-matching-modal');
 
-  const status = await fetchMaterialStationStatus();
+  void loadTrackingSpools(pending).then((spools) => {
+    const current = getMaterialMatchingState();
+    if (!current || current.pending !== pending) {
+      return;
+    }
+    current.spools = spools;
+    if (spools !== null) {
+      showElement('material-spool-hint');
+    }
+    renderMaterialMappings();
+    updateMaterialMatchingConfirmState();
+  });
+
+  // The server may not have a station status yet right after a connect or a
+  // printer switch, so read it a few times before reporting a problem.
+  let status: MaterialStationStatus | null = null;
+  for (let attempt = 1; attempt <= STATION_STATUS_ATTEMPTS; attempt++) {
+    status = await fetchMaterialStationStatus();
+    if (status?.connected && status.slots.length > 0) {
+      break;
+    }
+    if (attempt < STATION_STATUS_ATTEMPTS) {
+      await new Promise((resolve) => setTimeout(resolve, STATION_STATUS_RETRY_MS));
+    }
+    if (getMaterialMatchingState()?.pending !== pending) {
+      return;
+    }
+  }
+
   const matchingState = getMaterialMatchingState();
-  if (!matchingState) {
+  if (!matchingState || matchingState.pending !== pending) {
     return;
   }
 
   matchingState.materialStation = status;
+  clearMaterialMessages();
   renderMaterialSlots(status);
 
   if (!status || !status.connected) {
@@ -480,26 +730,42 @@ export async function confirmMaterialMatching(): Promise<void> {
     return;
   }
 
+  if (!allSpoolsChosen()) {
+    showMaterialError('Choose a Spoolman spool for each tool, or choose "Do not track".');
+    return;
+  }
+
   const mappings = Array.from(matchingState.mappings.values());
+  const spoolAssignments = collectSpoolAssignments(mappings);
   const confirmButton = getMaterialMatchingElement<HTMLButtonElement>('material-matching-confirm');
 
   if (confirmButton) {
     confirmButton.disabled = true;
   }
 
-  const success = await sendJobStartRequest({
-    filename: matchingState.pending.filename,
-    leveling: matchingState.pending.leveling,
-    startNow: true,
-    materialMappings: mappings,
-  });
+  // The job uploader supplies its own confirm handler: the file is not on the
+  // printer yet, so the mappings are handed back to its dialog instead of being
+  // sent straight to /api/jobs/start.
+  const onConfirm = matchingState.hooks?.onConfirm;
+  const success = onConfirm
+    ? await onConfirm(mappings, spoolAssignments)
+    : await sendJobStartRequest({
+        filename: matchingState.pending.filename,
+        leveling: matchingState.pending.leveling,
+        startNow: true,
+        materialMappings: mappings,
+        spoolAssignments,
+      });
 
   if (confirmButton) {
     confirmButton.disabled = false;
   }
 
   if (success) {
-    hideElement('file-modal');
+    matchingState.confirmed = true;
+    if (!onConfirm) {
+      hideElement('file-modal');
+    }
     closeMaterialMatchingModal();
   }
 }

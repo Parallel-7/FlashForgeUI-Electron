@@ -1,6 +1,6 @@
 # FlashForgeUI-Electron Development Guide
 
-**Last Updated:** 2026-03-06 17:54 ET (America/New_York)
+**Last Updated:** 2026-08-10 19:50 ET (America/New_York)
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -22,7 +22,7 @@ The information in this file directly influences how Claude Code understands and
 
 ## Project Overview
 
-FlashForgeUI is an Electron-based desktop and headless controller for FlashForge printers. It supports multi-context printing, material station workflows, Spoolman-powered filament tracking, go2rtc-based camera streaming (WebRTC/MSE), Discord + desktop notifications, and a fully authenticated WebUI. The app runs on Windows/macOS/Linux with both GUI and headless entry points (headless automatically boots the WebUI server).
+FlashForgeUI is an Electron-based desktop and headless controller for FlashForge printers. It supports multi-context printing, material station workflows (AD5X and Creator 5 / Creator 5 Pro), Spoolman-powered filament tracking, go2rtc-based camera streaming (WebRTC/MSE), Discord + desktop notifications, and a fully authenticated WebUI. The app runs on Windows/macOS/Linux with both GUI and headless entry points (headless automatically boots the WebUI server). SSH/SFTP features (the SFTP file manager and the calibration assistant) target the Adventurer 5M / 5M Pro / AD5X and rely on root SSH/SFTP provisioned by the sibling **FlashForge-EasySSH** USB tool (defaulting to seamless `root`/`flashforge` credentials); Creator 5 / Creator 5 Pro SSH features are planned but not yet implemented. See the *Companion Project* section below.
 
 ---
 
@@ -38,6 +38,7 @@ For detailed architectural information, see the comprehensive reference document
 - **[INTEGRATIONS.md](ai_docs/INTEGRATIONS.md)** - Camera streaming, Spoolman, notifications, Discord, persistence
 - **[THEME_SYSTEM.md](ai_docs/THEME_SYSTEM.md)** - CSS variables, theme computation, design patterns, hardcoded CSS detection
 - **[TOOLING.md](ai_docs/TOOLING.md)** - Development tools, commands, testing constraints, code search MCP tools
+- **[docs/TESTING.md](docs/TESTING.md)** - Test surfaces, the emulator/hardware E2E tracks, CI pipeline, known coverage gaps
 
 ---
 
@@ -57,7 +58,7 @@ For detailed architectural information, see the comprehensive reference document
 
 - **Documentation**: every repo-maintained `.ts`, `.tsx`, `.js`, `.jsx`, and `.cjs` source file should begin with an `@fileoverview` block describing purpose, key exports, and relationships. Use `pnpm docs:check` to catch gaps under `src/` and `pnpm docs:combine` to refresh `fileoverview-report.md`.
 
-- **Testing workflow**: `pnpm test` runs Jest over `src/`, `pnpm test:e2e` runs browser Playwright against the built WebUI fixture server, and `pnpm test:e2e:electron*` covers desktop Playwright flows. `test:all` currently excludes the Electron suites, so run the Electron slice explicitly when desktop behavior changes.
+- **Testing workflow**: **ALWAYS read [docs/TESTING.md](docs/TESTING.md) before writing, changing, or reasoning about any test.** It is the authoritative description of every test surface, the two Electron E2E tracks (`emulator` vs `hardware`, selected by `FFUI_E2E_TRACK`), what each spec actually proves, the CI pipeline, and the known coverage gaps. In brief: `pnpm test` runs Jest over `src/`, `pnpm test:e2e` runs browser Playwright against the built WebUI fixture server, `pnpm test:e2e:electron:emulator` runs the CI-safe Electron track against `flashforge-emulator-v2`, and `pnpm test:e2e:electron:hardware` runs the same specs against real bench printers. `test:all` excludes the Electron suites, so run the Electron slice explicitly when desktop behavior changes.
 
 - **Validation**: run the smallest meaningful checks (`pnpm type-check`, `pnpm lint`, targeted scripts) before handing work back. Reserve `pnpm build*` for user requests or when architectural changes demand it.
 
@@ -102,7 +103,29 @@ For detailed architectural information, see the comprehensive reference document
 
 12. **WebUI cache regressions**: built WebUI assets must remain version-stamped and served with no-cache headers. The browser Playwright suite exists specifically to catch stale asset mixes, icon hydration mismatches, and camera bootstrap regressions before release.
 
-13. **Desktop E2E boundaries**: use `tests/e2e/electron/desktop-smoke.spec.ts` for live `%APPDATA%` smoke coverage and `tests/e2e/electron/desktop-emulator.spec.ts` for isolated emulator-backed lifecycle coverage. On Windows, prefer the dedicated `package.json` scripts over ad hoc Playwright grep invocations.
+13. **Desktop E2E is two tracks over one set of specs**: `tests/e2e/electron/specs/*.spec.ts` run against either the emulator or real hardware depending on `FFUI_E2E_TRACK`; specs branch on target *capabilities* (`hasMaterialStation`, `supportsSftp`, `supportsManualConnect`), never on the track name. Don't fork a spec per track. Prefer the dedicated `package.json` scripts over ad hoc Playwright invocations. See [docs/TESTING.md](docs/TESTING.md).
+
+14. **Release builds are unsigned (no code-signing cert)**: there is no Windows (or macOS) code-signing certificate, so every release artifact - both CI and local `pnpm build:win` - is `NotSigned`. The `signtool.exe` lines in the local build log run but produce no valid Authenticode signature. This is expected, not a regression; Windows users get the normal SmartScreen "unknown publisher" prompt. Don't chase a "missing signature" as a bug.
+
+15. **Release channel is derived from the `package.json` version**: `electron-builder-config.cjs` parses the prerelease suffix - a `-alpha.N` version yields channel `alpha`/`alpha.yml` (prerelease), a bare `X.Y.Z` yields channel `latest`/`latest.yml` (stable). Bumping the version is all that's needed to flip the channel; don't hardcode it. The release workflow (`.github/workflows/release.yml`, `workflow_dispatch`) reads notes from the matching `## [<version>] - <date>` CHANGELOG section, and `softprops/action-gh-release` keyed on the tag will publish an existing **draft** of that tag *keeping the draft's body* (it does not overwrite with the templated notes) - so don't pre-create a draft if you want the workflow's templated notes.
+
+16. **WebUI camera streams through an authenticated proxy (single-port)**: browsers must NEVER connect directly to go2rtc's unauthenticated API port (1984). `CameraStreamProxy.ts` (`src/main/webui/server/`) tunnels streams through the authenticated WebUI server at `/api/camera/ws?src=<stream>&token=<auth>` on the WebUI port; the token is validated against `AuthManager`. For remote/WebUI access, forward the single WebUI port only — do not expose 1984. See the [Auto Start](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Auto-Start) wiki page and issue #76.
+
+17. **Single widget-creation path in `gridController.ts`**: do not duplicate grid-widget factories. The reload/context-switch and palette-add paths must route through the shared `createGridWidget()` + `createComponentForGrid()` primitives used by initial load. A divergent factory omits component cases (material-station, tool-temps, creator5-temperature) and produces blank tiles and missing edit-mode delete (X) buttons. The stale duplicate `createComponentInstance()` was removed in the fix for issue #77.
+
+18. **Component-dialog preload must mirror the main preload's `material` IPC surface**: the material-station widget renders inside a separate dialog window that loads `component-dialog-preload.ts`. If that preload lacks the `material` namespace (`material:set-slot`, `material:configure-slot`, `spoolman.openSpoolSelection`) and the `onSpoolPickedForSlot` listener, setting material type/color fails with "Material control is not available". Keep the two preloads in sync when adding material/Spoolman IPC channels.
+
+19. **Commit messages reference issues without auto-closing keywords**: when referencing a GitHub issue, omit `Fixes`/`Closes`/`Resolves #N` (these auto-close the issue on merge). The issue number may appear in the title or body — only the auto-close verbs are forbidden.
+
+20. **Component availability is centralized**: `ComponentDefinition.availability` ('grid' | 'shortcut' | 'both', default 'both') in `src/shared/component-definitions.ts` controls where a component surfaces. Grid surfaces (palette handlers, widget factories) must consume `getGridComponentDefinitions()` / `isGridComponent()`; the topbar shortcut system consumes `getShortcutComponentDefinitions()` / `isShortcutComponent()`. Shortcut-only entries that open a dedicated window declare `shortcutOpenChannel` (e.g. the file manager's `file-manager:open`) — `shortcutButtons.ts` sends that channel instead of `component-dialog:open`. Never enumerate `COMPONENT_REGISTRY_DATA` directly from a surface-specific consumer.
+
+21. **File manager is SFTP-based and shortcut-only**: `FileManagerService` (`src/main/services/FileManagerService.ts`) manages printer files over SSH/SFTP (easyssh provisioning, default root/flashforge, per-printer calibration SSH credentials honored). AD5X files live in `/usr/data/gcodes` (thumbs in `thum/` + `3mf/thum/`, USB under `/mnt`); 5M-series files in `/data` (thumbs in `/data/uploadThumbnail`, USB under `/mnt/usb`). Thumbnails resolve local ThumbnailCacheService → printer cache PNGs → ranged-read extraction of `Metadata/plate_1_small.png` from `.3mf` zips (no full-file download). USB presence is probed via `/proc/mounts`, not directory listings.
+
+22. **Centralized SSH settings + FlashForge-EasySSH provisioning**: SSH/SFTP features (file manager + calibration assistant) resolve credentials from one centralized per-printer store, `SSHSettingsService` (`src/main/services/SSHSettingsService.ts`, keyed by serial number, persisted to `ssh-settings.json` with passwords encrypted via `SecureStorage`) — NOT from `PrinterCalibrationData`. Defaults assume the user provisioned root SSH/SFTP with the sibling **FlashForge-EasySSH** USB tool (`root`/`flashforge`, port 22); non-default creds are edited once in Settings → SSH (desktop-only; the WebUI has no SSH-edit UI yet). The file manager and calibration share the store but use separate connection keys (`file-manager:<contextId>` vs calibration keys) on the shared `SSHConnectionManager`. The legacy `sshHost`/`sshPort`/`sshUsername`/`sshPassword`/`sshKeyPath` fields on `PrinterCalibrationData` are now dead code slated for removal.
+
+23. **The wall-clock ETA is gated on `isPrintAdvancing`, not on `isActive`**: `isPrintAdvancing` (`src/shared/types/polling.ts`) covers `Printing` and nothing else, and every surface that converts a remaining duration into a clock time must gate on it — the desktop job stats, the WebUI panel (`src/main/webui/static/ui/panels.ts`), the browser-side mirror in `src/main/webui/static/shared/formatting.ts`, and the Discord embed. `isActive` is the wrong predicate here because it deliberately includes `Paused`. The reason: `now + remaining` only holds still while the firmware counts `estimatedTime` down, and it freezes that field the moment the print stops advancing — so the ETA stepped forward a minute every minute and receded for as long as a pause lasted. **`Heating` is excluded along with the paused states**: the pre-print warmup does not advance the job either and drifts identically, just for minutes rather than hours. Duration readouts are unaffected and need no gate. This went unnoticed for so long because the desktop shows the clock time with no duration beside it, so nothing on screen contradicted it. The same predicate exists in FlashForgeWebUI and in both API libraries — a change to the rule belongs in all of them.
+
+24. **`@ghosttypes/ff-api` is pinned at `^2.0.0`** (since 1.0.5-alpha.11). The 2.0.0 major was one breaking change — `FFMachineInfo.CompletionTime` became `Date | null` — which this app is immune to because it never reads that field; it derives its own ETA from the remaining duration. 2.0.0 is also what brings the Creator 5 Pro `"pause"` status mapping, so a paused C5 Pro no longer reads as `Unknown`. Note the library publishes to **GitHub Packages**, not public npm: `.npmrc` needs the `@ghosttypes:registry` line and a token, which CI writes from `secrets.GITHUB_TOKEN`.
 
 ---
 
@@ -122,25 +145,45 @@ For detailed architectural information, see the comprehensive reference document
 
 ### Backends & Printers
 
-- `src/main/printer-backends/*.ts` - Legacy, Adventurer5M, Adventurer5M Pro, AD5X implementations
+- `src/main/printer-backends/*.ts` - Legacy, Adventurer5M, Adventurer5M Pro, AD5X, Creator 5 / Creator 5 Pro implementations
+- `src/main/printer-backends/MaterialStationBackend.ts` - shared abstract base for the 4-slot material-station printers; AD5X and Creator 5 both extend it
 - `src/main/printer-backends/ad5x/*` - material station transforms/types/utils
 
-### Model Detection (TCP-First Bootstrap, PID-Aware)
+### Model Detection (Discovery-PID-First, TCP Fallback)
 
-- **Bootstrap order matters.** The HTTP `/detail` endpoint requires authentication (`serialNumber` + `checkCode`), so during the very first connection — before the user has supplied a check code — we cannot read the firmware-set `pid` from `/detail`. `ConnectionEstablishmentService.ts` therefore opens an unauthenticated TCP `M115` first via `tcpClient.getPrinterInfo()` and uses the resulting `TypeName` (firmware-controlled, e.g. `"FlashForge Adventurer 5M Pro"`) for backend selection in `PrinterUtils.ts` (`detectPrinterModelType` / `detectPrinterFamily`). This is correct and intentional — `TypeName` is firmware-set and not the same as the user-mutable `Name` from `/detail`.
+- **Modern printers are typed from the discovery broadcast, not a TCP probe.** The UDP discovery response (276-byte modern packet) carries the USB product ID at `0x88`, the serial number at `0x92` and the name at `0x00`. `ConnectionEstablishmentService.createTemporaryConnection()` short-circuits on any product ID in `NEW_API_PRODUCT_IDS` (35 = 5M, 36 = 5M Pro, 38 = AD5X, 40 = Creator 5, 41 = Creator 5 Pro) and synthesizes the type info from that packet — **no TCP probe runs for any modern model**. This is safe because `establishDualAPIConnection` consumes none of the probe's output, capability flags come from `FiveMClient.initialize()` post-init, and reachability is covered by `initialize()` hitting authenticated `/detail`. (Verified against real hardware: a 5M Pro and an AD5X both return their serial at `0x92` and a correct PID at `0x88`.)
+- **The TCP probe remains the fallback for anything with no product ID.** Genuine legacy printers, and manual/headless connects that named no model, still open an unauthenticated TCP `M115` via `tcpClient.getPrinterInfo()`; the resulting `TypeName` (firmware-controlled, e.g. `"FlashForge Adventurer 5M Pro"`) drives backend selection in `PrinterUtils.ts` (`detectPrinterModelType` / `detectPrinterFamily`). `TypeName` is firmware-set and not the same as the user-mutable `Name` from `/detail`.
+- **Manual connects supply what the broadcast would have.** Because a named model skips the probe, the manual connect dialog (`src/renderer/src/ui/manual-connect-dialog/`, shown from the connect-choice "Enter IP" branch) collects IP + printer type + serial + check code, and `ConnectionFlowManager.connectDirectlyToIP()` maps the selected type to a product ID hint. Selecting `Legacy Printer` sends no product ID and is probed as before; `connectDirectlyToIP` still accepts a bare IP string for that path.
 - **Once paired, trust the library.** After the check code is provided and `FiveMClient.initialize()` succeeds, `client.isPro` / `client.isAD5X` / `info.Pid` (from `@ghosttypes/ff-api>=1.3.1`) are derived from the firmware `pid` (35 = 5M, 36 = 5M Pro, 38 = AD5X). All later capability gating should read those flags, not re-substring-match `info.Name` — that field is user-mutable via the LCD or cloud and re-deriving capabilities from it re-introduces the bug fixed in `ff-5mp-hass#13`.
 - **Don't mutate `client.isAD5X` after the fact.** If the upstream library disagrees with what you expected, fix the library or the backend selection upstream — don't patch the flag locally.
+- **HTTP-only models (Creator 5 / Creator 5 Pro) bypass TCP.** These printers expose no legacy TCP server on port 8899. `ConnectionEstablishmentService.ts` checks `isHttpOnlyModel()` and connects them over HTTP directly — even if a stale `forceLegacyMode` flag is saved, the bad flag is healed on the next successful HTTP connect. Backend routing for these uses the authoritative USB product ID carried through discovery, not the post-auth `/detail` endpoint.
 
 ### Renderer & Components
 
 - `src/renderer/src/renderer.ts`, `src/renderer/src/gridController.ts`, `src/renderer/src/shortcutButtons.ts`, `src/renderer/src/perPrinterStorage.ts`, `src/renderer/src/logging.ts`
-- `src/renderer/src/ui/components/**` (ComponentManager, printer tabs, job info, etc.) + `src/renderer/src/ui/gridstack/**` for layout/palette logic
+- `src/renderer/src/ui/components/**` (ComponentManager, printer tabs, job info, the `creator5-temperature` unified tool/bed/chamber card, etc.) + `src/renderer/src/ui/gridstack/**` for layout/palette logic
 - `src/renderer/src/ui/component-dialog/**` - component dialog renderer + preload mirrors
+- The material-station grid component is named `material-station` (renamed from `ifs-station`; saved layouts auto-migrate) and serves both AD5X and Creator 5. Filament palettes are per-printer-family (AD5X vs Creator 5) and snap Spoolman colors to the nearest swatch via CIEDE2000 color distance.
 
 ### IPC & Windows
 
 - `src/main/ipc/handlers/index.ts` + domain handlers in `src/main/ipc/handlers/*.ts`, `camera-ipc-handler.ts`, `printer-context-handlers.ts`, `WindowControlHandlers.ts`, `DialogHandlers.ts`
 - `src/main/windows/WindowManager.ts`, `src/main/windows/WindowFactory.ts`, `src/main/windows/factories/*`, `src/main/windows/dialogs/*`
+
+### SSH & File Access (SFTP)
+
+Both the file manager and the calibration assistant operate over root SSH/SFTP provisioned by the sibling **FlashForge-EasySSH** USB tool (default `root`/`flashforge`, port 22). Credentials resolve from one centralized per-printer store, not per-feature.
+
+- `src/main/services/SSHSettingsService.ts` - centralized per-printer SSH credential store (keyed by serial, `ssh-settings.json` + `SecureStorage`; defaults to easyssh `root`/`flashforge`); consumed by both file manager and calibration
+- `src/main/ipc/handlers/ssh-settings-handlers.ts` - `ssh-settings:get/update/reset` IPC surface
+- `src/renderer/src/ui/settings/sections/SSHSection.ts` - Settings → SSH tab (desktop-only editing; WebUI currently has no SSH-edit UI)
+- `src/shared/types/ssh-settings.ts` - SSH settings types + defaults
+- `src/main/services/FileManagerService.ts` - SFTP listing/delete/rename/thumbnails (pooled via SSHConnectionManager under `file-manager:<contextId>` keys, separate from calibration keys)
+- `src/main/ipc/handlers/file-manager-handlers.ts` - `file-manager:*` IPC surface (pinned to the context active when the dialog opened)
+- `src/renderer/src/ui/file-manager/*` - dialog HTML/CSS/preload/renderer (Internal + USB tabs, multi-select, confirm overlays)
+- `src/shared/types/file-manager.ts` - shared IPC payload types; opened only via the topbar shortcut (`availability: 'shortcut'` registry entry)
+
+Currently targets AD5X + Adventurer 5M / 5M Pro only (Creator 5 / Creator 5 Pro are NOT yet supported — `FileManagerService.isModelSupported()` returns false for them).
 
 ### Settings Dialog
 
@@ -153,6 +196,7 @@ For detailed architectural information, see the comprehensive reference document
 
 - `src/main/services/Go2rtcService.ts`, `Go2rtcBinaryManager.ts`
 - `src/main/ipc/camera-ipc-handler.ts`, `src/main/webui/server/routes/camera-routes.ts`
+- `src/main/webui/server/CameraStreamProxy.ts` - authenticated WebSocket proxy that tunnels browser streams through the WebUI port (no direct go2rtc exposure)
 - `src/main/services/notifications/*`, `src/main/services/discord/DiscordNotificationService.ts`
 
 ### Spoolman & Filament
@@ -165,17 +209,21 @@ For detailed architectural information, see the comprehensive reference document
 
 - `src/main/utils/HeadlessArguments.ts`, `HeadlessDetection.ts`, `HeadlessLogger.ts`, `src/main/managers/HeadlessManager.ts`
 - `src/main/webui/server/*` (WebUIManager, AuthManager, WebSocketManager, route modules) + `src/main/webui/static/*` (AppState, Transport, features, grid)
-- `docs/README.md` - user-facing headless instructions (keep updated)
+- **[Headless Mode](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Headless-Mode)** wiki page - user-facing headless instructions (keep updated)
 
 ### Testing & Automation
 
+**Authoritative reference: [docs/TESTING.md](docs/TESTING.md)** - read it before touching any test.
+
 - `src/**/__tests__/*` - Jest coverage for managers, services, calibration, WebUI server/routes, WebUI static helpers, and build utilities
 - `tests/e2e/browser/webui-smoke.spec.ts`, `tests/e2e/browser/webui-auth.spec.ts`, `tests/e2e/browser/helpers/webui-fixture-server.ts` - browser Playwright coverage for the built WebUI
-- `tests/e2e/electron/desktop-smoke.spec.ts` - live desktop smoke test against the local FlashForgeUI profile
-- `tests/e2e/electron/desktop-emulator.spec.ts`, `tests/e2e/electron/helpers/emulator-harness.ts` - emulator-backed Electron lifecycle coverage across modern and legacy printers
-- `tests/fixtures/calibration/` - synthetic calibration fixture data (not referenced by automated tests; used for manual local testing)
-- `scripts/run-playwright-electron-live.cjs`, `scripts/run-playwright-electron-emulator.cjs` - entry points for the Electron Playwright suites
-- `package.json` - canonical place for the Electron slice scripts (`test:e2e:electron:emulator`, `:legacy`, `:legacy-multi`, `:modern-multi`, `:smoke`, `:live`)
+- `tests/e2e/electron/specs/*.spec.ts` - connect, upload, LED, multi-printer, and SFTP round-trip coverage; each runs on whichever track `FFUI_E2E_TRACK` selects
+- `tests/e2e/electron/support/track.ts` - track selection and target enumeration; `printer-target.ts` - the emulator/hardware abstraction; `hardware-config.ts` - out-of-tree credential resolution + discovery-by-serial
+- `tests/e2e/electron/helpers/emulator-harness.ts` - boots/tears down `flashforge-emulator-v2` instances (process-group kill on POSIX; see docs/TESTING.md before changing teardown)
+- `tests/e2e/electron/discord-hardware.spec.ts` - hardware-only Discord webhook coverage, deliberately outside `specs/` so the emulator runner skips it
+- `tests/fixtures/print-files/` - real slicer output driving the upload specs; `tests/fixtures/calibration/` - synthetic calibration data for manual local testing
+- `scripts/run-playwright-electron-{emulator,hardware,discord}.cjs` - entry points for the Electron Playwright tracks
+- `.github/workflows/ci.yml` - `verify` (type-check, lint, build, Jest) + `e2e-emulator` (emulator track under xvfb)
 
 ---
 
@@ -189,10 +237,22 @@ For detailed architectural information, see the comprehensive reference document
 ### Other Documentation
 
 - **`GEMINI.md`, `QWEN.md`**: Sibling agent guides for cross-AI alignment
-- **`docs/README.md`**: User-facing setup + headless instructions (update alongside feature changes)
+- **[Wiki](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki)**: User-facing setup + headless instructions (update alongside feature changes)
 - **`ai_specs/*`**: Authoritative specs for in-flight features; always review before touching scoped areas
 - **`ai_specs/CAMERA_PRIORITY_SPEC.md`**: Camera proxy + RTSP behavior specification
 - **`ai_specs/webui-push-notifications.md`**: Upcoming WebUI push feature plan
+
+### Companion Project: FlashForge-EasySSH
+
+**FlashForge-EasySSH** ([github.com/Parallel-7/FlashForge-EasySSH](https://github.com/Parallel-7/FlashForge-EasySSH), locally `../flashforge-easyssh`) is the upstream sibling tool that provisions the root SSH/SFTP surface FlashForgeUI's file manager and calibration assistant consume. It is a USB-boot provisioning script (`flashforge_init.sh`) — no disassembly, no serial cable, no firmware hack — that auto-runs at printer power-on and configures SSH + SFTP on **Adventurer 5M / 5M Pro / AD5X only** (Creator 5 / Creator 5 Pro use a different method and are out of scope).
+
+- **Supported models:** 5M / 5M Pro ship *no sshd* — EasySSH bundles a static OpenSSH (`sshd`/`ssh-keygen`/`scp`) + init script. AD5X ships Dropbear SSH but *no `sftp-server`* — EasySSH stages a static MIPS `sftp-server` via a `/usr/libexec` bind-mount + a one-line idempotent, marker-guarded boot hook in `/usr/prog/app_startup.sh` (the writable boot orchestrator; init.d scripts run before the `/etc` overlay mounts and never execute).
+- **Default credentials:** `root` / `flashforge` (salt `ffuiroot`); 5M uses MD5-crypt (`$1$`), AD5X uses SHA-256-crypt (`$5$`). These are the exact defaults `SSHSettingsService` assumes.
+- **AD5X firmware-update caveat:** a FlashForge firmware update may overwrite `/usr/prog` and drop the SFTP boot hook — SSH keeps working, only SFTP breaks; re-running the USB stick restores the hook. The staged `sftp-server` on `/usr/data` survives regardless.
+- **No uninstall path:** reverting requires reflashing printer firmware.
+- **Canonical file paths** the file manager reads match EasySSH's docs: AD5X gcode in `/usr/data/gcodes` (thumbs `thum/` + `3mf/thum/`), 5M-series gcode in `/data` (thumbs `/data/uploadThumbnail`).
+
+The two projects are complementary: EasySSH provisions the printer's SSH/SFTP surface and is the provenance of the `root`/`flashforge` defaults; FlashForgeUI consumes it. Keep this guide's file-path and credential references in sync with EasySSH's `README.md` when either changes.
 
 ### Code Inventory
 

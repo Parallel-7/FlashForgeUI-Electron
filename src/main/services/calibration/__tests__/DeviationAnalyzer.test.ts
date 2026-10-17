@@ -1,8 +1,6 @@
 /**
  * @fileoverview Unit tests for the DeviationAnalyzer class.
  * Tests mesh deviation analysis and calibration strategy recommendations.
- *
- * @module main/services/calibration/__tests__/DeviationAnalyzer.test
  */
 
 import type { BedConfig } from '../../../../shared/types/calibration';

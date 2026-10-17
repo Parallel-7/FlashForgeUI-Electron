@@ -11,11 +11,7 @@
  * - Multiple view states: loading, error, empty, grid
  * - Click-to-select spool interaction
  * - Keyboard navigation (Escape to close)
- *
- * @module ui/spoolman-dialog/spoolman-dialog-renderer
  */
-
-/// <reference types="../../types/global.d.ts" />
 
 import type { ThemeColors } from '@shared/types/config.js';
 import type { ActiveSpoolData, SpoolResponse, SpoolSearchQuery } from '@shared/types/spoolman.js';

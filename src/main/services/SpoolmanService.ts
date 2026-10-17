@@ -14,8 +14,6 @@
  *
  * API Documentation: https://github.com/Donkie/Spoolman
  * Base API Path: /api/v1/
- *
- * @module services/SpoolmanService
  */
 
 import type {

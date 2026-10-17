@@ -3,12 +3,6 @@
  * and theme profile operations.
  */
 
-/**
- * @fileoverview Jest coverage for WebUI Zod schemas.
- *
- * Validates request parsing and constraint enforcement for WebUI job-start and
- * theme-profile API payloads before they reach route handlers.
- */
 import { JobStartRequestSchema, ThemeProfileOperationSchema } from '../web-api.schemas';
 
 describe('JobStartRequestSchema', () => {

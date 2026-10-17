@@ -94,6 +94,7 @@ temp/
 
 # Playwright test artifacts
 test-results/
+playwright-report/
 
 # Editor directories and files
 .vscode/
@@ -132,3 +133,4 @@ debug_logs/*
 hook_debug_log.txt
 __pycache__/
 .pi/session-memory.json
+

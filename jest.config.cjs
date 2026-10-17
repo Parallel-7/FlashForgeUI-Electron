@@ -16,6 +16,8 @@ module.exports = {
   },
   // Optional: Mock CSS/image imports if they cause errors
   moduleNameMapper: {
+    // Never let tests write to the real user-profile log file via electron-log
+    '^electron-log$': '<rootDir>/__mocks__/electron-log.js',
     '^(\\.{1,2}/.*)\\.js$': '$1',
     '^@shared/(.*)\\.js$': '<rootDir>/src/shared/$1',
     '^@shared/(.*)$': '<rootDir>/src/shared/$1',

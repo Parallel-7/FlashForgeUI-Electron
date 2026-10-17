@@ -56,10 +56,6 @@ Correct flow:
       - Use the `mcp__time__get_current_time` MCP tool with timezone `America/New_York` to get accurate timestamp
       - Format: `**Last Updated:** YYYY-MM-DD HH:mm ET (America/New_York)`
 
-   d. **docs/README.md**:
-      - Update any version references in user-facing documentation
-      - Update download links similar to main README.md
-
 5. **Summary**:
    - Show the user which files were updated
    - Display old version → new version
@@ -71,7 +67,7 @@ Correct flow:
 ```
 Current: 1.0.3-alpha.1
 New:     1.0.3-alpha.2
-Updated: package.json, README.md (alpha link), CLAUDE.md timestamp, docs/README.md
+Updated: package.json, README.md (alpha link), CLAUDE.md timestamp
 ```
 
 **Stable Release:**
@@ -79,14 +75,14 @@ Updated: package.json, README.md (alpha link), CLAUDE.md timestamp, docs/README.
 Current: 1.0.3-alpha.5
 Confirm: Ready to release 1.0.3 stable? [User confirms]
 New:     1.0.3
-Updated: package.json, README.md (stable link), CLAUDE.md timestamp, docs/README.md
+Updated: package.json, README.md (stable link), CLAUDE.md timestamp
 ```
 
 **After Stable → Next Alpha:**
 ```
 Current: 1.0.3
 New:     1.0.4-alpha.1
-Updated: package.json, README.md (alpha link), CLAUDE.md timestamp, docs/README.md
+Updated: package.json, README.md (alpha link), CLAUDE.md timestamp
 ```
 
 ## Validation

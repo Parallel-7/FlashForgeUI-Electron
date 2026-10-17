@@ -1,0 +1,20 @@
+{
+  "tools": {
+    "0": {
+      "filamentId": 1,
+      "material": "PLA",
+      "usedM": 2.33,
+      "usedG": 6.94,
+      "gramsAt40": 5.869,
+      "gramsAt75": 6.94
+    },
+    "2": {
+      "filamentId": 3,
+      "material": "PETG",
+      "usedM": 1.47,
+      "usedG": 4.38,
+      "gramsAt40": 0.0,
+      "gramsAt75": 1.933
+    }
+  }
+}

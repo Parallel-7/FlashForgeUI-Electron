@@ -18,8 +18,6 @@
  * - PrinterPollingService: Real-time printer state monitoring
  * - BasePrinterBackend: Upload completion and error notifications
  * - ConnectionEstablishmentService: Connection state change notifications
- *
- * @module services/notifications
  */
 
 // Core services

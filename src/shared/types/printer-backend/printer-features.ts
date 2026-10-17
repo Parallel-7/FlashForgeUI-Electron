@@ -17,6 +17,8 @@
 // src/types/printer-backend/printer-features.ts
 // Type definitions for printer feature management and capabilities
 
+import type { PrinterModelType } from './backend-operations.js';
+
 /**
  * Printer feature types that can be available on different printer models
  */
@@ -151,6 +153,12 @@ export interface MaterialStationStatus {
   readonly activeSlot: number | null;
   readonly overallStatus: 'ready' | 'warming' | 'error' | 'disconnected';
   readonly errorMessage: string | null;
+  /**
+   * Printer model that owns this station, propagated to the polling layer so the
+   * renderer can select the correct fixed filament palette (Creator 5 differs from
+   * AD5X — see `@shared/palette`). Optional; absent → treat as AD5X.
+   */
+  readonly printerModelType?: PrinterModelType;
 }
 
 /**

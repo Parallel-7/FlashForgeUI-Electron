@@ -2,8 +2,6 @@
  * @fileoverview Calculator for bed leveling screw adjustments.
  * Converts height deviations to rotation amounts (minutes, degrees, turns)
  * and determines rotation direction for each corner screw.
- *
- * @module main/services/calibration/engine/ScrewSolver
  */
 
 import type { ScrewAdjustment, ScrewConfig } from '../../../../shared/types/calibration';

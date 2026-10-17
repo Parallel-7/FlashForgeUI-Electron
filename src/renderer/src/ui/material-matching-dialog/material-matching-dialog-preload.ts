@@ -29,6 +29,17 @@ interface MaterialMatchingInitData {
     readonly filamentWeight: number;
   }[];
   readonly leveling: boolean;
+  /** True when the dialog asks for a Spoolman spool per tool. */
+  readonly trackSpools?: boolean;
+}
+
+/** Spool offered in the dialog for per-job Spoolman tracking. */
+interface TrackingSpool {
+  readonly id: number;
+  readonly name: string;
+  readonly vendor: string | null;
+  readonly material: string | null;
+  readonly remainingWeight: number | null;
 }
 
 interface MaterialMapping {
@@ -37,6 +48,8 @@ interface MaterialMapping {
   readonly materialName: string;
   readonly toolMaterialColor: string;
   readonly slotMaterialColor: string;
+  /** Spoolman spool for the tool; null = do not track; absent = not asked. */
+  readonly spoolId?: number | null;
 }
 
 interface MaterialStationStatus {
@@ -69,6 +82,11 @@ const materialMatchingDialogAPI = {
   // Confirm material mappings
   confirmMappings: (mappings: MaterialMapping[]) => {
     ipcRenderer.send('material-matching:confirm', mappings);
+  },
+
+  // Spools for per-job Spoolman tracking (null when tracking does not apply)
+  getTrackingSpools: (): Promise<TrackingSpool[] | null> => {
+    return ipcRenderer.invoke('material-matching:get-tracking-spools');
   },
 
   // Get material station status

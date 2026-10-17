@@ -90,27 +90,3 @@ export function formatDateTime(date: Date): string {
   return `${formatDate(date)} ${formatTime(date)}`;
 }
 
-/**
- * Format ETA as date/time string
- * @param etaSeconds - ETA in seconds from now
- * @returns Formatted ETA string
- */
-export function formatETA(etaSeconds: number): string {
-  const eta = new Date(Date.now() + etaSeconds * 1000);
-  const now = new Date();
-
-  // If ETA is today, show time only
-  if (eta.toDateString() === now.toDateString()) {
-    return formatTime(eta);
-  }
-
-  // If ETA is tomorrow, show "Tomorrow HH:MM"
-  const tomorrow = new Date(now);
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  if (eta.toDateString() === tomorrow.toDateString()) {
-    return `Tomorrow ${formatTime(eta)}`;
-  }
-
-  // Otherwise show full date and time
-  return formatDateTime(eta);
-}

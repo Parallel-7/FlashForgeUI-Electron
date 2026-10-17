@@ -1,9 +1,9 @@
 /**
  * @fileoverview Handles enable/disable logic for dependent settings inputs.
  *
- * Centralizes state transitions for the WebUI, Spoolman, Discord, and per-printer
- * fields so the main settings renderer can simply call `updateStates` when
- * relevant toggles change.
+ * Centralizes state transitions for the WebUI, Spoolman, Discord, per-printer,
+ * and startup fields so the main settings renderer can simply call `updateStates`
+ * when relevant toggles change.
  */
 
 // src/ui/settings/sections/InputDependencySection.ts
@@ -22,7 +22,7 @@ export class InputDependencySection {
     this.webUIEnabledToggle = options.webUIEnabledToggle;
   }
 
-  updateStates(perPrinterControlsEnabled: boolean, autoDownloadSupported: boolean): void {
+  updateStates(perPrinterControlsEnabled: boolean, autoDownloadSupported: boolean, isPackaged: boolean): void {
     const webUIEnabled = this.inputs.get('web-ui')?.checked || false;
     const passwordRequired = this.inputs.get('web-ui-password-required')?.checked ?? true;
     this.setInputEnabled('web-ui-port', webUIEnabled);
@@ -58,6 +58,15 @@ export class InputDependencySection {
     if (!autoDownloadSupported) {
       this.setInputEnabled('auto-download-updates', false);
     }
+
+    // Startup behavior.
+    // "Start with system" (auto-launch) is only relevant in packaged builds; in
+    // development the checkbox is disabled. "Start minimized" only makes sense
+    // when the app launches at boot, so it stays disabled until "Start with
+    // system" is checked.
+    this.setInputEnabled('start-at-boot', isPackaged);
+    const startAtBootChecked = this.inputs.get('start-at-boot')?.checked || false;
+    this.setInputEnabled('start-minimized', startAtBootChecked);
   }
 
   private setInputEnabled(inputId: string, enabled: boolean): void {

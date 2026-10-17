@@ -8,7 +8,7 @@
 
 ![Platforms](https://img.shields.io/badge/Platforms-Win%20%7C%20macOS%20%7C%20Linux-3178c6?style=flat)
 ![Downloads](https://img.shields.io/github/downloads/Parallel-7/FlashForgeUI-Electron/total?style=flat&color=brightgreen)
-![Version](https://img.shields.io/badge/Version-1.0.5--alpha.11-orange?style=flat)
+![Version](https://img.shields.io/github/v/release/Parallel-7/FlashForgeUI-Electron?include_prereleases&style=flat&color=orange&label=Version)
 ![License](https://img.shields.io/badge/License-MIT-blue?style=flat)
 
 **Monitor and control your printer from your desktop or any device on your network &mdash; with more features than any official FlashForge software, completely free.**
@@ -28,8 +28,6 @@
 ## Overview
 
 FlashForgeUI connects directly to your FlashForge printer over your local network &mdash; no cloud account required. Watch live camera and temperature data, start and manage prints, control LEDs and filtration, and keep an eye on multiple printers at once. When you're away from your desk, the built-in WebUI gives you the same control from your phone or any browser, and headless mode lets you run it as a lightweight always-on server.
-
-It works with everything from the latest Adventurer 5M / 5M Pro / AD5X to older legacy models, automatically picking the right way to talk to each printer.
 
 <div align="center">
 
@@ -57,14 +55,19 @@ It works with everything from the latest Adventurer 5M / 5M Pro / AD5X to older 
 | Capability | What You Get |
 | --- | --- |
 | **Live Monitoring** | Real-time status, temperatures, progress, layer count, and ETA &mdash; updated every few seconds |
-| **Full Print Control** | Start, pause, resume, and cancel jobs • upload `.gcode` / `.gx` / `.3mf` files • browse recent and local jobs with thumbnail previews |
-| **[Camera Streaming](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Custom-Camera-Setup)** | Auto-detected OEM cameras plus custom RTSP/HTTP sources • watch from multiple devices at once |
-| **[Multi-Printer Management](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Connecting-to-Multiple-Printers)** | Connect to several printers concurrently • tabbed desktop UI and dropdown WebUI selector • independent per-printer settings |
-| **[Remote Access (WebUI)](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/WebUI-Setup)** | Password-protected, mobile-friendly web interface with full feature parity to the desktop app |
+| **Full Print Control** | Start, pause, resume, and cancel jobs • upload `.gcode` / `.gx` / `.3mf` files from the desktop or any browser • browse recent and local jobs with thumbnail previews |
+| **Material Station** | 4-slot material station support for the AD5X and Creator 5 series • set slot material and color • tool-to-slot matching with color mismatch warnings when starting multi-material jobs |
+| **[Camera Streaming](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/4.-Custom-Camera-Setup)** | Auto-detected OEM cameras plus custom RTSP/HTTP sources • watch from multiple devices at once |
+| **[Multi-Printer Management](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/2.-Connecting-to-Multiple-Printers)** | Connect to several printers concurrently • tabbed desktop UI and dropdown WebUI selector • independent per-printer settings |
+| **[Remote Access (WebUI)](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/3.-WebUI-Setup)** | Password-protected, mobile-friendly web interface with full feature parity to the desktop app |
 | **[Headless Mode](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Headless-Mode)** | Run as a server with no desktop UI &mdash; ideal for a Raspberry Pi or always-on machine |
-| **[Spoolman Integration](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Spoolman-Integration)** | Track filament usage automatically and assign spools per printer |
+| **[Spoolman Integration](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/5.-Spoolman-Integration)** | Track filament usage automatically • assign a spool per printer, or pick a spool per slot for each job on material-station printers |
 | **[Notifications](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Notifications)** | Desktop and Discord alerts for print completion, cooldown, and more |
 | **Hardware Controls** | Temperature, LED, and filtration control • axis homing • clear platform • direct command terminal |
+| **Printer File Manager** | Browse, rename, and delete files stored on the printer and on USB, with thumbnail previews &mdash; desktop and WebUI • 5M / 5M Pro / AD5X, requires SSH access via [FlashForge-EasySSH](https://github.com/Parallel-7/FlashForge-EasySSH) |
+| **Calibration Assistant** | Read and analyze on-printer calibration data to help diagnose print quality &mdash; same models and SSH requirement as the file manager |
+| **Remote Reboot** | Restart the printer from the app or a browser and reconnect automatically once it is back &mdash; same models and SSH requirement as the file manager |
+| **Start with System** | Optionally launch at login on Windows, macOS, and Linux &mdash; start minimized, minimize to the tray, and let prints run unattended |
 | **[Customizable UI](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Customizing-the-Desktop-UI)** | Drag-and-drop layouts, light/dark themes, and custom color palettes on both desktop and WebUI |
 
 </div>
@@ -75,7 +78,8 @@ It works with everything from the latest Adventurer 5M / 5M Pro / AD5X to older 
 
 | Printer | Support | Material Station | Notes |
 | --- | --- | --- | --- |
-| **Creator 5** | Full | Yes (4 slots) | Unable to start local printer files, no filtration control |
+| **Creator 5 Pro** | Full | Yes (4 slots) | Includes filtration control • start jobs by uploading a `.3mf` (stored files can't be started) |
+| **Creator 5** | Full | Yes (4 slots) | Start jobs by uploading a `.3mf` (stored files can't be started) |
 | **AD5X** | Full | Yes (4 slots) | Multi-material 3MF printing |
 | **Adventurer 5M Pro** | Full | No | Includes filtration control |
 | **Adventurer 5M** | Full | No | |
@@ -83,6 +87,8 @@ It works with everything from the latest Adventurer 5M / 5M Pro / AD5X to older 
 | **Older Models** | Legacy Mode | No | Untested, basic control |
 
 **Newer printers (5M series and up) require LAN-only mode and a one-time pairing code &mdash; see [Pairing Your Printer](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/1.-Pairing-your-printer).**
+
+The SSH-based tools (file manager, calibration assistant, remote reboot) currently support the Adventurer 5M / 5M Pro / AD5X only. The Creator 5 series does not accept raw G-code commands such as axis homing.
 
 </div>
 
@@ -93,9 +99,9 @@ It works with everything from the latest Adventurer 5M / 5M Pro / AD5X to older 
 | Step | Instructions |
 | --- | --- |
 | **1. Download** | Grab the [latest release](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/latest) for your platform |
-| **2. Install** | **Windows:** run the `.exe` installer<br>**macOS:** open the `.dmg` and drag to Applications<br>**Linux:** use the `.AppImage`, `.deb`, or `.rpm` package |
+| **2. Install** | **Windows:** run the `.exe` installer<br>**macOS:** open the `.dmg` and drag to Applications<br>**Linux:** install the `.deb` or `.rpm`, or run the `.AppImage` directly &mdash; on Ubuntu 24.04+ prefer the `.deb`, see [Linux Notes](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Auto-Start#sandbox--apparmor-on-ubuntu-2404) |
 | **3. Connect** | Launch the app, use auto-discovery or enter your printer's IP, and add the [pairing code](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/1.-Pairing-your-printer) if prompted |
-| **4. Configure** | Optional: set up [remote access](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/WebUI-Setup), [Discord alerts](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Notifications), [Spoolman](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Spoolman-Integration), and [custom cameras](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Custom-Camera-Setup) |
+| **4. Configure** | Optional: set up [remote access](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/3.-WebUI-Setup), [Discord alerts](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Notifications), [Spoolman](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/5.-Spoolman-Integration), and [custom cameras](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/4.-Custom-Camera-Setup) |
 
 Full setup walkthroughs and troubleshooting live in the **[Wiki](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki)**.
 
@@ -107,7 +113,7 @@ Full setup walkthroughs and troubleshooting live in the **[Wiki](https://github.
 
 </div>
 
-This project uses [pnpm](https://pnpm.io/).
+You need [Node.js](https://nodejs.org/) 22 and [pnpm](https://pnpm.io/) 10 (`corepack enable` picks up the pinned version). All dependencies, including the `@ghosttypes` and `@parallel-7` scoped packages, are public on npm. You do not need an `.npmrc`, a token, or GitHub Packages access to build from source. `pnpm install` also downloads the bundled [go2rtc](https://github.com/AlexxIT/go2rtc) camera binary.
 
 ```bash
 pnpm install      # install dependencies
@@ -120,10 +126,18 @@ pnpm build:linux  # package Linux artifacts
 
 <div align="center">
 
+## Contributing
+
+</div>
+
+Contributions are welcome. Development happens on the **`alpha`** branch, and `main` only receives stable releases. Branch from `alpha` and open your pull request against `alpha`. **[CONTRIBUTING.md](CONTRIBUTING.md)** covers setup, code standards, testing, and the release workflow.
+
+<div align="center">
+
 ![Electron](https://img.shields.io/badge/Electron-39.8.10-47848f?style=flat&logo=electron)
 ![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-3178c6?style=flat&logo=typescript)
-![Vite](https://img.shields.io/badge/Vite-7.3.2-646cff?style=flat&logo=vite)
-![Express](https://img.shields.io/badge/Express-5.2.1-000000?style=flat&logo=express)
+![Vite](https://img.shields.io/badge/Vite-7.3.6-646cff?style=flat&logo=vite)
+![Express](https://img.shields.io/badge/Express-5.3.0-000000?style=flat&logo=express)
 
 ## License
 

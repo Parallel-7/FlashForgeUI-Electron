@@ -2,8 +2,6 @@
  * @fileoverview Model representing the 3D printer bed with mesh data management.
  * Provides methods for analyzing bed mesh, calculating corner heights, and
  * simulating adjustments.
- *
- * @module main/services/calibration/engine/Bed
  */
 
 import type { BedConfig, BedCorners, MeshData } from '../../../../shared/types/calibration';

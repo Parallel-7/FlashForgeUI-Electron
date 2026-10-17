@@ -10,6 +10,7 @@
 import type {
   MaterialMapping,
   PendingJobStart,
+  SpoolAssignment,
   PrinterCommandResponse,
   PrinterFeaturesResponse,
   PrintJobStartResponse,
@@ -18,7 +19,8 @@ import { getCurrentSettings, state } from '../core/AppState.js';
 import { apiRequest, sendCommand } from '../core/Transport.js';
 import { $, hideElement, showToast } from '../shared/dom.js';
 import { isAD5XJobFile } from '../shared/formatting.js';
-import { loadFileList, showTemperatureDialog } from '../ui/dialogs.js';
+import { loadFileList, showTemperatureDialog, type TemperatureTarget } from '../ui/dialogs.js';
+import { openJobUploadModal } from './job-upload.js';
 import { applySettings, refreshSettingsUI } from './layout-theme.js';
 import { openMaterialMatchingModal } from './material-matching.js';
 
@@ -96,6 +98,7 @@ interface JobStartOptions {
   leveling: boolean;
   startNow: boolean;
   materialMappings?: MaterialMapping[];
+  spoolAssignments?: SpoolAssignment[];
 }
 
 export async function startPrintJob(): Promise<void> {
@@ -113,7 +116,14 @@ export async function startPrintJob(): Promise<void> {
   const startNow = ($('start-now') as HTMLInputElement | null)?.checked ?? true;
   const jobInfo = state.jobMetadata.get(state.selectedFile);
 
-  if (startNow && hasMaterialStationSupport() && isAD5XJobFile(jobInfo)) {
+  // The length check is load-bearing on the Creator 5 series: `/gcodeList` there
+  // returns file names only - no `gcodeListDetail` - so `toolDatas` arrives as an
+  // empty array, which `isAD5XJobFile` still accepts (an empty array is an array).
+  // Without it the modal opens with no tools to map and its confirm button passes
+  // validation anyway, because 0 mappings equals 0 required. Only the AD5X reports
+  // per-tool material data on the recent-file list; matching a Creator 5 file is
+  // possible on upload, where the 3mf is parsed locally, never from here.
+  if (startNow && hasMaterialStationSupport() && isAD5XJobFile(jobInfo) && jobInfo.toolDatas.length > 0) {
     const pendingJob: PendingJobStart = {
       filename: state.selectedFile,
       leveling: autoLevel,
@@ -153,6 +163,10 @@ export async function sendJobStartRequest(options: JobStartOptions): Promise<boo
         leveling: options.leveling,
         startNow: options.startNow,
         materialMappings: options.materialMappings,
+        spoolAssignments:
+          options.spoolAssignments && options.spoolAssignments.length > 0
+            ? options.spoolAssignments
+            : undefined,
       }),
     });
 
@@ -170,6 +184,41 @@ export async function sendJobStartRequest(options: JobStartOptions): Promise<boo
   }
 }
 
+/** Resolve a Creator 5 temperature-card button to its heater target. */
+function resolveHeaterTarget(button: HTMLButtonElement): TemperatureTarget | null {
+  const heater = button.dataset.heater;
+  if (heater === 'bed') {
+    return { kind: 'bed' };
+  }
+  if (heater === 'chamber') {
+    return { kind: 'chamber' };
+  }
+  if (heater === 'tool') {
+    const index = Number.parseInt(button.dataset.tool ?? '', 10);
+    if (Number.isInteger(index) && index >= 0) {
+      return { kind: 'tool', index };
+    }
+  }
+  return null;
+}
+
+/** Handle a Set/Off click on the Creator 5 multi-tool temperature card. */
+async function handleCreator5TempButton(action: 'set' | 'off', button: HTMLButtonElement): Promise<void> {
+  const target = resolveHeaterTarget(button);
+  if (!target) {
+    return;
+  }
+
+  if (action === 'set') {
+    showTemperatureDialog(target);
+    return;
+  }
+
+  const endpoint =
+    target.kind === 'tool' ? `temperature/tool/${target.index}/off` : `temperature/${target.kind}/off`;
+  await sendPrinterCommand(endpoint);
+}
+
 export function setupJobControlEventHandlers(): void {
   const containers = [$('webui-grid-desktop'), $('webui-grid-mobile')];
 
@@ -182,6 +231,15 @@ export function setupJobControlEventHandlers(): void {
       const target = event.target as HTMLElement | null;
       const button = target?.closest('button') as HTMLButtonElement | null;
       if (!button || button.disabled) {
+        return;
+      }
+
+      // Creator 5 multi-tool card buttons are dynamic (per-tool), so they are keyed
+      // by data attributes rather than fixed ids.
+      const c5Action = button.dataset.c5Action;
+      if (c5Action === 'set' || c5Action === 'off') {
+        await handleCreator5TempButton(c5Action, button);
+        event.preventDefault();
         return;
       }
 
@@ -209,13 +267,13 @@ export function setupJobControlEventHandlers(): void {
           await sendPrinterCommand('control/cancel');
           break;
         case 'btn-bed-set':
-          showTemperatureDialog('bed');
+          showTemperatureDialog({ kind: 'bed' });
           break;
         case 'btn-bed-off':
           await sendPrinterCommand('temperature/bed/off');
           break;
         case 'btn-extruder-set':
-          showTemperatureDialog('extruder');
+          showTemperatureDialog({ kind: 'extruder' });
           break;
         case 'btn-extruder-off':
           await sendPrinterCommand('temperature/extruder/off');
@@ -225,6 +283,9 @@ export function setupJobControlEventHandlers(): void {
           break;
         case 'btn-start-local':
           await loadFileList('local');
+          break;
+        case 'btn-upload-job':
+          openJobUploadModal();
           break;
         case 'btn-refresh':
           sendCommand({ command: 'REQUEST_STATUS' });

@@ -3,12 +3,6 @@
  * auth-sensitive behavior, and go2rtc-backed camera availability.
  */
 
-/**
- * @fileoverview Jest coverage for WebUI camera route handlers.
- *
- * Tests route-level camera status/proxy responses, validation, and error
- * handling around the shared camera services exposed to the WebUI.
- */
 import express from 'express';
 import { getConfigManager } from '../../../../managers/ConfigManager.js';
 import { getPrinterContextManager } from '../../../../managers/PrinterContextManager.js';
@@ -143,11 +137,10 @@ describe('camera-routes', () => {
     );
     expect(body).toEqual({
       success: true,
-      wsUrl: expect.stringContaining('/api/ws?src=context-1-camera'),
+      wsUrl: '/api/camera/ws?src=context-1-camera',
       streamType: 'mjpeg',
       sourceType: 'oem',
       streamName: 'context-1-camera',
-      apiPort: 1984,
       mode: 'webrtc,mse,mjpeg',
       showCameraFps: true,
     });
@@ -248,11 +241,10 @@ describe('camera-routes', () => {
     );
     expect(body).toEqual({
       success: true,
-      wsUrl: expect.stringContaining('/api/ws?src=context-1-camera'),
+      wsUrl: '/api/camera/ws?src=context-1-camera',
       streamType: 'mjpeg',
       sourceType: 'intelligent-fallback',
       streamName: 'context-1-camera',
-      apiPort: 1984,
       mode: 'webrtc,mse,mjpeg',
       showCameraFps: true,
     });

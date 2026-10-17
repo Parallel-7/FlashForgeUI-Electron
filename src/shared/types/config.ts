@@ -23,8 +23,6 @@
  * - Themes: DesktopTheme, WebUITheme
  * - Advanced: CustomLeds
  * - Auto-Update: CheckForUpdatesOnLaunch, UpdateChannel, AutoDownloadUpdates
- *
- * @module types/config
  */
 
 /**
@@ -108,6 +106,9 @@ export interface AppConfig {
   readonly WebUITheme: ThemeColors;
   readonly desktopThemeProfiles: readonly ThemeProfile[];
   readonly webUIThemeProfiles: readonly ThemeProfile[];
+  readonly StartAtBoot: boolean;
+  readonly StartMinimized: boolean;
+  readonly MinimizeToTray: boolean;
 }
 
 /**
@@ -147,6 +148,9 @@ export interface MutableAppConfig {
   WebUITheme: ThemeColors;
   desktopThemeProfiles: readonly ThemeProfile[];
   webUIThemeProfiles: readonly ThemeProfile[];
+  StartAtBoot: boolean;
+  StartMinimized: boolean;
+  MinimizeToTray: boolean;
 }
 
 /**
@@ -291,6 +295,12 @@ export const DEFAULT_CONFIG: AppConfig = {
   WebUITheme: DEFAULT_THEME,
   desktopThemeProfiles: [...SYSTEM_THEME_PROFILES],
   webUIThemeProfiles: [...SYSTEM_THEME_PROFILES],
+  StartAtBoot: false,
+  StartMinimized: false,
+  // Off by default: hiding the window is only safe when the tray icon is actually visible, and
+  // tray support is not guaranteed on Linux (stock GNOME needs an AppIndicator extension). Opting
+  // in after seeing the icon avoids stranding users with no way back to the window.
+  MinimizeToTray: false,
 } as const;
 
 /**

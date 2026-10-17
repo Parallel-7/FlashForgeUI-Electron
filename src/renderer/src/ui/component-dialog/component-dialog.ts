@@ -10,12 +10,7 @@
  * - Real-time polling data updates
  * - Proper cleanup on window close
  * - Dialog header customization based on component type
- *
- * @author FlashForgeUI Team
- * @module ui/component-dialog/component-dialog
  */
-
-/// <reference types="../../types/global.d.ts" />
 
 // Component system imports
 import './component-dialog.css' with { type: 'css' };
@@ -29,13 +24,15 @@ import {
   CameraPreviewComponent,
   ControlsGridComponent,
   FiltrationControlsComponent,
-  IFSStationComponent,
   JobStatsComponent,
   LogPanelComponent,
+  MaterialStationComponent,
   ModelPreviewComponent,
   PrinterStatusComponent,
   SpoolmanComponent,
   TemperatureControlsComponent,
+  ToolTempsComponent,
+  Creator5TemperatureComponent,
 } from '../components/index.js';
 import { getComponentDefinition } from '../gridstack/ComponentRegistry.js';
 import { parseLogEntry } from '../shared/log-panel/index.js';
@@ -192,8 +189,12 @@ function createComponentInstance(componentId: string, container: HTMLElement) {
       return new FiltrationControlsComponent(container);
     case 'spoolman-tracker':
       return new SpoolmanComponent(container);
-    case 'ifs-station':
-      return new IFSStationComponent(container);
+    case 'material-station':
+      return new MaterialStationComponent(container);
+    case 'tool-temps':
+      return new ToolTempsComponent(container);
+    case 'creator5-temperature':
+      return new Creator5TemperatureComponent(container);
     default:
       console.error(`[ComponentDialog] Unknown component ID: ${componentId}`);
       return null;

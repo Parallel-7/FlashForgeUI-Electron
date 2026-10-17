@@ -15,14 +15,14 @@
  * - `spoolman:open-dialog` - Open spool selection dialog
  * - `spoolman:search-spools` - Search for spools matching query
  * - `spoolman:select-spool` - Broadcast selected spool to renderers
- *
- * @module ipc/handlers/spoolman-handlers
  */
 
 import type { ActiveSpoolData, SpoolSearchQuery } from '@shared/types/spoolman.js';
+import type { SpoolmanStationStatus } from '@shared/types/spoolman-tracking';
 import { BrowserWindow, ipcMain } from 'electron';
 import { getConfigManager } from '../../managers/ConfigManager.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
+import { getMultiContextSpoolmanTracker } from '../../services/MultiContextSpoolmanTracker.js';
 import { getSpoolmanHealthMonitor } from '../../services/SpoolmanHealthMonitor.js';
 import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegrationService.js';
 import { SpoolmanService } from '../../services/SpoolmanService.js';
@@ -44,6 +44,15 @@ import {
 
 let spoolmanDialogWindow: BrowserWindow | null = null;
 
+/**
+ * Purpose of the currently open spool selection dialog.
+ * - 'active': pick the active tracking spool (default, broadcasts 'spoolman:spool-selected')
+ * - 'slot-config': pick a spool to apply to an AD5X material slot
+ *   (broadcasts 'spoolman:spool-picked-for-slot', does NOT change the active spool)
+ */
+type SpoolSelectionPurpose = 'active' | 'slot-config';
+let spoolmanDialogPurpose: SpoolSelectionPurpose = 'active';
+
 // Spoolman dialog window size
 const SPOOLMAN_DIALOG_SIZE: WindowDimensions = {
   width: createWindowWidth(700),
@@ -57,7 +66,10 @@ const SPOOLMAN_DIALOG_SIZE: WindowDimensions = {
  */
 export function registerSpoolmanHandlers(): void {
   // Open spool selection dialog
-  ipcMain.handle('spoolman:open-dialog', async (event) => {
+  ipcMain.handle('spoolman:open-dialog', async (event, purpose?: SpoolSelectionPurpose) => {
+    // Track why the dialog is open so the selection can be routed correctly.
+    spoolmanDialogPurpose = purpose === 'slot-config' ? 'slot-config' : 'active';
+
     // Focus existing dialog if already open
     if (spoolmanDialogWindow && !spoolmanDialogWindow.isDestroyed()) {
       spoolmanDialogWindow.focus();
@@ -105,8 +117,19 @@ export function registerSpoolmanHandlers(): void {
     return await service.searchSpools(query);
   });
 
-  // Select spool - save to context and broadcast
+  // Select spool - route based on why the dialog was opened
   ipcMain.handle('spoolman:select-spool', async (_event, spool: ActiveSpoolData, contextId?: string) => {
+    if (spoolmanDialogPurpose === 'slot-config') {
+      // Slot-config flow: do NOT change the active tracking spool. Just hand the
+      // chosen spool back to the requesting renderer for material-slot configuration.
+      BrowserWindow.getAllWindows().forEach((win) => {
+        win.webContents.send('spoolman:spool-picked-for-slot', spool);
+      });
+      // Reset to the default so subsequent opens behave normally.
+      spoolmanDialogPurpose = 'active';
+      return;
+    }
+
     const service = getSpoolmanIntegrationService();
 
     // Save to context (persisted via ConfigManager)
@@ -187,6 +210,11 @@ export function registerSpoolmanHandlers(): void {
       enabled: true,
       contextId: targetContextId,
       disabledReason: null,
+      // Material-station contexts (Creator 5 series, AD5X with station) use
+      // the per-job tracking view instead of the single active spool.
+      station: service.isStationContext(targetContextId)
+        ? buildStationStatus(targetContextId)
+        : null,
     };
   });
 
@@ -194,4 +222,40 @@ export function registerSpoolmanHandlers(): void {
     const monitor = getSpoolmanHealthMonitor();
     return await monitor.manualRetry();
   });
+}
+
+/** Copy shown in the desktop Spoolman widget for station contexts. */
+const STATION_TRACKING_NOTE =
+  'Choose a spool for each tool when you match materials for an upload. ' +
+  'The slicer estimate is charged to those spools when the print ends. ' +
+  'Each spool choice applies to that one print only. ' +
+  'Prints started on the printer, or files sent without Start Now, are not tracked.';
+
+/**
+ * Station tracking view payload for material-station contexts: the job
+ * tracked now plus the most recent deduction.
+ */
+function buildStationStatus(contextId: string): SpoolmanStationStatus {
+  const tracker = getMultiContextSpoolmanTracker();
+  const job = tracker.getTrackedJob(contextId);
+  return {
+    supported: true,
+    note: STATION_TRACKING_NOTE,
+    activeJob: job
+      ? {
+          fileName: job.fileName,
+          started: job.startedAt !== null,
+          lastProgress: job.lastProgress,
+          hasUsageProfile: job.usageProfile !== null,
+          tools: job.tools.map((tool) => ({
+            toolId: tool.toolId,
+            slotId: tool.slotId,
+            spoolId: tool.spoolId,
+            usedG: tool.usedG,
+            usedM: tool.usedM,
+          })),
+        }
+      : null,
+    lastDeduction: tracker.getLastDeduction(contextId),
+  };
 }

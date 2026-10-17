@@ -28,6 +28,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 import type { CameraProxyStatus } from '@shared/types/camera/camera.types.js';
 import { isValidConfig } from '@shared/types/config.js';
 import type { AppConfig, ThemeColors } from '@shared/types/config.js';
+import type { RebootResult, RebootStatusPayload } from '@shared/types/printer-power.js';
+import type { SpoolmanStatusPayload } from '@shared/types/spoolman-tracking';
 import type {
   ISettingsAPI,
   IAutoUpdateAPI,
@@ -83,6 +85,31 @@ interface ElectronAPI {
   connectionState: ConnectionStateAPI;
   printerSettings: PrinterSettingsAPI;
   spoolman: SpoolmanAPI;
+  material: MaterialAPI;
+  rebootPrinter: (contextId: string) => Promise<RebootResult>;
+  onRebootStatus: (callback: (payload: RebootStatusPayload) => void) => EventDisposer;
+}
+
+// Result of an AD5X material-slot configuration attempt
+interface ConfigureSlotResult {
+  success: boolean;
+  error?: string;
+  slot?: number;
+  material?: string | null;
+  colorName?: string;
+  colorHex?: string;
+  spoolName?: string;
+}
+
+// Material station control API interface
+interface MaterialAPI {
+  configureSlot: (slot: number, spoolId: number, contextId?: string) => Promise<ConfigureSlotResult>;
+  setSlot: (
+    slot: number,
+    materialName: string,
+    colorHex: string,
+    contextId?: string
+  ) => Promise<ConfigureSlotResult>;
 }
 
 // Camera API interface
@@ -121,14 +148,15 @@ interface PrinterSettingsAPI {
 
 // Spoolman API interface
 interface SpoolmanAPI {
-  openSpoolSelection: () => Promise<void>;
+  openSpoolSelection: (purpose?: 'active' | 'slot-config') => Promise<void>;
   getActiveSpool: (contextId?: string) => Promise<unknown>;
   setActiveSpool: (spool: unknown, contextId?: string) => Promise<void>;
   getStatus: (
     contextId?: string
-  ) => Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }>;
+  ) => Promise<SpoolmanStatusPayload>;
   onSpoolSelected: (callback: (spool: unknown) => void) => void;
   onSpoolUpdated?: (callback: (spool: unknown) => void) => void;
+  onSpoolPickedForSlot: (callback: (spool: unknown) => void) => EventDisposer;
 }
 
 // Input dialog options interface
@@ -439,6 +467,7 @@ const validSendChannels = [
   'palette:toggle-edit-mode',
   'shortcut-config:open',
   'component-dialog:open',
+  'file-manager:open',
 ];
 
 const validReceiveChannels = [
@@ -464,6 +493,7 @@ const validReceiveChannels = [
   'loading-message-updated',
   'loading-cancelled',
   'polling-update',
+  'printer:reboot-status',
   'platform-info',
   'printer-context-created',
   'printer-context-switched',
@@ -483,6 +513,7 @@ const validReceiveChannels = [
   'shortcut-config:get-components-request',
   'spoolman:spool-selected',
   'spoolman:spool-updated',
+  'spoolman:spool-picked-for-slot',
   'config-updated',
   'config-loaded',
   'desktop-theme-preview',
@@ -492,6 +523,9 @@ const validReceiveChannels = [
 
 // Expose platform directly (no IPC needed) - available synchronously to renderer
 contextBridge.exposeInMainWorld('PLATFORM', process.platform);
+// Expose packaged state (production vs development). Resolved via synchronous IPC because the
+// sandboxed preload cannot access the main-process `app` module (app.isPackaged) directly.
+contextBridge.exposeInMainWorld('IS_PACKAGED', ipcRenderer.sendSync('app:is-packaged'));
 
 const configAPI: ConfigAPI = {
   get: async (): Promise<AppConfig> => {
@@ -587,6 +621,10 @@ const electronAPI: ElectronAPI = {
       'set-extruder-temp',
       'turn-off-bed-temp',
       'turn-off-extruder-temp',
+      'set-tool-temp',
+      'turn-off-tool-temp',
+      'set-chamber-temp',
+      'turn-off-chamber-temp',
       'clear-status',
       'led-on',
       'led-off',
@@ -632,6 +670,9 @@ const electronAPI: ElectronAPI = {
       'spoolman:get-active-spool',
       'spoolman:set-active-spool',
       'spoolman:get-status',
+      'material:configure-slot',
+      'material:set-slot',
+      'printer:reboot',
       'debug:get-state',
       'e2e:discord:send-current-status',
       'e2e:discord:send-print-complete',
@@ -798,8 +839,8 @@ const electronAPI: ElectronAPI = {
   printerSettings: printerSettingsBridge,
 
   spoolman: {
-    openSpoolSelection: async (): Promise<void> => {
-      await ipcRenderer.invoke('spoolman:open-dialog');
+    openSpoolSelection: async (purpose?: 'active' | 'slot-config'): Promise<void> => {
+      await ipcRenderer.invoke('spoolman:open-dialog', purpose);
     },
 
     getActiveSpool: async (contextId?: string): Promise<unknown> => {
@@ -810,9 +851,7 @@ const electronAPI: ElectronAPI = {
       await ipcRenderer.invoke('spoolman:set-active-spool', spool, contextId);
     },
 
-    getStatus: async (
-      contextId?: string
-    ): Promise<{ enabled: boolean; disabledReason?: string | null; contextId?: string | null }> => {
+    getStatus: async (contextId?: string): Promise<SpoolmanStatusPayload> => {
       const result: unknown = await ipcRenderer.invoke('spoolman:get-status', contextId);
       if (!isSpoolmanStatusResponse(result)) {
         return { enabled: false, disabledReason: 'Invalid response', contextId: null };
@@ -835,6 +874,49 @@ const electronAPI: ElectronAPI = {
       listeners.set('spoolman:spool-updated', { original: callback as IPCListener, wrapped: wrappedCallback });
       ipcRenderer.on('spoolman:spool-updated', wrappedCallback);
     },
+
+    onSpoolPickedForSlot: (callback: (spool: unknown) => void): EventDisposer => {
+      return registerPayloadEventListener<unknown>('spoolman:spool-picked-for-slot', callback);
+    },
+  },
+
+  material: {
+    configureSlot: async (slot: number, spoolId: number, contextId?: string): Promise<ConfigureSlotResult> => {
+      const result: unknown = await ipcRenderer.invoke('material:configure-slot', { slot, spoolId, contextId });
+      if (isRecord(result) && isBoolean(result.success)) {
+        return result as unknown as ConfigureSlotResult;
+      }
+      return { success: false, error: 'Invalid response from material:configure-slot' };
+    },
+    setSlot: async (
+      slot: number,
+      materialName: string,
+      colorHex: string,
+      contextId?: string
+    ): Promise<ConfigureSlotResult> => {
+      const result: unknown = await ipcRenderer.invoke('material:set-slot', {
+        slot,
+        materialName,
+        colorHex,
+        contextId,
+      });
+      if (isRecord(result) && isBoolean(result.success)) {
+        return result as unknown as ConfigureSlotResult;
+      }
+      return { success: false, error: 'Invalid response from material:set-slot' };
+    },
+  },
+
+  rebootPrinter: async (contextId: string): Promise<RebootResult> => {
+    const result: unknown = await ipcRenderer.invoke('printer:reboot', contextId);
+    if (isRecord(result) && isBoolean(result.success)) {
+      return { success: result.success };
+    }
+    return { success: false };
+  },
+
+  onRebootStatus: (callback: (payload: RebootStatusPayload) => void): EventDisposer => {
+    return registerPayloadEventListener<RebootStatusPayload>('printer:reboot-status', callback);
   },
 };
 

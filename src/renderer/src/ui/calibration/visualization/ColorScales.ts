@@ -2,8 +2,6 @@
  * @fileoverview Color scale utilities for heatmap visualization.
  * Provides color gradient generation for bed mesh heatmaps.
  * Supports multiple color schemes: viridis, plasma, inferno, coolwarm.
- *
- * @module renderer/ui/calibration/visualization/ColorScales
  */
 
 /**

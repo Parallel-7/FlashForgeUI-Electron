@@ -12,7 +12,7 @@ This document covers headless mode operations and the WebUI server architecture.
 
 - `HeadlessManager.initialize()` (invoked from `src/index.ts`) forces `WebUIEnabled`, applies overrides, connects printers (respecting discovery + saved printers), starts the WebUI server, launches polling/camera proxies, and sets up graceful shutdown.
 
-- Headless mode is documented for users in `docs/README.md` (update that doc whenever CLI or defaults change). `DEFAULT_CONFIG.WebUIPort` is **3000**; any mention of 3001 is legacy.
+- Headless mode is documented for users in the [Headless Mode](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Headless-Mode) wiki page (update it whenever CLI or defaults change). `DEFAULT_CONFIG.WebUIPort` is **3000**; any mention of 3001 is legacy.
 
 - The WebUI server (`src/webui/server/WebUIManager.ts`) wires Express, authentication (`AuthManager`), route registration (`server/routes/*.ts` for camera, contexts, jobs, printer control/status, spoolman, temperature, theme, filtration), and `WebSocketManager` for per-context real-time updates. Routes reuse the same services/IPC calls as the desktop UI—avoid duplicating logic.
 
@@ -165,4 +165,4 @@ class AppState {
 **Headless & WebUI**
 - `src/main/utils/HeadlessArguments.ts`, `HeadlessDetection.ts`, `HeadlessLogger.ts`, `src/main/managers/HeadlessManager.ts`
 - `src/main/webui/server/*` (WebUIManager, AuthManager, WebSocketManager, route modules) + `src/main/webui/static/*` (AppState, Transport, features, grid)
-- `docs/README.md` – user-facing headless instructions (keep updated)
+- [Headless Mode](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Headless-Mode) wiki – user-facing headless instructions (keep updated)

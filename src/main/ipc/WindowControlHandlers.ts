@@ -2,7 +2,7 @@
  * @fileoverview Window control IPC handlers for main window frame operations.
  *
  * Provides IPC handlers for custom title bar window controls:
- * - Window minimize operation
+ * - Window minimize operation (honors the MinimizeToTray setting)
  * - Window maximize/restore toggle operation
  * - Window close operation (triggers app quit)
  *
@@ -15,6 +15,8 @@
  */
 
 import { app, ipcMain } from 'electron';
+import { getConfigManager } from '../managers/ConfigManager.js';
+import { getTrayService } from '../services/TrayService.js';
 import { getWindowManager } from '../windows/WindowManager.js';
 
 /**
@@ -25,9 +27,18 @@ export const setupWindowControlHandlers = (): void => {
   const windowManager = getWindowManager();
 
   /**
-   * Handle window minimize request
+   * Handle window minimize request.
+   *
+   * With MinimizeToTray enabled the window is hidden instead of iconified, which is what actually
+   * clears the taskbar/dock entry (issue #75). TrayService downgrades this to a plain minimize when
+   * no tray icon exists, so the window can never be hidden with no way back.
    */
   ipcMain.on('window-minimize', () => {
+    if (getConfigManager().get('MinimizeToTray')) {
+      getTrayService().hideToTray();
+      return;
+    }
+
     const mainWindow = windowManager.getMainWindow();
     if (mainWindow) {
       mainWindow.minimize();

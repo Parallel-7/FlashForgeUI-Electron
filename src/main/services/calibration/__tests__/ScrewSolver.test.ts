@@ -1,8 +1,6 @@
 /**
  * @fileoverview Unit tests for the ScrewSolver class.
  * Tests screw adjustment calculations, rotation conversions, and direction determination.
- *
- * @module main/services/calibration/__tests__/ScrewSolver.test
  */
 
 import type { BedConfig, ScrewConfig } from '../../../../shared/types/calibration';

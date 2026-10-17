@@ -29,6 +29,10 @@ interface PrinterInfo {
   readonly model?: string;
   readonly status?: string;
   readonly firmwareVersion?: string;
+  // USB product ID / type from discovery — forwarded back on selection so the
+  // connection flow can identify HTTP-only models (Creator 5 / 5 Pro) by PID.
+  readonly productId?: number;
+  readonly productType?: number;
 }
 
 // Interface for saved printer information with additional metadata

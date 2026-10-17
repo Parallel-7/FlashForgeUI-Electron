@@ -7,9 +7,10 @@
  * material matching, printer commands) through dependency callbacks.
  */
 
-import type { FileListResponse, WebUIJobFile } from '../app.js';
+import type { ApiResponse, FileListResponse, WebUIJobFile } from '../app.js';
 import { state } from '../core/AppState.js';
 import { apiRequest } from '../core/Transport.js';
+import { loadSpoolmanConfig } from '../features/spoolman.js';
 import { $, hideElement, showElement, showToast } from '../shared/dom.js';
 import {
   buildMaterialBadgeTooltip,
@@ -17,23 +18,91 @@ import {
   isAD5XJobFile,
   isMultiColorJobFile,
 } from '../shared/formatting.js';
+import { describeStoredFileTracking } from '../shared/stored-file-tracking.js';
+
+/**
+ * A settable heater target. Single-nozzle printers use `bed`/`extruder`; the
+ * Creator 5 series adds `chamber` and per-`tool` heaters (index is 0-based on the
+ * wire, displayed as T1..Tn in the UI).
+ */
+export type TemperatureTarget =
+  | { kind: 'bed' }
+  | { kind: 'extruder' }
+  | { kind: 'chamber' }
+  | { kind: 'tool'; index: number };
 
 interface TemperatureDialogElement extends HTMLElement {
-  temperatureType?: 'bed' | 'extruder';
+  temperatureTarget?: TemperatureTarget;
 }
+
+/** Firmware chamber temperature ceiling (matches the desktop Creator 5 card). */
+const CHAMBER_MAX_TEMP = 80;
 
 export interface DialogHandlers {
   onStartPrintJob?: () => Promise<void> | void;
   onMaterialMatchingClosed?: () => void;
   onMaterialMatchingConfirm?: () => Promise<void> | void;
-  onTemperatureSubmit?: (type: 'bed' | 'extruder', temperature: number) => Promise<void> | void;
+  onTemperatureSubmit?: (target: TemperatureTarget, temperature: number) => Promise<void> | void;
+}
+
+function temperatureTargetLabel(target: TemperatureTarget): string {
+  switch (target.kind) {
+    case 'bed':
+      return 'Bed';
+    case 'extruder':
+      return 'Extruder';
+    case 'chamber':
+      return 'Chamber';
+    case 'tool':
+      return `Tool T${target.index + 1}`;
+  }
+}
+
+function currentTargetTemperature(target: TemperatureTarget): number {
+  const status = state.printerStatus;
+  if (!status) {
+    return 0;
+  }
+  switch (target.kind) {
+    case 'bed':
+      return status.bedTargetTemperature;
+    case 'extruder':
+      return status.nozzleTargetTemperature;
+    case 'chamber':
+      return status.chamberTargetTemperature ?? 0;
+    case 'tool':
+      return status.toolTemps?.[target.index]?.target ?? 0;
+  }
 }
 
 let dialogHandlers: DialogHandlers = {};
 
+/** Monotonic token identifying the current thumbnail-loading batch (for cancellation). */
+let thumbnailRunId = 0;
+
 export async function loadFileList(source: 'recent' | 'local'): Promise<void> {
   if (state.authRequired && !state.authToken) {
     return;
+  }
+
+  // Defensive: Creator 5 series cannot start resident local/recent jobs
+  // (firmware accepts no material mappings over the local API). The WebUI
+  // disables the entry buttons for these models; this catches a request that
+  // was triggered anyway.
+  // The AD5X has no local file listing either, so 'local' is refused for every
+  // material-station printer.
+  if (
+    state.printerFeatures?.hasMultiTool ||
+    (source === 'local' && state.printerFeatures?.hasMaterialStation)
+  ) {
+    showToast('Local job management is not available on this printer.', 'error');
+    return;
+  }
+
+  // The stored-file tracking indicator needs the Spoolman slot assignments;
+  // fetch them lazily if the Spoolman panel has never loaded the config.
+  if (state.spoolmanConfig === null) {
+    void loadSpoolmanConfig();
   }
 
   try {
@@ -78,6 +147,14 @@ export function showFileModal(files: WebUIJobFile[], source: 'recent' | 'local')
     item.className = 'file-item';
     item.dataset.filename = file.fileName;
 
+    const thumbnail = document.createElement('div');
+    thumbnail.className = 'file-thumbnail loading';
+    thumbnail.textContent = 'Loading…';
+    item.appendChild(thumbnail);
+
+    const body = document.createElement('div');
+    body.className = 'file-item-body';
+
     const header = document.createElement('div');
     header.className = 'file-item-header';
 
@@ -94,7 +171,7 @@ export function showFileModal(files: WebUIJobFile[], source: 'recent' | 'local')
       header.appendChild(badge);
     }
 
-    item.appendChild(header);
+    body.appendChild(header);
 
     const meta = document.createElement('div');
     meta.className = 'file-meta';
@@ -138,9 +215,27 @@ export function showFileModal(files: WebUIJobFile[], source: 'recent' | 'local')
       meta.appendChild(requirementSummary);
     }
 
-    if (meta.childElementCount > 0) {
-      item.appendChild(meta);
+    const trackingHint = describeStoredFileTracking(file, {
+      spoolmanEnabled: state.spoolmanConfig?.enabled === true,
+      hasStation: state.printerFeatures?.hasMaterialStation === true,
+    });
+    if (trackingHint) {
+      const hint = document.createElement('span');
+      hint.className = `file-meta-item spoolman-track-hint spoolman-track-hint--${
+        trackingHint.tracked ? '' : 'un'
+      }tracked`;
+      hint.textContent = trackingHint.label;
+      if (trackingHint.tooltip) {
+        hint.title = trackingHint.tooltip;
+      }
+      meta.appendChild(hint);
     }
+
+    if (meta.childElementCount > 0) {
+      body.appendChild(meta);
+    }
+
+    item.appendChild(body);
 
     item.addEventListener('click', () => {
       fileList.querySelectorAll('.file-item').forEach((el) => el.classList.remove('selected'));
@@ -157,9 +252,79 @@ export function showFileModal(files: WebUIJobFile[], source: 'recent' | 'local')
   });
 
   showElement('file-modal');
+
+  // Lazily fetch preview thumbnails once the list is on screen. The run token lets an
+  // in-flight batch bail out when the modal is closed or a different list is opened.
+  void loadThumbnails(files, ++thumbnailRunId);
 }
 
-export function showTemperatureDialog(type: 'bed' | 'extruder'): void {
+interface JobThumbnailResponse extends ApiResponse {
+  thumbnail?: string | null;
+}
+
+/**
+ * Sequentially request a preview thumbnail for each file and paint it into the matching
+ * card. Requests are serialized (one in flight at a time) to stay gentle on the printer's
+ * single connection; the server caches results per printer so re-opening the dialog is
+ * instant. Aborts as soon as `runId` no longer matches the active batch.
+ */
+async function loadThumbnails(files: WebUIJobFile[], runId: number): Promise<void> {
+  for (const file of files) {
+    if (runId !== thumbnailRunId) {
+      return;
+    }
+
+    let thumbnail: string | null = null;
+    try {
+      const result = await apiRequest<JobThumbnailResponse>(
+        `/api/jobs/thumbnail?filename=${encodeURIComponent(file.fileName)}`
+      );
+      thumbnail = result.success ? result.thumbnail ?? null : null;
+    } catch (error) {
+      console.error(`Failed to load thumbnail for ${file.fileName}:`, error);
+    }
+
+    if (runId !== thumbnailRunId) {
+      return;
+    }
+
+    applyThumbnail(file.fileName, thumbnail);
+  }
+}
+
+/** Replace a card's loading placeholder with the fetched image or a "No Preview" note. */
+function applyThumbnail(fileName: string, thumbnail: string | null): void {
+  const fileList = $('file-list');
+  if (!fileList) {
+    return;
+  }
+
+  const item = Array.from(fileList.querySelectorAll<HTMLElement>('.file-item')).find(
+    (el) => el.dataset.filename === fileName
+  );
+  const slot = item?.querySelector<HTMLElement>('.file-thumbnail');
+  if (!slot) {
+    return;
+  }
+
+  slot.classList.remove('loading');
+
+  if (thumbnail) {
+    const image = document.createElement('img');
+    image.src = thumbnail.startsWith('data:image/')
+      ? thumbnail
+      : `data:image/png;base64,${thumbnail}`;
+    image.alt = fileName;
+    slot.textContent = '';
+    slot.appendChild(image);
+    slot.classList.add('has-image');
+  } else {
+    slot.textContent = 'No Preview';
+    slot.classList.add('no-preview');
+  }
+}
+
+export function showTemperatureDialog(target: TemperatureTarget): void {
   const dialog = $('temp-dialog');
   const title = $('temp-dialog-title');
   const message = $('temp-dialog-message');
@@ -169,18 +334,14 @@ export function showTemperatureDialog(type: 'bed' | 'extruder'): void {
     return;
   }
 
-  title.textContent = type === 'bed' ? 'Set Bed Temperature' : 'Set Extruder Temperature';
-  message.textContent = `Enter ${type} temperature (°C):`;
+  const label = temperatureTargetLabel(target);
+  const maxNote = target.kind === 'chamber' ? `, max ${CHAMBER_MAX_TEMP}` : '';
+  title.textContent = `Set ${label} Temperature`;
+  message.textContent = `Enter ${label} temperature (°C)${maxNote}:`;
 
-  if (state.printerStatus) {
-    const currentTarget =
-      type === 'bed' ? state.printerStatus.bedTargetTemperature : state.printerStatus.nozzleTargetTemperature;
-    input.value = Math.round(currentTarget).toString();
-  } else {
-    input.value = '0';
-  }
+  input.value = state.printerStatus ? Math.round(currentTargetTemperature(target)).toString() : '0';
 
-  (dialog as TemperatureDialogElement).temperatureType = type;
+  (dialog as TemperatureDialogElement).temperatureTarget = target;
   showElement('temp-dialog');
   input.focus();
   input.select();
@@ -194,15 +355,17 @@ export async function setTemperature(): Promise<void> {
     return;
   }
 
-  const type = dialog.temperatureType;
+  const target = dialog.temperatureTarget;
   const temperature = parseInt(input.value, 10);
 
-  if (!type) {
+  if (!target) {
     showToast('Unknown temperature target', 'error');
     return;
   }
 
-  if (isNaN(temperature) || temperature < 0 || temperature > 300) {
+  // Chamber is capped at CHAMBER_MAX_TEMP by the range check below (no separate clamp needed).
+  const maxTemperature = target.kind === 'chamber' ? CHAMBER_MAX_TEMP : 300;
+  if (isNaN(temperature) || temperature < 0 || temperature > maxTemperature) {
     showToast('Invalid temperature value', 'error');
     return;
   }
@@ -213,7 +376,7 @@ export async function setTemperature(): Promise<void> {
   }
 
   try {
-    await dialogHandlers.onTemperatureSubmit(type, temperature);
+    await dialogHandlers.onTemperatureSubmit(target, temperature);
     hideElement('temp-dialog');
   } catch (error) {
     console.error('Failed to submit temperature command:', error);
@@ -275,6 +438,8 @@ export function setupDialogEventHandlers(handlers: DialogHandlers = {}): void {
 function closeFileModal(): void {
   hideElement('file-modal');
   state.selectedFile = null;
+  // Cancel any in-flight thumbnail batch for the now-closed list.
+  thumbnailRunId++;
 
   if (isMaterialMatchingVisible()) {
     dialogHandlers.onMaterialMatchingClosed?.();

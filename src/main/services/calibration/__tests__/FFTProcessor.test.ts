@@ -1,8 +1,6 @@
 /**
  * @fileoverview Unit tests for the FFTProcessor class.
  * Tests FFT computation, CSV parsing, and power spectral density analysis.
- *
- * @module main/services/calibration/__tests__/FFTProcessor.test
  */
 
 import { FFTProcessor } from '../shaper/FFTProcessor';

@@ -1,11 +1,18 @@
 /**
- * @fileoverview Spoolman integration routes (config, search, active spool management).
+ * @fileoverview Spoolman integration routes (config, search, active spool
+ * management, per-job tracking view for material-station printers).
+ *
+ * Material-station contexts (Creator 5 series, AD5X with station) use
+ * per-job tracking: the config response carries a `station` object (the job
+ * tracked now + last deduction) that the WebUI panel renders instead of the
+ * single active-spool view. Spools are chosen per job in the matching dialog.
  */
 
 import type { SpoolSearchQuery } from '@shared/types/spoolman.js';
 import {
   ActiveSpoolResponse,
   SpoolmanConfigResponse,
+  SpoolmanStationTracking,
   SpoolSearchResponse,
   SpoolSelectResponse,
   SpoolSummary,
@@ -13,6 +20,7 @@ import {
 } from '@shared/types/web-api.types.js';
 import type { Response, Router } from 'express';
 import { toAppError } from '../../../utils/error.utils.js';
+import { getMultiContextSpoolmanTracker } from '../../../services/MultiContextSpoolmanTracker.js';
 import {
   createValidationError,
   SpoolClearRequestSchema,
@@ -45,6 +53,7 @@ export function registerSpoolmanRoutes(router: Router, deps: RouteDependencies):
         serverUrl: deps.spoolmanService.getServerUrl(),
         updateMode: deps.spoolmanService.getUpdateMode(),
         contextId: activeContextId,
+        station: buildStationTracking(deps, activeContextId),
       };
       return res.json(response);
     } catch (error) {
@@ -111,7 +120,7 @@ export function registerSpoolmanRoutes(router: Router, deps: RouteDependencies):
         return sendErrorResponse<ActiveSpoolResponse>(
           res,
           409,
-          'Spoolman integration is disabled for this printer (AD5X with material station)',
+          'Spoolman integration is not available for this printer',
           { spool: null }
         );
       }
@@ -147,7 +156,7 @@ export function registerSpoolmanRoutes(router: Router, deps: RouteDependencies):
         return sendErrorResponse<StandardAPIResponse>(
           res,
           409,
-          'Spoolman integration is disabled for this printer (AD5X with material station)'
+          'Spoolman integration is not available for this printer'
         );
       }
 
@@ -184,7 +193,7 @@ export function registerSpoolmanRoutes(router: Router, deps: RouteDependencies):
         return sendErrorResponse<StandardAPIResponse>(
           res,
           409,
-          'Spoolman integration is disabled for this printer (AD5X with material station)'
+          'Spoolman integration is not available for this printer'
         );
       }
 
@@ -198,4 +207,46 @@ export function registerSpoolmanRoutes(router: Router, deps: RouteDependencies):
       return sendErrorResponse<StandardAPIResponse>(res, 500, appError.message);
     }
   });
+}
+
+/** Copy shown in the Spoolman panel for station contexts. */
+const STATION_TRACKING_NOTE =
+  'Choose a spool for each tool when you match materials for an upload. ' +
+  'The slicer estimate is charged to those spools when the print ends. ' +
+  'Each spool choice applies to that one print only. ' +
+  'Prints started on the printer, or files sent without Start Now, are not tracked.';
+
+/**
+ * Assemble per-job tracking info for a context, or null when the context has
+ * no material station.
+ */
+function buildStationTracking(
+  deps: RouteDependencies,
+  contextId: string
+): SpoolmanStationTracking | null {
+  if (!deps.spoolmanService.isStationContext(contextId)) {
+    return null;
+  }
+  const tracker = getMultiContextSpoolmanTracker();
+  const job = tracker.getTrackedJob(contextId);
+  return {
+    supported: true,
+    note: STATION_TRACKING_NOTE,
+    activeJob: job
+      ? {
+          fileName: job.fileName,
+          started: job.startedAt !== null,
+          lastProgress: job.lastProgress,
+          hasUsageProfile: job.usageProfile !== null,
+          tools: job.tools.map((tool) => ({
+            toolId: tool.toolId,
+            slotId: tool.slotId,
+            spoolId: tool.spoolId,
+            usedG: tool.usedG,
+            usedM: tool.usedM,
+          })),
+        }
+      : null,
+    lastDeduction: tracker.getLastDeduction(contextId),
+  };
 }

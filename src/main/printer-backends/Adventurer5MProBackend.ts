@@ -82,9 +82,11 @@ export class Adventurer5MProBackend extends DualAPIBackend {
    * Override from DualAPIBackend to add filtration fan fields
    */
   protected getAdditionalStatusFields(machineInfo: unknown): Record<string, unknown> {
-    // 5M Pro adds fan status for filtration mode detection
+    // 5M Pro adds fan status for filtration mode detection. Spread super so the
+    // filtration capability flag (filtrationAvailable) is carried through to the UI.
     const info = machineInfo as Record<string, unknown> | null;
     return {
+      ...super.getAdditionalStatusFields(machineInfo),
       externalFanOn: info?.ExternalFanOn || false,
       internalFanOn: info?.InternalFanOn || false,
     };

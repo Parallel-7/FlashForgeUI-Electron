@@ -8,7 +8,7 @@
  * - Input dialog (generic user input prompts)
  * - Job management dialogs (uploader, picker)
  * - Send commands dialog (G-code/command execution)
- * - Material dialogs (IFS, material info, matching, single-color confirmation)
+ * - Material dialogs (material info, matching, single-color confirmation)
  * - Generic window controls (minimize/close for sub-windows)
  *
  * Key exports:
@@ -27,6 +27,7 @@ import { getPrinterConnectionManager } from '../../managers/ConnectionFlowManage
 import { getPrinterBackendManager } from '../../managers/PrinterBackendManager.js';
 import { getPrinterContextManager } from '../../managers/PrinterContextManager.js';
 import { getDebugLogService } from '../../services/DebugLogService.js';
+import { getSpoolmanIntegrationService } from '../../services/SpoolmanIntegrationService.js';
 import { getGo2rtcService } from '../../services/Go2rtcService.js';
 import { getLogService } from '../../services/LogService.js';
 import { getModelDisplayName } from '../../utils/PrinterUtils.js';
@@ -403,7 +404,7 @@ export function registerDialogHandlers(configManager: ConfigManager, windowManag
         cameraPort: apiPort,
         cameraClients: serviceStatus.activeStreams,
         cameraStreaming: serviceStatus.activeStreams > 0,
-        cameraUrl: serviceStatus.isRunning ? `http://${localIP}:${apiPort}` : 'None',
+        cameraUrl: serviceStatus.isRunning ? `http://127.0.0.1:${apiPort}` : 'None',
         appUptime: process.uptime(),
         memoryUsage: process.memoryUsage().heapUsed,
       };
@@ -497,6 +498,8 @@ export function registerDialogHandlers(configManager: ConfigManager, windowManag
     try {
       const logService = getLogService();
       logService.addMessage(message);
+      // Tee renderer log-panel messages into the console log file when debug mode is on
+      getDebugLogService().logRendererMessage(message);
     } catch (error) {
       console.error('Failed to add log message to LogService:', error);
     }
@@ -574,30 +577,23 @@ export function registerDialogHandlers(configManager: ConfigManager, windowManag
     }
   });
 
-  // AD5X printer detection handler
-  ipcMain.handle('is-ad5x-printer', async (): Promise<boolean> => {
+  // Material-station capability handler. True for any printer with a material
+  // station (AD5X, Creator 5 / 5 Pro, and any future model), so the
+  // material-matching upload flow isn't tied to a specific backend class.
+  ipcMain.handle('has-material-station', async (): Promise<boolean> => {
     try {
       const backendManager = getPrinterBackendManager();
       const contextManager = getPrinterContextManager();
       const contextId = contextManager.getActiveContextId();
 
-      if (!contextId) {
+      if (!contextId || !backendManager.isBackendReady(contextId)) {
         return false;
       }
 
-      if (!backendManager.isBackendReady(contextId)) {
-        return false;
-      }
-
-      const backend = backendManager.getBackendForContext(contextId);
-      if (!backend) {
-        return false;
-      }
-
-      // Check if the backend is an instance of AD5XBackend
-      return backend.constructor.name === 'AD5XBackend';
+      const features = backendManager.getFeatures(contextId);
+      return features?.materialStation?.available === true;
     } catch (error) {
-      console.warn('Error checking AD5X printer status:', error);
+      console.warn('Error checking material-station capability:', error);
       return false;
     }
   });
@@ -625,6 +621,7 @@ export function registerDialogHandlers(configManager: ConfigManager, windowManag
         toolDatas: readonly unknown[];
         leveling: boolean;
         context?: 'job-start' | 'file-upload';
+        trackSpools?: boolean;
       }
     ) => {
       console.log('Material matching dialog handler called');
@@ -632,6 +629,31 @@ export function registerDialogHandlers(configManager: ConfigManager, windowManag
       return result; // Returns material mappings or null if cancelled
     }
   );
+
+  // Spools offered in the matching dialog for per-job Spoolman tracking, or
+  // null when tracking does not apply (Spoolman off, or no material station).
+  ipcMain.handle('material-matching:get-tracking-spools', async () => {
+    try {
+      const spoolman = getSpoolmanIntegrationService();
+      const contextId = getPrinterContextManager().getActiveContextId();
+      if (!contextId || !spoolman.isGloballyEnabled() || !spoolman.isStationContext(contextId)) {
+        return null;
+      }
+      const spools = await spoolman.fetchSpools({ allow_archived: false, limit: 200 });
+      return spools
+        .filter((spool) => !spool.archived)
+        .map((spool) => ({
+          id: spool.id,
+          name: spool.filament.name,
+          vendor: spool.filament.vendor?.name ?? null,
+          material: spool.filament.material,
+          remainingWeight: spool.remaining_weight ?? null,
+        }));
+    } catch (error) {
+      console.warn('[material-matching] Could not load Spoolman spools:', error);
+      return null;
+    }
+  });
 
   ipcMain.on('material-matching:close', () => {
     const materialMatchingWindow = windowManager.getMaterialMatchingDialogWindow();

@@ -1,8 +1,6 @@
 /**
  * @fileoverview Utilities for rendering calibration reports to binary formats.
  * Generates heatmap PNGs and PDF summaries from mesh data and analysis.
- *
- * @module main/services/calibration/report/ReportRenderer
  */
 
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';

@@ -1,50 +1,10 @@
 /**
- * @fileoverview GridStack.js wrapper and manager for FlashForgeUI
- *
- * Provides a clean TypeScript API wrapper around GridStack.js for managing
- * the dashboard grid. Handles widget lifecycle, drag-and-drop configuration,
- * layout serialization, and event management. Follows the principle of "don't
- * hack the framework" - all grid logic is delegated to GridStack with minimal
- * abstraction overhead.
- *
- * Key exports:
- * - GridStackManager: Main grid management class
- * - gridStackManager: Singleton instance for application-wide use
- *
- * Features:
- * - Widget add/remove/update operations with validation
- * - Enable/disable editing mode (dragging and resizing)
- * - Layout serialization/deserialization for persistence
- * - External drag-in support (from component palette)
- * - Event system (change, added, removed, dropped)
- * - Batch operations for performance optimization
- * - Grid compaction and layout cleanup
- * - Lifecycle management and cleanup
- *
- * Usage:
- * ```typescript
- * import { gridStackManager } from './GridStackManager';
- *
- * // Initialize grid with options
- * gridStackManager.initialize({ column: 12, cellHeight: 80 });
- *
- * // Add widget
- * const element = createGridWidget('camera-preview');
- * gridStackManager.addWidget(widgetConfig, element);
- *
- * // Enable editing
- * gridStackManager.enable();
- *
- * // Listen for changes
- * gridStackManager.onChange((widgets) => {
- *   console.log('Grid changed:', widgets);
- * });
- *
- * // Serialize current layout
- * const layout = gridStackManager.serialize();
- * ```
- *
- * @module ui/gridstack/GridStackManager
+ * @fileoverview GridStackManager wraps GridStack.js for the dashboard grid:
+ * widget add/remove/update, edit-mode enable/disable, layout serialization,
+ * and the change/added/removed/dropped events. Design rule: delegate to
+ * GridStack instead of working around it — no framework hacks. Supports
+ * external drag-in from the component palette. Exported as the singleton
+ * gridStackManager.
  */
 
 import { logVerbose } from '@shared/logging.js';

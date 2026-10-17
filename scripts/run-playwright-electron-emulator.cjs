@@ -1,8 +1,15 @@
 #!/usr/bin/env node
 
 /**
- * @fileoverview Wrapper script that builds FlashForgeUI and then runs the Electron Playwright
- * suite against the external flashforge-emulator-v2 repository.
+ * @fileoverview Builds FlashForgeUI and runs the Electron E2E suite against the
+ * emulator track.
+ *
+ * The emulator track boots flashforge-emulator-v2 instances, so it needs no printers on
+ * the network and is the track CI runs. The emulator repo is external; point
+ * FF_EMULATOR_ROOT at it if it does not sit beside this checkout.
+ *
+ * Extra arguments are forwarded to Playwright, e.g.
+ *   pnpm test:e2e:electron:emulator specs/led.spec.ts
  */
 
 const { existsSync } = require('node:fs');
@@ -13,8 +20,7 @@ const defaultEmulatorRoot = path.resolve(process.cwd(), '..', 'flashforge-emulat
 
 const env = {
   ...process.env,
-  FFUI_E2E_EMULATOR: '1',
-  FFUI_E2E_EMULATOR_DISCOVERY: process.env.FFUI_E2E_EMULATOR_DISCOVERY || '1',
+  FFUI_E2E_TRACK: 'emulator',
   FF_EMULATOR_ROOT: process.env.FF_EMULATOR_ROOT || defaultEmulatorRoot,
 };
 
@@ -24,6 +30,7 @@ if (!existsSync(emulatorPackageJson)) {
   console.error('[e2e:electron:emulator] Set FF_EMULATOR_ROOT to the flashforge-emulator-v2 repo path.');
   process.exit(1);
 }
+
 const passthroughArgs = process.argv.slice(2);
 
 const buildResult = spawnSync('pnpm', ['run', 'build'], {
@@ -39,12 +46,12 @@ if (buildResult.status !== 0) {
 
 const testResult = spawnSync(
   'pnpm',
-  ['exec', 'playwright', 'test', '-c', 'playwright.electron.config.ts', ...passthroughArgs],
+  ['exec', 'playwright', 'test', '-c', 'playwright.electron.config.ts', 'tests/e2e/electron/specs', ...passthroughArgs],
   {
-  stdio: 'inherit',
-  env,
-  shell: process.platform === 'win32',
-  windowsHide: true,
+    stdio: 'inherit',
+    env,
+    shell: process.platform === 'win32',
+    windowsHide: true,
   }
 );
 

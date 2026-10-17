@@ -92,10 +92,10 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
       // Get FPS overlay setting from printer details
       const showCameraFps = context.printerDetails.showCameraFps ?? false;
 
-      // Build WebSocket URL for WebUI client
-      // WebUI needs to connect to go2rtc on the server's hostname, not localhost
-      const host = req.hostname || 'localhost';
-      const wsUrl = `ws://${host}:${streamConfig.apiPort}/api/ws?src=${encodeURIComponent(streamConfig.streamName)}`;
+      // Relative WebSocket path served by the WebUI's authenticated camera proxy
+      // (CameraStreamProxy). video-rtc resolves it against the page origin, so
+      // the browser never connects to the go2rtc port directly.
+      const wsUrl = `/api/camera/ws?src=${encodeURIComponent(streamConfig.streamName)}`;
 
       const response = {
         success: true,
@@ -103,7 +103,6 @@ export function registerCameraRoutes(router: Router, deps: RouteDependencies): v
         streamType: cameraConfig.streamType,
         sourceType: cameraConfig.sourceType,
         streamName: streamConfig.streamName,
-        apiPort: streamConfig.apiPort,
         mode: streamConfig.mode,
         showCameraFps,
       };
