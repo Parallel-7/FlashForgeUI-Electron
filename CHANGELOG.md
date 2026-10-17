@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 The 1.0.5 stable release consolidates the 1.0.5-alpha cycle (alpha.1 through alpha.13). It adds Creator 5 and Creator 5 Pro support. On the Adventurer 5M / 5M Pro / AD5X it adds an SSH-based printer file manager and remote reboot. The WebUI can now upload jobs. Spoolman tracks filament per job on material-station printers. The app can start with your system and minimize to the tray. Connections to modern printers are faster. Every change is now tested in CI against a printer emulator. The per-alpha entries below have the full details.
 
+### Camera Security
+- **The camera service now accepts connections only from this computer.** go2rtc's API (port 1984) and its RTSP server (port 8554) used to listen on every network interface without a password, so any device on your network could watch the cameras or change go2rtc's streams. Both now listen on `127.0.0.1` only. Remote viewers still get the camera through the WebUI's authenticated proxy, and the WebRTC media port (8555) stays open for them.
+
 ### Creator 5 / Creator 5 Pro
 - **New: Creator 5 and Creator 5 Pro support.** These printers have no legacy TCP channel. The app identifies them by the USB product ID in their discovery broadcast and connects over HTTP only.
 - Four-slot material station support. It uses the same Material Station card as the AD5X, with the Creator 5's own filament palette (24 colors, 21 materials) and per-slot material and color editing. The card was renamed from "IFS Station" to "Material Station", and saved layouts migrate automatically.
@@ -32,6 +35,7 @@ The 1.0.5 stable release consolidates the 1.0.5-alpha cycle (alpha.1 through alp
 - Multi-material uploads send the correct tool numbers. A plate that uses filaments 1 and 3 now prints with T0 and T2. Before this fix it printed with T0 and T1, so the second tool fed from the wrong slot.
 - The matching dialog was reworked. Each color mismatch now gets its own warning line, both sides of every mapping show a color swatch, and the confirm button always reads **Confirm**. After matching, the upload dialog shows the mappings as chips. Its button reads **Start Print** or **Send File**, depending on whether **Start Now** is ticked.
 - The WebUI matching dialog now waits for the material station to report in after a connect or a printer switch, rather than showing "not connected".
+- **Start Local** is now greyed out on the AD5X, on the desktop and in the WebUI. The AD5X cannot list local files, so the button used to open a dialog that only showed an error. **Start Recent** still works.
 
 ### Spoolman
 - **Per-job filament tracking for material-station printers (AD5X with a station, Creator 5, Creator 5 Pro).** When you match materials for a job, you also pick the Spoolman spool in each slot, or choose "Do not track".
@@ -71,6 +75,7 @@ These features need root SSH access, which the [FlashForge-EasySSH](https://gith
 - Debug mode also saves all console output to a `console-<timestamp>.log` file. The WebUI debug routes can list and download it.
 - Releases now include `.exe.blockmap` files, so Windows updates download only what changed.
 - The update channel now matches the installed build unless you choose one yourself.
+- Every launch no longer logs a false "Critical asset validation failed" error. The check looked for a renderer file that the build stopped producing several releases ago.
 
 ### Testing & CI
 - CI type-checks, lints, builds, and runs the unit tests on every push and pull request, and the release workflow runs the same checks first.
