@@ -478,7 +478,10 @@ export class ControlsGridComponent extends BaseComponent {
         // dead-ends at material selection. Disable the local/recent job entry
         // buttons for those models; fresh 3mf upload+start still works (parsed
         // locally rather than via resident-file material mapping).
-        if (isCreator5ModelType(this.currentState.modelType)) {
+        // The AD5X backend has no local file listing either (`localJobs: false`),
+        // so its Start Local button is disabled too; its recent list still works.
+        const isAD5XLocal = mapping.id === 'btn-start-local' && this.currentState.modelType === 'ad5x';
+        if (isCreator5ModelType(this.currentState.modelType) || isAD5XLocal) {
           shouldDisable = true;
           reason = 'Local job management is not available on this printer.';
         }

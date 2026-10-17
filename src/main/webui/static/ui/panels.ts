@@ -515,13 +515,16 @@ function updateButtonStates(printerState: string): void {
   // models (fresh 3mf upload+start still works). hasMultiTool is true for BOTH
   // creator-5 and creator-5-pro.
   const isCreator5Series = Boolean(state.printerFeatures?.hasMultiTool);
+  // Material-station printers (AD5X and the Creator 5 series) have no local
+  // file listing, so Start Local is unavailable on all of them.
+  const noLocalJobs = isCreator5Series || Boolean(state.printerFeatures?.hasMaterialStation);
   if (recentBtn) {
     recentBtn.disabled = !isReadyForNewJob || isCreator5Series;
     recentBtn.title = isCreator5Series ? 'Local job management is not available on this printer.' : '';
   }
   if (localBtn) {
-    localBtn.disabled = !isReadyForNewJob || isCreator5Series;
-    localBtn.title = isCreator5Series ? 'Local job management is not available on this printer.' : '';
+    localBtn.disabled = !isReadyForNewJob || noLocalJobs;
+    localBtn.title = noLocalJobs ? 'Local job management is not available on this printer.' : '';
   }
   // Uploading a fresh file works on every model, Creator 5 series included -
   // the 3mf is parsed here, so material mappings are available on upload even

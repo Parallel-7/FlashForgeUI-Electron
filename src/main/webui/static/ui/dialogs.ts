@@ -89,7 +89,12 @@ export async function loadFileList(source: 'recent' | 'local'): Promise<void> {
   // (firmware accepts no material mappings over the local API). The WebUI
   // disables the entry buttons for these models; this catches a request that
   // was triggered anyway.
-  if (state.printerFeatures?.hasMultiTool) {
+  // The AD5X has no local file listing either, so 'local' is refused for every
+  // material-station printer.
+  if (
+    state.printerFeatures?.hasMultiTool ||
+    (source === 'local' && state.printerFeatures?.hasMaterialStation)
+  ) {
     showToast('Local job management is not available on this printer.', 'error');
     return;
   }
