@@ -404,7 +404,7 @@ export function registerDialogHandlers(configManager: ConfigManager, windowManag
         cameraPort: apiPort,
         cameraClients: serviceStatus.activeStreams,
         cameraStreaming: serviceStatus.activeStreams > 0,
-        cameraUrl: serviceStatus.isRunning ? `http://${localIP}:${apiPort}` : 'None',
+        cameraUrl: serviceStatus.isRunning ? `http://127.0.0.1:${apiPort}` : 'None',
         appUptime: process.uptime(),
         memoryUsage: process.memoryUsage().heapUsed,
       };

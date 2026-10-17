@@ -59,7 +59,7 @@ interface ManagedStream {
  *
  * // Get stream URL for UI
  * const config = service.getStreamConfig('context-1');
- * // config.wsUrl = 'ws://localhost:1984/api/ws?src=printer_context_1_...'
+ * // config.wsUrl = 'ws://127.0.0.1:1984/api/ws?src=printer_context_1_...'
  *
  * // Remove stream when printer disconnects
  * await service.removeStream('context-1');
@@ -308,7 +308,7 @@ export class Go2rtcService extends EventEmitter {
     }
 
     const apiPort = this.binaryManager.getApiPort();
-    const wsUrl = `ws://localhost:${apiPort}/api/ws?src=${encodeURIComponent(stream.streamName)}`;
+    const wsUrl = `ws://127.0.0.1:${apiPort}/api/ws?src=${encodeURIComponent(stream.streamName)}`;
 
     // Determine playback mode based on stream type:
     // - MJPEG: Use mjpeg mode directly (go2rtc can't transcode JPEG to H264 without ffmpeg)
