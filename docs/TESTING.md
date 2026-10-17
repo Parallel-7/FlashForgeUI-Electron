@@ -190,7 +190,9 @@ Pins the Creator 5 series gating contract from commit `58717fb`. Creator 5 / Cre
 Pro firmware cannot exchange material mappings over the local API, so starting a local
 or recent job dead-ends at material selection. On the series, the renderer disables
 `#btn-start-recent` and `#btn-start-local` with the title `Disabled: Local job
-management is not available on this printer.` Every other model keeps both enabled.
+management is not available on this printer.` The AD5X has no local file listing, so
+any other material-station target keeps `#btn-start-recent` enabled but has
+`#btn-start-local` disabled with the same title. Every other model keeps both enabled.
 A Creator 5-only test also pins `#btn-home-axes` as disabled with a title matching
 `Disabled: G-code unavailable` — the series is HTTP-only and offers no G-code
 passthrough. That second test skips itself on the other two printers, which is exactly

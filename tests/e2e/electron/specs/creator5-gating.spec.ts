@@ -4,9 +4,11 @@
  * Creator 5 / Creator 5 Pro firmware neither sends nor accepts material
  * mappings over the local API, so starting a previously-uploaded local or
  * recent job dead-ends at material selection. The renderer disables those
- * entry points for the series (commit 58717fb) while every other model keeps
- * them. This spec pins that contract down per target so a regression fails
- * loudly instead of shipping a dead-end button.
+ * entry points for the series (commit 58717fb). Start Local is also disabled
+ * on every other material-station printer (the AD5X), whose backend has no
+ * local file listing. Every other model keeps both. This spec pins that
+ * contract down per target so a regression fails loudly instead of shipping a
+ * dead-end button.
  *
  * It also pins the HTTP-only side effect: raw G-code entry points (Home Axes)
  * stay disabled for the series because the printers expose no TCP/G-code
@@ -49,7 +51,7 @@ test.describe(`creator 5 capability gating (${getTrack()} track)`, () => {
         }
       });
 
-      test('gates local and recent job start for the Creator 5 series only', async () => {
+      test('gates local and recent job start by printer capability', async () => {
         app = await launchFFUI({ seededPrinters: [target.toSeededPrinter()] });
         const mainWindow = new MainWindow(app.mainWindow, app.electronApp);
 
@@ -64,6 +66,10 @@ test.describe(`creator 5 capability gating (${getTrack()} track)`, () => {
           await expect(recentButton, 'recent job start must be disabled on the Creator 5 series').toBeDisabled();
           await expect(localButton, 'local job start must be disabled on the Creator 5 series').toBeDisabled();
           await expect(recentButton).toHaveAttribute('title', `Disabled: ${LOCAL_JOB_UNAVAILABLE_MESSAGE}`);
+          await expect(localButton).toHaveAttribute('title', `Disabled: ${LOCAL_JOB_UNAVAILABLE_MESSAGE}`);
+        } else if (target.hasMaterialStation) {
+          await expect(recentButton, 'recent job start must stay available on the AD5X').toBeEnabled();
+          await expect(localButton, 'local job start must be disabled without local file listing').toBeDisabled();
           await expect(localButton).toHaveAttribute('title', `Disabled: ${LOCAL_JOB_UNAVAILABLE_MESSAGE}`);
         } else {
           await expect(recentButton, 'recent job start must stay available on other models').toBeEnabled();
