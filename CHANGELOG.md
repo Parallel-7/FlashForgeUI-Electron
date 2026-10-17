@@ -7,92 +7,133 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.0.5] - 2026-10-10
+## [1.0.5] - 2026-10-17
 
-The 1.0.5 stable release consolidates the 1.0.5-alpha cycle (alpha.1 through alpha.13). It adds Creator 5 and Creator 5 Pro support. On the Adventurer 5M / 5M Pro / AD5X it adds an SSH-based printer file manager and remote reboot. The WebUI can now upload jobs. Spoolman tracks filament per job on material-station printers. The app can start with your system and minimize to the tray. Connections to modern printers are faster. Every change is now tested in CI against a printer emulator. The per-alpha entries below have the full details.
+This stable release contains all changes from 1.0.5-alpha.1 to 1.0.5-alpha.13. The CHANGELOG gives more detail about each alpha release.
+
+### Highlights
+
+- Support for the Creator 5 and Creator 5 Pro.
+- A printer file manager and a remote reboot for the Adventurer 5M, 5M Pro, and AD5X.
+- Job upload from the WebUI.
+- Spoolman filament tracking for each job on printers with a material station.
+- The app can start with your computer and can minimize to the system tray.
+- Faster connection to modern printers.
+- An automatic test suite runs each change against a printer emulator.
 
 ### Camera Security
-- **The camera service now accepts connections only from this computer.** go2rtc's API (port 1984) and its RTSP server (port 8554) used to listen on every network interface without a password, so any device on your network could watch the cameras or change go2rtc's streams. Both now listen on `127.0.0.1` only. Remote viewers still get the camera through the WebUI's authenticated proxy, and the WebRTC media port (8555) stays open for them.
+
+- **The camera service accepts connections only from this computer.** Before this release, the go2rtc API (port 1984) and RTSP server (port 8554) accepted connections from all networks. These servers had no password. Any device on your network could show your cameras or change the go2rtc streams.
+  - Now, the two servers accept connections only from `127.0.0.1`.
+  - Remote users get the camera through the WebUI proxy, which requires a login.
+  - The WebRTC media port (8555) stays open for remote users.
 
 ### Creator 5 / Creator 5 Pro
-- **New: Creator 5 and Creator 5 Pro support.** These printers have no legacy TCP channel. The app identifies them by the USB product ID in their discovery broadcast and connects over HTTP only.
-- Four-slot material station support. It uses the same Material Station card as the AD5X, with the Creator 5's own filament palette (24 colors, 21 materials) and per-slot material and color editing. The card was renamed from "IFS Station" to "Material Station", and saved layouts migrate automatically.
-- A unified temperature card shows all four tool nozzles, the bed, and the chamber in one place. Chamber temperature can be set and cleared, and each tool's **Off** button turns that tool head off. Tool heads are labeled T1–T4, as on the printer's own screen.
-- The Creator 5 Pro has filtration controls and its door sensor. The plain Creator 5 has neither, so both are hidden on it.
-- A paused Creator 5 Pro now shows as **Paused**, no longer as `Unknown`. The printer pauses itself when it detects a clog, so this matters most at the worst moment.
+
+- **New: support for the Creator 5 and Creator 5 Pro.** These printers do not have the legacy TCP channel. The app identifies them from the USB product ID in their discovery broadcast. Then, the app connects to them through HTTP only.
+- **Material station.** The app supports the 4-slot material station of these printers.
+  - The station uses the same Material Station card as the AD5X, with the Creator 5 filament palette (24 colors, 21 materials).
+  - You can edit the material and the color of each slot.
+  - The card name changed from "IFS Station" to "Material Station". The app updates your saved layouts automatically.
+- **Temperature card.** One card shows the four tool nozzles, the bed, and the chamber.
+  - You can set and clear the chamber temperature.
+  - The **Off** button of a tool stops the heater of that tool.
+  - The tool labels are T1 to T4, the same as on the printer screen.
+- **Creator 5 Pro.** The app shows the filtration controls and the door sensor. The Creator 5 does not have these parts, so the app does not show them on that model.
+- **Paused state.** A paused Creator 5 Pro shows **Paused**, not `Unknown`. The printer pauses automatically when it finds a clog. A correct state is important at that time.
 - **Known limitations:**
-  - These printers cannot start a job that is already stored on them, so **Start Recent** and **Start Local** are disabled. Upload a fresh `.3mf` instead.
-  - Raw G-code commands, including **Home Axes**, need the TCP channel these printers do not have, so they are disabled.
-  - The SSH file manager, calibration assistant, and reboot do not support the Creator 5 series yet.
+  - These printers cannot start a job that is stored on them. The app disables **Start Recent** and **Start Local** for these printers. To start a job, upload a new `.3mf` file.
+  - Raw G-code commands, for example **Home Axes**, need the TCP channel. These printers do not have this channel, so the app disables these commands.
+  - The file manager, the calibration assistant, and the reboot do not support the Creator 5 series yet.
 
-### Connecting to Printers
-- Modern printers (5M, 5M Pro, AD5X, Creator 5 series) are identified from their discovery broadcast. This removes an extra network probe from every connect. Legacy printers are still probed as before.
-- A new **manual connect form** replaces the old "Enter IP" prompt. It asks for the IP address, printer type, serial number, and check code. The check code is no longer asked for a second time.
-- Headless `--printers` accepts `creator-5` and `creator-5-pro` types and an optional serial field: `IP:TYPE[:CHECKCODE[:SERIAL]]`.
+### Printer Connection
 
-### Job Upload & Material Matching
-- **The WebUI can upload a job.** Phones and remote browsers can now send `.gcode`, `.gx`, and `.3mf` files. The dialog, metadata, warnings, and material matching are the same as on the desktop.
-- Multi-material uploads send the correct tool numbers. A plate that uses filaments 1 and 3 now prints with T0 and T2. Before this fix it printed with T0 and T1, so the second tool fed from the wrong slot.
-- The matching dialog was reworked. Each color mismatch now gets its own warning line, both sides of every mapping show a color swatch, and the confirm button always reads **Confirm**. After matching, the upload dialog shows the mappings as chips. Its button reads **Start Print** or **Send File**, depending on whether **Start Now** is ticked.
-- The WebUI matching dialog now waits for the material station to report in after a connect or a printer switch, rather than showing "not connected".
-- **Start Local** is now greyed out on the AD5X, on the desktop and in the WebUI. The AD5X cannot list local files, so the button used to open a dialog that only showed an error. **Start Recent** still works.
+- The app identifies modern printers (5M, 5M Pro, AD5X, and the Creator 5 series) from their discovery broadcast. This removes one network probe from each connection. The app continues to probe legacy printers.
+- A new **manual connection form** replaces the "Enter IP" prompt. Type the IP address, printer type, serial number, and check code in the form. The app does not ask for the check code a second time.
+- In headless mode, `--printers` accepts the `creator-5` and `creator-5-pro` types. It also accepts an optional serial number: `IP:TYPE[:CHECKCODE[:SERIAL]]`.
+
+### Job Upload & Material Match
+
+- **Job upload from the WebUI.** You can send `.gcode`, `.gx`, and `.3mf` files from a phone or a remote browser. The dialog, metadata, warnings, and material match are the same as in the desktop app.
+- **Correct tool numbers for multi-material jobs.** A plate that uses filaments 1 and 3 now prints with T0 and T2. Before this fix, it printed with T0 and T1. The second tool used filament from the incorrect slot.
+- **Changes to the material match dialog:**
+  - Each color difference has its own warning line.
+  - The two sides of each mapping show a color sample.
+  - The confirm button always shows **Confirm**.
+  - After you match the materials, the upload dialog shows each mapping.
+  - The upload button shows **Start Print** or **Send File**. The text changes with the **Start Now** checkbox.
+- After a connection or a printer change, the WebUI material match dialog waits for the material station data. Before this fix, the dialog showed "not connected".
+- **Start Local is disabled on the AD5X**, in the desktop app and in the WebUI. The AD5X cannot show a list of local files. Before this change, the button opened a dialog with only an error message. **Start Recent** continues to operate.
 
 ### Spoolman
-- **Per-job filament tracking for material-station printers (AD5X with a station, Creator 5, Creator 5 Pro).** When you match materials for a job, you also pick the Spoolman spool in each slot, or choose "Do not track".
-  - When the print finishes, each spool is charged the slicer's estimate for its tool.
-  - A cancelled or failed print is charged only for what was printed up to the point where it stopped.
-  - The choice applies to that one print only, because the spools on the printer can change at any time.
-- The per-slot spool assignment was removed from the Material Station editor. **Set from Spoolman** still sets a slot's material and color.
-- Creator 5 tracking has not been tested on a real printer yet. Feedback is welcome in [FlashForgeWebUI #21](https://github.com/Parallel-7/FlashForgeWebUI/issues/21).
+
+- **Filament tracking for each job on printers with a material station** (AD5X with a station, Creator 5, and Creator 5 Pro). When you match the materials for a job, select the Spoolman spool for each slot. Or, select **Do not track**.
+  - When the print is complete, the app removes the slicer estimate for each tool from its spool.
+  - If you cancel a print, or if the print fails, the app removes only the filament that the printer used before the stop.
+  - Your selection applies only to that print. You can change the spools on the printer at any time.
+- The Material Station editor does not keep a spool for each slot now. **Set from Spoolman** continues to set the material and the color of a slot.
+- Creator 5 tracking has no test on a real printer yet. Send feedback in [FlashForgeWebUI #21](https://github.com/Parallel-7/FlashForgeWebUI/issues/21).
 
 ### File Manager, SSH & Reboot (Adventurer 5M / 5M Pro / AD5X)
-These features need root SSH access, which the [FlashForge-EasySSH](https://github.com/Parallel-7/FlashForge-EasySSH) USB tool sets up.
-- **New: Printer file manager** (a top-bar shortcut). Browse, rename, and delete (one or many) files on the printer's internal storage and on USB, with thumbnail previews.
-- **New: Settings → SSH.** Each printer has one set of SSH credentials, encrypted at rest, which the file manager and the calibration assistant share. The defaults match EasySSH (`root` / `flashforge`, port 22). Credentials saved for the calibration assistant in 1.0.4 are not carried over. If yours were not the defaults, enter them again here.
-- **New: Reboot** in the menu. A full-screen overlay follows the printer through the restart and reconnects the camera once the printer is back.
-- All three work in the WebUI as well. Passwords can be changed from a browser but never read back.
+
+These features need root SSH access. Use the [FlashForge-EasySSH](https://github.com/Parallel-7/FlashForge-EasySSH) USB tool to configure this access.
+
+- **New: printer file manager** (a shortcut in the top bar). You can show, rename, and delete files on the internal storage and on the USB drive of the printer. You can delete one file or many files at one time. The file manager shows thumbnail previews.
+- **New: Settings → SSH.** Each printer has one set of SSH credentials. The file manager and the calibration assistant use the same credentials. The app encrypts the stored credentials. The defaults are the same as in EasySSH (`root` / `flashforge`, port 22).
+  - The app does not copy the credentials that you saved in the 1.0.4 calibration assistant. If you used credentials that are not the defaults, type them again in Settings → SSH.
+- **New: Reboot** in the menu. A full-screen overlay shows the restart of the printer. When the printer is available again, the app connects the camera again.
+- The three features also operate in the WebUI. You can change a password from a browser, but the browser cannot show the password.
 
 ### Start with System & Tray
-- **Start with system** and **Start minimized** settings for Windows, macOS, and Linux. Start minimized applies only when the system launches the app. A manual launch always shows the window.
-- A system tray icon (Show / Quit), and an optional **Minimize to tray** setting. It is off by default, because stock GNOME needs an extension to show tray icons.
-- On Linux, autostart uses a standard `~/.config/autostart` entry that points at the stable AppImage path.
+
+- **New settings: Start with system and Start minimized** for Windows, macOS, and Linux. Start minimized applies only when the operating system starts the app. When you start the app manually, the app always shows the window.
+- **System tray icon** with **Show** and **Quit**. An optional **Minimize to tray** setting is also available. This setting is off by default, because standard GNOME needs an extension to show tray icons.
+- On Linux, the app uses a standard `~/.config/autostart` entry. This entry points to the stable AppImage path.
 
 ### Status, WebUI & Notifications
-- The ETA no longer creeps forward while a print is paused or heating. It shows `--:--` until the print is advancing again, and the Discord notification leaves the ETA out.
-- The WebUI Recent/Local file dialog shows thumbnail previews. They share the desktop's thumbnail cache.
-- The TVOC air-quality reading shows on every printer that reports it.
-- Fixed the WebUI calibration dialog layout and see-through popup backgrounds.
+
+- The ETA does not increase while a print is paused or while the printer heats. In these conditions, the ETA shows `--:--` and the Discord notification does not show the ETA.
+- The WebUI Recent and Local file dialogs show thumbnail previews. They use the same thumbnail cache as the desktop app.
+- The app shows the TVOC (air quality) value for all printers that send it.
+- The WebUI calibration dialog has a correct layout. Popup backgrounds are not transparent now.
 
 ### Headless & Stability
-- Fixed headless mode exiting at startup because the WebUI server was started twice. Thanks to [@jsalmon00](https://github.com/jsalmon00) ([#80](https://github.com/Parallel-7/FlashForgeUI-Electron/pull/80)).
-- The go2rtc camera process now stops whenever the app exits, including after an error.
 
-### Linux Packaging
-- The `.deb` and `.rpm` packages install their AppArmor profile again, so the app starts on Ubuntu 24.04 and later. These packages are the recommended download there.
-- The AppImage detects when it has no usable sandbox and falls back to `--no-sandbox`, so it still launches.
+- Headless mode does not stop at startup now. Before this fix, the app started the WebUI server two times, and headless mode stopped. Thanks to [@jsalmon00](https://github.com/jsalmon00) ([#80](https://github.com/Parallel-7/FlashForgeUI-Electron/pull/80)).
+- The go2rtc camera process stops each time the app stops, also after an error.
+
+### Linux Packages
+
+- The `.deb` and `.rpm` packages install their AppArmor profile again. The app starts on Ubuntu 24.04 and later. Use these packages on these Ubuntu versions.
+- The AppImage examines the sandbox at startup. If no usable sandbox is available, the AppImage starts with `--no-sandbox`.
 
 ### Diagnostics & Updates
-- Debug mode also saves all console output to a `console-<timestamp>.log` file. The WebUI debug routes can list and download it.
-- Releases now include `.exe.blockmap` files, so Windows updates download only what changed.
-- The update channel now matches the installed build unless you choose one yourself.
-- Every launch no longer logs a false "Critical asset validation failed" error. The check looked for a renderer file that the build stopped producing several releases ago.
 
-### Testing & CI
-- CI type-checks, lints, builds, and runs the unit tests on every push and pull request, and the release workflow runs the same checks first.
-- An end-to-end suite drives the real desktop app against the [FlashForge printer emulator](https://github.com/GhostTypes/flashforge-emulator-v2) (5M Pro, AD5X, Creator 5, Creator 5 Pro) in CI. The same specs run against real printers on a test bench.
-- The WebUI browser tests now run against the real headless server, replacing a mock.
-- CI and release builds use Node 22, matching the Node runtime that ships with Electron 39.
+- In debug mode, the app also writes all console output to a `console-<timestamp>.log` file. You can show and download this file through the WebUI debug routes.
+- Releases include `.exe.blockmap` files. Windows updates download only the changed parts.
+- The update channel is the same as the channel of the installed build. You can select a different channel in the settings.
+- The app does not write an incorrect "Critical asset validation failed" error at each start. The check looked for a renderer file that the build does not make since the change to Vite.
+
+### Tests & CI
+
+- CI does a type check, a lint check, a build, and the unit tests for each push and pull request. The release workflow does the same checks first.
+- An end-to-end test suite operates the real desktop app against the [FlashForge printer emulator](https://github.com/GhostTypes/flashforge-emulator-v2) in CI. The emulator supplies a 5M Pro, an AD5X, a Creator 5, and a Creator 5 Pro. The same tests also operate with real printers on a test bench.
+- The WebUI browser tests use the real headless server. Before this change, they used a mock server.
+- CI and release builds use Node 22. This is the same Node version as in Electron 39.
+- The notes of a stable release compare the release against the previous stable release. Before this fix, the compare link used the newest earlier tag, which was an alpha tag.
 
 ### Documentation
-- User documentation moved to the [GitHub wiki](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki).
-- New `CONTRIBUTING.md` describing the alpha-first development and release workflow.
+
+- The user documentation is in the [GitHub wiki](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki).
+- A new `CONTRIBUTING.md` file explains the development and release workflow. All development starts on the `alpha` branch.
 
 ### Dependencies
+
 - `@ghosttypes/ff-api` 1.3 → 2.0.3, and `@parallel-7/slicer-meta` 1.3.0 → 1.5.0.
-- **Security update.** About 100 newly published dependency advisories are patched (5 critical, more than 50 high). The changes:
-  - Updated: `express` 5.3.0, `electron-updater` 6.8.9, `electron-builder` 26.15.3.
-  - Moved to patched versions: `axios` 1.20.0, `adm-zip` 0.6.1 (used to read 3MF files), `proxy-addr`, `js-yaml`, `tar`, `qs`, `ip-address`, `postcss`, `shell-quote`, `brace-expansion`, `@xmldom/xmldom`, `handlebars`, `nanoid`, `source-map-js`, and `browserslist`.
-  - Still open: the remaining advisories are in Electron 39 itself, or in tools used only during development that have no fix yet.
+- **Security update.** This release corrects approximately 100 new dependency advisories (5 critical and more than 50 high).
+  - Updated packages: `express` 5.3.0, `electron-updater` 6.8.9, and `electron-builder` 26.15.3.
+  - Packages moved to corrected versions: `axios` 1.20.0, `adm-zip` 0.6.1 (reads 3MF files), `proxy-addr`, `js-yaml`, `tar`, `qs`, `ip-address`, `postcss`, `shell-quote`, `brace-expansion`, `@xmldom/xmldom`, `handlebars`, `nanoid`, `source-map-js`, and `browserslist`.
+  - Open advisories: the other advisories are in Electron 39, or in development tools that do not have a correction yet.
 
 ## [1.0.5-alpha.13] - 2026-09-26
 
