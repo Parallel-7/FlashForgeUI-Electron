@@ -1,6 +1,6 @@
 # FlashForgeUI-Electron Development Guide
 
-**Last Updated:** 2026-08-10 19:50 ET (America/New_York)
+**Last Updated:** 2026-10-17 18:59 ET (America/New_York)
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
@@ -23,6 +23,16 @@ The information in this file directly influences how Claude Code understands and
 ## Project Overview
 
 FlashForgeUI is an Electron-based desktop and headless controller for FlashForge printers. It supports multi-context printing, material station workflows (AD5X and Creator 5 / Creator 5 Pro), Spoolman-powered filament tracking, go2rtc-based camera streaming (WebRTC/MSE), Discord + desktop notifications, and a fully authenticated WebUI. The app runs on Windows/macOS/Linux with both GUI and headless entry points (headless automatically boots the WebUI server). SSH/SFTP features (the SFTP file manager and the calibration assistant) target the Adventurer 5M / 5M Pro / AD5X and rely on root SSH/SFTP provisioned by the sibling **FlashForge-EasySSH** USB tool (defaulting to seamless `root`/`flashforge` credentials); Creator 5 / Creator 5 Pro SSH features are planned but not yet implemented. See the *Companion Project* section below.
+
+---
+
+## Release State
+
+- **Latest stable: [1.0.5](https://github.com/Parallel-7/FlashForgeUI-Electron/releases/tag/v1.0.5)** (2026-10-17, `latest` update channel). It rolls up 1.0.5-alpha.1 through alpha.13 plus the pre-release fixes (go2rtc loopback bind, AD5X Start Local gating, job-picker hint sizing). Released alongside FlashForgeWebUI 1.2.0.
+- **`alpha` is at `1.0.6-alpha.1`** (version bumped, not yet released). `main` was synced back into `alpha` after the stable cut.
+- **Planned for the 1.0.6 cycle: Electron 39 → 44.** Electron 39 is EOL and carries 4 open advisories (fixed in ≥41.10.6). Known migration work: macOS notifications need a code-signed app from 42 (builds are unsigned), Electron no longer downloads its binary in `postinstall` from 42 (check CI/e2e), dialogs stop remembering the last folder from 43 (add `defaultPath` tracking in `job-handlers.ts`), `openAsHidden` is removed in 44 (`AutoLaunchService.ts`), macOS 13+ is required in 44, and the bundled Node moves to 24 (bump CI/release from Node 22). The sync `safeStorage` APIs used by `SecureStorage.ts` go away in 46.
+- **Pending dependency bumps:** `@ghosttypes/ff-api` 2.1.0 and `@parallel-7/slicer-meta` 1.5.3 are published on npm (the 1.0.5 / 1.2.0 releases ship ff-api 2.0.3 and slicer-meta 1.5.0). Review their changelogs and bump on `alpha`.
+- **Release flow:** see `CONTRIBUTING.md` → Releasing. Stable notes come from the `## [X.Y.Z] - date` CHANGELOG section, written in ASD-STE100 style; the release workflow compares a stable release against the previous stable tag.
 
 ---
 
@@ -109,7 +119,7 @@ For detailed architectural information, see the comprehensive reference document
 
 15. **Release channel is derived from the `package.json` version**: `electron-builder-config.cjs` parses the prerelease suffix - a `-alpha.N` version yields channel `alpha`/`alpha.yml` (prerelease), a bare `X.Y.Z` yields channel `latest`/`latest.yml` (stable). Bumping the version is all that's needed to flip the channel; don't hardcode it. The release workflow (`.github/workflows/release.yml`, `workflow_dispatch`) reads notes from the matching `## [<version>] - <date>` CHANGELOG section, and `softprops/action-gh-release` keyed on the tag will publish an existing **draft** of that tag *keeping the draft's body* (it does not overwrite with the templated notes) - so don't pre-create a draft if you want the workflow's templated notes.
 
-16. **WebUI camera streams through an authenticated proxy (single-port)**: browsers must NEVER connect directly to go2rtc's unauthenticated API port (1984). `CameraStreamProxy.ts` (`src/main/webui/server/`) tunnels streams through the authenticated WebUI server at `/api/camera/ws?src=<stream>&token=<auth>` on the WebUI port; the token is validated against `AuthManager`. For remote/WebUI access, forward the single WebUI port only — do not expose 1984. See the [Auto Start](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Auto-Start) wiki page and issue #76.
+16. **WebUI camera streams through an authenticated proxy (single-port)**: browsers must NEVER connect directly to go2rtc's unauthenticated API port (1984). `CameraStreamProxy.ts` (`src/main/webui/server/`) tunnels streams through the authenticated WebUI server at `/api/camera/ws?src=<stream>&token=<auth>` on the WebUI port; the token is validated against `AuthManager`. For remote/WebUI access, forward the single WebUI port only — do not expose 1984. See the [Auto Start](https://github.com/Parallel-7/FlashForgeUI-Electron/wiki/Auto-Start) wiki page and issue #76. Since 1.0.5, `Go2rtcBinaryManager` also binds the go2rtc API (`127.0.0.1:1984`) and RTSP server (`127.0.0.1:8554`) to loopback, so the LAN cannot reach them at all; only WebRTC (`:8555`) stays on all interfaces for remote viewers. Every consumer (renderer `wsUrl`, `CameraStreamProxy`, `getApiUrl()`) uses `127.0.0.1` — never reintroduce a `:1984` (all-interfaces) listen or a `localhost`/LAN-IP go2rtc URL.
 
 17. **Single widget-creation path in `gridController.ts`**: do not duplicate grid-widget factories. The reload/context-switch and palette-add paths must route through the shared `createGridWidget()` + `createComponentForGrid()` primitives used by initial load. A divergent factory omits component cases (material-station, tool-temps, creator5-temperature) and produces blank tiles and missing edit-mode delete (X) buttons. The stale duplicate `createComponentInstance()` was removed in the fix for issue #77.
 
@@ -125,7 +135,9 @@ For detailed architectural information, see the comprehensive reference document
 
 23. **The wall-clock ETA is gated on `isPrintAdvancing`, not on `isActive`**: `isPrintAdvancing` (`src/shared/types/polling.ts`) covers `Printing` and nothing else, and every surface that converts a remaining duration into a clock time must gate on it — the desktop job stats, the WebUI panel (`src/main/webui/static/ui/panels.ts`), the browser-side mirror in `src/main/webui/static/shared/formatting.ts`, and the Discord embed. `isActive` is the wrong predicate here because it deliberately includes `Paused`. The reason: `now + remaining` only holds still while the firmware counts `estimatedTime` down, and it freezes that field the moment the print stops advancing — so the ETA stepped forward a minute every minute and receded for as long as a pause lasted. **`Heating` is excluded along with the paused states**: the pre-print warmup does not advance the job either and drifts identically, just for minutes rather than hours. Duration readouts are unaffected and need no gate. This went unnoticed for so long because the desktop shows the clock time with no duration beside it, so nothing on screen contradicted it. The same predicate exists in FlashForgeWebUI and in both API libraries — a change to the rule belongs in all of them.
 
-24. **`@ghosttypes/ff-api` is pinned at `^2.0.0`** (since 1.0.5-alpha.11). The 2.0.0 major was one breaking change — `FFMachineInfo.CompletionTime` became `Date | null` — which this app is immune to because it never reads that field; it derives its own ETA from the remaining duration. 2.0.0 is also what brings the Creator 5 Pro `"pause"` status mapping, so a paused C5 Pro no longer reads as `Unknown`. Note the library publishes to **GitHub Packages**, not public npm: `.npmrc` needs the `@ghosttypes:registry` line and a token, which CI writes from `secrets.GITHUB_TOKEN`.
+24. **`@ghosttypes/ff-api` is pinned at `^2.0.0`** (since 1.0.5-alpha.11). The 2.0.0 major was one breaking change — `FFMachineInfo.CompletionTime` became `Date | null` — which this app is immune to because it never reads that field; it derives its own ETA from the remaining duration. 2.0.0 is also what brings the Creator 5 Pro `"pause"` status mapping, so a paused C5 Pro no longer reads as `Unknown`. The library (and `@parallel-7/slicer-meta`) installs from **public npm** — no `.npmrc`, token, or GitHub Packages access is needed.
+
+25. **Start Recent / Start Local gating is capability-based**: the Creator 5 series disables both (no resident-file material mappings); the AD5X disables only Start Local (its backend has `localJobs: false`). The desktop gate lives in `controls-grid.ts`, the WebUI gate in `static/ui/panels.ts` + the `loadFileList` guard in `static/ui/dialogs.ts` (keyed on `printerFeatures.hasMaterialStation` / `hasMultiTool`), and `tests/e2e/electron/specs/creator5-gating.spec.ts` pins all three cases. Change them together, and mirror WebUI changes into FlashForgeWebUI.
 
 ---
 
