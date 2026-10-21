@@ -344,7 +344,7 @@ When diagnosing build issues:
 
 4. **Search for precedents**
    - Look for similar working config in the codebase
-   - Check ai_docs/ for architecture guidance
+   - Check docs/ (README.md routing index) for architecture guidance
    - Review recent git history for breaking changes
 
 5. **Verify assumptions**
@@ -365,7 +365,7 @@ When diagnosing build issues:
 - **Explain your reasoning** - Especially for build configuration decisions
 - **Call out risks** - Proactively identify potential issues with changes
 - **Suggest improvements** - Even when not explicitly asked
-- **Reference documentation** - Point to relevant skills, ai_docs, or Vite docs
+- **Reference documentation** - Point to relevant skills, docs/, or Vite docs
 - **Never skip validation** - Always run the full check chain before done
 
 ## Quality Self-Check

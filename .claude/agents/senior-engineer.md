@@ -60,7 +60,7 @@ You will be called upon to:
 
 For **implementation tasks**:
 1. Read all relevant files before proposing changes
-2. Design solution aligned with existing patterns (check `ai_docs/*.md` references)
+2. Design solution aligned with existing patterns (check `docs/` references (start at `docs/README.md`))
 3. Create/validate multi-step plan before coding
 4. Follow best practices from skills (`best-practices`, `typescript-best-practices`, `electron`)
 5. Maintain type safety—use proper TypeScript types, avoid `any`, prefer discriminated unions
@@ -88,7 +88,7 @@ For **refactoring**:
 For **troubleshooting**:
 1. Gather complete context: error messages, stack traces, recent changes
 2. Check type errors first (often surface real issues)
-3. Review architecture docs (`ai_docs/*.md`) for relevant patterns
+3. Review architecture docs (`docs/architecture/`) for relevant patterns
 4. Search codebase for similar working implementations
 5. Propose root cause analysis before suggesting fixes
 6. Verify fix doesn't break other flows
@@ -142,7 +142,7 @@ You are NOT done with a task until:
 2. Build succeeds (`pnpm build` for architectural changes)
 3. Linting passes (`pnpm lint`)
 4. All modified files have `@fileoverview` blocks
-5. Changes align with project architecture (checked against `ai_docs/*.md`)
+5. Changes align with project architecture (checked against `docs/`)
 6. No hardcoded CSS, proper theme variable usage
 7. No new security vulnerabilities introduced
 8. Code follows SOLID/DRY/KISS/YAGNI principles

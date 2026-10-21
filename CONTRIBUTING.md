@@ -116,10 +116,10 @@ wiki page.
 | `src/renderer/` | Desktop UI: the GridStack dashboard, components, and dialogs |
 | `src/shared/` | Types and helpers shared across processes |
 | `tests/e2e/` | Playwright suites (browser WebUI + Electron) |
-| `docs/TESTING.md` | The authoritative guide to every test surface |
+| `docs/testing/` | The authoritative guide to every test surface (start at `overview.md`) |
 
-`ai_docs/` has deeper architecture notes. Start with `ARCHITECTURE.md` and
-`MULTI_CONTEXT.md`.
+`docs/` has the full architecture notes. Start at `docs/README.md` (routing index)
+and `docs/architecture/overview.md`.
 
 ---
 
@@ -133,7 +133,7 @@ wiki page.
   modules. `pnpm docs:check` finds files that are missing one.
 - **Never hardcode colors in CSS.** Use the theme variables (`--theme-primary`,
   `--surface-elevated`, …) so light, dark, and custom themes keep working. See
-  `ai_docs/THEME_SYSTEM.md`.
+  `docs/renderer/theme-system.md`.
 - **One code path for desktop and headless.** Both modes share the same connection,
   polling, and camera stack. Avoid branching on headless mode unless there is no other way.
 - **WebUI parity.** User-facing features should work in the WebUI as well as the desktop
@@ -152,7 +152,7 @@ wiki page.
 
 ## Testing
 
-**Read [`docs/TESTING.md`](docs/TESTING.md) before you write or change a test.** It
+**Read [`docs/testing/overview.md`](docs/testing/overview.md) before you write or change a test.** It
 explains what each suite actually proves and where the known gaps are.
 
 - **Unit / integration (`pnpm test`):** Jest tests live next to the code in `__tests__/`

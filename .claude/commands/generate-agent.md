@@ -81,7 +81,7 @@ Description format (match existing agents):
 List which skills MUST be invoked and in what order
 
 4. **Project Context:**
-- Relevant architecture sections from ai_docs/
+- Relevant architecture sections from docs/
 - Key files this agent will touch
 - Important constraints
 
@@ -114,7 +114,7 @@ After creation:
 - Each agent should have a clear, unique purpose
 - Avoid creating agents that overlap significantly with existing ones
 - Maintain consistency in tone and structure with existing agents
-- Include project-specific context from CLAUDE.md and ai_docs/
+- Include project-specific context from CLAUDE.md and docs/
 - Reference existing patterns and conventions
 
 The goal is to create focused, effective agents that enhance the development workflow while maintaining consistency with the established agent ecosystem.
