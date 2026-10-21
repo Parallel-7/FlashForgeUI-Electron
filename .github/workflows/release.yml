@@ -108,6 +108,23 @@ jobs:
             pnpm run build:ci:mac
           fi
 
+      # Gatekeeper blocks unsigned macOS downloads as damaged - ad-hoc is the minimum.
+      - name: Verify macOS code signature
+        if: runner.os == 'macOS'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for app in dist/mac/FlashForgeUI.app dist/mac-arm64/FlashForgeUI.app; do
+            info=$(codesign -dv "$app" 2>&1 || true)
+            echo "$info"
+            if echo "$info" | grep -Eq 'Signature=adhoc|Authority='; then
+              echo "OK: ${app} is code signed"
+            else
+              echo "::error::${app} is not signed - an ad-hoc signature is the minimum for macOS Gatekeeper"
+              exit 1
+            fi
+          done
+
       - name: Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
