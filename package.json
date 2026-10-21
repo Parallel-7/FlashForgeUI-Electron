@@ -38,7 +38,6 @@
     "find:console": "go run scripts/find-console-usage.go",
     "find:lucide": "go run scripts/find-lucide-usage.go",
     "find:window": "ts-node --esm scripts/find-window-usage.ts",
-    "specs:list": "tsx scripts/list-specs.ts",
     "clean": "rimraf out dist \"NVIDIA Corporation\"",
     "type-check": "pnpm exec tsc --noEmit && pnpm exec tsc --noEmit -p tsconfig.e2e.json",
     "test": "jest",
