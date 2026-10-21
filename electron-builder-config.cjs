@@ -159,6 +159,17 @@ module.exports = {
   mac: {
     icon: 'src/icons/icon.icns',
     category: 'public.app-category.utilities',
+
+    // No code-signing certificate exists, so sign ad-hoc. Without any signature, macOS
+    // Gatekeeper reports browser downloads as damaged and unrunnable. electron-builder
+    // <=26.8.x signed ad-hoc implicitly (arm64 only); 26.15.x signs ad-hoc only when
+    // identity is set explicitly. Covers both x64 and arm64 targets.
+    identity: '-',
+
+    // The hardened runtime only matters for Developer ID + notarization. Ad-hoc signing
+    // with it enabled requires the disable-library-validation entitlement, or the app
+    // can fail to launch.
+    hardenedRuntime: false,
     target: [
       {
         target: 'dmg',
