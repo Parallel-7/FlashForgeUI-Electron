@@ -107,6 +107,14 @@ const COMPONENT_TEMPLATES: Record<string, WebUIComponentTemplate> = {
         <div class="panel-content camera-panel-content" id="camera-container">
           <div id="camera-placeholder" class="no-camera">Camera Unavailable</div>
           <div id="camera-fps-overlay" class="camera-fps-overlay hidden">-- FPS</div>
+          <button id="camera-fullscreen-btn" class="camera-fullscreen-toggle hidden" type="button" title="Enter fullscreen" aria-label="Enter fullscreen">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="8 3 3 3 3 8"></polyline>
+              <polyline points="16 3 21 3 21 8"></polyline>
+              <polyline points="3 16 3 21 8 21"></polyline>
+              <polyline points="21 16 21 21 16 21"></polyline>
+            </svg>
+          </button>
         </div>
       </div>
     `,

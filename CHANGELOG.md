@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- **Fullscreen button on the camera preview.** A button in the top-left corner of the desktop camera preview expands the video to fill the screen and hides the rest of the app. Click it again, or press Esc, to return. The video is letterboxed instead of cropped while fullscreen. This is desktop only; the WebUI camera has no fullscreen button yet.
+- **Fullscreen button on the camera preview, in the desktop app and the WebUI.** A button in the top-left corner of the camera preview expands the video to fill the screen and hides the rest of the app or page. Click it again, or press Esc, to return. In the WebUI the button only appears in browsers that support fullscreen for page elements.
 
 ## [1.0.5] - 2026-10-17
 
