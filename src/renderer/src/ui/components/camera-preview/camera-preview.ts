@@ -62,6 +62,14 @@ export class CameraPreviewComponent extends BaseComponent {
         <div class="no-camera">Preview Disabled</div>
       </div>
       <div class="fps-overlay" id="fps-overlay" hidden>Streaming</div>
+      <button id="btn-fullscreen" class="fullscreen-toggle" type="button" title="Enter fullscreen" aria-label="Enter fullscreen">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="8 3 3 3 3 8"></polyline>
+          <polyline points="16 3 21 3 21 8"></polyline>
+          <polyline points="3 16 3 21 8 21"></polyline>
+          <polyline points="21 16 21 21 16 21"></polyline>
+        </svg>
+      </button>
     </div>
     <div class="job-info-overlay">
       <div class="job-row">
@@ -99,6 +107,12 @@ export class CameraPreviewComponent extends BaseComponent {
 
   /** Reference to remove the global visibility listener */
   private readonly visibilityChangeHandler: () => void;
+
+  /** Reference to remove the global fullscreen change listener */
+  private readonly fullscreenChangeHandler: () => void;
+
+  /** Whether the camera stream area is currently fullscreen */
+  private isFullscreen = false;
 
   /** FPS/Status overlay state */
   private showFpsOverlay = false;
@@ -320,6 +334,7 @@ export class CameraPreviewComponent extends BaseComponent {
   constructor(parentElement: HTMLElement) {
     super(parentElement);
     this.visibilityChangeHandler = this.handleVisibilityChange.bind(this);
+    this.fullscreenChangeHandler = this.handleFullscreenChange.bind(this);
   }
 
   /**
@@ -362,6 +377,16 @@ export class CameraPreviewComponent extends BaseComponent {
     } else {
       console.warn('Camera Preview: Preview button not found during setup');
     }
+
+    const fullscreenButton = this.findElementById<HTMLButtonElement>('btn-fullscreen');
+
+    if (fullscreenButton) {
+      this.addEventListener(fullscreenButton, 'click', this.handleFullscreenToggle.bind(this));
+    } else {
+      console.warn('Camera Preview: Fullscreen button not found during setup');
+    }
+
+    document.addEventListener('fullscreenchange', this.fullscreenChangeHandler);
 
     // Listen for context switches to reload camera for new printer
     window.api.receive('printer-context-switched', (...args: unknown[]) => {
@@ -639,6 +664,47 @@ export class CameraPreviewComponent extends BaseComponent {
   }
 
   /**
+   * Handle fullscreen toggle button click - enlarge the video window to
+   * fill the screen (hiding the rest of the app UI) or exit back to normal.
+   */
+  private async handleFullscreenToggle(): Promise<void> {
+    const streamArea = this.findElement<HTMLElement>('.camera-stream-area');
+    if (!streamArea) {
+      console.warn('Camera Preview: Stream area not found for fullscreen toggle');
+      return;
+    }
+
+    try {
+      if (!document.fullscreenElement) {
+        await streamArea.requestFullscreen();
+      } else {
+        await document.exitFullscreen();
+      }
+    } catch (error) {
+      console.warn('[CameraPreview] Fullscreen toggle failed:', error);
+    }
+  }
+
+  /**
+   * Sync internal state and button UI whenever fullscreen state changes,
+   * including exits triggered by the browser/OS (e.g. pressing Esc).
+   */
+  private handleFullscreenChange(): void {
+    const streamArea = this.findElement<HTMLElement>('.camera-stream-area');
+    const fullscreenButton = this.findElementById<HTMLButtonElement>('btn-fullscreen');
+    if (!streamArea) return;
+
+    this.isFullscreen = document.fullscreenElement === streamArea;
+    streamArea.classList.toggle('is-fullscreen', this.isFullscreen);
+
+    if (fullscreenButton) {
+      fullscreenButton.title = this.isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen';
+      fullscreenButton.setAttribute('aria-label', fullscreenButton.title);
+      fullscreenButton.classList.toggle('is-active', this.isFullscreen);
+    }
+  }
+
+  /**
    * Update job display with current job information
    */
   private updateJobDisplay(jobInfo: CurrentJobInfo | null): void {
@@ -755,6 +821,15 @@ export class CameraPreviewComponent extends BaseComponent {
     this.logDebug('Cleaning up camera preview component');
 
     document.removeEventListener('visibilitychange', this.visibilityChangeHandler);
+    document.removeEventListener('fullscreenchange', this.fullscreenChangeHandler);
+
+    // Exit fullscreen if this component's stream area is currently fullscreen
+    if (this.isFullscreen && document.fullscreenElement) {
+      document.exitFullscreen().catch(() => {
+        // Ignore - element is being removed anyway
+      });
+    }
+    this.isFullscreen = false;
 
     // Clean up IPC listeners
     if (this.configUpdateDisposer) {

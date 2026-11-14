@@ -11,6 +11,7 @@
  * - Lower latency via WebRTC (~500ms vs 1-3s with transcoding)
  * - Automatic reconnection built into go2rtc
  * - Unified handling for all camera types
+ * - Fullscreen toggle that expands the camera panel and hides the rest of the page
  */
 
 import type { CameraProxyConfigResponse } from '../app.js';
@@ -32,6 +33,101 @@ let videoRtcElement: VideoRTCElement | null = null;
 
 /** Whether FPS overlay is enabled */
 let showFpsOverlay = false;
+
+/** Element expanded when the camera goes fullscreen (holds the video, overlays and toggle) */
+const CAMERA_CONTAINER_ID = 'camera-container';
+
+/** Fullscreen toggle button overlaid on the camera panel */
+const FULLSCREEN_BUTTON_ID = 'camera-fullscreen-btn';
+
+/** Whether the document-level fullscreen listeners have been registered */
+let fullscreenListenersBound = false;
+
+/**
+ * Whether the camera container is the element currently shown fullscreen.
+ */
+function isCameraFullscreen(): boolean {
+  const container = $(CAMERA_CONTAINER_ID);
+  return container !== null && document.fullscreenElement === container;
+}
+
+/**
+ * Sync the toggle button's label and state with the current fullscreen state.
+ * Also runs when fullscreen is exited outside the button (e.g. the Esc key).
+ */
+function updateFullscreenButton(): void {
+  const button = $(FULLSCREEN_BUTTON_ID);
+  if (!button) return;
+
+  const active = isCameraFullscreen();
+  const label = active ? 'Exit fullscreen' : 'Enter fullscreen';
+  button.title = label;
+  button.setAttribute('aria-label', label);
+  button.classList.toggle('is-active', active);
+}
+
+/**
+ * Enter or leave fullscreen for the camera container.
+ */
+async function toggleCameraFullscreen(): Promise<void> {
+  const container = $(CAMERA_CONTAINER_ID);
+  if (!container) return;
+
+  try {
+    if (isCameraFullscreen()) {
+      await document.exitFullscreen();
+    } else {
+      await container.requestFullscreen();
+    }
+  } catch (error) {
+    console.warn('[Camera] Fullscreen toggle failed:', error);
+  }
+}
+
+/**
+ * Register the click and fullscreenchange listeners once. The click handler is
+ * delegated from the document because the camera panel is re-created whenever
+ * the grid layout is rebuilt, which would drop listeners bound to the button.
+ */
+function bindFullscreenListeners(): void {
+  if (fullscreenListenersBound) return;
+  fullscreenListenersBound = true;
+
+  document.addEventListener('click', (event) => {
+    const target = event.target;
+    if (target instanceof Element && target.closest(`#${FULLSCREEN_BUTTON_ID}`)) {
+      void toggleCameraFullscreen();
+    }
+  });
+  document.addEventListener('fullscreenchange', updateFullscreenButton);
+}
+
+/**
+ * Show the fullscreen toggle. Browsers without element fullscreen support
+ * (notably Safari on iPhone) keep the button hidden rather than showing a
+ * control that cannot work.
+ */
+function showFullscreenButton(): void {
+  if (!document.fullscreenEnabled) return;
+
+  bindFullscreenListeners();
+  showElement(FULLSCREEN_BUTTON_ID);
+  updateFullscreenButton();
+}
+
+/**
+ * Hide the fullscreen toggle and leave fullscreen if the camera is showing it,
+ * so a dropped stream does not leave the page stuck on a blank fullscreen panel.
+ */
+function hideFullscreenButton(): void {
+  hideElement(FULLSCREEN_BUTTON_ID);
+
+  if (isCameraFullscreen()) {
+    document.exitFullscreen().catch(() => {
+      // Ignore: the element may already be gone
+    });
+  }
+}
 
 /**
  * Update FPS overlay display.
@@ -81,6 +177,7 @@ export function teardownCameraStreamElements(): void {
   }
   showElement('camera-placeholder');
 
+  hideFullscreenButton();
   updateFpsDisplay();
 }
 
@@ -164,6 +261,7 @@ export async function loadCameraStream(): Promise<void> {
     }
 
     console.log(`[Camera] go2rtc stream started: ${config.wsUrl} (mode: ${mode})`);
+    showFullscreenButton();
     updateFpsDisplay();
   } catch (error) {
     console.error('[Camera] Failed to load camera stream:', error);

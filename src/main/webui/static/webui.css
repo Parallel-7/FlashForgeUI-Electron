@@ -485,6 +485,44 @@ body {
   user-select: none;
 }
 
+/* Camera fullscreen toggle - overlaid on the top-left of the video (the FPS
+   overlay sits top-right). Shown only while a stream is playing and the
+   browser supports element fullscreen. */
+.camera-fullscreen-toggle {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: color-mix(in srgb, var(--theme-background) 80%, transparent);
+  color: var(--text-color);
+  border: 1px solid var(--border-color-light);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color var(--transition-fast), color var(--transition-fast);
+}
+
+.camera-fullscreen-toggle:hover,
+.camera-fullscreen-toggle.is-active {
+  background-color: var(--accent-color);
+  color: var(--text-on-primary);
+}
+
+/* Fullscreen state - the camera container fills the screen, hiding the rest of the page */
+.camera-panel-content:fullscreen {
+  background-color: var(--darker-bg);
+  padding: 0;
+}
+
+.camera-panel-content:fullscreen video-rtc {
+  border-radius: 0;
+}
+
 .panel .status-title,
 .panel .temp-row span,
 .panel .detail-row span,
