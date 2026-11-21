@@ -1,3 +1,6 @@
+> **📦 This repository has moved to GitLab:** https://gitlab.com/parallel-7/FlashForgeUI-Electron
+> This GitHub copy is no longer updated.
+
 <div align="center">
 
 <img width="48" height="48" alt="icon" src="https://github.com/user-attachments/assets/6f187987-027f-4b66-a4e4-3bc30be4ca90" />
